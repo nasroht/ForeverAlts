@@ -4,6 +4,7 @@
 ## Author: CLIAlts
 ## Version: 1.0.0
 ## SavedVariables: CLIAltsDB
+## X-License: MIT
 
 data.lua
 minimap.lua

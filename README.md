@@ -82,3 +82,9 @@ Cycle through 4 authentic retro CRT themes by clicking the `[ THEME ]` button in
 2. Ensure the folder name is `clialts` and contains `clialts.toc`, `data.lua`, `minimap.lua`, `ui.lua`, and `core.lua`.
 3. Launch World of Warcraft and enable **CLIAlts** in your AddOns menu.
 4. Log into any character and type `/clialts` or click the minimap button to start tracking!
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
