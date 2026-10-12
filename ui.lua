@@ -152,6 +152,7 @@ local ROWS_COUNT = 12
 local rowFrames = {}
 local currentPage = 1
 local totalPages = 1
+local headerPool = {} -- [tabId] = { btn1, btn2, ... }
 
 function CLIAlts:CreateMainFrame()
     if mainFrame then return mainFrame end
@@ -598,6 +599,16 @@ function CLIAlts:ApplyTheme()
             mainFrame.btnPerk.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
             mainFrame.btnPerk:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
         end
+
+        if next(headerPool) then
+            for _, btns in pairs(headerPool) do
+                for _, btn in ipairs(btns) do
+                    if btn:IsShown() and btn.str then
+                        btn.str:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+                    end
+                end
+            end
+        end
     end
 
     -- Update minimap disc if loaded
@@ -611,101 +622,142 @@ function CLIAlts:ApplyTheme()
 end
 
 -- ----------------------------------------------------------------------------
--- Table Header Renderer
+-- Table Header Definitions & Pool (Zero Garbage / Frame Leak Fix)
 -- ----------------------------------------------------------------------------
-local function CreateHeaderBtn(parent, text, xOffset, width, sortKey)
-    local btn = CreateFrame("Button", nil, parent)
-    btn:SetSize(width, 18)
-    btn:SetPoint("LEFT", parent, "LEFT", xOffset, 0)
-
-    local str = btn:CreateFontString(nil, "OVERLAY")
-    str:SetFont("Fonts\\ARIALN.TTF", 11, "OUTLINE")
-    str:SetPoint("LEFT", btn, "LEFT", 0, 0)
-    str:SetText(text)
-    btn.str = str
-
-    btn:SetScript("OnEnter", function(self)
-        local t = CLIAlts:GetTheme()
-        self.str:SetTextColor(1, 1, 1)
-    end)
-    btn:SetScript("OnLeave", function(self)
-        local t = CLIAlts:GetTheme()
-        self.str:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-    end)
-
-    if sortKey then
-        btn:SetScript("OnClick", function()
-            PlayRetroSound()
-            if CLIAltsDB.settings.sortBy == sortKey then
-                CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
-            else
-                CLIAltsDB.settings.sortBy = sortKey
-                CLIAltsDB.settings.sortAsc = false
+local HEADER_DEFS = {
+    [1] = {
+        { name = "FAC", offset = 6, width = 26 },
+        { name = "NAME", offset = 34, width = 120, sortKey = "name" },
+        { name = "LVL", offset = 158, width = 45, sortKey = "level" },
+        { name = "RACE / CLASS", offset = 206, width = 115 },
+        { name = "LEVEL XP", offset = 325, width = 135, sortKey = "xp" },
+        { name = "GOLD", offset = 464, width = 115, sortKey = "gold" },
+        { name = "RESTED", offset = 583, width = 80, sortKey = "rested" },
+        { name = "ETA FULL", offset = 667, width = 75 },
+    },
+    [2] = {
+        { name = "NAME", offset = 12, width = 135, sortKey = "name" },
+        { name = "LVL", offset = 152, width = 45, sortKey = "level" },
+        { name = "RESTED / CAP", offset = 202, width = 125, sortKey = "rested" },
+        { name = "RESTED BAR", offset = 332, width = 145 },
+        { name = "STATUS", offset = 482, width = 65 },
+        {
+            name = "TIME TO %d%%",
+            offset = 552,
+            width = 85,
+            getText = function()
+                local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+                return string.format("[TIME TO %d%%]", 150 + (r * 6))
             end
-            CLIAlts:Render()
-        end)
-    end
+        },
+        { name = "CAPPED DATE", offset = 642, width = 75 },
+    },
+    [3] = {
+        { name = "NAME", offset = 12, width = 135, sortKey = "name" },
+        { name = "LVL", offset = 152, width = 45, sortKey = "level" },
+        { name = "PRIMARY PROF 1", offset = 202, width = 125 },
+        { name = "PRIMARY PROF 2", offset = 332, width = 125 },
+        { name = "COOKING", offset = 462, width = 80 },
+        { name = "FIRST AID", offset = 547, width = 80 },
+        { name = "FISHING", offset = 632, width = 80 },
+    },
+    [4] = {
+        { name = "NAME", offset = 12, width = 135, sortKey = "name" },
+        { name = "LVL", offset = 152, width = 45, sortKey = "level" },
+        { name = "WEALTH SHARE / BAR", offset = 202, width = 155, sortKey = "gold" },
+        { name = "EXACT WEALTH", offset = 362, width = 145, sortKey = "gold" },
+        { name = "SHARE %", offset = 512, width = 75 },
+        { name = "LAST ACTIVE", offset = 592, width = 115 },
+    },
+}
 
-    return btn
+local function InitHeaderPool(parent)
+    if not parent or next(headerPool) then return end
+
+    for tabId = 1, 4 do
+        local defs = HEADER_DEFS[tabId]
+        headerPool[tabId] = {}
+        if defs then
+            for _, def in ipairs(defs) do
+                local btn = CreateFrame("Button", nil, parent)
+                btn:SetSize(def.width, 18)
+                btn:SetPoint("LEFT", parent, "LEFT", def.offset, 0)
+
+                local str = btn:CreateFontString(nil, "OVERLAY")
+                str:SetFont("Fonts\\ARIALN.TTF", 11, "OUTLINE")
+                str:SetPoint("LEFT", btn, "LEFT", 0, 0)
+                btn.str = str
+                btn.labelName = def.name
+                btn.sortKey = def.sortKey
+                btn.getText = def.getText
+
+                btn:SetScript("OnEnter", function(self)
+                    self.str:SetTextColor(1, 1, 1)
+                end)
+                btn:SetScript("OnLeave", function(self)
+                    local t = CLIAlts:GetTheme()
+                    self.str:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+                end)
+
+                if def.sortKey then
+                    btn:SetScript("OnClick", function()
+                        PlayRetroSound()
+                        if CLIAltsDB.settings.sortBy == def.sortKey then
+                            CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
+                        else
+                            CLIAltsDB.settings.sortBy = def.sortKey
+                            CLIAltsDB.settings.sortAsc = false
+                        end
+                        CLIAlts:Render()
+                    end)
+                end
+
+                btn:Hide()
+                table.insert(headerPool[tabId], btn)
+            end
+        end
+    end
 end
 
 function CLIAlts:RenderHeaders(activeTab)
-    local hf = mainFrame.headerFrame
-    -- Hide any previous header children
-    local children = { hf:GetChildren() }
-    for _, child in ipairs(children) do
-        child:Hide()
-        child:SetParent(nil)
+    local hf = mainFrame and mainFrame.headerFrame
+    if not hf then return end
+
+    if not next(headerPool) then
+        InitHeaderPool(hf)
     end
 
     local t = self:GetTheme()
     local sortBy = CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB.settings.sortAsc
-    local function GetSortIndicator(key)
-        if sortBy == key then
-            return sortAsc and " ^" or " v"
+
+    -- Hide all header pools for inactive tabs
+    for tabId, btns in pairs(headerPool) do
+        if tabId ~= activeTab then
+            for _, btn in ipairs(btns) do
+                btn:Hide()
+            end
         end
-        return ""
     end
 
-    if activeTab == 1 then
-        -- Tab 1: Alts Overview
-        CreateHeaderBtn(hf, "[FAC]", 6, 26, nil)
-        CreateHeaderBtn(hf, "[NAME" .. GetSortIndicator("name") .. "]", 34, 120, "name")
-        CreateHeaderBtn(hf, "[LVL" .. GetSortIndicator("level") .. "]", 158, 45, "level")
-        CreateHeaderBtn(hf, "[RACE / CLASS]", 206, 115, nil)
-        CreateHeaderBtn(hf, "[LEVEL XP" .. GetSortIndicator("xp") .. "]", 325, 135, "xp")
-        CreateHeaderBtn(hf, "[GOLD" .. GetSortIndicator("gold") .. "]", 464, 115, "gold")
-        CreateHeaderBtn(hf, "[RESTED" .. GetSortIndicator("rested") .. "]", 583, 80, "rested")
-        CreateHeaderBtn(hf, "[ETA FULL]", 667, 75, nil)
-    elseif activeTab == 2 then
-        -- Tab 2: Rested XP Monitor
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-        local capPct = 150 + (r * 6)
-        CreateHeaderBtn(hf, "[NAME" .. GetSortIndicator("name") .. "]", 12, 135, "name")
-        CreateHeaderBtn(hf, "[LVL" .. GetSortIndicator("level") .. "]", 152, 45, "level")
-        CreateHeaderBtn(hf, "[RESTED / CAP]", 202, 125, "rested")
-        CreateHeaderBtn(hf, "[RESTED BAR]", 332, 145, nil)
-        CreateHeaderBtn(hf, "[STATUS]", 482, 65, nil)
-        CreateHeaderBtn(hf, string.format("[TIME TO %d%%]", capPct), 552, 85, nil)
-        CreateHeaderBtn(hf, "[CAPPED DATE]", 642, 75, nil)
-    elseif activeTab == 3 then
-        -- Tab 3: Professions
-        CreateHeaderBtn(hf, "[NAME" .. GetSortIndicator("name") .. "]", 12, 135, "name")
-        CreateHeaderBtn(hf, "[LVL]", 152, 45, "level")
-        CreateHeaderBtn(hf, "[PRIMARY PROF 1]", 202, 125, nil)
-        CreateHeaderBtn(hf, "[PRIMARY PROF 2]", 332, 125, nil)
-        CreateHeaderBtn(hf, "[COOKING]", 462, 80, nil)
-        CreateHeaderBtn(hf, "[FIRST AID]", 547, 80, nil)
-        CreateHeaderBtn(hf, "[FISHING]", 632, 80, nil)
-    elseif activeTab == 4 then
-        -- Tab 4: Economy / Wealth
-        CreateHeaderBtn(hf, "[NAME" .. GetSortIndicator("name") .. "]", 12, 135, "name")
-        CreateHeaderBtn(hf, "[LVL" .. GetSortIndicator("level") .. "]", 152, 45, "level")
-        CreateHeaderBtn(hf, "[WEALTH SHARE / BAR]", 202, 155, "gold")
-        CreateHeaderBtn(hf, "[EXACT WEALTH]", 362, 145, "gold")
-        CreateHeaderBtn(hf, "[SHARE %]", 512, 75, nil)
-        CreateHeaderBtn(hf, "[LAST ACTIVE]", 592, 115, nil)
+    -- Show and update only active tab's headers
+    local activeBtns = headerPool[activeTab]
+    if activeBtns then
+        for _, btn in ipairs(activeBtns) do
+            local text
+            if btn.getText then
+                text = btn.getText()
+            elseif btn.sortKey then
+                local indicator = (sortBy == btn.sortKey) and (sortAsc and " ^" or " v") or ""
+                text = string.format("[%s%s]", btn.labelName, indicator)
+            else
+                text = string.format("[%s]", btn.labelName)
+            end
+
+            btn.str:SetText(text)
+            btn.str:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+            btn:Show()
+        end
     end
 end
 
