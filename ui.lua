@@ -154,13 +154,42 @@ local currentPage = 1
 local totalPages = 1
 local headerPool = {} -- [tabId] = { btn1, btn2, ... }
 
+function CLIAlts:SaveWindowPosition(frame)
+    frame = frame or mainFrame
+    if not frame then return end
+    if not CLIAltsDB then return end
+    CLIAltsDB.settings = CLIAltsDB.settings or {}
+
+    local point, _, relPoint, x, y = frame:GetPoint(1)
+    if point and x and y then
+        CLIAltsDB.settings.windowPos = {
+            point = point,
+            relPoint = relPoint or point,
+            x = math.floor(x + 0.5),
+            y = math.floor(y + 0.5),
+        }
+    end
+end
+
+function CLIAlts:RestoreWindowPosition(frame)
+    frame = frame or mainFrame
+    if not frame then return end
+
+    frame:ClearAllPoints()
+    local pos = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.windowPos
+    if pos and pos.point and type(pos.x) == "number" and type(pos.y) == "number" then
+        frame:SetPoint(pos.point, UIParent, pos.relPoint or pos.point, pos.x, pos.y)
+    else
+        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    end
+end
+
 function CLIAlts:CreateMainFrame()
     if mainFrame then return mainFrame end
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:Hide()
     frame:SetSize(780, 520)
-    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -168,8 +197,14 @@ function CLIAlts:CreateMainFrame()
     frame:SetFrameStrata("HIGH")
     tinsert(UISpecialFrames, "CLIAltsMainFrame")
 
+    -- Restore saved window position or default to center
+    self:RestoreWindowPosition(frame)
+
     frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        CLIAlts:SaveWindowPosition(self)
+    end)
 
     frame:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",

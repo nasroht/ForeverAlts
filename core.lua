@@ -222,11 +222,14 @@ local function SlashHandler(msg)
         CLIAlts:Print(string.format("Minimap icon is now %s.", state))
 
     elseif cmd == "reset" then
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.windowPos = nil
+        end
         if CLIAltsMainFrame then
             CLIAltsMainFrame:ClearAllPoints()
             CLIAltsMainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-            CLIAlts:Print("Window position reset to center.")
         end
+        CLIAlts:Print("Window position reset to center.")
 
     elseif cmd == "gold" then
         local summary = CLIAlts:GetAccountSummary()
