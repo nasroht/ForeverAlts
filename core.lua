@@ -29,6 +29,7 @@ local function SafeAfter(delay, callback)
         end
     end)
 end
+CLIAlts.SafeAfter = SafeAfter
 
 -- ----------------------------------------------------------------------------
 -- Event Handler Frame
@@ -66,6 +67,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         local loaded = (arg1 or ""):lower()
         if not arg1 or loaded == (addonName or ""):lower() or loaded == "clialts" then
             CLIAlts:InitDB()
+            CLIAlts:CacheCurrentPlayer()
             CLIAlts:CreateMinimapButton()
             CLIAlts:CreateMainFrame()
             CLIAlts:ApplyTheme()
@@ -73,13 +75,14 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
 
     elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         CLIAlts:InitDB()
+        CLIAlts:CacheCurrentPlayer()
         CLIAlts:CreateMinimapButton()
         CLIAlts:CreateMainFrame()
         CLIAlts:ApplyTheme()
         CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
 
         -- Immediate snapshot
-        local char = CLIAlts:CollectCurrentCharacter()
+        local char = CLIAlts:CollectCurrentCharacter(false, true)
         if char and not self.hasAnnounced then
             self.hasAnnounced = true
             local coloredName = CLIAlts:ColorizePlayerName(char.name, char.classFile)
@@ -88,34 +91,26 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
                 coloredName, char.level or 1, CLIAlts:FormatRaceClass(char), summary.totalAlts or 1))
         end
 
-        -- Delayed sync after 1.5s and 3.0s to ensure server-synced money, XP, and resting state
+        -- Delayed sync after 1.5s, 3.0s, and 5.0s to ensure server-synced money, XP, and resting state
         SafeAfter(1.5, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
             CLIAlts:CollectCurrentCharacter()
-            if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-                CLIAlts:Render()
-            end
+            CLIAlts:RequestRender()
         end)
 
         SafeAfter(3.0, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
             CLIAlts:CollectCurrentCharacter()
-            if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-                CLIAlts:Render()
-            end
+            CLIAlts:RequestRender()
         end)
 
         SafeAfter(5.0, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
             CLIAlts:CollectCurrentCharacter()
-            if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-                CLIAlts:Render()
-            end
+            CLIAlts:RequestRender()
         end)
 
-        if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-            CLIAlts:Render()
-        end
+        CLIAlts:RequestRender()
 
     elseif event == "PLAYER_LOGOUT" then
         -- Final snapshot before logout
@@ -130,56 +125,31 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     elseif event == "LOGOUT_CANCEL" then
         -- Logout cancelled
         CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
-        CLIAlts:CollectCurrentCharacter(false)
+        CLIAlts:CollectCurrentCharacter(false, true)
 
     elseif event == "PLAYER_UPDATE_RESTING" then
         CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
         CLIAlts:CollectCurrentCharacter(false)
-        if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-            CLIAlts:Render()
-        end
+        CLIAlts:RequestRender()
 
     elseif event == "PLAYER_XP_UPDATE" or event == "UPDATE_EXHAUSTION" or event == "PLAYER_LEVEL_UP" then
         CLIAlts:CollectCurrentCharacter()
-        if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-            CLIAlts:Render()
-        end
+        CLIAlts:RequestRender()
 
     elseif event == "PLAYER_MONEY" then
         CLIAlts:CollectCurrentCharacter()
-        if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-            CLIAlts:Render()
-        end
+        CLIAlts:RequestRender()
 
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" or event == "ZONE_CHANGED_INDOORS" then
         CLIAlts:CollectCurrentCharacter()
         SafeAfter(1.0, function()
-            CLIAlts:CollectCurrentCharacter()
-            if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-                CLIAlts:Render()
-            end
+            CLIAlts:CollectCurrentCharacter(false, true)
+            CLIAlts:RequestRender()
         end)
 
     elseif event == "SKILL_LINES_CHANGED" or event == "SPELLS_CHANGED" or event == "CHAT_MSG_SKILL" or event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "CRAFT_SHOW" or event == "CRAFT_UPDATE" then
         CLIAlts:CollectCurrentCharacter()
-        if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-            CLIAlts:Render()
-        end
-    end
-end)
-
--- ----------------------------------------------------------------------------
--- Periodic Refresh Ticker (Every 60s to keep offline resting countdowns fresh)
--- ----------------------------------------------------------------------------
-local tickerElapsed = 0
-local tickerFrame = CreateFrame("Frame")
-tickerFrame:SetScript("OnUpdate", function(self, elapsed)
-    tickerElapsed = tickerElapsed + elapsed
-    if tickerElapsed >= 60 then
-        tickerElapsed = 0
-        if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
-            CLIAlts:Render()
-        end
+        CLIAlts:RequestRender()
     end
 end)
 

@@ -287,9 +287,29 @@ function CLIAlts:InitDB()
 end
 
 -- ----------------------------------------------------------------------------
--- Helper: Primary Name & Secondary Name (WoW Forever Support)
+-- Timer Helper
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetPlayerNames()
+local function SafeAfter(delay, callback)
+    if C_Timer and C_Timer.After then
+        C_Timer.After(delay, callback)
+        return
+    end
+    local timerFrame = CreateFrame("Frame")
+    local elapsed = 0
+    timerFrame:SetScript("OnUpdate", function(self, dt)
+        elapsed = elapsed + dt
+        if elapsed >= delay then
+            self:SetScript("OnUpdate", nil)
+            callback()
+        end
+    end)
+end
+CLIAlts.SafeAfter = SafeAfter
+
+-- ----------------------------------------------------------------------------
+-- Helper: Primary Name & Secondary Name (WoW Forever Support & Identity Cache)
+-- ----------------------------------------------------------------------------
+function CLIAlts:CacheCurrentPlayer()
     local primaryName, secondaryName = nil, nil
 
     -- 1. In WoW Forever, UnitName("player") returns (primaryName, secondaryName)
@@ -341,7 +361,46 @@ function CLIAlts:GetPlayerNames()
         fullName = primaryName .. " " .. secondaryName
     end
 
+    if primaryName and primaryName ~= "Unknown" and primaryName ~= "" then
+        self.curPlayerPrimary = primaryName
+        self.curPlayerSecondary = secondaryName
+        self.curPlayerFullName = fullName
+
+        local realm = (GetRealmName and GetRealmName()) or ""
+        if realm == "" then realm = "Forever" end
+        self.curPlayerRealm = realm
+        self.curPlayerKey = self:GetCharacterKey(fullName, realm)
+    end
+
     return primaryName, secondaryName, fullName
+end
+
+function CLIAlts:GetPlayerNames(force)
+    if not force and self.curPlayerPrimary and self.curPlayerFullName then
+        return self.curPlayerPrimary, self.curPlayerSecondary, self.curPlayerFullName
+    end
+    return self:CacheCurrentPlayer()
+end
+
+function CLIAlts:IsCurrentPlayer(char)
+    if not char then return false end
+    if not self.curPlayerFullName then
+        self:CacheCurrentPlayer()
+    end
+    local curFull = self.curPlayerFullName
+    local curPrim = self.curPlayerPrimary
+
+    if curFull then
+        if char.fullName == curFull or char.name == curFull or char.key == curFull then
+            return true
+        end
+    end
+    if curPrim then
+        if char.primaryName == curPrim or char.name == curPrim or char.key == curPrim then
+            return true
+        end
+    end
+    return false
 end
 
 function CLIAlts:GetCharacterKey(name, realm)
@@ -444,10 +503,34 @@ function CLIAlts:CollectProfessions()
 end
 
 -- ----------------------------------------------------------------------------
--- Data Collection: Current Logged-in Character
+-- Data Collection: Current Logged-in Character (Throttled to 1s)
 -- ----------------------------------------------------------------------------
-function CLIAlts:CollectCurrentCharacter(isLogout)
+local lastCollectTime = 0
+local cachedCurrentChar = nil
+local collectPending = false
+
+function CLIAlts:CollectCurrentCharacter(isLogout, force)
     self:InitDB()
+
+    local nowTime = (GetTime and GetTime()) or time()
+    if not isLogout and not force and cachedCurrentChar and (nowTime - lastCollectTime < 1.0) then
+        if not collectPending then
+            collectPending = true
+            local safeAfter = self.SafeAfter or (C_Timer and C_Timer.After)
+            if safeAfter then
+                safeAfter(1.0, function()
+                    collectPending = false
+                    CLIAlts:CollectCurrentCharacter(false, true)
+                    if CLIAlts.RequestRender then
+                        CLIAlts:RequestRender()
+                    end
+                end)
+            end
+        end
+        return cachedCurrentChar
+    end
+
+    lastCollectTime = nowTime
 
     local primaryName, secondaryName, fullName = self:GetPlayerNames()
     if not primaryName or primaryName == "" or primaryName == "Unknown" then
@@ -562,6 +645,10 @@ function CLIAlts:CollectCurrentCharacter(isLogout)
         CLIAltsDB.characters = {}
     end
     CLIAltsDB.characters[charKey] = charData
+    cachedCurrentChar = charData
+    if self.InvalidateRestedCache then
+        self:InvalidateRestedCache()
+    end
 
     return charData
 end
@@ -616,13 +703,7 @@ function CLIAlts:IsCharacterResting(char)
     if not char then return false end
 
     -- 1. If currently logged in as this character, live IsResting() is authoritative
-    local curPrimary, curSecondary, curFull = self:GetPlayerNames()
-    local isCurrent = (char.fullName and char.fullName == curFull)
-        or (char.name and char.name == curFull)
-        or (char.primaryName and char.primaryName == curPrimary)
-        or (char.name and char.name == curPrimary)
-
-    if isCurrent then
+    if self:IsCurrentPlayer(char) then
         return (IsResting and IsResting() and true or false)
     end
 
@@ -677,11 +758,7 @@ function CLIAlts:GetLevelProgressData(char)
     local maxXP = char.maxXP or 0
 
     -- If currently logged in as this character, read live client values
-    local curPrimary, curSecondary, curFull = self:GetPlayerNames()
-    local isCurrent = (char.fullName and char.fullName == curFull)
-        or (char.name and char.name == curFull)
-        or (char.primaryName and char.primaryName == curPrimary)
-        or (char.name and char.name == curPrimary)
+    local isCurrent = self:IsCurrentPlayer(char)
 
     if isCurrent and not isMaxLevel then
         if UnitXP and UnitXPMax then
@@ -737,10 +814,29 @@ function CLIAlts:GetLevelProgressData(char)
 end
 
 -- ----------------------------------------------------------------------------
--- Rested XP Calculator & Offline Projection (WoW Forever Enhanced)
+-- Rested XP Calculator & Offline Projection (With In-Memory Render Cache)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetRestedData(char)
+local RESTED_CACHE_TTL = 1.0
+local restedDataCache = {}
+
+function CLIAlts:InvalidateRestedCache()
+    for k in pairs(restedDataCache) do
+        restedDataCache[k] = nil
+    end
+end
+
+function CLIAlts:GetRestedData(char, force)
     if not char then return nil end
+
+    local charKey = char.key or char.fullName or char.name or tostring(char)
+    local nowTime = (GetTime and GetTime()) or time()
+
+    if not force and restedDataCache[charKey] then
+        local entry = restedDataCache[charKey]
+        if entry.time and (nowTime - entry.time < RESTED_CACHE_TTL) then
+            return entry.data
+        end
+    end
 
     local currentLevel = char.level or 1
     local maxXP = char.maxXP or 0
@@ -760,7 +856,7 @@ function CLIAlts:GetRestedData(char)
 
     -- Max level characters
     if currentLevel >= maxLevel then
-        return {
+        local maxData = {
             isMaxLevel = true,
             currentRested = 0,
             maxRested = 0,
@@ -778,16 +874,14 @@ function CLIAlts:GetRestedData(char)
             isResting = false,
             ratePerSec = 0,
         }
+        restedDataCache[charKey] = { time = nowTime, data = maxData }
+        return maxData
     end
 
     local maxRested = (maxXP > 0) and (maxXP * capMult) or 0
 
     -- Check if currently logged in as this character
-    local isCurrentPlayer = false
-    local curPrimary, curSecondary, curFull = self:GetPlayerNames()
-    if (char.fullName and char.fullName == curFull) or (char.name == curFull) or (char.primaryName and char.primaryName == curPrimary) or (char.name == curPrimary) then
-        isCurrentPlayer = true
-    end
+    local isCurrentPlayer = self:IsCurrentPlayer(char)
 
     -- Robust resting determination (evaluated BEFORE rate calculation)
     local isResting = self:IsCharacterResting(char)
@@ -871,7 +965,7 @@ function CLIAlts:GetRestedData(char)
     -- Rested ratio toward cap (0.0 to 1.0)
     local ratio = (maxRested > 0) and math.min(1.0, currentRested / maxRested) or 0
 
-    return {
+    local result = {
         isMaxLevel = false,
         currentRested = math.floor(currentRested),
         maxRested = math.floor(maxRested),
@@ -890,6 +984,9 @@ function CLIAlts:GetRestedData(char)
         ratePerSec = ratePerSec,
         isEstimate = isEstimate,
     }
+
+    restedDataCache[charKey] = { time = nowTime, data = result }
+    return result
 end
 
 -- ----------------------------------------------------------------------------
@@ -1059,8 +1156,16 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc)
     end
 
     sortBy = sortBy or CLIAltsDB.settings.sortBy or "level"
-    if sortAsc == nil then
-        sortAsc = CLIAltsDB.settings.sortAsc or false
+    -- Precompute sort keys once per character to avoid expensive repeated calculations in comparator
+    if sortBy == "rested" then
+        for _, char in ipairs(list) do
+            local r = self:GetRestedData(char)
+            char._sortRested = (r and r.percent) or 0
+        end
+    elseif sortBy == "xp" or sortBy == "progress" then
+        for _, char in ipairs(list) do
+            char._sortProgress = (char.maxXP and char.maxXP > 0) and ((char.xp or 0) / char.maxXP) or 0
+        end
     end
 
     table.sort(list, function(a, b)
@@ -1069,17 +1174,18 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc)
         elseif sortBy == "gold" then
             if sortAsc then return (a.money or 0) < (b.money or 0) else return (a.money or 0) > (b.money or 0) end
         elseif sortBy == "xp" or sortBy == "progress" then
-            local pA = (a.maxXP and a.maxXP > 0) and ((a.xp or 0) / a.maxXP) or 0
-            local pB = (b.maxXP and b.maxXP > 0) and ((b.xp or 0) / b.maxXP) or 0
+            local pA = a._sortProgress or 0
+            local pB = b._sortProgress or 0
             if pA == pB then
                 return (a.level or 0) > (b.level or 0)
             end
             if sortAsc then return pA < pB else return pA > pB end
         elseif sortBy == "rested" then
-            local rA = CLIAlts:GetRestedData(a)
-            local rB = CLIAlts:GetRestedData(b)
-            local pA = rA and rA.percent or 0
-            local pB = rB and rB.percent or 0
+            local pA = a._sortRested or 0
+            local pB = b._sortRested or 0
+            if pA == pB then
+                return (a.level or 0) > (b.level or 0)
+            end
             if sortAsc then return pA < pB else return pA > pB end
         else -- default "level"
             local lvlA = a.level or 0
@@ -1090,6 +1196,12 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc)
             if sortAsc then return lvlA < lvlB else return lvlA > lvlB end
         end
     end)
+
+    -- Clean up temporary sort keys from character objects
+    for _, char in ipairs(list) do
+        char._sortRested = nil
+        char._sortProgress = nil
+    end
 
     return list
 end

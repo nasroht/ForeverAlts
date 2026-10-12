@@ -911,13 +911,57 @@ function CLIAlts:CreateMainFrame()
     botAscii:SetText(BORDER_LINE)
     frame.botAscii = botAscii
 
+    -- 60s Periodic Refresh Ticker: Runs ONLY while mainFrame is visible
+    local tickerElapsed = 0
+    frame:SetScript("OnUpdate", function(self, elapsed)
+        tickerElapsed = tickerElapsed + (elapsed or 0)
+        if tickerElapsed >= 60 then
+            tickerElapsed = 0
+            CLIAlts:Render()
+        end
+    end)
+    frame:SetScript("OnShow", function(self)
+        tickerElapsed = 0
+        if renderDirty then
+            CLIAlts:Render()
+        end
+    end)
+
     return frame
 end
 
 -- ----------------------------------------------------------------------------
--- Terminal Render Engine
+-- Terminal Render Engine (Coalesced with Dirty Flag)
 -- ----------------------------------------------------------------------------
+local renderDirty = false
+local renderTimerPending = false
+
+function CLIAlts:RequestRender()
+    renderDirty = true
+    if not mainFrame or not mainFrame:IsShown() then
+        return
+    end
+    if not renderTimerPending then
+        renderTimerPending = true
+        local safeAfter = self.SafeAfter or (C_Timer and C_Timer.After)
+        if safeAfter then
+            safeAfter(0.1, function()
+                renderTimerPending = false
+                if renderDirty and mainFrame and mainFrame:IsShown() then
+                    renderDirty = false
+                    CLIAlts:Render()
+                end
+            end)
+        else
+            renderTimerPending = false
+            renderDirty = false
+            CLIAlts:Render()
+        end
+    end
+end
+
 function CLIAlts:Render()
+    renderDirty = false
     if not mainFrame or not mainFrame:IsShown() then return end
 
     local t = self:GetTheme()
@@ -943,9 +987,9 @@ function CLIAlts:Render()
     local summary = self:GetAccountSummary()
     local totalGold = summary.totalGold or 0
     local goldOnly = math.floor(totalGold / 10000)
-    local curPrimary, curSecondary, curFull = self:GetPlayerNames()
+    local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
     mainFrame.statusBarText:SetText(string.format("SYSTEM: WOW FOREVER | ACTIVE: %s | TRACKED: %d ALTS | WEALTH: %sg",
-        curFull or curPrimary or "Unknown", summary.totalAlts or 0, self:FormatNumber(goldOnly)))
+        curFull or "Unknown", summary.totalAlts or 0, self:FormatNumber(goldOnly)))
 
     -- Render Table Header (Monospace Text)
     mainFrame.tableHeaderString:SetText(self:BuildHeaderLine(activeTab, t))
