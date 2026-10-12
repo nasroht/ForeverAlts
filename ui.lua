@@ -485,9 +485,13 @@ function CLIAlts:CreateMainFrame()
 
                 local rested = CLIAlts:GetRestedData(self.charData)
                 if rested and not rested.isMaxLevel then
-                    GameTooltip:AddLine(string.format("Rested Pool: |cffffffff%s XP|r (%d%% of level, %s)",
-                        CLIAlts:FormatNumber(rested.currentRested), rested.percent, rested.statusStr), 0.8, 0.8, 0.8)
+                    local est = rested.isEstimate and "~" or ""
+                    GameTooltip:AddLine(string.format("Rested Pool: |cffffffff%s%s XP|r (%s%d%% of level, %s)",
+                        est, CLIAlts:FormatNumber(rested.currentRested), est, rested.percent, rested.statusStr), 0.8, 0.8, 0.8)
                     GameTooltip:AddLine(string.format("Time to Capped: |cffffffff%s|r (%s)", rested.timeLeftStr, rested.fullDate), 0.8, 0.8, 0.8)
+                    if rested.isEstimate then
+                        GameTooltip:AddLine("|cffffaa00* Rested values are estimated (~disconnect / crash)|r", 1, 0.8, 0)
+                    end
                 end
 
                 GameTooltip:AddLine(string.format("Gold: %s", CLIAlts:FormatMoney(self.charData.money, true)), 1, 1, 1)
@@ -925,7 +929,8 @@ function CLIAlts:Render()
 
                 -- Col 7: RESTED STATUS & POOL %
                 if rested and not rested.isMaxLevel then
-                    row.col7:SetText(string.format("%s %d%%", rested.statusStr, rested.percent))
+                    local est = rested.isEstimate and "~" or ""
+                    row.col7:SetText(string.format("%s %s%d%%", rested.statusStr, est, rested.percent))
                 else
                     row.col7:SetText("|cff888888--- |r")
                 end
@@ -959,9 +964,10 @@ function CLIAlts:Render()
                 row.pBar:SetPoint("LEFT", row, "LEFT", 332, 0)
 
                 if rested and not rested.isMaxLevel then
-                    row.col4:SetText(string.format("%s / %s", self:FormatNumber(rested.currentRested), self:FormatNumber(rested.maxRested)))
+                    local est = rested.isEstimate and "~" or ""
+                    row.col4:SetText(string.format("%s%s / %s", est, self:FormatNumber(rested.currentRested), self:FormatNumber(rested.maxRested)))
                     local restRatio = (rested.maxRested > 0) and (rested.currentRested / rested.maxRested) or 0
-                    self:UpdateRowProgressBar(row, restRatio, string.format("%3d%%", rested.percent), t.primary[1], t.primary[2], t.primary[3], false)
+                    self:UpdateRowProgressBar(row, restRatio, string.format("%s%2d%%", est, rested.percent), t.primary[1], t.primary[2], t.primary[3], false)
                     row.col6:SetText(rested.statusStr)
                     row.col7:SetText(rested.timeLeftStr)
                     row.col8:SetText(rested.fullDate)
@@ -1172,13 +1178,17 @@ function CLIAlts:ShowDossierPopup(char)
     table.insert(lines, "| RESTED EXPERIENCE (WoW Forever):")
 
     if rested and not rested.isMaxLevel then
+        local est = rested.isEstimate and "~" or ""
         local restModeStr = rested.isResting and "+5.0% every 8h (Resting)" or "+1.25% every 8h (Wilderness)"
-        table.insert(lines, string.format("| Rested Points:  |cffffffff%s / %s XP|r (%d%% of Level)", self:FormatNumber(rested.currentRested), self:FormatNumber(rested.maxRested), rested.percent))
+        table.insert(lines, string.format("| Rested Points:  |cffffffff%s%s / %s XP|r (%s%d%% of Level)", est, self:FormatNumber(rested.currentRested), self:FormatNumber(rested.maxRested), est, rested.percent))
         table.insert(lines, string.format("| Rest Status:    %s (%s | Perk: R%d/5)", rested.statusStr, restModeStr, rested.perkRank))
-        table.insert(lines, string.format("| Accumulation:   |cffffffff%s XP/hr|r (+%d%% speed bonus)", self:FormatNumber(math.floor((rested.ratePerSec or 0) * 3600)), rested.perkRank * 4))
-        table.insert(lines, string.format("| Progress Bar:   %s%s|r %d%%", t.barFill, rested.barStr, rested.percent))
+        table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r (+%d%% speed bonus)", est, self:FormatNumber(math.floor((rested.ratePerSec or 0) * 3600)), rested.perkRank * 4))
+        table.insert(lines, string.format("| Progress Bar:   %s%s|r %s%d%%", t.barFill, rested.barStr, est, rested.percent))
         table.insert(lines, string.format("| Time to %d%%:   |cffffffff%s|r", rested.maxPercent or 150, rested.timeLeftStr))
         table.insert(lines, string.format("| Projected Date: |cffffffff%s|r", rested.fullDate))
+        if rested.isEstimate then
+            table.insert(lines, "| Note:           |cffffaa00Estimated projection (~disconnect / crash)|r")
+        end
     else
         table.insert(lines, "| Status:         |cff888888MAX LEVEL (No Rested Required)|r")
     end

@@ -14,8 +14,8 @@ _G["Nasalts"] = CLIAlts
 -- Constants & Reference Tables
 -- ----------------------------------------------------------------------------
 CLIAlts.VERSION = "1.0.0"
-CLIAlts.DB_VERSION = 2
-local CURRENT_DB_VERSION = 2
+CLIAlts.DB_VERSION = 3
+local CURRENT_DB_VERSION = 3
 
 -- Fallback RAID_CLASS_COLORS if not present in client
 local FALLBACK_CLASS_COLORS = {
@@ -173,13 +173,11 @@ function CLIAlts:InitDB()
             char.fullName = cleanKey
             char.name = cleanKey
 
-            -- Repair isResting & loggedOutInRestZone if location indicates an inn, camp, or resting zone
-            if self:IsLocationResting(char.location) then
-                char.isResting = true
-                char.loggedOutInRestZone = true
-            elseif char.isResting == true and char.loggedOutInRestZone == nil then
-                char.loggedOutInRestZone = true
+            -- Initialize cleanLogout for pre-existing character records
+            if char.cleanLogout == nil then
+                char.cleanLogout = true
             end
+
             -- Ensure fallback maxXP is populated if 0
             if (not char.maxXP or char.maxXP <= 0) and char.level and char.level < 60 then
                 char.maxXP = self.XP_TABLE[char.level] or (char.level * 1000)
@@ -424,19 +422,9 @@ function CLIAlts:CollectCurrentCharacter(isLogout)
         location = existing.location
     end
 
-    -- Robust resting determination for logout / session tracking
+    -- Trust only IsResting() at logout and live gameplay without fuzzy location matching
     local isResting = liveResting
-    if not isResting then
-        if self.isPlayerResting == true then
-            isResting = true
-        elseif self:IsLocationResting(location) then
-            isResting = true
-        elseif isLogout and existing and existing.isResting and (location == (existing.location or "")) then
-            isResting = true
-        end
-    else
-        self.isPlayerResting = true
-    end
+    local cleanLogout = (isLogout == true)
 
     local professions = self:CollectProfessions()
     local hasNewPrimary = (professions and professions.primary and #professions.primary > 0)
@@ -472,6 +460,7 @@ function CLIAlts:CollectCurrentCharacter(isLogout)
         restedXP = restedXP,
         isResting = isResting,
         loggedOutInRestZone = isResting,
+        cleanLogout = cleanLogout,
         money = money,
         location = location,
         professions = professions,
@@ -544,26 +533,15 @@ function CLIAlts:IsCharacterResting(char)
         or (char.name and char.name == curPrimary)
 
     if isCurrent then
-        if IsResting and IsResting() then
-            return true
-        end
-        if self.isPlayerResting == true then
-            return true
-        end
+        return (IsResting and IsResting() and true or false)
     end
 
-    -- 2. Explicit logged-out resting flag recorded at logout
+    -- 2. Explicit resting flag recorded at logout (trust only what client reported)
     if char.loggedOutInRestZone ~= nil then
-        if char.loggedOutInRestZone == true then
-            return true
-        end
-    elseif char.isResting == true then
-        return true
+        return (char.loggedOutInRestZone == true)
     end
-
-    -- 3. Location string pattern match (inn, tavern, city, camp, tent)
-    if self:IsLocationResting(char.location) then
-        return true
+    if char.isResting ~= nil then
+        return (char.isResting == true)
     end
 
     return false
@@ -777,6 +755,19 @@ function CLIAlts:GetRestedData(char)
         fullDate = date("%b %d, %H:%M", now + timeToFull)
     end
 
+    -- If alt experienced an unclean logout (disconnect or crash), flag projection as estimated
+    local isEstimate = (not isCurrentPlayer and char.cleanLogout == false)
+    if isEstimate then
+        if isFull then
+            timeLeftStr = string.format("~FULL (%d%%)", maxPercent)
+        else
+            timeLeftStr = "~" .. timeLeftStr
+            if fullDate ~= "N/A" and fullDate ~= "Ready Now" then
+                fullDate = "~" .. fullDate
+            end
+        end
+    end
+
     -- Status string
     local statusStr
     if isFull then
@@ -813,6 +804,7 @@ function CLIAlts:GetRestedData(char)
         barStr = barStr,
         isResting = isResting,
         ratePerSec = ratePerSec,
+        isEstimate = isEstimate,
     }
 end
 
