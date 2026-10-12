@@ -372,7 +372,14 @@ local function FmtETA(char, t)
     local rested = CLIAlts:GetRestedData(char)
     if not rested then return CLIAlts:Pad("---", 7, "RIGHT", "666666") end
     if rested.isMaxLevel then return CLIAlts:Pad("MAX", 7, "RIGHT", "888888") end
-    if rested.isFull then return CLIAlts:Pad("FULL", 7, "RIGHT", t.highlightHex) end
+    if rested.isFull then
+        local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(char)
+        if wastedSec and wastedSec > 3600 then
+            return CLIAlts:Pad("+" .. (timeStr or "1h"), 7, "RIGHT", "ff5555")
+        else
+            return CLIAlts:Pad("FULL", 7, "RIGHT", t.highlightHex)
+        end
+    end
 
     local s = rested.timeLeftStr or "---"
     return CLIAlts:Pad(s, 7, "RIGHT", t.dimHex)
@@ -491,6 +498,56 @@ local function FmtLocation(char, t)
     return CLIAlts:Pad(loc, 23, "LEFT", t.dimHex)
 end
 
+-- Tab 5 Cooldowns & Lockouts Formatters
+local function FmtTradeCooldowns(char, t)
+    local cds = char.tradeCooldowns
+    if not cds or not next(cds) then
+        return CLIAlts:Pad("NO COOLDOWNS", 25, "LEFT", "666666")
+    end
+    local parts = {}
+    local now = time()
+    for name, readyAt in pairs(cds) do
+        local short = name:gsub("^Transmute: ", "Xm:"):gsub("^Refined ", "")
+        short = short:sub(1, 9)
+        local rem = readyAt - now
+        if rem <= 0 then
+            table.insert(parts, string.format("|cff00ff66%s:RDY|r", short))
+        else
+            local h = math.floor(rem / 3600)
+            local m = math.floor((rem % 3600) / 60)
+            local timStr = (h > 0) and string.format("%dh", h) or string.format("%dm", m)
+            table.insert(parts, string.format("%s:%s", short, timStr))
+        end
+    end
+    if #parts == 0 then return CLIAlts:Pad("READY", 25, "LEFT", "00ff66") end
+    local str = table.concat(parts, ", ")
+    return CLIAlts:Pad(str, 25, "LEFT", t.primaryHex)
+end
+
+local function FmtRaidLocks(char, t)
+    local locks = char.lockouts
+    if not locks or not next(locks) then
+        return CLIAlts:Pad("NO SAVED LOCKS", 30, "LEFT", "666666")
+    end
+    local parts = {}
+    local now = time()
+    for name, data in pairs(locks) do
+        local resetTime = (type(data) == "table" and data.resetTime) or data
+        local rem = (resetTime or now) - now
+        if rem > 0 then
+            local short = name:gsub("^Molten Core", "MC"):gsub("^Blackwing Lair", "BWL"):gsub("^Onyxia's Lair", "Ony"):gsub("^Zul'Gurub", "ZG"):gsub("^Ruins of Ahn'Qiraj", "AQ20"):gsub("^Temple of Ahn'Qiraj", "AQ40"):gsub("^Naxxramas", "Naxx")
+            short = short:sub(1, 8)
+            local d = math.floor(rem / 86400)
+            local h = math.floor((rem % 86400) / 3600)
+            local tStr = (d > 0) and string.format("%dd", d) or string.format("%dh", h)
+            table.insert(parts, string.format("%s:%s", short, tStr))
+        end
+    end
+    if #parts == 0 then return CLIAlts:Pad("NO ACTIVE LOCKS", 30, "LEFT", "666666") end
+    local str = table.concat(parts, ", ")
+    return CLIAlts:Pad(str, 30, "LEFT", t.dimHex)
+end
+
 -- ----------------------------------------------------------------------------
 -- Data-Driven Columns Table (COLS) - Exactly 85 Characters Per Tab
 -- ----------------------------------------------------------------------------
@@ -513,7 +570,7 @@ local COLS = {
         { key = "restBar",   title = "RESTED PROGRESS", w = 17, align = "LEFT",   fmt = FmtRestedBar },
         { key = "rate",      title = "RATE",            w = 8,  align = "RIGHT",  fmt = FmtRate },
         { key = "state",     title = "STATE",           w = 7,  align = "CENTER", fmt = FmtState },
-        { key = "eta",       title = "ETA",             w = 7,  align = "RIGHT",  fmt = FmtETA },
+        { key = "eta",       title = "ETA/WST",         w = 7,  align = "RIGHT",  sort = "waste",  fmt = FmtETA },
     },
     [3] = { -- PROFESSIONS (Width = 85 chars)
         { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
@@ -531,6 +588,13 @@ local COLS = {
         { key = "share",     title = "SHARE",           w = 8,  align = "RIGHT",  fmt = FmtWealthShare },
         { key = "bar",       title = "WEALTH SHARE",    w = 14, align = "LEFT",   fmt = FmtWealthBar },
         { key = "location",  title = "LAST LOCATION",   w = 23, align = "LEFT",   fmt = FmtLocation },
+    },
+    [5] = { -- COOLDOWNS & SAVED LOCKS (Width = 85 chars)
+        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS", w = 25, align = "LEFT",   fmt = FmtTradeCooldowns },
+        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 30, align = "LEFT", fmt = FmtRaidLocks },
     },
 }
 
@@ -565,7 +629,7 @@ function CLIAlts:CreateMainFrame()
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:Hide()
-    frame:SetSize(780, 520)
+    frame:SetSize(780, 535)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -686,14 +750,15 @@ function CLIAlts:CreateMainFrame()
     -- Retro Tabs
     local tabs = {
         { id = 1, text = "[ ALTS OVERVIEW ]" },
-        { id = 2, text = "[ RESTED XP MONITOR ]" },
+        { id = 2, text = "[ RESTED XP ]" },
         { id = 3, text = "[ PROFESSIONS ]" },
-        { id = 4, text = "[ ECONOMY / WEALTH ]" },
+        { id = 4, text = "[ ECONOMY ]" },
+        { id = 5, text = "[ COOLDOWNS ]" },
     }
     frame.tabButtons = {}
     local prevTab = nil
     for _, tabData in ipairs(tabs) do
-        local tabBtn = CreateRetroButton(frame, tabData.text, 170, 22, function()
+        local tabBtn = CreateRetroButton(frame, tabData.text, 142, 22, function()
             CLIAltsDB.settings.activeTab = tabData.id
             currentPage = 1
             CLIAlts:Render()
@@ -701,7 +766,7 @@ function CLIAlts:CreateMainFrame()
         if not prevTab then
             tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -80)
         else
-            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 8, 0)
+            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 7, 0)
         end
         tabBtn.tabId = tabData.id
         tabBtn.baseText = tabData.text
@@ -735,14 +800,7 @@ function CLIAlts:CreateMainFrame()
         btn:EnableMouse(true)
         btn:SetScript("OnClick", function(self)
             if self.sortKey then
-                if CLIAltsDB.settings.sortBy == self.sortKey then
-                    CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
-                else
-                    CLIAltsDB.settings.sortBy = self.sortKey
-                    CLIAltsDB.settings.sortAsc = false
-                end
-                PlayRetroSound()
-                CLIAlts:Render()
+                CLIAlts:ToggleSortKey(self.sortKey)
             end
         end)
         btn:SetScript("OnEnter", function(self)
@@ -881,7 +939,7 @@ function CLIAlts:CreateMainFrame()
             CLIAlts:Render()
         end
     end)
-    btnPrev:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 22)
+    btnPrev:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 68)
     frame.btnPrev = btnPrev
 
     local btnNext = CreateRetroButton(frame, "[NEXT >>]", 75, 18, function()
@@ -901,13 +959,85 @@ function CLIAlts:CreateMainFrame()
 
     local statusTip = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(statusTip, fontSize - 1)
-    statusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 24)
+    statusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 70)
     statusTip:SetText("|cff888888[Left-Click: Dossier | Right-Click: Delete | Click Col: Sort]|r")
     frame.statusTip = statusTip
 
+    -- Command Prompt Separator Line
+    local promptSepAscii = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(promptSepAscii, fontSize)
+    promptSepAscii:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 50)
+    promptSepAscii:SetText(BORDER_LINE)
+    frame.promptSepAscii = promptSepAscii
+
+    -- Interactive Command Prompt (EditBox with > prompt)
+    local promptLabel = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(promptLabel, fontSize, "BOLD")
+    promptLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 30)
+    promptLabel:SetText("> ")
+    frame.promptLabel = promptLabel
+
+    local promptBox = CreateFrame("EditBox", "CLIAltsPromptEditBox", frame)
+    self:SetWidgetFont(promptBox, fontSize)
+    promptBox:SetPoint("LEFT", promptLabel, "RIGHT", 2, 0)
+    promptBox:SetPoint("RIGHT", frame, "RIGHT", -18, 0)
+    promptBox:SetHeight(18)
+    promptBox:SetAutoFocus(false)
+    promptBox:EnableMouse(true)
+    promptBox:SetTextInsets(2, 2, 2, 2)
+    frame.promptBox = promptBox
+
+    local historyIndex = 0
+
+    promptBox:SetScript("OnEnterPressed", function(self)
+        local text = self:GetText() or ""
+        self:SetText("")
+        historyIndex = 0
+        CLIAlts:ExecutePromptCommand(text)
+    end)
+
+    promptBox:SetScript("OnEscapePressed", function(self)
+        self:SetText("")
+        self:ClearFocus()
+    end)
+
+    promptBox:SetScript("OnTabPressed", function(self)
+        CLIAlts:AutoCompletePrompt(self)
+    end)
+
+    promptBox:SetScript("OnArrowPressed", function(self, key)
+        local hist = (CLIAltsDB and CLIAltsDB.commandHistory) or {}
+        if #hist == 0 then return end
+        if key == "UP" then
+            if historyIndex == 0 then
+                historyIndex = #hist
+            elseif historyIndex > 1 then
+                historyIndex = historyIndex - 1
+            end
+            self:SetText(hist[historyIndex] or "")
+            self:SetCursorPosition(string.len(self:GetText()))
+        elseif key == "DOWN" then
+            if historyIndex > 0 and historyIndex < #hist then
+                historyIndex = historyIndex + 1
+                self:SetText(hist[historyIndex] or "")
+                self:SetCursorPosition(string.len(self:GetText()))
+            else
+                historyIndex = 0
+                self:SetText("")
+            end
+        end
+    end)
+
+    -- Prompt Hint & Feedback Line
+    local promptStatusTip = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(promptStatusTip, fontSize - 2)
+    promptStatusTip:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 14)
+    promptStatusTip:SetText("|cff888888[Commands: 1-5, sort <col>, filter <query>, find <text>, watch <item>, next, export, help]|r")
+    frame.promptStatusTip = promptStatusTip
+
     local botAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(botAscii, fontSize)
-    botAscii:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 6)
+    botAscii:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 2)
     botAscii:SetText(BORDER_LINE)
     frame.botAscii = botAscii
 
@@ -988,8 +1118,20 @@ function CLIAlts:Render()
     local totalGold = summary.totalGold or 0
     local goldOnly = math.floor(totalGold / 10000)
     local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
-    mainFrame.statusBarText:SetText(string.format("SYSTEM: WOW FOREVER | ACTIVE: %s | TRACKED: %d ALTS | WEALTH: %sg",
-        curFull or "Unknown", summary.totalAlts or 0, self:FormatNumber(goldOnly)))
+
+    if activeTab == 4 then
+        local spark = self:GenerateAsciiSparkline(14)
+        local d1, d7, d30 = self:GetGoldHistoryDeltas()
+        local d1Sign = d1 >= 0 and "+" or ""
+        local d7Sign = d7 >= 0 and "+" or ""
+        local d30Sign = d30 >= 0 and "+" or ""
+        mainFrame.statusBarText:SetText(string.format("WEALTH [%s] | 24H: %s%dg | 7D: %s%dg | 30D: %s%dg | TOTAL: %sg",
+            spark, d1Sign, d1, d7Sign, d7, d30Sign, d30, self:FormatNumber(goldOnly)))
+    else
+        local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
+        mainFrame.statusBarText:SetText(string.format("SYSTEM: WOW FOREVER | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
+            curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+    end
 
     -- Render Table Header (Monospace Text)
     mainFrame.tableHeaderString:SetText(self:BuildHeaderLine(activeTab, t))
@@ -1018,12 +1160,13 @@ function CLIAlts:Render()
     end
 
     -- Retrieve Sorted Characters
-    local chars = self:GetCharactersList(CLIAltsDB.settings.sortBy, CLIAltsDB.settings.sortAsc)
+    local chars = self:GetCharactersList(CLIAltsDB.settings.sortBy, CLIAltsDB.settings.sortAsc, self.activeFilter)
     totalPages = math.max(1, math.ceil(#chars / ROWS_COUNT))
     if currentPage > totalPages then currentPage = totalPages end
     if currentPage < 1 then currentPage = 1 end
 
-    mainFrame.pageText:SetText(string.format("PAGE %d OF %d (%d ALTS)", currentPage, totalPages, #chars))
+    local filterSuffix = self.activeFilter and " FILTERED" or ""
+    mainFrame.pageText:SetText(string.format("PAGE %d OF %d (%d ALTS%s)", currentPage, totalPages, #chars, filterSuffix))
     mainFrame.btnPrev:SetEnabled(currentPage > 1)
     mainFrame.btnNext:SetEnabled(currentPage < totalPages)
 
@@ -1088,6 +1231,327 @@ function CLIAlts:ApplyTheme()
         local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
         mainFrame.btnScale.label:SetText(string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)))
         mainFrame.btnScale.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+    end
+
+    if mainFrame.promptLabel then
+        mainFrame.promptLabel:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+    end
+    if mainFrame.promptBox then
+        mainFrame.promptBox:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    end
+    if mainFrame.promptSepAscii then
+        mainFrame.promptSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    end
+    if mainFrame.promptStatusTip then
+        mainFrame.promptStatusTip:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Tab Switching, Sorting & Filtering Controls
+-- ----------------------------------------------------------------------------
+function CLIAlts:ToggleSortKey(key)
+    if not key then return end
+    if CLIAltsDB and CLIAltsDB.settings then
+        if CLIAltsDB.settings.sortBy == key then
+            CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
+        else
+            CLIAltsDB.settings.sortBy = key
+            CLIAltsDB.settings.sortAsc = (key == "name" or key == "level")
+        end
+    end
+    PlayRetroSound()
+    currentPage = 1
+    self:Render()
+end
+
+function CLIAlts:SwitchTab(tabId)
+    tabId = tonumber(tabId)
+    if not tabId or tabId < 1 or tabId > 5 then return end
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.activeTab = tabId
+    end
+    currentPage = 1
+    PlayRetroSound()
+    self:Render()
+end
+
+function CLIAlts:SetFilter(filterStr)
+    if not filterStr or filterStr == "" then
+        self.activeFilter = nil
+    else
+        self.activeFilter = filterStr:match("^%s*(.-)%s*$")
+        if self.activeFilter == "" then
+            self.activeFilter = nil
+        end
+    end
+    currentPage = 1
+    self:Render()
+end
+
+function CLIAlts:SetPage(page)
+    local p = tonumber(page)
+    if p and p >= 1 and p <= (totalPages or 1) then
+        currentPage = p
+        self:Render()
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Interactive Terminal Command Prompt Methods
+-- ----------------------------------------------------------------------------
+function CLIAlts:SetPromptFeedback(msg, isError)
+    if not mainFrame or not mainFrame.promptStatusTip then return end
+    local t = self:GetTheme()
+    local color = isError and "|cffff4444" or t.highlightHex
+    mainFrame.promptStatusTip:SetText(string.format("%s>> %s|r", color, msg or ""))
+
+    local safeAfter = self.SafeAfter or (C_Timer and C_Timer.After)
+    if safeAfter then
+        safeAfter(4.0, function()
+            if mainFrame and mainFrame.promptStatusTip then
+                mainFrame.promptStatusTip:SetText("|cff888888[Commands: 1-5, sort <col>, filter <query>, find <text>, watch <item>, next, export, help]|r")
+            end
+        end)
+    end
+end
+
+function CLIAlts:ExecutePromptCommand(input)
+    if not input then return end
+    local clean = input:match("^%s*(.-)%s*$") or ""
+    if clean == "" then return end
+
+    if not CLIAltsDB.commandHistory then
+        CLIAltsDB.commandHistory = {}
+    end
+    local hist = CLIAltsDB.commandHistory
+    if hist[#hist] ~= clean then
+        table.insert(hist, clean)
+        if #hist > 50 then
+            table.remove(hist, 1)
+        end
+    end
+
+    local cmd, args = clean:match("^(%S+)%s*(.*)$")
+    if not cmd then return end
+    cmd = cmd:lower()
+    args = args and args:match("^%s*(.-)%s*$") or ""
+
+    if cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" then
+        local tNum = tonumber(cmd)
+        self:SwitchTab(tNum)
+        self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
+
+    elseif cmd == "tab" then
+        local tNum = tonumber(args)
+        if tNum and tNum >= 1 and tNum <= 5 then
+            self:SwitchTab(tNum)
+            self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
+        else
+            self:SetPromptFeedback("Usage: tab <1-5>", true)
+        end
+
+    elseif cmd == "sort" then
+        if args and args ~= "" then
+            local map = {
+                name = "name",
+                char = "name",
+                lvl = "level",
+                level = "level",
+                gold = "gold",
+                money = "gold",
+                rest = "rested",
+                rested = "rested",
+                xp = "xp",
+                exp = "xp",
+                progress = "xp",
+                waste = "waste",
+                wst = "waste",
+                fac = "name",
+                loc = "location",
+                location = "location",
+            }
+            local key = map[args:lower()] or args:lower()
+            self:ToggleSortKey(key)
+            local dir = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc) and "ASC" or "DESC"
+            self:SetPromptFeedback(string.format("Sorted by %s (%s)", key:upper(), dir))
+        else
+            self:SetPromptFeedback("Usage: sort <name|level|gold|rested|waste|xp>", true)
+        end
+
+    elseif cmd == "filter" or cmd == "find" then
+        if args and args ~= "" and args:lower() ~= "clear" then
+            self:SetFilter(args)
+            self:SetPromptFeedback(string.format("Filter applied: '%s'", args))
+        else
+            self:SetFilter(nil)
+            self:SetPromptFeedback("Filter cleared.")
+        end
+
+    elseif cmd == "clear" then
+        self:SetFilter(nil)
+        self:SetPromptFeedback("Filter cleared.")
+
+    elseif cmd == "goto" or cmd == "page" then
+        local num = tonumber(args)
+        if num and num >= 1 and num <= totalPages then
+            currentPage = num
+            self:Render()
+            self:SetPromptFeedback(string.format("Jumped to Page %d", num))
+        elseif num and num >= 1 and num <= ROWS_COUNT and rowFrames[num] and rowFrames[num].charData then
+            self:ShowDossierPopup(rowFrames[num].charData)
+            self:SetPromptFeedback(string.format("Opened Dossier: %s", rowFrames[num].charData.name or ""))
+        else
+            self:SetPromptFeedback(string.format("Usage: goto <page 1-%d or row 1-%d>", totalPages or 1, ROWS_COUNT), true)
+        end
+
+    elseif cmd == "next" then
+        self:PrintNextAlts()
+        self:SetPromptFeedback("Next recommended alts printed to chat.")
+
+    elseif cmd == "watch" then
+        if args and args ~= "" then
+            self:AddWatchItem(args)
+            self:SetPromptFeedback(string.format("Added '%s' to watchlist", args))
+            self:Render()
+        else
+            self:SetPromptFeedback("Usage: watch <Item Name or ID>", true)
+        end
+
+    elseif cmd == "unwatch" then
+        if args and args ~= "" then
+            self:RemoveWatchItem(args)
+            self:SetPromptFeedback(string.format("Removed '%s' from watchlist", args))
+            self:Render()
+        else
+            self:SetPromptFeedback("Usage: unwatch <Item Name>", true)
+        end
+
+    elseif cmd == "watchlist" then
+        self:PrintWatchlist()
+        self:SetPromptFeedback("Watchlist printed to chat.")
+
+    elseif cmd == "export" or cmd == "csv" then
+        self:ShowExportPopup()
+        self:SetPromptFeedback("CSV Export window opened.")
+
+    elseif cmd == "theme" then
+        if args and args ~= "" then
+            local map = {
+                green = "GREEN",
+                amber = "AMBER",
+                cyan = "CYAN",
+                mono = "MONO",
+                synthwave = "SYNTHWAVE",
+                dracula = "DRACULA",
+            }
+            local choice = map[args:lower()]
+            if choice then
+                CLIAltsDB.settings.theme = choice
+                self:ApplyTheme()
+                self:Render()
+                self:SetPromptFeedback(string.format("Theme set to %s", choice))
+            else
+                self:SetPromptFeedback("Themes: green, amber, cyan, mono, synthwave, dracula", true)
+            end
+        else
+            self:CycleTheme()
+            self:SetPromptFeedback(string.format("Theme cycled: %s", CLIAltsDB.settings.theme))
+        end
+
+    elseif cmd == "scale" then
+        if args and args ~= "" then
+            local cleanVal = args:gsub("%%", "")
+            local val = tonumber(cleanVal)
+            if val then
+                if val > 5 then val = val / 100 end
+                self:SetScale(val)
+                self:SetPromptFeedback(string.format("Scale set to %d%%", math.floor(val * 100 + 0.5)))
+            else
+                self:SetPromptFeedback("Usage: scale <0.7 - 1.8>", true)
+            end
+        else
+            self:CycleScale()
+            local curScale = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+            self:SetPromptFeedback(string.format("Scale: %d%%", math.floor(curScale * 100 + 0.5)))
+        end
+
+    elseif cmd == "perk" then
+        if args and args ~= "" then
+            local r = tonumber(args)
+            if r and r >= 0 and r <= 5 then
+                self:SetWellRestedRank(r)
+                self:SetPromptFeedback(string.format("Well Rested perk set to Rank %d", r))
+            else
+                self:SetPromptFeedback("Usage: perk <0-5>", true)
+            end
+        else
+            self:CycleWellRestedPerk()
+            local curR = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0
+            self:SetPromptFeedback(string.format("Well Rested perk rank: %d", curR))
+        end
+
+    elseif cmd == "refresh" then
+        self:Refresh()
+        self:SetPromptFeedback("Database refreshed.")
+
+    elseif cmd == "help" then
+        self:ShowHelpPopup()
+        self:SetPromptFeedback("Help manual opened.")
+
+    elseif cmd == "exit" or cmd == "quit" or cmd == "close" then
+        if mainFrame then mainFrame:Hide() end
+
+    else
+        self:SetPromptFeedback(string.format("Unknown command: '%s'. Type 'help' for manual.", cmd), true)
+    end
+end
+
+function CLIAlts:AutoCompletePrompt(editBox)
+    if not editBox then return end
+    local text = editBox:GetText() or ""
+    local trimmed = text:match("^%s*(.-)%s*$") or ""
+
+    local commands = {
+        "1", "2", "3", "4", "5",
+        "sort", "filter", "find", "clear",
+        "goto", "page", "next", "export",
+        "watch", "unwatch", "watchlist",
+        "theme", "scale", "perk",
+        "refresh", "help", "exit", "close"
+    }
+
+    local cmd, arg = trimmed:match("^(%S+)%s+(.*)$")
+    if cmd then
+        cmd = cmd:lower()
+        if cmd == "sort" then
+            local sortKeys = { "name", "level", "gold", "rested", "waste", "xp", "location" }
+            for _, k in ipairs(sortKeys) do
+                if k:sub(1, #arg) == arg:lower() and k ~= arg:lower() then
+                    editBox:SetText("sort " .. k)
+                    editBox:SetCursorPosition(#editBox:GetText())
+                    return
+                end
+            end
+        elseif cmd == "theme" then
+            local themes = { "green", "amber", "cyan", "mono", "synthwave", "dracula" }
+            for _, th in ipairs(themes) do
+                if th:sub(1, #arg) == arg:lower() and th ~= arg:lower() then
+                    editBox:SetText("theme " .. th)
+                    editBox:SetCursorPosition(#editBox:GetText())
+                    return
+                end
+            end
+        end
+        return
+    end
+
+    for _, c in ipairs(commands) do
+        if c:sub(1, #trimmed) == trimmed:lower() and c ~= trimmed:lower() then
+            editBox:SetText(c .. " ")
+            editBox:SetCursorPosition(#editBox:GetText())
+            return
+        end
     end
 end
 
@@ -1283,7 +1747,7 @@ end
 function CLIAlts:ShowHelpPopup()
     if not helpPopup then
         local hp = CreateFrame("Frame", "CLIAltsHelpPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        hp:SetSize(520, 430)
+        hp:SetSize(560, 520)
         hp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
         hp:SetFrameStrata("DIALOG")
         hp:EnableMouse(true)
@@ -1296,7 +1760,7 @@ function CLIAlts:ShowHelpPopup()
         })
 
         local body = hp:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(body, 14)
+        self:SetWidgetFont(body, 13)
         body:SetPoint("TOPLEFT", hp, "TOPLEFT", 16, -16)
         body:SetPoint("BOTTOMRIGHT", hp, "BOTTOMRIGHT", -16, 45)
         body:SetJustifyH("LEFT")
@@ -1321,8 +1785,11 @@ function CLIAlts:ShowHelpPopup()
         "+====================================================================+",
         "| Slash Commands:                                                    |",
         "|   /clialts            - Toggle the main TUI monitor                |",
-        "|   /clialts [1-4]      - Open directly to specific tab (1-4)        |",
-        "|   /clialts show       - Open window                                |",
+        "|   /clialts [1-5]      - Open directly to specific tab (1-5)        |",
+        "|   /clialts next       - Recommend top 3 alts with rested XP waste  |",
+        "|   /clialts watch <it> - Track item count in bags & bank (e.g. ore) |",
+        "|   /clialts watchlist  - Print tracked items summary                |",
+        "|   /clialts export     - Open CSV export dialog for spreadsheets    |",
         "|   /clialts scale <val>- Set UI scale (0.7 to 1.8, e.g. 1.2 / 120%) |",
         "|   /clialts font <sz>  - Set terminal font size (12 to 22)          |",
         "|   /clialts track      - Force save current character to tracker    |",
@@ -1330,6 +1797,19 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts perk <0-5> - Set Well Rested legacy perk rank (0-5)     |",
         "|   /clialts gold       - Print total account gold summary           |",
         "|   /clialts reset      - Reset window position to center            |",
+        "+--------------------------------------------------------------------+",
+        "| Interactive Terminal Command Prompt (>):                           |",
+        "|   > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)|",
+        "|   > sort <column>     - Sort table (name, lvl, gold, rest, waste)  |",
+        "|   > filter <query>    - Filter alts (alliance, horde, <60, mining) |",
+        "|   > find <text>       - Search character names, classes, or zones  |",
+        "|   > clear             - Clear active filter query                  |",
+        "|   > next              - Print alts with highest rested waste       |",
+        "|   > watch <item>      - Add item to bag/bank inventory tracker     |",
+        "|   > export            - Open CSV export modal dialog               |",
+        "|   > theme [name]      - Cycle or set color theme                   |",
+        "|   > Up / Down arrows  - Browse terminal command history            |",
+        "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",
         "| Interactions:                                                      |",
         "|   - Click [SCALE] on title bar to cycle 100%, 115%, 130%, 145%, 90%|",
@@ -1349,6 +1829,80 @@ function CLIAlts:ShowHelpPopup()
 
     helpPopup.body:SetText(table.concat(helpText, "\n"))
     helpPopup:Show()
+end
+
+-- ----------------------------------------------------------------------------
+-- CSV Export Modal (Copyable Multi-Line Dialog)
+-- ----------------------------------------------------------------------------
+local exportPopup = nil
+function CLIAlts:ShowExportPopup()
+    if not exportPopup then
+        local ep = CreateFrame("Frame", "CLIAltsExportPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        ep:SetSize(640, 440)
+        ep:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
+        ep:SetFrameStrata("DIALOG")
+        ep:EnableMouse(true)
+
+        ep:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 2,
+            insets = { left = 2, right = 2, top = 2, bottom = 2 }
+        })
+
+        local title = ep:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(title, 14, "BOLD")
+        title:SetPoint("TOPLEFT", ep, "TOPLEFT", 16, -14)
+        title:SetText("CLIALTS :: CSV EXPORT (PRESS CTRL+C TO COPY)")
+        ep.title = title
+
+        local scrollFrame = CreateFrame("ScrollFrame", "CLIAltsExportScrollFrame", ep, "UIPanelScrollFrameTemplate")
+        scrollFrame:SetPoint("TOPLEFT", ep, "TOPLEFT", 16, -42)
+        scrollFrame:SetPoint("BOTTOMRIGHT", ep, "BOTTOMRIGHT", -36, 45)
+
+        local editBox = CreateFrame("EditBox", "CLIAltsExportEditBox", scrollFrame)
+        self:SetWidgetFont(editBox, 12)
+        editBox:SetWidth(580)
+        editBox:SetMultiLine(true)
+        editBox:SetAutoFocus(false)
+        editBox:EnableMouse(true)
+        editBox:SetScript("OnEscapePressed", function() ep:Hide() end)
+        scrollFrame:SetScrollChild(editBox)
+        ep.editBox = editBox
+
+        local btnSelectAll = CreateRetroButton(ep, "[ SELECT ALL ]", 110, 20, function()
+            if ep.editBox then
+                ep.editBox:SetFocus()
+                ep.editBox:HighlightText()
+            end
+        end)
+        btnSelectAll:SetPoint("BOTTOMLEFT", ep, "BOTTOMLEFT", 16, 14)
+
+        local btnClose = CreateRetroButton(ep, "[ CLOSE ]", 80, 20, function()
+            ep:Hide()
+        end)
+        btnClose:SetPoint("BOTTOMRIGHT", ep, "BOTTOMRIGHT", -16, 14)
+
+        exportPopup = ep
+    end
+
+    local t = self:GetTheme()
+    exportPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+    exportPopup:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+    if exportPopup.title then
+        exportPopup.title:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    end
+    if exportPopup.editBox then
+        exportPopup.editBox:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+        local csv = self:GenerateExportCSV()
+        exportPopup.editBox:SetText(csv or "")
+    end
+
+    exportPopup:Show()
+    if exportPopup.editBox then
+        exportPopup.editBox:SetFocus()
+        exportPopup.editBox:HighlightText()
+    end
 end
 
 -- ----------------------------------------------------------------------------

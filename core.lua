@@ -57,6 +57,11 @@ local safeEvents = {
     "TRADE_SKILL_UPDATE",
     "CRAFT_SHOW",
     "CRAFT_UPDATE",
+    "UPDATE_INSTANCE_INFO",
+    "BAG_UPDATE",
+    "BANKFRAME_CLOSED",
+    "MAIL_INBOX_UPDATE",
+    "MAIL_SHOW",
 }
 for _, ev in ipairs(safeEvents) do
     pcall(function() eventFrame:RegisterEvent(ev) end)
@@ -81,6 +86,15 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:ApplyTheme()
         CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
 
+        -- Self-calibrating rested model check against last clean logout
+        CLIAlts:CalibrateRestedModel()
+
+        -- Record daily gold history snapshot (capped at 90 days)
+        CLIAlts:RecordGoldSnapshot()
+
+        -- Scan watchlist item counts across bags & bank
+        CLIAlts:CollectWatchlistCounts()
+
         -- Immediate snapshot
         local char = CLIAlts:CollectCurrentCharacter(false, true)
         if char and not self.hasAnnounced then
@@ -89,23 +103,32 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             local summary = CLIAlts:GetAccountSummary()
             CLIAlts:Print(string.format("Tracking %s (Level %d %s). Total tracked: %d. Type |cff00ff66/clialts|r to view.",
                 coloredName, char.level or 1, CLIAlts:FormatRaceClass(char), summary.totalAlts or 1))
+
+            -- Alert if any alts are rested capped (Rested Waste Tracker)
+            CLIAlts:CheckCappedAltsAlert()
+
+            -- Alert if mail expires in <= 3 days on any alt
+            CLIAlts:CheckMailExpiryAlert()
         end
 
         -- Delayed sync after 1.5s, 3.0s, and 5.0s to ensure server-synced money, XP, and resting state
         SafeAfter(1.5, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
+            CLIAlts:CollectWatchlistCounts()
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:RequestRender()
         end)
 
         SafeAfter(3.0, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
+            CLIAlts:CollectWatchlistCounts()
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:RequestRender()
         end)
 
         SafeAfter(5.0, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
+            CLIAlts:CollectWatchlistCounts()
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:RequestRender()
         end)
@@ -150,6 +173,18 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     elseif event == "SKILL_LINES_CHANGED" or event == "SPELLS_CHANGED" or event == "CHAT_MSG_SKILL" or event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "CRAFT_SHOW" or event == "CRAFT_UPDATE" then
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:RequestRender()
+
+    elseif event == "UPDATE_INSTANCE_INFO" then
+        CLIAlts:CollectCurrentCharacter()
+        CLIAlts:RequestRender()
+
+    elseif event == "BAG_UPDATE" or event == "BANKFRAME_CLOSED" then
+        CLIAlts:CollectWatchlistCounts()
+        CLIAlts:RequestRender()
+
+    elseif event == "MAIL_INBOX_UPDATE" or event == "MAIL_SHOW" then
+        CLIAlts:ScanMailInbox()
+        CLIAlts:RequestRender()
     end
 end)
 
@@ -172,12 +207,12 @@ local function SlashHandler(msg)
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:Toggle()
 
-    elseif cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "tab" then
+    elseif cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "tab" then
         local tabId = tonumber(cmd)
         if cmd == "tab" and arg and arg ~= "" then
             tabId = tonumber(arg)
         end
-        if tabId and tabId >= 1 and tabId <= 4 then
+        if tabId and tabId >= 1 and tabId <= 5 then
             if CLIAltsDB and CLIAltsDB.settings then
                 CLIAltsDB.settings.activeTab = tabId
             end
@@ -186,8 +221,50 @@ local function SlashHandler(msg)
             if CLIAlts.SetPage then CLIAlts:SetPage(1) end
             CLIAlts:Render()
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts [1-4]|r (Switches to specified tab)")
+            CLIAlts:Print("Usage: |cff00ff66/clialts [1-5]|r (Switches to specified tab)")
         end
+
+    elseif cmd == "next" then
+        CLIAlts:PrintNextAlts()
+
+    elseif cmd == "watch" then
+        if arg and arg ~= "" then
+            CLIAlts:AddWatchItem(arg)
+            CLIAlts:CollectWatchlistCounts()
+            CLIAlts:RequestRender()
+        else
+            CLIAlts:Print("Usage: |cff00ff66/clialts watch <Item Name or ID>|r")
+        end
+
+    elseif cmd == "unwatch" then
+        if arg and arg ~= "" then
+            CLIAlts:RemoveWatchItem(arg)
+            CLIAlts:RequestRender()
+        else
+            CLIAlts:Print("Usage: |cff00ff66/clialts unwatch <Item Name>|r")
+        end
+
+    elseif cmd == "watchlist" then
+        CLIAlts:PrintWatchlist()
+
+    elseif cmd == "export" or cmd == "csv" then
+        CLIAlts:Toggle(true)
+        CLIAlts:ShowExportPopup()
+
+    elseif cmd == "filter" or cmd == "find" then
+        CLIAlts:Toggle(true)
+        if CLIAlts.SetFilter then
+            CLIAlts:SetFilter(arg)
+        end
+
+    elseif cmd == "clear" then
+        if CLIAlts.SetFilter then
+            CLIAlts:SetFilter(nil)
+        end
+        CLIAlts:Print("Active filter cleared.")
+
+    elseif cmd == "calibrate" then
+        CLIAlts:CalibrateRestedModel()
 
     elseif cmd == "show" then
         CLIAlts:CollectCurrentCharacter()

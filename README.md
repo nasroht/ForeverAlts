@@ -8,41 +8,42 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 
 ## Features
 
-- **Retro ASCII / TUI Aesthetic**: Styled like a classic CRT terminal or BBS dashboard, complete with ASCII borders, box headers, progress bars, and multiple retro color phosphor palettes.
-- **Full Mouse & Window Controls**:
-  - Drag the window anywhere on screen.
-  - Clickable tabs: `[ 1: ALTS OVERVIEW ]`, `[ 2: RESTED XP MONITOR ]`, `[ 3: PROFESSIONS ]`, `[ 4: ECONOMY / WEALTH ]`.
-  - Clickable column headers to sort by **Level**, **Name**, **Gold**, or **Rested XP** (toggle Ascending / Descending with arrow indicators `^` and `v`).
-  - Hover highlight on rows with terminal prompt arrow `>`.
-  - Click any row to view a detailed **Character Dossier** popup.
-  - Delete alt records with a retro confirmation modal.
-  - Mouse wheel scrolling for unlimited characters.
-- **Rested XP Projection & Full Cap Countdown**:
-  - Tracks whether characters logged off in an **Inn/City** (+5% every 8 hours) or in the **Wilderness** (+1.25% every 8 hours).
-  - Real-time offline estimation: Calculates current rested percentage even when logged on other characters.
-  - Displays remaining time until 150% cap (`2d 14h`, `5h 30m`, or `FULL (150%)`).
-  - Predicts the exact calendar date and time when rested XP reaches cap (e.g. `Oct 16, 14:30`).
-  - Max level characters automatically marked as `[ MAX LEVEL ]`.
-- **Professions Tracker**:
-  - Tracks primary professions (Mining, Herbalism, Alchemy, Tailoring, etc.) and secondary skills (Cooking, First Aid, Fishing).
-  - Shows current skill level and tier cap (e.g. `225/225`).
-- **Economy & Wealth Dashboard**:
-  - Formats gold, silver, and copper.
-  - ASCII bar chart depicting wealth share per character.
-  - Calculates total account wealth and average per alt.
-- **Interactive Minimap Button**:
-  - Sleek circular minimap icon with retro `[A]` display.
-  - Left-click to toggle the monitor.
-  - Right-click to refresh timers.
-  - Drag to reposition along the minimap circumference.
-  - Hover tooltip displaying an ASCII quick summary of alts and next rested character.
-- **Primary Name & Secondary Name Support (WoW Forever)**:
-  - Full native support for World of Warcraft Forever's two-part naming convention (First Name & Surname).
-  - Captures and displays both names cleanly in the overview tables, Character Dossier, and chat reports.
-  - Characters with the same first name but different surnames are preserved as distinct alts without colliding.
-- **First-Load Auto Registration**:
-  - Automatically records and updates the logged-in player on first load and subsequent logins.
-  - Keeps stats fresh on logout, zone change, and skill rank ups.
+- **Retro Monospace DEC VT220 Terminal TUI Aesthetic**: Styled like a classic CRT terminal or BBS dashboard, complete with ASCII borders, box headers, progress bars, and multiple retro color phosphor palettes.
+- **Interactive Terminal Command Prompt (`>`)**:
+  - Full interactive terminal EditBox at the bottom of the window.
+  - Command history cycling with **Up/Down arrows** (up to 50 commands).
+  - Auto-completion with **Tab key** for commands and sort column keys.
+  - Quick keyboard navigation: `> 1` .. `> 5` to switch tabs.
+  - Direct prompt commands: `> sort gold`, `> filter horde <60`, `> find mining`, `> goto 3`, `> watch Runecloth`, `> next`, `> export`, `> theme cyan`.
+- **5 Monospace Dashboard Tabs**:
+  - `[ 1: ALTS OVERVIEW ]`: Faction, Name, Level, Race/Class 3-letter codes, XP progress bar, Gold, Rested %, and ETA to cap.
+  - `[ 2: RESTED XP MONITOR ]`: Pool vs Cap, ASCII Rested progress bar, accumulation rate, resting state, and ETA / Rested Waste timer.
+  - `[ 3: PROFESSIONS ]`: Primary professions with ranks and secondary skills (Cooking, First Aid, Fishing).
+  - `[ 4: ECONOMY / WEALTH ]`: Gold breakdown, account wealth share percentage and bar, last known location, plus a 14-character ASCII sparkline (`_.-=*#`) and 24h/7d/30d gold history deltas in the status bar.
+  - `[ 5: COOLDOWNS & SAVED LOCKS ]`: Real-time trade skill cooldown timers (Transmutes, Mooncloth, Salt Shaker) and saved raid/dungeon instance lockouts with reset countdowns.
+- **Self-Calibrating Rested Model**:
+  - Compares live `GetXPExhaustion()` with predicted rested projections on login.
+  - If drift > 2%, automatically calculates observed accumulation rate, detects resting state, and auto-calibrates the `Well Rested` legacy perk rank.
+- **Rested XP Waste Tracker**:
+  - Calculates exactly how long each character has been sitting at maximum rested cap and how much XP has been wasted without accruing (e.g. `capped for 3d 4h, ~52k XP wasted`).
+  - Sort by `"waste"` column to prioritize characters losing the most potential XP.
+  - `/clialts next` (or `> next`) instantly prints the top 3 alts you should log into right now to stop wasting rested XP.
+  - Automatic login alert warning if any alts are currently rested capped.
+- **Bank & Bag Item Watchlist**:
+  - Lightweight inventory tracking: `/clialts watch <Item Name or ID>` monitors counts across bags and bank without scanning entire bag inventories.
+  - View summary across all alts with `/clialts watchlist` (or `> watchlist`).
+- **Gold History & ASCII Sparkline**:
+  - Daily total-wealth snapshots capped at 90 days.
+  - Calculates wealth changes over 24h, 7d, and 30d.
+  - Renders a multi-level ASCII sparkline (`_.-=*#`) directly in the Economy tab status line.
+- **Mail Expiry Tracker**:
+  - Automatically records shortest mailbox expiration time on `MAIL_INBOX_UPDATE`.
+  - Alerts you at login if any alt has mail expiring in $\le 3$ days.
+- **CSV Data Export**:
+  - `/clialts export` (or `> export`) opens an in-game copyable dialog formatted for easy import into spreadsheets (Excel, Google Sheets).
+- **Customizable UI Scale & Fonts**:
+  - Monospace font rendering with exact column width calculations.
+  - `/clialts scale <0.7-1.8>` and title bar `[ SCALE ]` button for 1440p / 4K displays.
 
 ---
 
@@ -51,27 +52,34 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | Command | Description |
 | :--- | :--- |
 | `/clialts`, `/cli`, or `/ca` | Toggle the main TUI monitor window |
-| `/clialts [1-4]` | Open directly to specific tab (1-4) |
-| `/clialts show` | Open the window |
-| `/clialts hide` | Close the window |
-| `/clialts scale <0.7-1.8>` | Set UI scale (e.g. `1.2` or `120%`) for 1440p / 4K displays |
+| `/clialts [1-5]` | Open directly to specific tab (1-5) |
+| `/clialts next` | Recommend top 3 alts to log into (highest rested XP waste) |
+| `/clialts watch <item>` | Add item to bag & bank watchlist tracker |
+| `/clialts unwatch <item>` | Remove item from watchlist tracker |
+| `/clialts watchlist` | Print watchlist summary across all characters |
+| `/clialts export` | Open copyable CSV export modal dialog |
+| `/clialts filter <query>` | Filter characters by faction, level range, class, or profession |
+| `/clialts clear` | Clear active filter |
+| `/clialts scale <0.7-1.8>` | Set UI scale (e.g. `1.2` or `120%`) for high resolution monitors |
 | `/clialts font <12-22>` | Set terminal monospace font size (default `15`) |
 | `/clialts minimap` | Toggle the minimap icon on or off |
 | `/clialts rested` | Print an ASCII summary of all alts' rested XP to chat |
-| `/clialts perk <0-5>` | Set your Well Rested legacy perk rank (0-5) |
+| `/clialts perk <0-5>` | Set or cycle your Well Rested legacy perk rank (0-5) |
 | `/clialts gold` | Print total account wealth summary across all alts |
-| `/clialts reset` | Reset the window position to the center of your screen |
+| `/clialts reset` | Reset window position to the center of your screen |
 | `/clialts help` | Open the in-game retro quick guide popup |
 
 ---
 
 ## Retro Color Themes
 
-Cycle through 4 authentic retro CRT themes by clicking the `[ THEME ]` button in the top-right corner of the window:
-1. **Phosphor CRT (`GRN`)**: Classic green monochrome monitor.
-2. **VT220 Amber (`AMB`)**: Warm retro amber terminal display.
-3. **Cyberdeck Cyan (`CYN`)**: Futuristic BBS / neon cyan style.
-4. **VT100 Monochrome (`MON`)**: Classic white-on-black terminal.
+Cycle through authentic retro CRT color themes by clicking the `[ THEME ]` button in the title bar or typing `> theme <name>`:
+1. **Phosphor Green (`GRN`)**: Classic green monochrome CRT monitor.
+2. **VT220 Amber (`AMB`)**: Warm retro amber phosphor display.
+3. **Cyberdeck Cyan (`CYN`)**: BBS / neon cyberspace cyan.
+4. **VT100 Monochrome (`MON`)**: Classic white phosphor on black.
+5. **Synthwave (`SYN`)**: Neon magenta and retro-wave styling.
+6. **Dracula (`DRA`)**: Gothic purple and mint terminal palette.
 
 ---
 

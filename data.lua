@@ -212,6 +212,9 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.activeTab = CLIAltsDB.settings.activeTab or 1
     CLIAltsDB.settings.wellRestedRank = tonumber(CLIAltsDB.settings.wellRestedRank) or 0
     CLIAltsDB.characters = CLIAltsDB.characters or {}
+    CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
+    CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
+    CLIAltsDB.commandHistory = CLIAltsDB.commandHistory or {}
 
     -- Run one-time migration and repair only if dbVersion is older than CURRENT_DB_VERSION
     if (tonumber(CLIAltsDB.dbVersion) or 0) < CURRENT_DB_VERSION then
@@ -503,6 +506,114 @@ function CLIAlts:CollectProfessions()
 end
 
 -- ----------------------------------------------------------------------------
+-- Cooldowns, Lockouts, Mail & Watchlist Collectors
+-- ----------------------------------------------------------------------------
+local liveMailCount = nil
+local liveMinMailDays = nil
+local liveMailCheckedTime = nil
+
+function CLIAlts:ScanMailInbox()
+    pcall(function()
+        if GetInboxNumItems and GetInboxHeaderInfo then
+            local n = GetInboxNumItems() or 0
+            liveMailCount = n
+            liveMailCheckedTime = time()
+            local minDays = 999
+            for i = 1, n do
+                local _, _, _, _, _, _, daysLeft = GetInboxHeaderInfo(i)
+                if daysLeft and daysLeft < minDays then
+                    minDays = daysLeft
+                end
+            end
+            liveMinMailDays = (n > 0 and minDays < 999) and minDays or nil
+
+            local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
+            if curFull and CLIAltsDB and CLIAltsDB.characters then
+                local char = CLIAltsDB.characters[curFull] or CLIAltsDB.characters[self:GetCharacterKey(curFull)]
+                if char then
+                    char.mailCount = liveMailCount
+                    char.minMailDays = liveMinMailDays
+                    char.mailCheckedTime = liveMailCheckedTime
+                end
+            end
+        end
+    end)
+end
+
+function CLIAlts:CollectTradeCooldowns(existing)
+    local cds = {}
+    if existing then
+        for k, v in pairs(existing) do cds[k] = v end
+    end
+    pcall(function()
+        if GetNumTradeSkills and GetTradeSkillInfo and GetTradeSkillCooldown then
+            local n = GetNumTradeSkills() or 0
+            for i = 1, n do
+                local name, skillType = GetTradeSkillInfo(i)
+                if name and skillType ~= "header" then
+                    local cd = GetTradeSkillCooldown(i)
+                    if cd and cd > 0 then
+                        cds[name] = time() + cd
+                    elseif cd == 0 and cds[name] then
+                        cds[name] = nil
+                    end
+                end
+            end
+        end
+    end)
+    return cds
+end
+
+function CLIAlts:CollectLockouts(existing)
+    local locks = {}
+    if existing then
+        for k, v in pairs(existing) do locks[k] = v end
+    end
+    pcall(function()
+        if RequestRaidInfo then pcall(RequestRaidInfo) end
+        if GetNumSavedInstances and GetSavedInstanceInfo then
+            local n = GetNumSavedInstances() or 0
+            local now = time()
+            local activeLocks = {}
+            for i = 1, n do
+                local name, id, reset, diff, locked, isExtended, isRaid, maxPlayers, diffName = GetSavedInstanceInfo(i)
+                if locked and reset and reset > 0 then
+                    activeLocks[name] = {
+                        resetTime = now + reset,
+                        id = id,
+                        difficulty = diffName or diff or "Normal",
+                        isRaid = isRaid,
+                    }
+                end
+            end
+            if n > 0 or not existing then
+                locks = activeLocks
+            end
+        end
+    end)
+    return locks
+end
+
+function CLIAlts:CollectWatchlistCounts(existing)
+    local counts = {}
+    if existing then
+        for k, v in pairs(existing) do counts[k] = v end
+    end
+    if not CLIAltsDB or not CLIAltsDB.watchlist then return counts end
+    pcall(function()
+        if GetItemCount then
+            for _, item in ipairs(CLIAltsDB.watchlist) do
+                if item and item ~= "" then
+                    local count = GetItemCount(item, true)
+                    counts[item] = count or 0
+                end
+            end
+        end
+    end)
+    return counts
+end
+
+-- ----------------------------------------------------------------------------
 -- Data Collection: Current Logged-in Character (Throttled to 1s)
 -- ----------------------------------------------------------------------------
 local lastCollectTime = 0
@@ -637,6 +748,12 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         money = money,
         location = location,
         professions = professions,
+        tradeCooldowns = self:CollectTradeCooldowns(existing and existing.tradeCooldowns),
+        lockouts = self:CollectLockouts(existing and existing.lockouts),
+        mailCount = liveMailCount or (existing and existing.mailCount),
+        minMailDays = liveMinMailDays or (existing and existing.minMailDays),
+        mailCheckedTime = liveMailCheckedTime or (existing and existing.mailCheckedTime),
+        watchlistCounts = self:CollectWatchlistCounts(existing and existing.watchlistCounts),
         lastUpdate = now,
         logoutTime = (isLogout and now) or (existing and existing.logoutTime) or now,
     }
@@ -1144,15 +1261,48 @@ function CLIAlts:DeleteCharacter(charKey)
     return false
 end
 
-function CLIAlts:GetCharactersList(sortBy, sortAsc)
+function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     local list = {}
     if not CLIAltsDB or not CLIAltsDB.characters then
         return list
     end
 
+    local query = filterQuery or self.activeFilter
+    if query then query = query:lower():match("^%s*(.-)%s*$") end
+    if query == "" then query = nil end
+
     for key, char in pairs(CLIAltsDB.characters) do
         char.key = key
-        table.insert(list, char)
+        local keep = true
+        if query then
+            if query == "alliance" or query == "ally" or query == "a" then
+                keep = (char.faction == "Alliance")
+            elseif query == "horde" or query == "h" then
+                keep = (char.faction == "Horde")
+            elseif query:sub(1, 1) == "<" then
+                local maxLvl = tonumber(query:sub(2))
+                keep = maxLvl and ((char.level or 1) < maxLvl)
+            elseif query:sub(1, 1) == ">" then
+                local minLvl = tonumber(query:sub(2))
+                keep = minLvl and ((char.level or 1) > minLvl)
+            else
+                local name = (char.fullName or char.name or ""):lower()
+                local cls = (char.class or ""):lower()
+                local race = (char.race or ""):lower()
+                local loc = (char.location or ""):lower()
+                local p1 = (char.professions and char.professions.primary and char.professions.primary[1] and char.professions.primary[1].name or ""):lower()
+                local p2 = (char.professions and char.professions.primary and char.professions.primary[2] and char.professions.primary[2].name or ""):lower()
+                keep = name:find(query, 1, true)
+                    or cls:find(query, 1, true)
+                    or race:find(query, 1, true)
+                    or loc:find(query, 1, true)
+                    or p1:find(query, 1, true)
+                    or p2:find(query, 1, true)
+            end
+        end
+        if keep then
+            table.insert(list, char)
+        end
     end
 
     sortBy = sortBy or CLIAltsDB.settings.sortBy or "level"
@@ -1165,6 +1315,11 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc)
     elseif sortBy == "xp" or sortBy == "progress" then
         for _, char in ipairs(list) do
             char._sortProgress = (char.maxXP and char.maxXP > 0) and ((char.xp or 0) / char.maxXP) or 0
+        end
+    elseif sortBy == "waste" then
+        for _, char in ipairs(list) do
+            local _, wastedXP = self:GetRestedWaste(char)
+            char._sortWaste = wastedXP or 0
         end
     end
 
@@ -1187,6 +1342,13 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc)
                 return (a.level or 0) > (b.level or 0)
             end
             if sortAsc then return pA < pB else return pA > pB end
+        elseif sortBy == "waste" then
+            local wA = a._sortWaste or 0
+            local wB = b._sortWaste or 0
+            if wA == wB then
+                return (a.level or 0) > (b.level or 0)
+            end
+            if sortAsc then return wA < wB else return wA > wB end
         else -- default "level"
             local lvlA = a.level or 0
             local lvlB = b.level or 0
@@ -1201,6 +1363,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc)
     for _, char in ipairs(list) do
         char._sortRested = nil
         char._sortProgress = nil
+        char._sortWaste = nil
     end
 
     return list
@@ -1242,4 +1405,464 @@ function CLIAlts:GetAccountSummary()
         fullyRested = fullyRested,
         nextFullAlt = nextFullAlt,
     }
+end
+
+-- ----------------------------------------------------------------------------
+-- Self-Calibrating Rested Model (Feature 1)
+-- ----------------------------------------------------------------------------
+function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride)
+    if not char then return 0 end
+    local maxXP = char.maxXP or 0
+    if maxXP <= 0 then return char.restedXP or 0 end
+
+    local rank = rankOverride or (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    if rank < 0 then rank = 0 end
+    if rank > 5 then rank = 5 end
+
+    local speedMult = 1 + (rank * 0.04)
+    local capMult = 1.5 * speedMult
+    local maxRested = maxXP * capMult
+
+    local isResting = self:IsCharacterResting(char)
+    local baseRate = isResting and (maxXP / 576000) or (maxXP / 2304000)
+    local ratePerSec = baseRate * speedMult
+
+    local lastUpdate = char.lastUpdate or (char.logoutTime or targetTimestamp)
+    local elapsed = math.max(0, targetTimestamp - lastUpdate)
+
+    local projected = (char.restedXP or 0) + (elapsed * ratePerSec)
+    return math.min(maxRested, projected)
+end
+
+function CLIAlts:CalibrateRestedModel()
+    if not GetXPExhaustion or not UnitXPMax then return end
+    local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
+    if not curFull or not CLIAltsDB or not CLIAltsDB.characters then return end
+
+    local charKey = self:GetCharacterKey(curFull)
+    local old = CLIAltsDB.characters[charKey]
+    if not old or not old.cleanLogout or not old.lastUpdate then return end
+
+    local now = time()
+    local elapsed = now - old.lastUpdate
+    -- Require at least 10 minutes (600s) of offline time for a meaningful calibration sample
+    if elapsed < 600 then return end
+
+    local actualRested = GetXPExhaustion() or 0
+    local maxXP = old.maxXP or (UnitXPMax and UnitXPMax("player")) or 0
+    if maxXP <= 0 then return end
+
+    local predicted = self:ProjectRested(old, now)
+    local drift = (actualRested - predicted) / maxXP
+
+    -- Only calibrate if drift exceeds 2% of level max XP
+    if math.abs(drift) > 0.02 then
+        local observedDelta = actualRested - (old.restedXP or 0)
+        if observedDelta > 0 and elapsed > 0 then
+            local observedRate = observedDelta / elapsed
+            local baseInnRate = maxXP / 576000
+            local baseWildRate = maxXP / 2304000
+
+            local isInn = (observedRate >= baseWildRate * 2.0)
+            local baseRate = isInn and baseInnRate or baseWildRate
+
+            local inferredSpeedMult = observedRate / baseRate
+            local inferredRank = math.floor(((inferredSpeedMult - 1.0) / 0.04) + 0.5)
+            if inferredRank < 0 then inferredRank = 0 end
+            if inferredRank > 5 then inferredRank = 5 end
+
+            local prevRank = (CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+            if inferredRank ~= prevRank then
+                CLIAltsDB.settings.wellRestedRank = inferredRank
+                CLIAltsDB.settings.calibrated = true
+                self:InvalidateRestedCache()
+                self:Print(string.format("Rested model self-calibrated: Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
+                    inferredRank, inferredRank * 4, drift * 100))
+            end
+        end
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Rested Waste Tracker & Next Alt Priority (Feature 2)
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetRestedWaste(char)
+    if not char then return 0, 0, "No waste", "0m" end
+    local maxLevel = self:GetMaxLevel()
+    local level = char.level or 1
+    if level >= maxLevel then
+        return 0, 0, "MAX LEVEL", "MAX"
+    end
+
+    local rested = self:GetRestedData(char)
+    if not rested or not rested.isFull then
+        return 0, 0, "Accruing", "0m"
+    end
+
+    local maxXP = char.maxXP or 0
+    local ratePerSec = rested.ratePerSec or (maxXP / 576000)
+    if ratePerSec <= 0 then ratePerSec = 1 end
+
+    local now = time()
+    local lastUpdate = char.lastUpdate or now
+    local elapsed = math.max(0, now - lastUpdate)
+
+    local baseRested = char.restedXP or 0
+    local maxRested = rested.maxRested or 0
+    local neededToCap = math.max(0, maxRested - baseRested)
+    local secondsToCap = (ratePerSec > 0) and (neededToCap / ratePerSec) or 0
+
+    local wastedSeconds = 0
+    if elapsed >= secondsToCap then
+        wastedSeconds = elapsed - secondsToCap
+    end
+
+    local wastedXP = math.floor(wastedSeconds * ratePerSec)
+
+    local days = math.floor(wastedSeconds / 86400)
+    local hours = math.floor((wastedSeconds % 86400) / 3600)
+    local mins = math.floor((wastedSeconds % 3600) / 60)
+
+    local timeStr
+    if days > 0 then
+        timeStr = string.format("%dd %dh", days, hours)
+    elseif hours > 0 then
+        timeStr = string.format("%dh %dm", hours, mins)
+    elseif mins > 0 then
+        timeStr = string.format("%dm", mins)
+    else
+        timeStr = "Just capped"
+    end
+
+    local formattedWaste = string.format("Capped %s (~%s XP lost)", timeStr, self:FormatNumber(wastedXP))
+    return wastedSeconds, wastedXP, formattedWaste, timeStr
+end
+
+function CLIAlts:GetNextAltsPriority()
+    local chars = self:GetCharactersList()
+    local scored = {}
+    local maxLevel = self:GetMaxLevel()
+
+    for _, char in ipairs(chars) do
+        local level = char.level or 1
+        if level < maxLevel then
+            local wastedSec, wastedXP, formattedWaste, timeStr = self:GetRestedWaste(char)
+            local rested = self:GetRestedData(char)
+            local isCapped = rested and rested.isFull
+
+            local score = 0
+            local reason = ""
+            if isCapped then
+                score = 100000000 + (wastedXP or 0)
+                reason = string.format("Capped for %s (%s XP wasted)", timeStr, self:FormatNumber(wastedXP))
+            else
+                local timeToFull = (rested and rested.timeToFull) or 9999999
+                score = math.max(1, 10000000 - timeToFull)
+                reason = string.format("%d%% rested (Caps in %s)", rested and rested.percent or 0, rested and rested.timeLeftStr or "---")
+            end
+
+            table.insert(scored, {
+                char = char,
+                score = score,
+                isCapped = isCapped,
+                wastedXP = wastedXP,
+                timeStr = timeStr,
+                reason = reason,
+            })
+        end
+    end
+
+    table.sort(scored, function(a, b)
+        return a.score > b.score
+    end)
+
+    return scored
+end
+
+function CLIAlts:PrintNextAlts()
+    local list = self:GetNextAltsPriority()
+    if #list == 0 then
+        self:Print("No leveling alts found or all alts are at maximum level.")
+        return
+    end
+
+    self:Print("--- Recommended Next Alts to Play ---")
+    local count = math.min(3, #list)
+    for i = 1, count do
+        local item = list[i]
+        local c = item.char
+        local coloredName = self:ColorizePlayerName(c.name, c.classFile)
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cff00ff66%d.|r %s (Lvl %d %s) :: |cffffd700%s|r",
+            i, coloredName, c.level or 1, self:FormatRaceClass(c), item.reason))
+    end
+end
+
+function CLIAlts:CheckCappedAltsAlert()
+    local list = self:GetNextAltsPriority()
+    local capped = {}
+    for _, item in ipairs(list) do
+        if item.isCapped and item.wastedXP and item.wastedXP > 1000 then
+            table.insert(capped, item)
+        end
+    end
+    if #capped > 0 then
+        local parts = {}
+        for i = 1, math.min(2, #capped) do
+            local c = capped[i].char
+            local coloredName = self:ColorizePlayerName(c.name, c.classFile)
+            table.insert(parts, string.format("%s (~%s XP lost)", coloredName, self:FormatNumber(capped[i].wastedXP)))
+        end
+        self:Print(string.format("|cffffaa00Notice:|r %d alts capped (%s). Type |cff00ff66/ca next|r for priority.",
+            #capped, table.concat(parts, ", ")))
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Watchlist System (Feature 5)
+-- ----------------------------------------------------------------------------
+function CLIAlts:AddWatchItem(itemName)
+    if not itemName or itemName == "" then return false end
+    CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
+    for _, existing in ipairs(CLIAltsDB.watchlist) do
+        if existing:lower() == itemName:lower() then
+            return false
+        end
+    end
+    table.insert(CLIAltsDB.watchlist, itemName)
+    self:CollectWatchlistCounts()
+    return true
+end
+
+function CLIAlts:RemoveWatchItem(itemName)
+    if not itemName or not CLIAltsDB or not CLIAltsDB.watchlist then return false end
+    local found = false
+    local newWatch = {}
+    for _, existing in ipairs(CLIAltsDB.watchlist) do
+        if existing:lower() == itemName:lower() then
+            found = true
+        else
+            table.insert(newWatch, existing)
+        end
+    end
+    CLIAltsDB.watchlist = newWatch
+    return found
+end
+
+function CLIAlts:GetWatchlistSummary()
+    local watchlist = (CLIAltsDB and CLIAltsDB.watchlist) or {}
+    local summary = {}
+    local chars = self:GetCharactersList("name", true)
+
+    for _, item in ipairs(watchlist) do
+        local total = 0
+        local breakdown = {}
+        for _, c in ipairs(chars) do
+            local cnt = (c.watchlistCounts and c.watchlistCounts[item]) or 0
+            if cnt > 0 then
+                total = total + cnt
+                table.insert(breakdown, { name = c.name, count = cnt, classFile = c.classFile })
+            end
+        end
+        table.insert(summary, {
+            item = item,
+            total = total,
+            breakdown = breakdown,
+        })
+    end
+    return summary
+end
+
+function CLIAlts:PrintWatchlist()
+    local summary = self:GetWatchlistSummary()
+    if #summary == 0 then
+        self:Print("Watchlist is empty. Use |cff00ff66/ca watch <Item Name>|r to track specific items across alts.")
+        return
+    end
+    self:Print("--- CLIAlts Watchlist Summary ---")
+    for _, entry in ipairs(summary) do
+        local parts = {}
+        for _, b in ipairs(entry.breakdown) do
+            table.insert(parts, string.format("%s: %s", b.name, self:FormatNumber(b.count)))
+        end
+        local detail = #parts > 0 and (" (" .. table.concat(parts, ", ") .. ")") or ""
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("  * |cffffd700%s|r :: |cff00ff66%s total|r%s",
+            entry.item, self:FormatNumber(entry.total), detail))
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Gold History & ASCII Sparkline (Feature 6)
+-- ----------------------------------------------------------------------------
+function CLIAlts:RecordGoldSnapshot()
+    if not CLIAltsDB then return end
+    CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
+
+    local summary = self:GetAccountSummary()
+    local totalGold = math.floor((summary.totalGold or 0) / 10000)
+    local today = date("%Y-%m-%d")
+    local now = time()
+
+    local last = CLIAltsDB.goldHistory[#CLIAltsDB.goldHistory]
+    if last and last.date == today then
+        last.gold = totalGold
+        last.time = now
+    else
+        table.insert(CLIAltsDB.goldHistory, {
+            date = today,
+            time = now,
+            gold = totalGold,
+        })
+        while #CLIAltsDB.goldHistory > 90 do
+            table.remove(CLIAltsDB.goldHistory, 1)
+        end
+    end
+end
+
+function CLIAlts:GetGoldHistoryDeltas()
+    local summary = self:GetAccountSummary()
+    local curGold = math.floor((summary.totalGold or 0) / 10000)
+    local hist = (CLIAltsDB and CLIAltsDB.goldHistory) or {}
+    local now = time()
+
+    local g1d, g7d, g30d = curGold, curGold, curGold
+    for i = #hist, 1, -1 do
+        local entry = hist[i]
+        local ageDays = (now - entry.time) / 86400
+        if ageDays >= 1 and g1d == curGold then
+            g1d = entry.gold
+        end
+        if ageDays >= 7 and g7d == curGold then
+            g7d = entry.gold
+        end
+        if ageDays >= 30 and g30d == curGold then
+            g30d = entry.gold
+            break
+        end
+    end
+
+    if #hist > 0 and g1d == curGold and #hist > 1 then
+        g1d = hist[#hist - 1].gold
+    end
+
+    return (curGold - g1d), (curGold - g7d), (curGold - g30d)
+end
+
+function CLIAlts:GenerateAsciiSparkline(numChars)
+    numChars = numChars or 14
+    local hist = (CLIAltsDB and CLIAltsDB.goldHistory) or {}
+    local ramp = { "_", ".", "-", "=", "*", "#" }
+
+    if #hist == 0 then
+        return string.rep("-", numChars)
+    end
+
+    local points = {}
+    local startIdx = math.max(1, #hist - numChars + 1)
+    for i = startIdx, #hist do
+        table.insert(points, hist[i].gold)
+    end
+
+    while #points < numChars do
+        table.insert(points, 1, points[1] or 0)
+    end
+
+    local minG = points[1]
+    local maxG = points[1]
+    for _, g in ipairs(points) do
+        if g < minG then minG = g end
+        if g > maxG then maxG = g end
+    end
+
+    local range = maxG - minG
+    local chars = {}
+    for _, g in ipairs(points) do
+        local rIdx = 3
+        if range > 0 then
+            local ratio = (g - minG) / range
+            rIdx = math.min(6, math.max(1, math.floor(ratio * 5.99) + 1))
+        end
+        table.insert(chars, ramp[rIdx])
+    end
+
+    return table.concat(chars, "")
+end
+
+-- ----------------------------------------------------------------------------
+-- Mail Expiry Alert (Feature 7)
+-- ----------------------------------------------------------------------------
+function CLIAlts:CheckMailExpiryAlert()
+    if not CLIAltsDB or not CLIAltsDB.characters then return end
+    local now = time()
+    local expiring = {}
+
+    for _, c in ipairs(self:GetCharactersList()) do
+        if c.minMailDays and c.mailCheckedTime and (c.mailCount or 0) > 0 then
+            local elapsedDays = (now - c.mailCheckedTime) / 86400
+            local daysRemaining = c.minMailDays - elapsedDays
+            if daysRemaining <= 3.0 then
+                table.insert(expiring, {
+                    name = c.name,
+                    classFile = c.classFile,
+                    days = math.max(0, daysRemaining),
+                    count = c.mailCount,
+                })
+            end
+        end
+    end
+
+    if #expiring > 0 then
+        for _, entry in ipairs(expiring) do
+            local coloredName = self:ColorizePlayerName(entry.name, entry.classFile)
+            local daysText = (entry.days < 1.0) and string.format("%.0fh", entry.days * 24) or string.format("%.1fd", entry.days)
+            self:Print(string.format("|cffff4444[MAIL WARNING]|r %s has %d mail(s) expiring in |cffffffff%s|r! Log in to retrieve.",
+                coloredName, entry.count, daysText))
+        end
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- CSV Data Export (Feature 8)
+-- ----------------------------------------------------------------------------
+function CLIAlts:GenerateExportCSV()
+    local lines = {}
+    table.insert(lines, "Name,Realm,Faction,Race,Class,Level,XP,MaxXP,RestedXP,RestedPct,RestedStatus,WastedXP,Gold,Silver,Copper,Prof1,Prof1Rank,Prof2,Prof2Rank,Location,LastSeen")
+
+    local chars = self:GetCharactersList("name", true)
+    for _, c in ipairs(chars) do
+        local rested = self:GetRestedData(c)
+        local wastedSec, wastedXP = self:GetRestedWaste(c)
+        local money = c.money or 0
+        local gold = math.floor(money / 10000)
+        local silver = math.floor((money % 10000) / 100)
+        local copper = money % 100
+
+        local profs = c.professions and c.professions.primary or {}
+        local p1Name = (profs[1] and profs[1].name) or ""
+        local p1Rank = (profs[1] and profs[1].rank) or 0
+        local p2Name = (profs[2] and profs[2].name) or ""
+        local p2Rank = (profs[2] and profs[2].rank) or 0
+
+        local row = string.format("%q,%q,%q,%q,%q,%d,%d,%d,%d,%d,%q,%d,%d,%d,%d,%q,%d,%q,%d,%q,%q",
+            c.fullName or c.name or "Unknown",
+            c.realm or "Forever",
+            c.faction or "Neutral",
+            c.race or "Unknown",
+            c.class or "Unknown",
+            c.level or 1,
+            c.xp or 0,
+            c.maxXP or 0,
+            c.restedXP or 0,
+            (rested and rested.percent) or 0,
+            (rested and rested.statusStr) or "Unknown",
+            wastedXP or 0,
+            gold, silver, copper,
+            p1Name, p1Rank,
+            p2Name, p2Rank,
+            c.location or "Unknown",
+            self:GetTimeAgo(c.lastUpdate)
+        )
+        table.insert(lines, row)
+    end
+
+    return table.concat(lines, "\n")
 end
