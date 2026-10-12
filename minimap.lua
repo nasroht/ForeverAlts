@@ -14,7 +14,6 @@ function CLIAlts:CreateMinimapButton()
     if minimapBtn then return minimapBtn end
 
     minimapBtn = CreateFrame("Button", "CLIAltsMinimapButton", Minimap)
-    _G["NasaltsMinimapButton"] = minimapBtn
     minimapBtn:SetFrameStrata("HIGH")
     minimapBtn:SetSize(32, 32)
     minimapBtn:SetFrameLevel(25)

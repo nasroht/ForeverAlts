@@ -64,7 +64,7 @@ end
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "ADDON_LOADED" then
         local loaded = (arg1 or ""):lower()
-        if not arg1 or loaded == (addonName or ""):lower() or loaded == "clialts" or loaded == "nasalts" then
+        if not arg1 or loaded == (addonName or ""):lower() or loaded == "clialts" then
             CLIAlts:InitDB()
             CLIAlts:CreateMinimapButton()
             CLIAlts:CreateMainFrame()
@@ -291,8 +291,4 @@ end
 SLASH_CLIALTS1 = "/clialts"
 SLASH_CLIALTS2 = "/cli"
 SLASH_CLIALTS3 = "/ca"
-SLASH_CLIALTS4 = "/alts"
-SLASH_CLIALTS5 = "/nasalts"
-SLASH_CLIALTS6 = "/nas"
 SlashCmdList["CLIALTS"] = SlashHandler
-SlashCmdList["NASALTS"] = SlashHandler

@@ -8,7 +8,6 @@ local addonName, addonTable = ...
 local CLIAlts = addonTable
 _G["CLIAlts"] = CLIAlts
 _G["clialts"] = CLIAlts
-_G["Nasalts"] = CLIAlts
 
 -- ----------------------------------------------------------------------------
 -- Constants & Reference Tables
@@ -197,7 +196,7 @@ function CLIAlts:InitDB()
         return
     end
 
-    local oldDB = NasaltsDB
+    local oldDB = rawget(_G, "NasaltsDB")
     if not CLIAltsDB and oldDB then
         CLIAltsDB = oldDB
     end
@@ -205,7 +204,7 @@ function CLIAlts:InitDB()
         CLIAltsDB = {}
     end
     CLIAltsDB.settings = CLIAltsDB.settings or {}
-    CLIAltsDB.settings.theme = CLIAltsDB.settings.theme or "AMBER"
+    CLIAltsDB.settings.theme = CLIAltsDB.settings.theme or "GREEN"
     CLIAltsDB.settings.minimapPos = CLIAltsDB.settings.minimapPos or 45
     CLIAltsDB.settings.minimapShow = (CLIAltsDB.settings.minimapShow ~= false)
     CLIAltsDB.settings.sortBy = CLIAltsDB.settings.sortBy or "name"
@@ -281,7 +280,9 @@ function CLIAlts:InitDB()
         CLIAltsDB.dbVersion = CURRENT_DB_VERSION
     end
 
-    NasaltsDB = CLIAltsDB -- Keep backward compatibility alias synchronized
+    if rawget(_G, "NasaltsDB") then
+        _G["NasaltsDB"] = nil
+    end
     self.dbInitialized = true
 end
 

@@ -215,7 +215,6 @@ function CLIAlts:CreateMainFrame()
 
     mainFrame = frame
     _G["CLIAltsMainFrame"] = frame
-    _G["NasaltsMainFrame"] = frame
 
     -- Top border ASCII line
     local topAscii = frame:CreateFontString(nil, "OVERLAY")
