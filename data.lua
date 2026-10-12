@@ -14,6 +14,8 @@ _G["Nasalts"] = CLIAlts
 -- Constants & Reference Tables
 -- ----------------------------------------------------------------------------
 CLIAlts.VERSION = "1.0.0"
+CLIAlts.DB_VERSION = 2
+local CURRENT_DB_VERSION = 2
 
 -- Fallback RAID_CLASS_COLORS if not present in client
 local FALLBACK_CLASS_COLORS = {
@@ -97,6 +99,10 @@ end
 -- Database Initialization & Two-Name Migration
 -- ----------------------------------------------------------------------------
 function CLIAlts:InitDB()
+    if self.dbInitialized and CLIAltsDB and CLIAltsDB.characters and CLIAltsDB.settings and CLIAltsDB.dbVersion == CURRENT_DB_VERSION then
+        return
+    end
+
     local oldDB = NasaltsDB
     if not CLIAltsDB and oldDB then
         CLIAltsDB = oldDB
@@ -114,74 +120,79 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.wellRestedRank = tonumber(CLIAltsDB.settings.wellRestedRank) or 0
     CLIAltsDB.characters = CLIAltsDB.characters or {}
 
-    -- Merge / restore character data and professions from old NasaltsDB if available
-    if oldDB and oldDB ~= CLIAltsDB and oldDB.characters then
-        for oldKey, oldChar in pairs(oldDB.characters) do
-            local cleanOldKey = oldChar.fullName or oldChar.name or oldKey
-            cleanOldKey = cleanOldKey:match("^(.-)%s*-%s*.*$") or cleanOldKey
+    -- Run one-time migration and repair only if dbVersion is older than CURRENT_DB_VERSION
+    if (tonumber(CLIAltsDB.dbVersion) or 0) < CURRENT_DB_VERSION then
+        -- Merge / restore character data and professions from old NasaltsDB if available
+        if oldDB and oldDB ~= CLIAltsDB and oldDB.characters then
+            for oldKey, oldChar in pairs(oldDB.characters) do
+                local cleanOldKey = oldChar.fullName or oldChar.name or oldKey
+                cleanOldKey = cleanOldKey:match("^(.-)%s*-%s*.*$") or cleanOldKey
 
-            -- Find if this character already exists in CLIAltsDB
-            local target = CLIAltsDB.characters[cleanOldKey] or CLIAltsDB.characters[oldKey]
-            if not target then
-                for k, c in pairs(CLIAltsDB.characters) do
-                    local n = c.fullName or c.name or k
-                    if n == cleanOldKey or (n and cleanOldKey and (n:find(cleanOldKey, 1, true) or cleanOldKey:find(n, 1, true))) then
-                        target = c
-                        break
+                -- Find if this character already exists in CLIAltsDB
+                local target = CLIAltsDB.characters[cleanOldKey] or CLIAltsDB.characters[oldKey]
+                if not target then
+                    for k, c in pairs(CLIAltsDB.characters) do
+                        local n = c.fullName or c.name or k
+                        if n == cleanOldKey or (n and cleanOldKey and (n:find(cleanOldKey, 1, true) or cleanOldKey:find(n, 1, true))) then
+                            target = c
+                            break
+                        end
+                    end
+                end
+
+                if not target then
+                    -- Import character that was tracked in NasaltsDB but missing in CLIAltsDB
+                    CLIAltsDB.characters[cleanOldKey] = oldChar
+                else
+                    -- Restore professions if current character has empty professions but old character has recorded ones
+                    local curProf = target.professions
+                    local oldProf = oldChar.professions
+                    local hasCur = curProf and ((curProf.primary and #curProf.primary > 0) or (curProf.secondary and #curProf.secondary > 0))
+                    local hasOld = oldProf and ((oldProf.primary and #oldProf.primary > 0) or (oldProf.secondary and #oldProf.secondary > 0))
+                    if not hasCur and hasOld then
+                        target.professions = oldProf
                     end
                 end
             end
+        end
 
-            if not target then
-                -- Import character that was tracked in NasaltsDB but missing in CLIAltsDB
-                CLIAltsDB.characters[cleanOldKey] = oldChar
-            else
-                -- Restore professions if current character has empty professions but old character has recorded ones
-                local curProf = target.professions
-                local oldProf = oldChar.professions
-                local hasCur = curProf and ((curProf.primary and #curProf.primary > 0) or (curProf.secondary and #curProf.secondary > 0))
-                local hasOld = oldProf and ((oldProf.primary and #oldProf.primary > 0) or (oldProf.secondary and #oldProf.secondary > 0))
-                if not hasCur and hasOld then
-                    target.professions = oldProf
+        -- Migrate old "Name - Realm" keys to clean two-name keys & repair resting flags
+        local migrated = {}
+        for key, char in pairs(CLIAltsDB.characters) do
+            local cleanKey = char.fullName
+            if not cleanKey or cleanKey == "" then
+                if char.primaryName and char.secondaryName and char.secondaryName ~= "" then
+                    cleanKey = char.primaryName .. " " .. char.secondaryName
+                elseif char.name and char.name ~= "" then
+                    cleanKey = char.name:match("^(.-)%s*-%s*.*$") or char.name
+                else
+                    cleanKey = key:match("^(.-)%s*-%s*.*$") or key
                 end
             end
+            char.key = cleanKey
+            char.fullName = cleanKey
+            char.name = cleanKey
+
+            -- Repair isResting & loggedOutInRestZone if location indicates an inn, camp, or resting zone
+            if self:IsLocationResting(char.location) then
+                char.isResting = true
+                char.loggedOutInRestZone = true
+            elseif char.isResting == true and char.loggedOutInRestZone == nil then
+                char.loggedOutInRestZone = true
+            end
+            -- Ensure fallback maxXP is populated if 0
+            if (not char.maxXP or char.maxXP <= 0) and char.level and char.level < 60 then
+                char.maxXP = self.XP_TABLE[char.level] or (char.level * 1000)
+            end
+
+            migrated[cleanKey] = char
         end
+        CLIAltsDB.characters = migrated
+        CLIAltsDB.dbVersion = CURRENT_DB_VERSION
     end
 
     NasaltsDB = CLIAltsDB -- Keep backward compatibility alias synchronized
-
-    -- Migrate old "Name - Realm" keys to clean two-name keys & repair resting flags
-    local migrated = {}
-    for key, char in pairs(CLIAltsDB.characters) do
-        local cleanKey = char.fullName
-        if not cleanKey or cleanKey == "" then
-            if char.primaryName and char.secondaryName and char.secondaryName ~= "" then
-                cleanKey = char.primaryName .. " " .. char.secondaryName
-            elseif char.name and char.name ~= "" then
-                cleanKey = char.name:match("^(.-)%s*-%s*.*$") or char.name
-            else
-                cleanKey = key:match("^(.-)%s*-%s*.*$") or key
-            end
-        end
-        char.key = cleanKey
-        char.fullName = cleanKey
-        char.name = cleanKey
-
-        -- Repair isResting & loggedOutInRestZone if location indicates an inn, camp, or resting zone
-        if self:IsLocationResting(char.location) then
-            char.isResting = true
-            char.loggedOutInRestZone = true
-        elseif char.isResting == true and char.loggedOutInRestZone == nil then
-            char.loggedOutInRestZone = true
-        end
-        -- Ensure fallback maxXP is populated if 0
-        if (not char.maxXP or char.maxXP <= 0) and char.level and char.level < 60 then
-            char.maxXP = self.XP_TABLE[char.level] or (char.level * 1000)
-        end
-
-        migrated[cleanKey] = char
-    end
-    CLIAltsDB.characters = migrated
+    self.dbInitialized = true
 end
 
 -- ----------------------------------------------------------------------------
