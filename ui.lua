@@ -300,10 +300,10 @@ function CLIAlts:CreateMainFrame()
 
     -- Retro Tabs
     local tabs = {
-        { id = 1, text = "[ 1: ALTS OVERVIEW ]" },
-        { id = 2, text = "[ 2: RESTED XP MONITOR ]" },
-        { id = 3, text = "[ 3: PROFESSIONS ]" },
-        { id = 4, text = "[ 4: ECONOMY / WEALTH ]" },
+        { id = 1, text = "[ ALTS OVERVIEW ]" },
+        { id = 2, text = "[ RESTED XP MONITOR ]" },
+        { id = 3, text = "[ PROFESSIONS ]" },
+        { id = 4, text = "[ ECONOMY / WEALTH ]" },
     }
     frame.tabButtons = {}
     local prevTab = nil
@@ -1348,6 +1348,7 @@ function CLIAlts:ShowHelpPopup()
         "+====================================================================+",
         "| Slash Commands:                                                    |",
         "|   /CLIAlts            - Toggle the main TUI monitor                |",
+        "|   /CLIAlts [1-4]      - Open directly to specific tab (1-4)        |",
         "|   /CLIAlts show       - Open window                                |",
         "|   /CLIAlts track      - Force save current character to tracker    |",
         "|   /CLIAlts rested     - Print quick rested XP report to chat       |",

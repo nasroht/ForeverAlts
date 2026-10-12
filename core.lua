@@ -202,6 +202,23 @@ local function SlashHandler(msg)
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:Toggle()
 
+    elseif cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "tab" then
+        local tabId = tonumber(cmd)
+        if cmd == "tab" and arg and arg ~= "" then
+            tabId = tonumber(arg)
+        end
+        if tabId and tabId >= 1 and tabId <= 4 then
+            if CLIAltsDB and CLIAltsDB.settings then
+                CLIAltsDB.settings.activeTab = tabId
+            end
+            CLIAlts:CollectCurrentCharacter()
+            CLIAlts:Toggle(true)
+            if CLIAlts.SetPage then CLIAlts:SetPage(1) end
+            CLIAlts:Render()
+        else
+            CLIAlts:Print("Usage: |cff00ff66/clialts [1-4]|r (Switches to specified tab)")
+        end
+
     elseif cmd == "show" then
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:Toggle(true)
