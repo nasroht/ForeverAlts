@@ -751,6 +751,23 @@ function CLIAlts:UpdateRowProgressBar(row, ratio, textStr, r, g, b, isMaxLevel)
 end
 
 -- ----------------------------------------------------------------------------
+-- Tab 3 Profession Format Helpers
+-- ----------------------------------------------------------------------------
+local function FormatProf(p)
+    if not p then return "|cff555555---|r" end
+    local isMax = p.rank >= (p.maxRank or 300)
+    local color = isMax and "|cff00ff66" or "|cffffffff"
+    return string.format("%s: %s%d/%d|r", p.name:sub(1, 8), color, p.rank, p.maxRank or 300)
+end
+
+local function FormatSec(p)
+    if not p then return "|cff555555---|r" end
+    local isMax = p.rank >= (p.maxRank or 300)
+    local color = isMax and "|cff00ff66" or "|cffffffff"
+    return string.format("%s%d/%d|r", color, p.rank, p.maxRank or 300)
+end
+
+-- ----------------------------------------------------------------------------
 -- Render Main Content
 -- ----------------------------------------------------------------------------
 function CLIAlts:Render()
@@ -935,20 +952,6 @@ function CLIAlts:Render()
                         elseif sec.name == "First Aid" then firstAid = sec
                         elseif sec.name == "Fishing" then fishing = sec end
                     end
-                end
-
-                local function FormatProf(p)
-                    if not p then return "|cff555555---|r" end
-                    local isMax = p.rank >= (p.maxRank or 300)
-                    local color = isMax and "|cff00ff66" or "|cffffffff"
-                    return string.format("%s: %s%d/%d|r", p.name:sub(1, 8), color, p.rank, p.maxRank or 300)
-                end
-
-                local function FormatSec(p)
-                    if not p then return "|cff555555---|r" end
-                    local isMax = p.rank >= (p.maxRank or 300)
-                    local color = isMax and "|cff00ff66" or "|cffffffff"
-                    return string.format("%s%d/%d|r", color, p.rank, p.maxRank or 300)
                 end
 
                 row.col4:SetText(FormatProf(p1))

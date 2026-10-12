@@ -33,29 +33,32 @@ end
 -- ----------------------------------------------------------------------------
 -- Event Handler Frame
 -- ----------------------------------------------------------------------------
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:RegisterEvent("PLAYER_LOGIN")
-eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-eventFrame:RegisterEvent("PLAYER_LOGOUT")
-eventFrame:RegisterEvent("PLAYER_CAMPING")
-eventFrame:RegisterEvent("PLAYER_QUITING")
-eventFrame:RegisterEvent("LOGOUT_CANCEL")
-eventFrame:RegisterEvent("PLAYER_XP_UPDATE")
-eventFrame:RegisterEvent("UPDATE_EXHAUSTION")
-eventFrame:RegisterEvent("PLAYER_MONEY")
-eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
-eventFrame:RegisterEvent("PLAYER_UPDATE_RESTING")
-eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-eventFrame:RegisterEvent("ZONE_CHANGED")
-eventFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
-eventFrame:RegisterEvent("SKILL_LINES_CHANGED")
-
-if TRADE_SKILL_SHOW then
-    eventFrame:RegisterEvent("TRADE_SKILL_SHOW")
-end
-if TRADE_SKILL_UPDATE then
-    eventFrame:RegisterEvent("TRADE_SKILL_UPDATE")
+local safeEvents = {
+    "ADDON_LOADED",
+    "PLAYER_LOGIN",
+    "PLAYER_ENTERING_WORLD",
+    "PLAYER_LOGOUT",
+    "PLAYER_CAMPING",
+    "PLAYER_QUITING",
+    "LOGOUT_CANCEL",
+    "PLAYER_XP_UPDATE",
+    "UPDATE_EXHAUSTION",
+    "PLAYER_MONEY",
+    "PLAYER_LEVEL_UP",
+    "PLAYER_UPDATE_RESTING",
+    "ZONE_CHANGED_NEW_AREA",
+    "ZONE_CHANGED",
+    "ZONE_CHANGED_INDOORS",
+    "SKILL_LINES_CHANGED",
+    "SPELLS_CHANGED",
+    "CHAT_MSG_SKILL",
+    "TRADE_SKILL_SHOW",
+    "TRADE_SKILL_UPDATE",
+    "CRAFT_SHOW",
+    "CRAFT_UPDATE",
+}
+for _, ev in ipairs(safeEvents) do
+    pcall(function() eventFrame:RegisterEvent(ev) end)
 end
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
@@ -95,6 +98,14 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end)
 
         SafeAfter(3.0, function()
+            CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
+            CLIAlts:CollectCurrentCharacter()
+            if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
+                CLIAlts:Render()
+            end
+        end)
+
+        SafeAfter(5.0, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
             CLIAlts:CollectCurrentCharacter()
             if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
@@ -149,7 +160,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             end
         end)
 
-    elseif event == "SKILL_LINES_CHANGED" or event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" then
+    elseif event == "SKILL_LINES_CHANGED" or event == "SPELLS_CHANGED" or event == "CHAT_MSG_SKILL" or event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "CRAFT_SHOW" or event == "CRAFT_UPDATE" then
         CLIAlts:CollectCurrentCharacter()
         if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
             CLIAlts:Render()

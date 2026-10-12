@@ -97,13 +97,13 @@ end
 -- Database Initialization & Two-Name Migration
 -- ----------------------------------------------------------------------------
 function CLIAlts:InitDB()
-    if not CLIAltsDB and NasaltsDB then
-        CLIAltsDB = NasaltsDB
+    local oldDB = NasaltsDB
+    if not CLIAltsDB and oldDB then
+        CLIAltsDB = oldDB
     end
     if not CLIAltsDB then
         CLIAltsDB = {}
     end
-    NasaltsDB = CLIAltsDB -- backward compatibility alias
     CLIAltsDB.settings = CLIAltsDB.settings or {}
     CLIAltsDB.settings.theme = CLIAltsDB.settings.theme or "AMBER"
     CLIAltsDB.settings.minimapPos = CLIAltsDB.settings.minimapPos or 45
@@ -113,6 +113,42 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.activeTab = CLIAltsDB.settings.activeTab or 1
     CLIAltsDB.settings.wellRestedRank = tonumber(CLIAltsDB.settings.wellRestedRank) or 0
     CLIAltsDB.characters = CLIAltsDB.characters or {}
+
+    -- Merge / restore character data and professions from old NasaltsDB if available
+    if oldDB and oldDB ~= CLIAltsDB and oldDB.characters then
+        for oldKey, oldChar in pairs(oldDB.characters) do
+            local cleanOldKey = oldChar.fullName or oldChar.name or oldKey
+            cleanOldKey = cleanOldKey:match("^(.-)%s*-%s*.*$") or cleanOldKey
+
+            -- Find if this character already exists in CLIAltsDB
+            local target = CLIAltsDB.characters[cleanOldKey] or CLIAltsDB.characters[oldKey]
+            if not target then
+                for k, c in pairs(CLIAltsDB.characters) do
+                    local n = c.fullName or c.name or k
+                    if n == cleanOldKey or (n and cleanOldKey and (n:find(cleanOldKey, 1, true) or cleanOldKey:find(n, 1, true))) then
+                        target = c
+                        break
+                    end
+                end
+            end
+
+            if not target then
+                -- Import character that was tracked in NasaltsDB but missing in CLIAltsDB
+                CLIAltsDB.characters[cleanOldKey] = oldChar
+            else
+                -- Restore professions if current character has empty professions but old character has recorded ones
+                local curProf = target.professions
+                local oldProf = oldChar.professions
+                local hasCur = curProf and ((curProf.primary and #curProf.primary > 0) or (curProf.secondary and #curProf.secondary > 0))
+                local hasOld = oldProf and ((oldProf.primary and #oldProf.primary > 0) or (oldProf.secondary and #oldProf.secondary > 0))
+                if not hasCur and hasOld then
+                    target.professions = oldProf
+                end
+            end
+        end
+    end
+
+    NasaltsDB = CLIAltsDB -- Keep backward compatibility alias synchronized
 
     -- Migrate old "Name - Realm" keys to clean two-name keys & repair resting flags
     local migrated = {}
@@ -258,17 +294,28 @@ function CLIAlts:CollectProfessions()
 
         -- Method 2: Classic Skill Lines (GetNumSkillLines & GetSkillLineInfo)
         if (#primary == 0 or #secondary == 0) and GetNumSkillLines and GetSkillLineInfo then
+            if ExpandSkillHeader then
+                pcall(ExpandSkillHeader, 0)
+            end
             local numSkills = GetNumSkillLines() or 0
             local currentHeader = ""
             for i = 1, numSkills do
-                local skillName, isHeader, _, skillRank, _, _, skillMaxRank = GetSkillLineInfo(i)
+                local skillName, isHeader, _, skillRank, _, _, skillMaxRank, isAbandonable = GetSkillLineInfo(i)
                 if isHeader then
                     currentHeader = skillName or ""
                 elseif skillName and skillRank and not seen[skillName] then
-                    local isPrimary = KNOWN_PRIMARY_PROFS[skillName] or (currentHeader == "Professions")
+                    local canAbandon = (isAbandonable == true or isAbandonable == 1)
                     local isSecondary = KNOWN_SECONDARY_PROFS[skillName] or (currentHeader == "Secondary Skills")
+                    local isPrimary = (not isSecondary) and (KNOWN_PRIMARY_PROFS[skillName] or (currentHeader == "Professions") or canAbandon)
 
-                    if isPrimary and #primary < 2 then
+                    if isSecondary then
+                        seen[skillName] = true
+                        table.insert(secondary, {
+                            name = skillName,
+                            rank = skillRank,
+                            maxRank = skillMaxRank or 300,
+                        })
+                    elseif isPrimary and #primary < 2 then
                         seen[skillName] = true
                         table.insert(primary, {
                             name = skillName,
@@ -381,6 +428,19 @@ function CLIAlts:CollectCurrentCharacter(isLogout)
     end
 
     local professions = self:CollectProfessions()
+    local hasNewPrimary = (professions and professions.primary and #professions.primary > 0)
+    local hasNewSecondary = (professions and professions.secondary and #professions.secondary > 0)
+
+    -- Prevent logout or uninitialized skill lines from wiping out valid saved professions
+    if existing and existing.professions then
+        if not hasNewPrimary and existing.professions.primary and #existing.professions.primary > 0 then
+            professions.primary = existing.professions.primary
+        end
+        if not hasNewSecondary and existing.professions.secondary and #existing.professions.secondary > 0 then
+            professions.secondary = existing.professions.secondary
+        end
+    end
+
     local now = time()
 
     local charData = {

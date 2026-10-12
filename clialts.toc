@@ -3,7 +3,7 @@
 ## Notes: Retro ASCII TUI-styled character and alt tracker. Tracks Faction, Race, Level, Rested XP with ETA, Professions, and Gold.
 ## Author: CLIAlts
 ## Version: 1.0.0
-## SavedVariables: CLIAltsDB
+## SavedVariables: CLIAltsDB, NasaltsDB
 ## X-License: MIT
 
 data.lua
