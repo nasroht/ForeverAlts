@@ -515,7 +515,8 @@ function CLIAlts:CreateMainFrame()
                     GameTooltip:AddLine(string.format("XP to Level %d: |cff00ff66%s XP needed|r",
                         (self.charData.level or 1) + 1, CLIAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
                 else
-                    GameTooltip:AddLine("Level: |cff00ff6660 (MAX LEVEL)|r", 0.8, 0.8, 0.8)
+                    local maxLvl = (self.charData and self.charData.level) or CLIAlts:GetMaxLevel()
+                    GameTooltip:AddLine(string.format("Level: |cff00ff66%d (MAX LEVEL)|r", maxLvl), 0.8, 0.8, 0.8)
                 end
 
                 local rested = CLIAlts:GetRestedData(self.charData)
@@ -1206,7 +1207,7 @@ function CLIAlts:ShowDossierPopup(char)
         table.insert(lines, string.format("| Next Level:     |cffffffff%s XP needed|r to reach Level %d", self:FormatNumber(xpData.remainingXP), (char.level or 1) + 1))
         table.insert(lines, string.format("| Progress Bar:   %s%s|r %d%%", t.barFill, xpData.barStr, xpData.percent))
     else
-        table.insert(lines, "| Status:         |cff888888MAX LEVEL (Level 60 reached)|r")
+        table.insert(lines, string.format("| Status:         |cff888888MAX LEVEL (Level %d reached)|r", char.level or self:GetMaxLevel()))
     end
 
     table.insert(lines, "+------------------------------------------------------------------------------+")

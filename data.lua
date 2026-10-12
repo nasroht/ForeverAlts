@@ -34,22 +34,21 @@ local FALLBACK_CLASS_COLORS = {
     ["EVOKER"]      = { r = 0.20, g = 0.58, b = 0.50, hex = "33937f" },
 }
 
--- Standard Classic / Vanilla XP required per level (Levels 1 to 59)
--- Fallback in case client UnitXPMax returns 0 before server sync
-CLIAlts.XP_TABLE = {
-    [1] = 400,    [2] = 900,    [3] = 1400,   [4] = 2100,   [5] = 2800,
-    [6] = 3600,   [7] = 4500,   [8] = 5400,   [9] = 6500,   [10] = 7600,
-    [11] = 8700,  [12] = 9800,  [13] = 11000, [14] = 12300, [15] = 13600,
-    [16] = 15000, [17] = 16400, [18] = 17900, [19] = 19500, [20] = 21100,
-    [21] = 22800, [22] = 24600, [23] = 26500, [24] = 28500, [25] = 30500,
-    [26] = 32600, [27] = 34800, [28] = 37000, [29] = 39400, [30] = 41800,
-    [31] = 44300, [32] = 46900, [33] = 49600, [34] = 52400, [35] = 55300,
-    [36] = 58300, [37] = 61400, [38] = 64600, [39] = 67900, [40] = 71300,
-    [41] = 74800, [42] = 78400, [43] = 82100, [44] = 85900, [45] = 89800,
-    [46] = 93800, [47] = 97900, [48] = 102100, [49] = 106400, [50] = 110800,
-    [51] = 115300, [52] = 119900, [53] = 124600, [54] = 129400, [55] = 134300,
-    [56] = 139300, [57] = 144400, [58] = 149600, [59] = 154900,
-}
+-- ----------------------------------------------------------------------------
+-- Level Cap Helper (WoW Forever / Classic / Expansion Dynamic Cap)
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetMaxLevel()
+    if GetMaxPlayerLevel then
+        local ml = GetMaxPlayerLevel()
+        if ml and type(ml) == "number" and ml > 0 then
+            if CLIAltsDB and CLIAltsDB.settings then
+                CLIAltsDB.settings.maxLevel = ml
+            end
+            return ml
+        end
+    end
+    return (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.maxLevel) or 60
+end
 
 local KNOWN_PRIMARY_PROFS = {
     ["Alchemy"]        = true,
@@ -273,10 +272,8 @@ function CLIAlts:InitDB()
                 char.cleanLogout = true
             end
 
-            -- Ensure fallback maxXP is populated if 0
-            if (not char.maxXP or char.maxXP <= 0) and char.level and char.level < 60 then
-                char.maxXP = self.XP_TABLE[char.level] or (char.level * 1000)
-            end
+            -- Ensure char.maxXP is initialized (populated dynamically from UnitXPMax snapshots)
+            char.maxXP = char.maxXP or 0
 
             migrated[cleanKey] = char
         end
@@ -490,9 +487,6 @@ function CLIAlts:CollectCurrentCharacter(isLogout)
     if maxXP <= 0 and existing and existing.maxXP and existing.maxXP > 0 then
         maxXP = existing.maxXP
     end
-    if maxXP <= 0 and level < 60 then
-        maxXP = self.XP_TABLE[level] or (level * 1000)
-    end
     if existing and existing.level and level > existing.level then
         -- Leveled up: start fresh at current level
     elseif curXP <= 0 and existing and existing.xp and existing.xp > 0 then
@@ -675,8 +669,9 @@ end
 function CLIAlts:GetLevelProgressData(char)
     if not char then return nil end
 
+    local maxLevel = self:GetMaxLevel()
     local level = char.level or 1
-    local isMaxLevel = (level >= 60)
+    local isMaxLevel = (level >= maxLevel)
     local curXP = char.xp or 0
     local maxXP = char.maxXP or 0
 
@@ -698,10 +693,6 @@ function CLIAlts:GetLevelProgressData(char)
                 char.maxXP = liveMax
             end
         end
-    end
-
-    if maxXP <= 0 and not isMaxLevel then
-        maxXP = self.XP_TABLE[level] or (level * 1000)
     end
 
     if isMaxLevel then
@@ -764,8 +755,10 @@ function CLIAlts:GetRestedData(char)
     local capMult = 1.5 * speedMult           -- +4% cap per rank (1.50 to 1.80)
     local maxPercent = math.floor((capMult * 100) + 0.5) -- 150 to 180
 
+    local maxLevel = self:GetMaxLevel()
+
     -- Max level characters
-    if currentLevel >= 60 then
+    if currentLevel >= maxLevel then
         return {
             isMaxLevel = true,
             currentRested = 0,
@@ -786,12 +779,7 @@ function CLIAlts:GetRestedData(char)
         }
     end
 
-    -- Fallback to standard Classic XP if maxXP is not yet initialized
-    if maxXP <= 0 and currentLevel < 60 then
-        maxXP = self.XP_TABLE[currentLevel] or (currentLevel * 1000)
-    end
-
-    local maxRested = maxXP * capMult
+    local maxRested = (maxXP > 0) and (maxXP * capMult) or 0
 
     -- Check if currently logged in as this character
     local isCurrentPlayer = false
