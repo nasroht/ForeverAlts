@@ -51,8 +51,11 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | Command | Description |
 | :--- | :--- |
 | `/clialts`, `/cli`, or `/ca` | Toggle the main TUI monitor window |
+| `/clialts [1-4]` | Open directly to specific tab (1-4) |
 | `/clialts show` | Open the window |
 | `/clialts hide` | Close the window |
+| `/clialts scale <0.7-1.8>` | Set UI scale (e.g. `1.2` or `120%`) for 1440p / 4K displays |
+| `/clialts font <12-22>` | Set terminal monospace font size (default `15`) |
 | `/clialts minimap` | Toggle the minimap icon on or off |
 | `/clialts rested` | Print an ASCII summary of all alts' rested XP to chat |
 | `/clialts perk <0-5>` | Set your Well Rested legacy perk rank (0-5) |

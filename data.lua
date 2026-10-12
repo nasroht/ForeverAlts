@@ -909,6 +909,52 @@ function CLIAlts:FormatNumber(n)
     return formatted
 end
 
+function CLIAlts:StripColors(str)
+    if not str then return "" end
+    str = tostring(str)
+    str = str:gsub("|c%x%x%x%x%x%x%x%x", "")
+    str = str:gsub("|r", "")
+    str = str:gsub("|T.-|t", "")
+    return str
+end
+
+function CLIAlts:VisibleLen(str)
+    if not str then return 0 end
+    return string.len(self:StripColors(str))
+end
+
+function CLIAlts:Pad(text, width, align, colorHex)
+    text = tostring(text or "")
+    if colorHex and not text:find("|c") then
+        text = string.format("|cff%s%s|r", colorHex, text)
+    end
+
+    local visLen = self:VisibleLen(text)
+    if visLen >= width then
+        if visLen > width then
+            local clean = self:StripColors(text):sub(1, width)
+            if colorHex then
+                return string.format("|cff%s%s|r", colorHex, clean)
+            else
+                return clean
+            end
+        end
+        return text
+    end
+
+    local diff = width - visLen
+    align = align or "LEFT"
+    if align == "RIGHT" then
+        return string.rep(" ", diff) .. text
+    elseif align == "CENTER" then
+        local left = math.floor(diff / 2)
+        local right = diff - left
+        return string.rep(" ", left) .. text .. string.rep(" ", right)
+    else
+        return text .. string.rep(" ", diff)
+    end
+end
+
 function CLIAlts:FormatMoney(copper, colorize)
     copper = tonumber(copper) or 0
     local gold = math.floor(copper / 10000)

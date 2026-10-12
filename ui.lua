@@ -1,15 +1,35 @@
 -- ============================================================================
 -- CLIAlts: Retro Alt Tracker
 -- File: ui.lua
--- Retro ASCII / TUI interface with mouse support, clickable tabs, sorting,
--- character dossiers, rested XP bars, and theme customization.
+-- Pure Monospace ASCII / TUI Terminal Interface with data-driven columns,
+-- single FontString rows, VT323 CRT terminal typography, and SetScale support.
 -- ============================================================================
 
 local addonName, addonTable = ...
 local CLIAlts = addonTable
 
 -- ----------------------------------------------------------------------------
--- Theme Definitions
+-- Constants & Terminal Configuration
+-- ----------------------------------------------------------------------------
+local FONT_PATH = "Interface\\AddOns\\clialts\\media\\VT323-Regular.ttf"
+local DEFAULT_FONT_SIZE = 15
+local LINE_WIDTH = 85
+local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
+local DOUBLE_BORDER = "+" .. string.rep("=", LINE_WIDTH - 2) .. "+"
+
+local ROWS_COUNT = 12
+local rowFrames = {}
+local headerButtons = {}
+local currentPage = 1
+local totalPages = 1
+local mainFrame = nil
+local dossierPopup = nil
+local confirmPopup = nil
+local helpPopup = nil
+local probeString = nil
+
+-- ----------------------------------------------------------------------------
+-- CRT Theme Definitions (With Syntax Coloring Hex Codes)
 -- ----------------------------------------------------------------------------
 CLIAlts.THEMES = {
     ["GREEN"] = {
@@ -21,6 +41,10 @@ CLIAlts.THEMES = {
         dim = { 0.25, 0.65, 0.35 },
         highlight = { 0.6, 1.0, 0.7 },
         rowHover = { 0.0, 0.3, 0.15, 0.35 },
+        borderHex = "00ff66",
+        primaryHex = "00ff66",
+        dimHex = "3fa859",
+        highlightHex = "99ffb2",
         barFill = "|cff00ff66",
         barEmpty = "|cff1a6633",
     },
@@ -33,6 +57,10 @@ CLIAlts.THEMES = {
         dim = { 0.75, 0.5, 0.15 },
         highlight = { 1.0, 0.9, 0.4 },
         rowHover = { 0.3, 0.2, 0.05, 0.35 },
+        borderHex = "ffb000",
+        primaryHex = "ffb000",
+        dimHex = "bf8026",
+        highlightHex = "ffe666",
         barFill = "|cffffb000",
         barEmpty = "|cff664400",
     },
@@ -45,6 +73,10 @@ CLIAlts.THEMES = {
         dim = { 0.2, 0.55, 0.75 },
         highlight = { 0.7, 1.0, 1.0 },
         rowHover = { 0.05, 0.2, 0.3, 0.35 },
+        borderHex = "00d9ff",
+        primaryHex = "33e6ff",
+        dimHex = "338cbf",
+        highlightHex = "b3ffff",
         barFill = "|cff00e5ff",
         barEmpty = "|cff004f66",
     },
@@ -57,12 +89,17 @@ CLIAlts.THEMES = {
         dim = { 0.5, 0.5, 0.5 },
         highlight = { 1.0, 1.0, 1.0 },
         rowHover = { 0.2, 0.2, 0.2, 0.35 },
+        borderHex = "cccccc",
+        primaryHex = "e6e6e6",
+        dimHex = "808080",
+        highlightHex = "ffffff",
         barFill = "|cffd8d8d8",
         barEmpty = "|cff555555",
     },
 }
 
 local THEME_ORDER = { "GREEN", "AMBER", "CYAN", "MONO" }
+local SCALES = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
 
 function CLIAlts:GetTheme()
     local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "GREEN"
@@ -84,7 +121,38 @@ function CLIAlts:CycleTheme()
 end
 
 -- ----------------------------------------------------------------------------
--- UI Sound Helper
+-- Typography & Monospace Helpers
+-- ----------------------------------------------------------------------------
+function CLIAlts:SetWidgetFont(fontString, size, flags)
+    if not fontString then return end
+    size = size or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+    flags = flags or ""
+    local success = pcall(function()
+        fontString:SetFont(FONT_PATH, size, flags)
+    end)
+    if not success or not fontString:GetFont() then
+        fontString:SetFont("Fonts\\ARIALN.TTF", size, flags)
+    end
+end
+
+function CLIAlts:GetCharWidth(fontSize)
+    if not probeString and mainFrame then
+        probeString = mainFrame:CreateFontString(nil, "BACKGROUND")
+        probeString:Hide()
+    end
+    if probeString then
+        self:SetWidgetFont(probeString, fontSize or DEFAULT_FONT_SIZE)
+        probeString:SetText(string.rep("X", LINE_WIDTH))
+        local w = probeString:GetStringWidth()
+        if w and w > 0 then
+            return w / LINE_WIDTH
+        end
+    end
+    return (fontSize or DEFAULT_FONT_SIZE) * 0.52
+end
+
+-- ----------------------------------------------------------------------------
+-- Audio & Button Helpers
 -- ----------------------------------------------------------------------------
 local function PlayRetroSound()
     if SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON then
@@ -94,9 +162,6 @@ local function PlayRetroSound()
     end
 end
 
--- ----------------------------------------------------------------------------
--- Retro Button Creator Helper
--- ----------------------------------------------------------------------------
 local function CreateRetroButton(parent, text, width, height, onClick)
     local btn = CreateFrame("Button", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btn:SetSize(width or 80, height or 20)
@@ -111,7 +176,7 @@ local function CreateRetroButton(parent, text, width, height, onClick)
     btn:SetBackdropBorderColor(0.2, 0.6, 0.3, 0.8)
 
     local label = btn:CreateFontString(nil, "OVERLAY")
-    label:SetFont("Fonts\\ARIALN.TTF", 11, "OUTLINE")
+    CLIAlts:SetWidgetFont(label, 14, "")
     label:SetPoint("CENTER", 0, 0)
     label:SetText(text or "")
     btn.label = label
@@ -141,19 +206,8 @@ local function CreateRetroButton(parent, text, width, height, onClick)
 end
 
 -- ----------------------------------------------------------------------------
--- Main Frame Creation
+-- Window Position Persistence
 -- ----------------------------------------------------------------------------
-local mainFrame = nil
-local dossierPopup = nil
-local confirmPopup = nil
-local helpPopup = nil
-
-local ROWS_COUNT = 12
-local rowFrames = {}
-local currentPage = 1
-local totalPages = 1
-local headerPool = {} -- [tabId] = { btn1, btn2, ... }
-
 function CLIAlts:SaveWindowPosition(frame)
     frame = frame or mainFrame
     if not frame then return end
@@ -184,6 +238,328 @@ function CLIAlts:RestoreWindowPosition(frame)
     end
 end
 
+-- ----------------------------------------------------------------------------
+-- Scale & Font Size API
+-- ----------------------------------------------------------------------------
+function CLIAlts:SetScale(scale)
+    scale = tonumber(scale) or 1.0
+    scale = math.min(1.8, math.max(0.7, scale))
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.scale = scale
+    end
+    if mainFrame then
+        mainFrame:SetScale(scale)
+        if mainFrame.btnScale then
+            mainFrame.btnScale.label:SetText(string.format("[ SCALE: %d%% ]", math.floor(scale * 100 + 0.5)))
+        end
+    end
+end
+
+function CLIAlts:CycleScale()
+    local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+    local nextScale = 1.0
+    for i, s in ipairs(SCALES) do
+        if math.abs(s - cur) < 0.05 then
+            nextScale = SCALES[(i % #SCALES) + 1]
+            break
+        end
+    end
+    self:SetScale(nextScale)
+    self:Render()
+end
+
+function CLIAlts:SetFontSize(size)
+    size = tonumber(size) or DEFAULT_FONT_SIZE
+    size = math.min(22, math.max(12, size))
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.fontSize = size
+    end
+    if mainFrame then
+        self:UpdateAllFonts(size)
+        self:Render()
+    end
+end
+
+function CLIAlts:UpdateAllFonts(fontSize)
+    if not mainFrame then return end
+    fontSize = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+
+    self:SetWidgetFont(mainFrame.topAscii, fontSize)
+    self:SetWidgetFont(mainFrame.titleText, fontSize + 1, "OUTLINE")
+    self:SetWidgetFont(mainFrame.midAscii1, fontSize)
+    self:SetWidgetFont(mainFrame.statusBarText, fontSize)
+    self:SetWidgetFont(mainFrame.midAscii2, fontSize)
+    self:SetWidgetFont(mainFrame.tableTopAscii, fontSize)
+    self:SetWidgetFont(mainFrame.tableHeaderString, fontSize)
+    self:SetWidgetFont(mainFrame.tableSepAscii, fontSize)
+    self:SetWidgetFont(mainFrame.tableBotAscii, fontSize)
+    self:SetWidgetFont(mainFrame.botAscii, fontSize)
+    self:SetWidgetFont(mainFrame.pageText, fontSize)
+    self:SetWidgetFont(mainFrame.statusTip, fontSize)
+
+    for _, row in ipairs(rowFrames) do
+        self:SetWidgetFont(row.text, fontSize)
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Data-Driven Column Formatters (fmt)
+-- ----------------------------------------------------------------------------
+local function FmtFaction(char)
+    local fac = char.faction or "Neutral"
+    if fac == "Alliance" then
+        return "|cff00aaff[A]|r"
+    elseif fac == "Horde" then
+        return "|cffff3333[H]|r"
+    else
+        return "|cffaaaaaa[-]|r"
+    end
+end
+
+local function FmtName(char)
+    local name = char.fullName or char.name or "Unknown"
+    local _, _, _, hex = CLIAlts:GetClassColor(char.classFile)
+    return CLIAlts:Pad(name, 16, "LEFT", hex)
+end
+
+local function FmtLevel(char)
+    local lvl = tostring(char.level or 1)
+    return CLIAlts:Pad(lvl, 3, "RIGHT", "ffffff")
+end
+
+local function FmtRaceClass(char)
+    local code = CLIAlts:GetRaceCode(char)
+    local class = char.class or "Unknown"
+    local str = string.format("%s %s", code, class)
+    return CLIAlts:Pad(str, 11, "LEFT", "cccccc")
+end
+
+local function FmtLevelProgress(char, t)
+    local xpData = CLIAlts:GetLevelProgressData(char)
+    if not xpData or xpData.isMaxLevel then
+        return string.format("|cff%s[|r|cff%s%s|r|cff%s]|r |cff%sMAX |r",
+            t.borderHex, t.dimHex, string.rep("=", 10), t.borderHex, t.highlightHex)
+    end
+
+    local fill = math.min(10, math.max(0, math.floor((xpData.ratio or 0) * 10)))
+    local empty = 10 - fill
+    local fillStr = string.rep("=", fill)
+    local emptyStr = string.rep(".", empty)
+    local pctStr = string.format("%3d%%", xpData.percent)
+
+    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
+        t.borderHex, t.highlightHex, fillStr, t.dimHex, emptyStr, t.borderHex, t.primaryHex, pctStr)
+end
+
+local function FmtGold(char)
+    local gold = math.floor((char.money or 0) / 10000)
+    local str = CLIAlts:FormatNumber(gold) .. "g"
+    return CLIAlts:Pad(str, 10, "RIGHT", "ffd700")
+end
+
+local function FmtRested(char, t)
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested then return CLIAlts:Pad("---", 8, "RIGHT", "666666") end
+    if rested.isMaxLevel then return CLIAlts:Pad("MAX", 8, "RIGHT", "888888") end
+
+    local est = rested.isEstimate and "~" or " "
+    local pct = string.format("%3d%%%s", rested.percent, est)
+    local color = rested.isFull and t.highlightHex or t.primaryHex
+    return CLIAlts:Pad(pct, 8, "RIGHT", color)
+end
+
+local function FmtETA(char, t)
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested then return CLIAlts:Pad("---", 7, "RIGHT", "666666") end
+    if rested.isMaxLevel then return CLIAlts:Pad("MAX", 7, "RIGHT", "888888") end
+    if rested.isFull then return CLIAlts:Pad("FULL", 7, "RIGHT", t.highlightHex) end
+
+    local s = rested.timeLeftStr or "---"
+    return CLIAlts:Pad(s, 7, "RIGHT", t.dimHex)
+end
+
+-- Tab 2 Rested Monitor Formatters
+local function FmtRestedPool(char, t)
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return CLIAlts:Pad("MAX LEVEL", 17, "RIGHT", "888888")
+    end
+    local s = string.format("%s / %s", CLIAlts:FormatNumber(rested.currentRested), CLIAlts:FormatNumber(rested.maxRested))
+    return CLIAlts:Pad(s, 17, "RIGHT", t.primaryHex)
+end
+
+local function FmtRestedBar(char, t)
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return string.format("|cff%s[|r|cff%s%s|r|cff%s]|r |cff%sMAX  |r",
+            t.borderHex, t.dimHex, string.rep("=", 10), t.borderHex, t.highlightHex)
+    end
+
+    local ratio = math.min(1.0, math.max(0, rested.ratio or 0))
+    local fill = math.min(10, math.max(0, math.floor(ratio * 10)))
+    local empty = 10 - fill
+    local fillStr = string.rep("=", fill)
+    local emptyStr = string.rep(".", empty)
+    local est = rested.isEstimate and "~" or " "
+    local pctStr = string.format("%3d%%%s", rested.percent, est)
+
+    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
+        t.borderHex, rested.isFull and t.highlightHex or t.primaryHex, fillStr, t.dimHex, emptyStr, t.borderHex, t.primaryHex, pctStr)
+end
+
+local function FmtRate(char, t)
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return CLIAlts:Pad("---", 8, "RIGHT", "666666")
+    end
+    local s = rested.isResting and "+5.0%/8h" or "+1.25%/8h"
+    return CLIAlts:Pad(s, 8, "RIGHT", t.dimHex)
+end
+
+local function FmtState(char, t)
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return CLIAlts:Pad("---", 7, "CENTER", "666666")
+    end
+    if rested.isResting then
+        return "|cff00ff66[REST]|r "
+    else
+        return "|cffffaa00[WILD]|r "
+    end
+end
+
+-- Tab 3 Profession Formatters
+local function FmtProf1(char, t)
+    local profs = char.professions and char.professions.primary
+    local p = profs and profs[1]
+    if not p then return CLIAlts:Pad("---", 23, "LEFT", "666666") end
+    local str = string.format("%s %d/%d", p.name or "Prof", p.rank or 0, p.maxRank or 0)
+    return CLIAlts:Pad(str, 23, "LEFT", t.primaryHex)
+end
+
+local function FmtProf2(char, t)
+    local profs = char.professions and char.professions.primary
+    local p = profs and profs[2]
+    if not p then return CLIAlts:Pad("---", 20, "LEFT", "666666") end
+    local str = string.format("%s %d/%d", p.name or "Prof", p.rank or 0, p.maxRank or 0)
+    return CLIAlts:Pad(str, 20, "LEFT", t.primaryHex)
+end
+
+local function FmtSecProf(char, t)
+    local secs = char.professions and char.professions.secondary
+    if not secs or #secs == 0 then return CLIAlts:Pad("---", 14, "LEFT", "666666") end
+    local parts = {}
+    for _, s in ipairs(secs) do
+        local shortName = s.name:sub(1, 4)
+        table.insert(parts, string.format("%s %d", shortName, s.rank or 0))
+    end
+    local str = table.concat(parts, ", ")
+    return CLIAlts:Pad(str, 14, "LEFT", t.dimHex)
+end
+
+-- Tab 4 Economy Formatters
+local function FmtGoldLong(char)
+    local gold = math.floor((char.money or 0) / 10000)
+    local str = CLIAlts:FormatNumber(gold) .. "g"
+    return CLIAlts:Pad(str, 12, "RIGHT", "ffd700")
+end
+
+local function FmtWealthShare(char, t)
+    local summary = CLIAlts:GetAccountSummary()
+    local total = summary.totalGold or 0
+    local money = char.money or 0
+    local pct = total > 0 and (money / total * 100) or 0
+    local str = string.format("%5.1f%%", pct)
+    return CLIAlts:Pad(str, 8, "RIGHT", t.primaryHex)
+end
+
+local function FmtWealthBar(char, t)
+    local summary = CLIAlts:GetAccountSummary()
+    local total = summary.totalGold or 0
+    local money = char.money or 0
+    local ratio = total > 0 and math.min(1.0, math.max(0, money / total)) or 0
+    local fill = math.min(10, math.max(0, math.floor(ratio * 10)))
+    local empty = 10 - fill
+    local fillStr = string.rep("=", fill)
+    local emptyStr = string.rep(".", empty)
+    return string.format("|cff%s[|r|cffffd700%s|r|cff%s%s|r|cff%s]|r  ",
+        t.borderHex, fillStr, t.dimHex, emptyStr, t.borderHex)
+end
+
+local function FmtLocation(char, t)
+    local loc = char.location or "Unknown"
+    return CLIAlts:Pad(loc, 23, "LEFT", t.dimHex)
+end
+
+-- ----------------------------------------------------------------------------
+-- Data-Driven Columns Table (COLS) - Exactly 85 Characters Per Tab
+-- ----------------------------------------------------------------------------
+local COLS = {
+    [1] = { -- ALTS OVERVIEW (Width = 85 chars)
+        { key = "fac",       title = "FAC",            w = 3,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",           w = 16, align = "LEFT",   sort = "name",    fmt = FmtName },
+        { key = "lvl",       title = "LVL",            w = 3,  align = "RIGHT",  sort = "level",   fmt = FmtLevel },
+        { key = "raceClass", title = "RACE/CLASS",     w = 11, align = "LEFT",   fmt = FmtRaceClass },
+        { key = "xp",        title = "LEVEL PROGRESS", w = 16, align = "LEFT",   sort = "xp",      fmt = FmtLevelProgress },
+        { key = "gold",      title = "GOLD",           w = 10, align = "RIGHT",  sort = "gold",    fmt = FmtGold },
+        { key = "rested",    title = "RESTED",         w = 8,  align = "RIGHT",  sort = "rested",  fmt = FmtRested },
+        { key = "eta",       title = "ETA",            w = 7,  align = "RIGHT",  fmt = FmtETA },
+    },
+    [2] = { -- RESTED XP MONITOR (Width = 85 chars)
+        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
+        { key = "pool",      title = "RESTED / CAP",    w = 17, align = "RIGHT",  sort = "rested", fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS", w = 17, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",            w = 8,  align = "RIGHT",  fmt = FmtRate },
+        { key = "state",     title = "STATE",           w = 7,  align = "CENTER", fmt = FmtState },
+        { key = "eta",       title = "ETA",             w = 7,  align = "RIGHT",  fmt = FmtETA },
+    },
+    [3] = { -- PROFESSIONS (Width = 85 chars)
+        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
+        { key = "prof1",     title = "PRIMARY PROF 1",  w = 23, align = "LEFT",   fmt = FmtProf1 },
+        { key = "prof2",     title = "PRIMARY PROF 2",  w = 20, align = "LEFT",   fmt = FmtProf2 },
+        { key = "sec",       title = "SECONDARY",       w = 14, align = "LEFT",   fmt = FmtSecProf },
+    },
+    [4] = { -- ECONOMY / WEALTH (Width = 85 chars)
+        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
+        { key = "gold",      title = "GOLD",            w = 12, align = "RIGHT",  sort = "gold",   fmt = FmtGoldLong },
+        { key = "share",     title = "SHARE",           w = 8,  align = "RIGHT",  fmt = FmtWealthShare },
+        { key = "bar",       title = "WEALTH SHARE",    w = 14, align = "LEFT",   fmt = FmtWealthBar },
+        { key = "location",  title = "LAST LOCATION",   w = 23, align = "LEFT",   fmt = FmtLocation },
+    },
+}
+
+function CLIAlts:BuildHeaderLine(activeTab, t)
+    local cols = COLS[activeTab] or COLS[1]
+    local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
+    local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
+    local parts = {}
+
+    for _, col in ipairs(cols) do
+        local title = col.title
+        if col.sort and col.sort == sortBy then
+            local arrow = sortAsc and "^" or "v"
+            if col.align == "RIGHT" then
+                title = arrow .. title
+            else
+                title = title .. arrow
+            end
+        end
+        local padded = self:Pad(title, col.w, col.align or "LEFT", t.highlightHex)
+        table.insert(parts, padded)
+    end
+
+    return "| " .. table.concat(parts, " ") .. " |"
+end
+
+-- ----------------------------------------------------------------------------
+-- Main Frame Construction
+-- ----------------------------------------------------------------------------
 function CLIAlts:CreateMainFrame()
     if mainFrame then return mainFrame end
 
@@ -197,7 +573,9 @@ function CLIAlts:CreateMainFrame()
     frame:SetFrameStrata("HIGH")
     tinsert(UISpecialFrames, "CLIAltsMainFrame")
 
-    -- Restore saved window position or default to center
+    -- Restore saved window scale & position
+    local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+    frame:SetScale(s)
     self:RestoreWindowPosition(frame)
 
     frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
@@ -216,21 +594,23 @@ function CLIAlts:CreateMainFrame()
     mainFrame = frame
     _G["CLIAltsMainFrame"] = frame
 
+    local fontSize = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+
     -- Top border ASCII line
     local topAscii = frame:CreateFontString(nil, "OVERLAY")
-    topAscii:SetFont("Fonts\\ARIALN.TTF", 11, "")
+    self:SetWidgetFont(topAscii, fontSize)
     topAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -8)
-    topAscii:SetText("+==================================================================================================+")
+    topAscii:SetText(DOUBLE_BORDER)
     frame.topAscii = topAscii
 
     -- Title Bar
     local titleText = frame:CreateFontString(nil, "OVERLAY")
-    titleText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
+    self:SetWidgetFont(titleText, fontSize + 1, "OUTLINE")
     titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -22)
-    titleText:SetText("[#] CLIALTS :: RETRO ALT & RESTED XP MONITOR v" .. CLIAlts.VERSION)
+    titleText:SetText("[#] CLIALTS :: RETRO TERMINAL ALT MONITOR v" .. CLIAlts.VERSION)
     frame.titleText = titleText
 
-    -- Window Controls on Title Bar (Theme, Help, Refresh, Close)
+    -- Window Controls on Title Bar (Scale, Theme, Help, Refresh, Close)
     local btnClose = CreateRetroButton(frame, "[ X ]", 34, 18, function()
         CLIAlts:Toggle(false)
     end)
@@ -241,10 +621,16 @@ function CLIAlts:CreateMainFrame()
     end)
     btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -6, 0)
 
+    local btnScale = CreateRetroButton(frame, string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)), 95, 18, function()
+        CLIAlts:CycleScale()
+    end)
+    btnScale:SetPoint("RIGHT", btnHelp, "LEFT", -6, 0)
+    frame.btnScale = btnScale
+
     local btnTheme = CreateRetroButton(frame, "[ THEME: GRN ]", 100, 18, function()
         CLIAlts:CycleTheme()
     end)
-    btnTheme:SetPoint("RIGHT", btnHelp, "LEFT", -6, 0)
+    btnTheme:SetPoint("RIGHT", btnScale, "LEFT", -6, 0)
     frame.btnTheme = btnTheme
 
     local btnRefresh = CreateRetroButton(frame, "[ REFRESH ]", 80, 18, function()
@@ -254,16 +640,16 @@ function CLIAlts:CreateMainFrame()
 
     -- Subheader border ASCII line
     local midAscii1 = frame:CreateFontString(nil, "OVERLAY")
-    midAscii1:SetFont("Fonts\\ARIALN.TTF", 11, "")
+    self:SetWidgetFont(midAscii1, fontSize)
     midAscii1:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -40)
-    midAscii1:SetText("+--------------------------------------------------------------------------------------------------+")
+    midAscii1:SetText(BORDER_LINE)
     frame.midAscii1 = midAscii1
 
     -- Status bar line (Realm, Alts count, Wealth)
     local statusBarText = frame:CreateFontString(nil, "OVERLAY")
-    statusBarText:SetFont("Fonts\\ARIALN.TTF", 11, "OUTLINE")
+    self:SetWidgetFont(statusBarText, fontSize)
     statusBarText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -53)
-    statusBarText:SetText("SYSTEM: WOW FOREVER | TRACKED CHARACTERS: 0 | TOTAL WEALTH: 0g 0s 0c")
+    statusBarText:SetText("SYSTEM: WOW FOREVER | TRACKED CHARACTERS: 0 | TOTAL WEALTH: 0g")
     frame.statusBarText = statusBarText
 
     -- Well Rested Perk quick toggle button
@@ -281,7 +667,7 @@ function CLIAlts:CreateMainFrame()
         GameTooltip:AddLine(string.format("Rest Speed: |cff00ff66+%d%%|r", r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested Cap: |cff00ff66%d%%|r", 150 + (r * 6)), 0.8, 0.8, 0.8)
         GameTooltip:AddLine("Click to cycle rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Slash cmd: |cff00ff66/CLIAlts perk <0-5>|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Slash cmd: |cff00ff66/clialts perk <0-5>|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
@@ -292,9 +678,9 @@ function CLIAlts:CreateMainFrame()
     frame.btnPerk = btnPerk
 
     local midAscii2 = frame:CreateFontString(nil, "OVERLAY")
-    midAscii2:SetFont("Fonts\\ARIALN.TTF", 11, "")
+    self:SetWidgetFont(midAscii2, fontSize)
     midAscii2:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -66)
-    midAscii2:SetText("+--------------------------------------------------------------------------------------------------+")
+    midAscii2:SetText(BORDER_LINE)
     frame.midAscii2 = midAscii2
 
     -- Retro Tabs
@@ -323,26 +709,71 @@ function CLIAlts:CreateMainFrame()
         prevTab = tabBtn
     end
 
-    -- Header row border ASCII line
+    -- Header top border ASCII line
     local tableTopAscii = frame:CreateFontString(nil, "OVERLAY")
-    tableTopAscii:SetFont("Fonts\\ARIALN.TTF", 11, "")
+    self:SetWidgetFont(tableTopAscii, fontSize)
     tableTopAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -106)
-    tableTopAscii:SetText("+==================================================================================================+")
+    tableTopAscii:SetText(DOUBLE_BORDER)
     frame.tableTopAscii = tableTopAscii
 
-    -- Column Header Frame (Clickable for sorting)
+    -- Column Header Line (Monospace Text) & Clickable Hit Frame
     local headerFrame = CreateFrame("Frame", nil, frame)
-    headerFrame:SetSize(746, 20)
-    headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -120)
+    headerFrame:SetSize(756, 18)
+    headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -120)
     frame.headerFrame = headerFrame
 
-    -- Container for Rows
+    local tableHeaderString = headerFrame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(tableHeaderString, fontSize)
+    tableHeaderString:SetPoint("LEFT", headerFrame, "LEFT", 0, 0)
+    tableHeaderString:SetJustifyH("LEFT")
+    frame.tableHeaderString = tableHeaderString
+
+    -- Clickable Header Buttons for Sorting
+    for i = 1, 8 do
+        local btn = CreateFrame("Button", nil, headerFrame)
+        btn:SetHeight(18)
+        btn:EnableMouse(true)
+        btn:SetScript("OnClick", function(self)
+            if self.sortKey then
+                if CLIAltsDB.settings.sortBy == self.sortKey then
+                    CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
+                else
+                    CLIAltsDB.settings.sortBy = self.sortKey
+                    CLIAltsDB.settings.sortAsc = false
+                end
+                PlayRetroSound()
+                CLIAlts:Render()
+            end
+        end)
+        btn:SetScript("OnEnter", function(self)
+            if self.colTitle then
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:AddLine(string.format("Sort by %s", self.colTitle), 1, 1, 1)
+                GameTooltip:AddLine("Click to toggle ascending / descending.", 0.8, 0.8, 0.8)
+                GameTooltip:Show()
+            end
+        end)
+        btn:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+        btn:Hide()
+        headerButtons[i] = btn
+    end
+
+    -- Header separator ASCII line
+    local tableSepAscii = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(tableSepAscii, fontSize)
+    tableSepAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -136)
+    tableSepAscii:SetText(BORDER_LINE)
+    frame.tableSepAscii = tableSepAscii
+
+    -- Rows Container
     local rowsContainer = CreateFrame("Frame", nil, frame)
-    rowsContainer:SetSize(746, 280)
-    rowsContainer:SetPoint("TOPLEFT", headerFrame, "BOTTOMLEFT", 0, -4)
+    rowsContainer:SetSize(756, ROWS_COUNT * 21)
+    rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -150)
     frame.rowsContainer = rowsContainer
 
-    -- Enable mousewheel scrolling on row container
+    -- Mousewheel pagination
     rowsContainer:EnableMouseWheel(true)
     rowsContainer:SetScript("OnMouseWheel", function(self, delta)
         if delta > 0 then
@@ -360,11 +791,11 @@ function CLIAlts:CreateMainFrame()
         end
     end)
 
-    -- Create 12 reusable row frames
+    -- Create 12 Monospace Row Buttons (One FontString Per Row)
     for i = 1, ROWS_COUNT do
         local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        row:SetSize(746, 22)
-        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 23))
+        row:SetSize(756, 20)
+        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 21))
 
         row:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -375,137 +806,31 @@ function CLIAlts:CreateMainFrame()
         row:SetBackdropColor(0, 0, 0, 0.2)
         row:SetBackdropBorderColor(0, 0, 0, 0)
 
-        -- Cell 1 (Faction / Prompt arrow)
-        row.col1 = row:CreateFontString(nil, "OVERLAY")
-        row.col1:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        row.col1:SetJustifyH("LEFT")
-        row.col1:SetWordWrap(false)
-        row.col1:SetPoint("LEFT", row, "LEFT", 6, 0)
+        local rowText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(rowText, fontSize)
+        rowText:SetPoint("LEFT", row, "LEFT", 0, 0)
+        rowText:SetJustifyH("LEFT")
+        rowText:SetWordWrap(false)
+        row.text = rowText
 
-        -- Cell 2 (Name)
-        row.col2 = row:CreateFontString(nil, "OVERLAY")
-        row.col2:SetFont("Fonts\\FRIZQT__.TTF", 11, "OUTLINE")
-        row.col2:SetJustifyH("LEFT")
-        row.col2:SetWordWrap(false)
-        row.col2:SetPoint("LEFT", row, "LEFT", 44, 0)
-
-        -- Cell 3 (Level)
-        row.col3 = row:CreateFontString(nil, "OVERLAY")
-        row.col3:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        row.col3:SetJustifyH("LEFT")
-        row.col3:SetWordWrap(false)
-        row.col3:SetPoint("LEFT", row, "LEFT", 170, 0)
-
-        -- Cell 4 (Race/Class or Rested or Prof1)
-        row.col4 = row:CreateFontString(nil, "OVERLAY")
-        row.col4:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        row.col4:SetJustifyH("LEFT")
-        row.col4:SetWordWrap(false)
-        row.col4:SetPoint("LEFT", row, "LEFT", 215, 0)
-
-        -- Cell 5 (Gold or Rested Bar or Prof2)
-        row.col5 = row:CreateFontString(nil, "OVERLAY")
-        row.col5:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        row.col5:SetJustifyH("LEFT")
-        row.col5:SetWordWrap(false)
-        row.col5:SetPoint("LEFT", row, "LEFT", 355, 0)
-
-        -- Cell 6 (Rested Info or Secondary or Wealth Share)
-        row.col6 = row:CreateFontString(nil, "OVERLAY")
-        row.col6:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        row.col6:SetJustifyH("LEFT")
-        row.col6:SetWordWrap(false)
-        row.col6:SetPoint("LEFT", row, "LEFT", 495, 0)
-
-        -- Cell 7 (Status / ETA / Timestamp)
-        row.col7 = row:CreateFontString(nil, "OVERLAY")
-        row.col7:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        row.col7:SetJustifyH("LEFT")
-        row.col7:SetWordWrap(false)
-        row.col7:SetPoint("LEFT", row, "LEFT", 625, 0)
-
-        -- Cell 8 (Extra Info / Date)
-        row.col8 = row:CreateFontString(nil, "OVERLAY")
-        row.col8:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        row.col8:SetJustifyH("LEFT")
-        row.col8:SetWordWrap(false)
-        row.col8:SetPoint("LEFT", row, "LEFT", 665, 0)
-
-        -- Row Action Button [DEL]
-        local btnDel = CreateRetroButton(row, "[X]", 24, 16, function()
-            if row.charData then
-                CLIAlts:ShowConfirmDelete(row.charData)
+        row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        row:SetScript("OnClick", function(self, button)
+            if self.charData then
+                if button == "RightButton" then
+                    CLIAlts:ShowConfirmDelete(self.charData)
+                else
+                    CLIAlts:ShowDossierPopup(self.charData)
+                end
             end
         end)
-        btnDel:SetPoint("RIGHT", row, "RIGHT", -6, 0)
-        row.btnDel = btnDel
 
-        -- Fixed-width Retro TUI Progress Bar Widget (Identical pixel width across all rows)
-        local TRACK_WIDTH = 76
-        local pBar = CreateFrame("Frame", nil, row)
-        pBar:SetSize(130, 20)
-        pBar:EnableMouse(false) -- Allow mouse events to pass through to row
-
-        local leftBracket = pBar:CreateFontString(nil, "OVERLAY")
-        leftBracket:SetFont("Fonts\\ARIALN.TTF", 12, "OUTLINE")
-        leftBracket:SetPoint("LEFT", pBar, "LEFT", 0, 0)
-        leftBracket:SetText("[")
-        pBar.leftBracket = leftBracket
-
-        local trackBg = pBar:CreateTexture(nil, "BACKGROUND")
-        trackBg:SetPoint("LEFT", leftBracket, "RIGHT", 1, 0)
-        trackBg:SetSize(TRACK_WIDTH, 8)
-        trackBg:SetTexture("Interface\\Buttons\\WHITE8X8")
-        trackBg:SetVertexColor(0.10, 0.10, 0.10, 0.9)
-        pBar.trackBg = trackBg
-
-        local trackFill = pBar:CreateTexture(nil, "BORDER")
-        trackFill:SetPoint("TOPLEFT", trackBg, "TOPLEFT", 0, 0)
-        trackFill:SetPoint("BOTTOMLEFT", trackBg, "BOTTOMLEFT", 0, 0)
-        trackFill:SetWidth(0)
-        trackFill:SetTexture("Interface\\Buttons\\WHITE8X8")
-        pBar.trackFill = trackFill
-
-        -- 50% Midpoint Notch: calibrated indicator to easily gauge "Half Full"
-        local midTick = pBar:CreateTexture(nil, "ARTWORK")
-        midTick:SetPoint("TOPLEFT", trackBg, "TOPLEFT", math.floor(TRACK_WIDTH / 2), 0)
-        midTick:SetPoint("BOTTOMLEFT", trackBg, "BOTTOMLEFT", math.floor(TRACK_WIDTH / 2), 0)
-        midTick:SetWidth(1)
-        midTick:SetTexture("Interface\\Buttons\\WHITE8X8")
-        midTick:SetVertexColor(0.40, 0.40, 0.40, 0.85)
-        pBar.midTick = midTick
-
-        local rightBracket = pBar:CreateFontString(nil, "OVERLAY")
-        rightBracket:SetFont("Fonts\\ARIALN.TTF", 12, "OUTLINE")
-        rightBracket:SetPoint("LEFT", trackBg, "RIGHT", 1, 0)
-        rightBracket:SetText("]")
-        pBar.rightBracket = rightBracket
-
-        local pctText = pBar:CreateFontString(nil, "OVERLAY")
-        pctText:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        pctText:SetJustifyH("LEFT")
-        pctText:SetPoint("LEFT", rightBracket, "RIGHT", 4, 0)
-        pBar.pctText = pctText
-
-        pBar:Hide()
-        row.pBar = pBar
-
-        -- Hover behavior
         row:SetScript("OnEnter", function(self)
             local t = CLIAlts:GetTheme()
-            self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], t.rowHover[4])
-            self:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.6)
-            self.col1:SetText("|cff" .. (t.barFill:sub(5) or "ffffff") .. ">|r")
-
-            if self.pBar and self.pBar:IsShown() then
-                self.pBar.leftBracket:SetTextColor(1, 1, 1)
-                self.pBar.rightBracket:SetTextColor(1, 1, 1)
-            end
-
+            self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.4)
             if self.charData then
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                local coloredName = CLIAlts:ColorizePlayerName(self.charData.name, self.charData.classFile)
-                GameTooltip:AddLine(coloredName, 1, 1, 1)
+                local coloredName = CLIAlts:ColorizePlayerName(self.charData.fullName or self.charData.name, self.charData.classFile)
+                GameTooltip:AddLine(string.format("%s - %s", coloredName, self.charData.location or "Unknown"), 1, 1, 1)
 
                 local xpData = CLIAlts:GetLevelProgressData(self.charData)
                 if xpData and not xpData.isMaxLevel then
@@ -529,44 +854,25 @@ function CLIAlts:CreateMainFrame()
                     end
                 end
 
-                GameTooltip:AddLine(string.format("Gold: %s", CLIAlts:FormatMoney(self.charData.money, true)), 1, 1, 1)
-                GameTooltip:AddLine(string.format("Location: |cffffffff%s|r", self.charData.location or "Unknown"), 0.7, 0.7, 0.7)
-                GameTooltip:AddLine("Click row to view Alt Dossier.", 1, 0.82, 0)
+                GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Delete Character", 0.7, 0.7, 0.7)
                 GameTooltip:Show()
             end
         end)
 
         row:SetScript("OnLeave", function(self)
-            local t = CLIAlts:GetTheme()
             self:SetBackdropColor(0, 0, 0, (i % 2 == 0) and 0.25 or 0.1)
-            self:SetBackdropBorderColor(0, 0, 0, 0)
-            if self.facText then
-                self.col1:SetText(self.facText)
-            end
-            if self.pBar and self.pBar:IsShown() then
-                self.pBar.leftBracket:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-                self.pBar.rightBracket:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
             GameTooltip:Hide()
         end)
 
-        -- Click to inspect character dossier
-        row:SetScript("OnClick", function(self)
-            if self.charData then
-                PlayRetroSound()
-                CLIAlts:ShowDossierPopup(self.charData)
-            end
-        end)
-
-        table.insert(rowFrames, row)
+        rowFrames[i] = row
     end
 
     -- Bottom border ASCII line
-    local botAscii = frame:CreateFontString(nil, "OVERLAY")
-    botAscii:SetFont("Fonts\\ARIALN.TTF", 11, "")
-    botAscii:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 42)
-    botAscii:SetText("+==================================================================================================+")
-    frame.botAscii = botAscii
+    local tableBotAscii = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(tableBotAscii, fontSize)
+    tableBotAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -406)
+    tableBotAscii:SetText(DOUBLE_BORDER)
+    frame.tableBotAscii = tableBotAscii
 
     -- Footer: Pagination controls and helper tips
     local btnPrev = CreateRetroButton(frame, "[<< PREV]", 75, 18, function()
@@ -575,14 +881,8 @@ function CLIAlts:CreateMainFrame()
             CLIAlts:Render()
         end
     end)
-    btnPrev:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 16)
+    btnPrev:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 22)
     frame.btnPrev = btnPrev
-
-    local pageLabel = frame:CreateFontString(nil, "OVERLAY")
-    pageLabel:SetFont("Fonts\\ARIALN.TTF", 11, "OUTLINE")
-    pageLabel:SetPoint("LEFT", btnPrev, "RIGHT", 12, 0)
-    pageLabel:SetText("[ PAGE 1 / 1 ]")
-    frame.pageLabel = pageLabel
 
     local btnNext = CreateRetroButton(frame, "[NEXT >>]", 75, 18, function()
         if currentPage < totalPages then
@@ -590,282 +890,39 @@ function CLIAlts:CreateMainFrame()
             CLIAlts:Render()
         end
     end)
-    btnNext:SetPoint("LEFT", pageLabel, "RIGHT", 12, 0)
+    btnNext:SetPoint("LEFT", btnPrev, "RIGHT", 6, 0)
     frame.btnNext = btnNext
 
-    local tipText = frame:CreateFontString(nil, "OVERLAY")
-    tipText:SetFont("Fonts\\ARIALN.TTF", 11, "")
-    tipText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -90, 19)
-    tipText:SetText("|cff888888>> Click row to inspect Alt Dossier | Click headers to sort | /CLIAlts|r")
-    frame.tipText = tipText
+    local pageText = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(pageText, fontSize)
+    pageText:SetPoint("LEFT", btnNext, "RIGHT", 10, 0)
+    pageText:SetText("PAGE 1 OF 1")
+    frame.pageText = pageText
 
-    local btnBottomClose = CreateRetroButton(frame, "[ CLOSE ]", 65, 18, function()
-        CLIAlts:Toggle(false)
-    end)
-    btnBottomClose:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 16)
+    local statusTip = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(statusTip, fontSize - 1)
+    statusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 24)
+    statusTip:SetText("|cff888888[Left-Click: Dossier | Right-Click: Delete | Click Col: Sort]|r")
+    frame.statusTip = statusTip
 
-    CLIAlts:ApplyTheme()
-    frame:Hide()
+    local botAscii = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(botAscii, fontSize)
+    botAscii:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 6)
+    botAscii:SetText(BORDER_LINE)
+    frame.botAscii = botAscii
+
     return frame
 end
 
 -- ----------------------------------------------------------------------------
--- Apply Visual Themes
--- ----------------------------------------------------------------------------
-function CLIAlts:ApplyTheme()
-    local t = self:GetTheme()
-
-    if mainFrame then
-        mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
-        mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
-
-        mainFrame.topAscii:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        mainFrame.midAscii1:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        mainFrame.midAscii2:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        mainFrame.tableTopAscii:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        mainFrame.botAscii:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-
-        mainFrame.titleText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-        mainFrame.statusBarText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-
-        if mainFrame.btnTheme then
-            mainFrame.btnTheme.label:SetText(string.format("[ THEME: %s ]", t.tag))
-        end
-
-        if mainFrame.btnPerk then
-            local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-            mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
-            mainFrame.btnPerk.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-            mainFrame.btnPerk:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
-        end
-
-        if next(headerPool) then
-            for _, btns in pairs(headerPool) do
-                for _, btn in ipairs(btns) do
-                    if btn:IsShown() and btn.str then
-                        btn.str:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-                    end
-                end
-            end
-        end
-    end
-
-    -- Update minimap disc if loaded
-    local mBtn = minimapBtn or CLIAltsMinimapButton
-    if mBtn and mBtn.bg then
-        mBtn.bg:SetVertexColor(t.bg[1], t.bg[2], t.bg[3], 1)
-        if mBtn.iconText then
-            mBtn.iconText:SetText(string.format("%s[A]|r", t.barFill))
-        end
-    end
-end
-
--- ----------------------------------------------------------------------------
--- Table Header Definitions & Pool (Zero Garbage / Frame Leak Fix)
--- ----------------------------------------------------------------------------
-local HEADER_DEFS = {
-    [1] = {
-        { name = "FAC", offset = 6, width = 26 },
-        { name = "NAME", offset = 34, width = 120, sortKey = "name" },
-        { name = "LVL", offset = 158, width = 45, sortKey = "level" },
-        { name = "RACE / CLASS", offset = 206, width = 115 },
-        { name = "LEVEL XP", offset = 325, width = 135, sortKey = "xp" },
-        { name = "GOLD", offset = 464, width = 115, sortKey = "gold" },
-        { name = "RESTED", offset = 583, width = 80, sortKey = "rested" },
-        { name = "ETA FULL", offset = 667, width = 75 },
-    },
-    [2] = {
-        { name = "NAME", offset = 12, width = 135, sortKey = "name" },
-        { name = "LVL", offset = 152, width = 45, sortKey = "level" },
-        { name = "RESTED / CAP", offset = 202, width = 125, sortKey = "rested" },
-        { name = "RESTED BAR", offset = 332, width = 145 },
-        { name = "STATUS", offset = 482, width = 65 },
-        {
-            name = "TIME TO %d%%",
-            offset = 552,
-            width = 85,
-            getText = function()
-                local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-                return string.format("[TIME TO %d%%]", 150 + (r * 6))
-            end
-        },
-        { name = "CAPPED DATE", offset = 642, width = 75 },
-    },
-    [3] = {
-        { name = "NAME", offset = 12, width = 135, sortKey = "name" },
-        { name = "LVL", offset = 152, width = 45, sortKey = "level" },
-        { name = "PRIMARY PROF 1", offset = 202, width = 125 },
-        { name = "PRIMARY PROF 2", offset = 332, width = 125 },
-        { name = "COOKING", offset = 462, width = 80 },
-        { name = "FIRST AID", offset = 547, width = 80 },
-        { name = "FISHING", offset = 632, width = 80 },
-    },
-    [4] = {
-        { name = "NAME", offset = 12, width = 135, sortKey = "name" },
-        { name = "LVL", offset = 152, width = 45, sortKey = "level" },
-        { name = "WEALTH SHARE / BAR", offset = 202, width = 155, sortKey = "gold" },
-        { name = "EXACT WEALTH", offset = 362, width = 145, sortKey = "gold" },
-        { name = "SHARE %", offset = 512, width = 75 },
-        { name = "LAST ACTIVE", offset = 592, width = 115 },
-    },
-}
-
-local function InitHeaderPool(parent)
-    if not parent or next(headerPool) then return end
-
-    for tabId = 1, 4 do
-        local defs = HEADER_DEFS[tabId]
-        headerPool[tabId] = {}
-        if defs then
-            for _, def in ipairs(defs) do
-                local btn = CreateFrame("Button", nil, parent)
-                btn:SetSize(def.width, 18)
-                btn:SetPoint("LEFT", parent, "LEFT", def.offset, 0)
-
-                local str = btn:CreateFontString(nil, "OVERLAY")
-                str:SetFont("Fonts\\ARIALN.TTF", 11, "OUTLINE")
-                str:SetPoint("LEFT", btn, "LEFT", 0, 0)
-                btn.str = str
-                btn.labelName = def.name
-                btn.sortKey = def.sortKey
-                btn.getText = def.getText
-
-                btn:SetScript("OnEnter", function(self)
-                    self.str:SetTextColor(1, 1, 1)
-                end)
-                btn:SetScript("OnLeave", function(self)
-                    local t = CLIAlts:GetTheme()
-                    self.str:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-                end)
-
-                if def.sortKey then
-                    btn:SetScript("OnClick", function()
-                        PlayRetroSound()
-                        if CLIAltsDB.settings.sortBy == def.sortKey then
-                            CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
-                        else
-                            CLIAltsDB.settings.sortBy = def.sortKey
-                            CLIAltsDB.settings.sortAsc = false
-                        end
-                        CLIAlts:Render()
-                    end)
-                end
-
-                btn:Hide()
-                table.insert(headerPool[tabId], btn)
-            end
-        end
-    end
-end
-
-function CLIAlts:RenderHeaders(activeTab)
-    local hf = mainFrame and mainFrame.headerFrame
-    if not hf then return end
-
-    if not next(headerPool) then
-        InitHeaderPool(hf)
-    end
-
-    local t = self:GetTheme()
-    local sortBy = CLIAltsDB.settings.sortBy
-    local sortAsc = CLIAltsDB.settings.sortAsc
-
-    -- Hide all header pools for inactive tabs
-    for tabId, btns in pairs(headerPool) do
-        if tabId ~= activeTab then
-            for _, btn in ipairs(btns) do
-                btn:Hide()
-            end
-        end
-    end
-
-    -- Show and update only active tab's headers
-    local activeBtns = headerPool[activeTab]
-    if activeBtns then
-        for _, btn in ipairs(activeBtns) do
-            local text
-            if btn.getText then
-                text = btn.getText()
-            elseif btn.sortKey then
-                local indicator = (sortBy == btn.sortKey) and (sortAsc and " ^" or " v") or ""
-                text = string.format("[%s%s]", btn.labelName, indicator)
-            else
-                text = string.format("[%s]", btn.labelName)
-            end
-
-            btn.str:SetText(text)
-            btn.str:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-            btn:Show()
-        end
-    end
-end
-
--- ----------------------------------------------------------------------------
--- Retro TUI Fixed-Width Progress Bar Update Helper
--- ----------------------------------------------------------------------------
-local TRACK_WIDTH = 76
-
-function CLIAlts:UpdateRowProgressBar(row, ratio, textStr, r, g, b, isMaxLevel)
-    local pBar = row.pBar
-    if not pBar then return end
-    pBar:Show()
-
-    local t = self:GetTheme()
-    r = r or t.primary[1]
-    g = g or t.primary[2]
-    b = b or t.primary[3]
-
-    pBar.leftBracket:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-    pBar.rightBracket:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-
-    if isMaxLevel then
-        pBar.trackFill:SetWidth(TRACK_WIDTH)
-        pBar.trackFill:SetVertexColor(0.35, 0.35, 0.35, 0.8)
-        pBar.pctText:SetText(textStr or " MAX")
-        pBar.pctText:SetTextColor(0.6, 0.6, 0.6)
-        pBar.midTick:Hide()
-    else
-        ratio = math.max(0, math.min(1, ratio or 0))
-        local fillW = math.floor(ratio * TRACK_WIDTH)
-        pBar.trackFill:SetWidth(fillW)
-        pBar.trackFill:SetVertexColor(r, g, b, 0.95)
-        pBar.pctText:SetText(textStr or "")
-        pBar.pctText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-        pBar.midTick:Show()
-        -- Dynamic contrast for the 50% midpoint notch (gauge indicator for "half full")
-        if fillW >= math.floor(TRACK_WIDTH / 2) then
-            pBar.midTick:SetVertexColor(0, 0, 0, 0.85)
-        else
-            pBar.midTick:SetVertexColor(0.40, 0.40, 0.40, 0.85)
-        end
-    end
-end
-
--- ----------------------------------------------------------------------------
--- Tab 3 Profession Format Helpers
--- ----------------------------------------------------------------------------
-local function FormatProf(p)
-    if not p then return "|cff555555---|r" end
-    local isMax = p.rank >= (p.maxRank or 300)
-    local color = isMax and "|cff00ff66" or "|cffffffff"
-    return string.format("%s: %s%d/%d|r", p.name:sub(1, 8), color, p.rank, p.maxRank or 300)
-end
-
-local function FormatSec(p)
-    if not p then return "|cff555555---|r" end
-    local isMax = p.rank >= (p.maxRank or 300)
-    local color = isMax and "|cff00ff66" or "|cffffffff"
-    return string.format("%s%d/%d|r", color, p.rank, p.maxRank or 300)
-end
-
--- ----------------------------------------------------------------------------
--- Render Main Content
+-- Terminal Render Engine
 -- ----------------------------------------------------------------------------
 function CLIAlts:Render()
     if not mainFrame or not mainFrame:IsShown() then return end
 
     local t = self:GetTheme()
     local activeTab = CLIAltsDB.settings.activeTab or 1
+    local fontSize = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
 
     -- Highlight active tab button
     for _, tabBtn in ipairs(mainFrame.tabButtons) do
@@ -873,20 +930,109 @@ function CLIAlts:Render()
             tabBtn.label:SetText(string.format(">> %s <<", tabBtn.baseText))
             tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
             tabBtn:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.3)
-            tabBtn:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 1)
+            tabBtn:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 1)
         else
             tabBtn.label:SetText(tabBtn.baseText)
             tabBtn.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
             tabBtn:SetBackdropColor(0, 0, 0, 0.6)
-            tabBtn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.6)
+            tabBtn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
         end
     end
 
-    -- Update Status Bar & Perk Button
+    -- Update Status Bar
     local summary = self:GetAccountSummary()
-    local moneyStr = self:FormatMoney(summary.totalGold, true)
-    mainFrame.statusBarText:SetText(string.format("SYSTEM: |cffffffffWOW FOREVER|r  |  TRACKED CHARACTERS: |cffffffff%d|r  |  TOTAL WEALTH: %s",
-        summary.totalAlts, moneyStr))
+    local totalGold = summary.totalGold or 0
+    local goldOnly = math.floor(totalGold / 10000)
+    local curPrimary, curSecondary, curFull = self:GetPlayerNames()
+    mainFrame.statusBarText:SetText(string.format("SYSTEM: WOW FOREVER | ACTIVE: %s | TRACKED: %d ALTS | WEALTH: %sg",
+        curFull or curPrimary or "Unknown", summary.totalAlts or 0, self:FormatNumber(goldOnly)))
+
+    -- Render Table Header (Monospace Text)
+    mainFrame.tableHeaderString:SetText(self:BuildHeaderLine(activeTab, t))
+
+    -- Position Clickable Header Buttons
+    local charW = self:GetCharWidth(fontSize)
+    local cols = COLS[activeTab] or COLS[1]
+    local curCharOffset = 3 -- after "| "
+
+    for idx = 1, 8 do
+        local btn = headerButtons[idx]
+        local col = cols[idx]
+        if col and col.sort then
+            btn:ClearAllPoints()
+            btn:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", (curCharOffset - 1) * charW, 0)
+            btn:SetSize(col.w * charW, 18)
+            btn.sortKey = col.sort
+            btn.colTitle = col.title
+            btn:Show()
+        else
+            btn:Hide()
+        end
+        if col then
+            curCharOffset = curCharOffset + col.w + 1
+        end
+    end
+
+    -- Retrieve Sorted Characters
+    local chars = self:GetCharactersList(CLIAltsDB.settings.sortBy, CLIAltsDB.settings.sortAsc)
+    totalPages = math.max(1, math.ceil(#chars / ROWS_COUNT))
+    if currentPage > totalPages then currentPage = totalPages end
+    if currentPage < 1 then currentPage = 1 end
+
+    mainFrame.pageText:SetText(string.format("PAGE %d OF %d (%d ALTS)", currentPage, totalPages, #chars))
+    mainFrame.btnPrev:SetEnabled(currentPage > 1)
+    mainFrame.btnNext:SetEnabled(currentPage < totalPages)
+
+    -- Render 12 Monospace Rows (Single FontString Per Row)
+    for rowIndex = 1, ROWS_COUNT do
+        local row = rowFrames[rowIndex]
+        local charIndex = (currentPage - 1) * ROWS_COUNT + rowIndex
+        local char = chars[charIndex]
+
+        if char then
+            row.charData = char
+            row:SetBackdropColor(0, 0, 0, (rowIndex % 2 == 0) and 0.25 or 0.1)
+
+            local parts = {}
+            for _, col in ipairs(cols) do
+                table.insert(parts, col.fmt(char, t))
+            end
+            local line = "| " .. table.concat(parts, " ") .. " |"
+            row.text:SetText(line)
+            row:Show()
+        else
+            row.charData = nil
+            row.text:SetText("")
+            row:Hide()
+        end
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Theme Application
+-- ----------------------------------------------------------------------------
+function CLIAlts:ApplyTheme()
+    if not mainFrame then return end
+    local t = self:GetTheme()
+
+    mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
+    mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
+
+    mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    mainFrame.midAscii2:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    mainFrame.tableTopAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    mainFrame.tableSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    mainFrame.tableBotAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    mainFrame.botAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
+    mainFrame.pageText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+
+    if mainFrame.btnTheme then
+        mainFrame.btnTheme.label:SetText(string.format("[ THEME: %s ]", t.tag))
+        mainFrame.btnTheme.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+    end
 
     if mainFrame.btnPerk then
         local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
@@ -894,286 +1040,67 @@ function CLIAlts:Render()
         mainFrame.btnPerk.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     end
 
-    -- Render Headers for Active Tab
-    self:RenderHeaders(activeTab)
-
-    -- Get Sorted Characters
-    local chars = self:GetCharactersList(CLIAltsDB.settings.sortBy, CLIAltsDB.settings.sortAsc)
-    totalPages = math.max(1, math.ceil(#chars / ROWS_COUNT))
-    if currentPage > totalPages then currentPage = totalPages end
-    if currentPage < 1 then currentPage = 1 end
-
-    mainFrame.pageLabel:SetText(string.format("[ PAGE %d / %d ]", currentPage, totalPages))
-    mainFrame.pageLabel:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-
-    local startIndex = (currentPage - 1) * ROWS_COUNT + 1
-    local endIndex = math.min(#chars, startIndex + ROWS_COUNT - 1)
-
-    -- Render Rows
-    for rowIndex = 1, ROWS_COUNT do
-        local row = rowFrames[rowIndex]
-        local charIndex = startIndex + (rowIndex - 1)
-
-        if charIndex <= endIndex then
-            local char = chars[charIndex]
-            row.charData = char
-            row:Show()
-
-            local coloredName = self:ColorizePlayerName(char.name, char.classFile)
-            local rested = self:GetRestedData(char)
-
-            -- Base alternating background
-            row:SetBackdropColor(0, 0, 0, (rowIndex % 2 == 0) and 0.25 or 0.1)
-            row:SetBackdropBorderColor(0, 0, 0, 0)
-
-            if activeTab == 1 then
-                -- ALTS OVERVIEW
-                local facTag = self:GetFactionTag(char.faction)
-                row.facText = facTag
-                row.col1:SetText(facTag)
-                row.col1:SetWidth(26)
-                row.col1:SetPoint("LEFT", row, "LEFT", 6, 0)
-
-                row.col2:SetText(coloredName)
-                row.col2:SetWidth(120)
-                row.col2:SetPoint("LEFT", row, "LEFT", 34, 0)
-
-                row.col3:SetText(string.format("Lvl %d", char.level or 1))
-                row.col3:SetWidth(45)
-                row.col3:SetPoint("LEFT", row, "LEFT", 158, 0)
-
-                row.col4:SetText(self:FormatRaceClass(char))
-                row.col4:SetWidth(115)
-                row.col4:SetPoint("LEFT", row, "LEFT", 206, 0)
-
-                -- Col 5: LEVEL EXPERIENCE PROGRESS (Fixed-width retro TUI bar)
-                local xpData = self:GetLevelProgressData(char)
-                row.col5:SetText("")
-                row.pBar:ClearAllPoints()
-                row.pBar:SetPoint("LEFT", row, "LEFT", 325, 0)
-                if xpData and not xpData.isMaxLevel then
-                    self:UpdateRowProgressBar(row, xpData.ratio, string.format("%2d%%", xpData.percent), t.primary[1], t.primary[2], t.primary[3], false)
-                else
-                    self:UpdateRowProgressBar(row, 1.0, " MAX", 0.35, 0.35, 0.35, true)
-                end
-
-                -- Col 6: GOLD
-                row.col6:SetText(self:FormatMoney(char.money, true))
-                row.col6:SetWidth(115)
-                row.col6:SetPoint("LEFT", row, "LEFT", 464, 0)
-
-                -- Col 7: RESTED STATUS & POOL %
-                if rested and not rested.isMaxLevel then
-                    local est = rested.isEstimate and "~" or ""
-                    row.col7:SetText(string.format("%s %s%d%%", rested.statusStr, est, rested.percent))
-                else
-                    row.col7:SetText("|cff888888--- |r")
-                end
-                row.col7:SetWidth(80)
-                row.col7:SetPoint("LEFT", row, "LEFT", 583, 0)
-
-                -- Col 8: TIME TO FULL RESTED
-                if rested and not rested.isMaxLevel then
-                    row.col8:SetText(rested.timeLeftStr)
-                else
-                    row.col8:SetText("")
-                end
-                row.col8:SetWidth(46)
-                row.col8:SetPoint("LEFT", row, "LEFT", 667, 0)
-
-            elseif activeTab == 2 then
-                -- RESTED XP MONITOR
-                row.facText = ""
-                row.col1:SetText("")
-
-                row.col2:SetText(coloredName)
-                row.col2:SetWidth(135)
-                row.col2:SetPoint("LEFT", row, "LEFT", 12, 0)
-
-                row.col3:SetText(string.format("Lvl %d", char.level or 1))
-                row.col3:SetWidth(45)
-                row.col3:SetPoint("LEFT", row, "LEFT", 152, 0)
-
-                row.col5:SetText("")
-                row.pBar:ClearAllPoints()
-                row.pBar:SetPoint("LEFT", row, "LEFT", 332, 0)
-
-                if rested and not rested.isMaxLevel then
-                    local est = rested.isEstimate and "~" or ""
-                    row.col4:SetText(string.format("%s%s / %s", est, self:FormatNumber(rested.currentRested), self:FormatNumber(rested.maxRested)))
-                    local restRatio = (rested.maxRested > 0) and (rested.currentRested / rested.maxRested) or 0
-                    self:UpdateRowProgressBar(row, restRatio, string.format("%s%2d%%", est, rested.percent), t.primary[1], t.primary[2], t.primary[3], false)
-                    row.col6:SetText(rested.statusStr)
-                    row.col7:SetText(rested.timeLeftStr)
-                    row.col8:SetText(rested.fullDate)
-                else
-                    row.col4:SetText("|cff888888MAX LEVEL|r")
-                    self:UpdateRowProgressBar(row, 1.0, " MAX", 0.35, 0.35, 0.35, true)
-                    row.col6:SetText("|cff888888--- |r")
-                    row.col7:SetText("|cff888888--- |r")
-                    row.col8:SetText("|cff888888--- |r")
-                end
-                row.col4:SetWidth(125)
-                row.col4:SetPoint("LEFT", row, "LEFT", 202, 0)
-                row.col6:SetWidth(65)
-                row.col6:SetPoint("LEFT", row, "LEFT", 482, 0)
-                row.col7:SetWidth(80)
-                row.col7:SetPoint("LEFT", row, "LEFT", 552, 0)
-                row.col8:SetWidth(75)
-                row.col8:SetPoint("LEFT", row, "LEFT", 637, 0)
-
-            elseif activeTab == 3 then
-                -- PROFESSIONS
-                row.pBar:Hide()
-                row.facText = ""
-                row.col1:SetText("")
-
-                row.col2:SetText(coloredName)
-                row.col2:SetWidth(135)
-                row.col2:SetPoint("LEFT", row, "LEFT", 12, 0)
-
-                row.col3:SetText(string.format("Lvl %d", char.level or 1))
-                row.col3:SetWidth(45)
-                row.col3:SetPoint("LEFT", row, "LEFT", 152, 0)
-
-                local p1 = char.professions and char.professions.primary and char.professions.primary[1]
-                local p2 = char.professions and char.professions.primary and char.professions.primary[2]
-                local cooking, firstAid, fishing = nil, nil, nil
-                if char.professions and char.professions.secondary then
-                    for _, sec in ipairs(char.professions.secondary) do
-                        if sec.name == "Cooking" then cooking = sec
-                        elseif sec.name == "First Aid" then firstAid = sec
-                        elseif sec.name == "Fishing" then fishing = sec end
-                    end
-                end
-
-                row.col4:SetText(FormatProf(p1))
-                row.col4:SetWidth(125)
-                row.col4:SetPoint("LEFT", row, "LEFT", 202, 0)
-
-                row.col5:SetText(FormatProf(p2))
-                row.col5:SetWidth(125)
-                row.col5:SetPoint("LEFT", row, "LEFT", 332, 0)
-
-                row.col6:SetText(FormatSec(cooking))
-                row.col6:SetWidth(80)
-                row.col6:SetPoint("LEFT", row, "LEFT", 462, 0)
-
-                row.col7:SetText(FormatSec(firstAid))
-                row.col7:SetWidth(80)
-                row.col7:SetPoint("LEFT", row, "LEFT", 547, 0)
-
-                row.col8:SetText(FormatSec(fishing))
-                row.col8:SetWidth(80)
-                row.col8:SetPoint("LEFT", row, "LEFT", 632, 0)
-
-            elseif activeTab == 4 then
-                -- ECONOMY / WEALTH
-                row.facText = ""
-                row.col1:SetText("")
-
-                row.col2:SetText(coloredName)
-                row.col2:SetWidth(135)
-                row.col2:SetPoint("LEFT", row, "LEFT", 12, 0)
-
-                row.col3:SetText(string.format("Lvl %d", char.level or 1))
-                row.col3:SetWidth(45)
-                row.col3:SetPoint("LEFT", row, "LEFT", 152, 0)
-
-                local totalWealth = summary.totalGold
-                local share = (totalWealth > 0) and ((char.money or 0) / totalWealth) or 0
-                local sharePct = share * 100
-
-                row.col4:SetText("")
-                row.pBar:ClearAllPoints()
-                row.pBar:SetPoint("LEFT", row, "LEFT", 202, 0)
-                self:UpdateRowProgressBar(row, share, string.format("%4.1f%%", sharePct), t.primary[1], t.primary[2], t.primary[3], false)
-
-                row.col5:SetText(self:FormatMoney(char.money, true))
-                row.col5:SetWidth(145)
-                row.col5:SetPoint("LEFT", row, "LEFT", 362, 0)
-
-                row.col6:SetText(string.format("%5.1f%%", sharePct))
-                row.col6:SetWidth(75)
-                row.col6:SetPoint("LEFT", row, "LEFT", 512, 0)
-
-                row.col7:SetText(self:GetTimeAgo(char.lastUpdate))
-                row.col7:SetWidth(115)
-                row.col7:SetPoint("LEFT", row, "LEFT", 592, 0)
-
-                row.col8:SetText("")
-            end
-        else
-            row.charData = nil
-            if row.pBar then row.pBar:Hide() end
-            row:Hide()
-        end
+    if mainFrame.btnScale then
+        local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+        mainFrame.btnScale.label:SetText(string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)))
+        mainFrame.btnScale.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     end
 end
 
 -- ----------------------------------------------------------------------------
--- Alt Dossier Popup (Inspect Alt Details)
+-- Alt Dossier Modal (Detailed Character Inspection)
 -- ----------------------------------------------------------------------------
 function CLIAlts:ShowDossierPopup(char)
     if not char then return end
 
     if not dossierPopup then
-        local p = CreateFrame("Frame", "CLIAltsDossierPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        p:SetSize(500, 530)
-        p:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
-        p:SetFrameStrata("TOOLTIP")
-        p:EnableMouse(true)
+        local dp = CreateFrame("Frame", "CLIAltsDossierPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        dp:SetSize(660, 480)
+        dp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
+        dp:SetFrameStrata("DIALOG")
+        dp:EnableMouse(true)
 
-        p:SetBackdrop({
+        dp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
             edgeSize = 2,
             insets = { left = 2, right = 2, top = 2, bottom = 2 }
         })
 
-        local title = p:CreateFontString(nil, "OVERLAY")
-        title:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
-        title:SetPoint("TOPLEFT", p, "TOPLEFT", 16, -16)
-        p.title = title
-
-        local btnClose = CreateRetroButton(p, "[ X ]", 34, 18, function()
-            p:Hide()
-        end)
-        btnClose:SetPoint("TOPRIGHT", p, "TOPRIGHT", -16, -14)
-
-        local body = p:CreateFontString(nil, "OVERLAY")
-        body:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        body:SetPoint("TOPLEFT", p, "TOPLEFT", 16, -42)
+        local body = dp:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(body, 14)
+        body:SetPoint("TOPLEFT", dp, "TOPLEFT", 16, -16)
+        body:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 45)
         body:SetJustifyH("LEFT")
-        body:SetSpacing(3)
-        p.body = body
+        body:SetJustifyV("TOP")
+        dp.body = body
 
-        local btnDel = CreateRetroButton(p, "[ DELETE ALT RECORD ]", 150, 22, function()
-            p:Hide()
-            CLIAlts:ShowConfirmDelete(p.currentChar)
+        local btnDel = CreateRetroButton(dp, "[ DELETE CHARACTER ]", 140, 20, function()
+            dp:Hide()
+            if dp.charData then
+                CLIAlts:ShowConfirmDelete(dp.charData)
+            end
         end)
-        btnDel:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 16, 16)
+        btnDel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 16)
 
-        local btnDone = CreateRetroButton(p, "[ CLOSE ]", 80, 22, function()
-            p:Hide()
+        local btnClose = CreateRetroButton(dp, "[ CLOSE ]", 80, 20, function()
+            dp:Hide()
         end)
-        btnDone:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -16, 16)
+        btnClose:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 16)
 
-        dossierPopup = p
+        dossierPopup = dp
     end
 
+    dossierPopup.charData = char
     local t = self:GetTheme()
     dossierPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
     dossierPopup:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
-    dossierPopup.currentChar = char
-    dossierPopup.title:SetText(string.format(".:: DOSSIER: %s ::.", self:ColorizePlayerName(char.name, char.classFile)))
-    dossierPopup.title:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-
-    local rested = self:GetRestedData(char)
     local lines = {}
+    table.insert(lines, "+==============================================================================+")
+    table.insert(lines, "|                    CLIALTS :: ALT DOSSIER & RECORD                           |")
+    table.insert(lines, "+==============================================================================+")
 
-    table.insert(lines, "+------------------------------------------------------------------------------+")
     if char.secondaryName and char.secondaryName ~= "" then
         table.insert(lines, string.format("| Full Name:      %s", self:ColorizePlayerName(char.fullName or char.name, char.classFile)))
         table.insert(lines, string.format("|   * First Name: |cffffffff%s|r", char.primaryName or char.name))
@@ -1187,14 +1114,7 @@ function CLIAlts:ShowDossierPopup(char)
     table.insert(lines, string.format("| Current Gold:   %s", self:FormatMoney(char.money, true)))
 
     local isResting = self:IsCharacterResting(char)
-    local logoutZoneTag
-    if char.loggedOutInRestZone ~= nil then
-        logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
-    elseif isResting then
-        logoutZoneTag = "|cff00ff66[REST AREA]|r"
-    else
-        logoutZoneTag = "|cffffaa00[WILD]|r"
-    end
+    local logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
     table.insert(lines, string.format("| Location:       |cffffffff%s|r %s", char.location or "Unknown", logoutZoneTag))
     table.insert(lines, string.format("| Last Active:    |cffffffff%s|r (%s)", self:GetTimeAgo(char.lastUpdate), date("%b %d, %H:%M", char.lastUpdate or time())))
     table.insert(lines, "+------------------------------------------------------------------------------+")
@@ -1212,6 +1132,7 @@ function CLIAlts:ShowDossierPopup(char)
     table.insert(lines, "+------------------------------------------------------------------------------+")
     table.insert(lines, "| RESTED EXPERIENCE (WoW Forever):")
 
+    local rested = self:GetRestedData(char)
     if rested and not rested.isMaxLevel then
         local est = rested.isEstimate and "~" or ""
         local restModeStr = rested.isResting and "+5.0% every 8h (Resting)" or "+1.25% every 8h (Wilderness)"
@@ -1225,39 +1146,37 @@ function CLIAlts:ShowDossierPopup(char)
             table.insert(lines, "| Note:           |cffffaa00Estimated projection (~disconnect / crash)|r")
         end
     else
-        table.insert(lines, "| Status:         |cff888888MAX LEVEL (No Rested Required)|r")
+        table.insert(lines, "| Rest Status:    |cff888888N/A (Max Level characters do not accumulate Rested XP)|r")
     end
 
     table.insert(lines, "+------------------------------------------------------------------------------+")
-    table.insert(lines, "| PROFESSIONS:")
+    table.insert(lines, "| PROFESSIONS & CRAFTING:")
     if char.professions and char.professions.primary and #char.professions.primary > 0 then
         for _, p in ipairs(char.professions.primary) do
-            table.insert(lines, string.format("|   * Primary:   |cffffffff%-14s|r (%d / %d)", p.name, p.rank, p.maxRank or 300))
+            table.insert(lines, string.format("|  * Primary:   |cffffffff%-16s|r %3d / %-3d", p.name or "Unknown", p.rank or 0, p.maxRank or 0))
         end
     else
-        table.insert(lines, "|   * Primary:   |cff777777None recorded|r")
+        table.insert(lines, "|  * Primary:   |cff888888None learned|r")
     end
-
     if char.professions and char.professions.secondary and #char.professions.secondary > 0 then
         for _, s in ipairs(char.professions.secondary) do
-            table.insert(lines, string.format("|   * Secondary: |cffffffff%-14s|r (%d / %d)", s.name, s.rank, s.maxRank or 300))
+            table.insert(lines, string.format("|  * Secondary: |cffffffff%-16s|r %3d / %-3d", s.name or "Unknown", s.rank or 0, s.maxRank or 0))
         end
     end
-
-    table.insert(lines, "+------------------------------------------------------------------------------+")
+    table.insert(lines, "+==============================================================================+")
 
     dossierPopup.body:SetText(table.concat(lines, "\n"))
     dossierPopup:Show()
 end
 
 -- ----------------------------------------------------------------------------
--- Delete Confirmation Modal
+-- Confirmation Modal (Delete Character)
 -- ----------------------------------------------------------------------------
 function CLIAlts:ShowConfirmDelete(char)
     if not char then return end
 
     if not confirmPopup then
-        local cp = CreateFrame("Frame", "CLIAltsConfirmDelete", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local cp = CreateFrame("Frame", "CLIAltsConfirmPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
         cp:SetSize(360, 160)
         cp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
         cp:SetFrameStrata("DIALOG")
@@ -1270,38 +1189,47 @@ function CLIAlts:ShowConfirmDelete(char)
             insets = { left = 2, right = 2, top = 2, bottom = 2 }
         })
 
-        local txt = cp:CreateFontString(nil, "OVERLAY")
-        txt:SetFont("Fonts\\ARIALN.TTF", 11, "")
-        txt:SetPoint("CENTER", cp, "CENTER", 0, 15)
-        txt:SetJustifyH("CENTER")
-        cp.txt = txt
+        local body = cp:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(body, 14)
+        body:SetPoint("TOPLEFT", cp, "TOPLEFT", 16, -16)
+        body:SetPoint("BOTTOMRIGHT", cp, "BOTTOMRIGHT", -16, 45)
+        body:SetJustifyH("CENTER")
+        body:SetJustifyV("TOP")
+        cp.body = body
 
-        local btnConfirm = CreateRetroButton(cp, "[ CONFIRM DELETE ]", 130, 22, function()
-            if cp.targetChar and cp.targetChar.key then
-                CLIAlts:DeleteCharacter(cp.targetChar.key)
-                DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r Deleted alt record for %s.", cp.targetChar.name))
-                cp:Hide()
-                CLIAlts:Render()
+        local btnConfirm = CreateRetroButton(cp, "[ YES, PURGE ]", 110, 20, function()
+            if cp.charKey then
+                CLIAlts:DeleteCharacter(cp.charKey)
             end
-        end)
-        btnConfirm:SetPoint("BOTTOMLEFT", cp, "BOTTOMLEFT", 30, 20)
-
-        local btnCancel = CreateRetroButton(cp, "[ CANCEL ]", 90, 22, function()
             cp:Hide()
         end)
-        btnCancel:SetPoint("BOTTOMRIGHT", cp, "BOTTOMRIGHT", -30, 20)
+        btnConfirm:SetPoint("BOTTOMLEFT", cp, "BOTTOMLEFT", 40, 16)
+
+        local btnCancel = CreateRetroButton(cp, "[ CANCEL ]", 90, 20, function()
+            cp:Hide()
+        end)
+        btnCancel:SetPoint("BOTTOMRIGHT", cp, "BOTTOMRIGHT", -40, 16)
 
         confirmPopup = cp
     end
 
+    local cleanKey = char.fullName or char.name or char.key
+    confirmPopup.charKey = cleanKey
     local t = self:GetTheme()
     confirmPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
-    confirmPopup:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+    confirmPopup:SetBackdropBorderColor(1, 0.2, 0.2, 1)
 
-    confirmPopup.targetChar = char
-    confirmPopup.txt:SetText(string.format("+----------------------------------------+\n| DELETE ALT RECORD CONFIRMATION         |\n+----------------------------------------+\nAre you sure you want to remove\n%s from tracking?\n+----------------------------------------+",
-        self:ColorizePlayerName(char.name, char.classFile)))
-
+    local msg = {
+        "+=======================================+",
+        "|       PURGE CHARACTER RECORD?         |",
+        "+=======================================+",
+        "",
+        string.format("Are you sure you want to delete"),
+        string.format("|cffff4444%s|r", cleanKey),
+        "from the local CLIAlts database?",
+        "",
+    }
+    confirmPopup.body:SetText(table.concat(msg, "\n"))
     confirmPopup:Show()
 end
 
@@ -1311,7 +1239,7 @@ end
 function CLIAlts:ShowHelpPopup()
     if not helpPopup then
         local hp = CreateFrame("Frame", "CLIAltsHelpPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        hp:SetSize(520, 420)
+        hp:SetSize(520, 430)
         hp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
         hp:SetFrameStrata("DIALOG")
         hp:EnableMouse(true)
@@ -1324,13 +1252,14 @@ function CLIAlts:ShowHelpPopup()
         })
 
         local body = hp:CreateFontString(nil, "OVERLAY")
-        body:SetFont("Fonts\\ARIALN.TTF", 11, "")
+        self:SetWidgetFont(body, 14)
         body:SetPoint("TOPLEFT", hp, "TOPLEFT", 16, -16)
+        body:SetPoint("BOTTOMRIGHT", hp, "BOTTOMRIGHT", -16, 45)
         body:SetJustifyH("LEFT")
-        body:SetSpacing(2)
+        body:SetJustifyV("TOP")
         hp.body = body
 
-        local btnClose = CreateRetroButton(hp, "[ CLOSE ]", 80, 22, function()
+        local btnClose = CreateRetroButton(hp, "[ CLOSE ]", 80, 20, function()
             hp:Hide()
         end)
         btnClose:SetPoint("BOTTOMRIGHT", hp, "BOTTOMRIGHT", -16, 16)
@@ -1347,23 +1276,25 @@ function CLIAlts:ShowHelpPopup()
         "|                 CLIALTS :: QUICK GUIDE & COMMANDS                  |",
         "+====================================================================+",
         "| Slash Commands:                                                    |",
-        "|   /CLIAlts            - Toggle the main TUI monitor                |",
-        "|   /CLIAlts [1-4]      - Open directly to specific tab (1-4)        |",
-        "|   /CLIAlts show       - Open window                                |",
-        "|   /CLIAlts track      - Force save current character to tracker    |",
-        "|   /CLIAlts rested     - Print quick rested XP report to chat       |",
-        "|   /CLIAlts perk <0-5> - Set Well Rested legacy perk rank (0-5)     |",
-        "|   /CLIAlts gold       - Print total account gold summary           |",
-        "|   /CLIAlts reset      - Reset window position to center            |",
+        "|   /clialts            - Toggle the main TUI monitor                |",
+        "|   /clialts [1-4]      - Open directly to specific tab (1-4)        |",
+        "|   /clialts show       - Open window                                |",
+        "|   /clialts scale <val>- Set UI scale (0.7 to 1.8, e.g. 1.2 / 120%) |",
+        "|   /clialts font <sz>  - Set terminal font size (12 to 22)          |",
+        "|   /clialts track      - Force save current character to tracker    |",
+        "|   /clialts rested     - Print quick rested XP report to chat       |",
+        "|   /clialts perk <0-5> - Set Well Rested legacy perk rank (0-5)     |",
+        "|   /clialts gold       - Print total account gold summary           |",
+        "|   /clialts reset      - Reset window position to center            |",
         "+--------------------------------------------------------------------+",
-        "| Mouse Interactions:                                                |",
-        "|   - Click [PERK: R#] on status bar to cycle Well Rested perk rank  |",
-        "|   - Drag header bar to move window                                 |",
-        "|   - Click any column header to sort ascending / descending         |",
-        "|   - Click any character row to view detailed Dossier               |",
+        "| Interactions:                                                      |",
+        "|   - Click [SCALE] on title bar to cycle 100%, 115%, 130%, 145%, 90%|",
         "|   - Click [THEME] on title bar to cycle CRT retro color palettes   |",
+        "|   - Click column title in header line to sort ascending/descending |",
+        "|   - Left-Click any character row to inspect full Dossier           |",
+        "|   - Right-Click any character row to delete character record       |",
         "|   - Mouse wheel over table to scroll pages                         |",
-        "|   - Drag Minimap icon to move around outside of minimap            |",
+        "|   - Drag Minimap icon to move outside of minimap                   |",
         "+--------------------------------------------------------------------+",
         "| Rested XP Mechanics (WoW Forever):                                 |",
         "|   - Resting in Inn/City/Camp: +5% of level every 8h (10 days base) |",
@@ -1389,21 +1320,26 @@ function CLIAlts:Toggle(show)
             mainFrame:Hide()
         else
             self:CollectCurrentCharacter()
+            self:ApplyTheme()
+            self:Render()
             mainFrame:Show()
             PlayRetroSound()
-            self:Render()
         end
     elseif show then
         self:CollectCurrentCharacter()
+        self:ApplyTheme()
+        self:Render()
         mainFrame:Show()
         PlayRetroSound()
-        self:Render()
     else
         mainFrame:Hide()
+        PlayRetroSound()
     end
 end
 
 function CLIAlts:Refresh()
     self:CollectCurrentCharacter()
+    self:ApplyTheme()
     self:Render()
+    self:Print("Database refreshed.")
 end

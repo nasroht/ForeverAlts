@@ -248,6 +248,35 @@ local function SlashHandler(msg)
         end
         CLIAlts:Print("Window position reset to center.")
 
+    elseif cmd == "scale" then
+        if arg and arg ~= "" then
+            local clean = arg:gsub("%%", "")
+            local val = tonumber(clean)
+            if val then
+                if val > 5 then val = val / 100 end
+                CLIAlts:SetScale(val)
+                CLIAlts:Print(string.format("UI scale set to %.2fx (%d%%).", val, math.floor(val * 100 + 0.5)))
+            else
+                CLIAlts:Print("Usage: |cff00ff66/clialts scale <0.7 - 1.8>|r (e.g. 1.2 or 120%)")
+            end
+        else
+            CLIAlts:CycleScale()
+        end
+
+    elseif cmd == "font" or cmd == "fontsize" then
+        if arg and arg ~= "" then
+            local sz = tonumber(arg)
+            if sz and sz >= 12 and sz <= 22 then
+                CLIAlts:SetFontSize(sz)
+                CLIAlts:Print(string.format("Terminal font size set to %dpx.", sz))
+            else
+                CLIAlts:Print("Usage: |cff00ff66/clialts font <12-22>|r")
+            end
+        else
+            local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 15
+            CLIAlts:Print(string.format("Current font size: %dpx. Usage: |cff00ff66/clialts font <12-22>|r", cur))
+        end
+
     elseif cmd == "gold" then
         local summary = CLIAlts:GetAccountSummary()
         local moneyStr = CLIAlts:FormatMoney(summary.totalGold, true)
