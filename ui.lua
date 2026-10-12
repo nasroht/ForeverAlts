@@ -1147,7 +1147,7 @@ function CLIAlts:ShowDossierPopup(char)
         table.insert(lines, string.format("| Character Name: %s", self:ColorizePlayerName(char.name, char.classFile)))
     end
     table.insert(lines, "| System:         |cffffffffWoW Forever|r")
-    table.insert(lines, string.format("| Faction / Race: %s |cffffffff%s|r", self:GetFactionTag(char.faction), self:FormatRaceClass(char)))
+    table.insert(lines, string.format("| Faction / Race: %s |cffffffff%s (%s)|r", self:GetFactionTag(char.faction), self:FormatRace(char), self:GetRaceCode(char)))
     table.insert(lines, string.format("| Class / Level:  %s (Level |cffffffff%d|r)", self:ColorizePlayerName(char.class or "Unknown", char.classFile), char.level or 1))
     table.insert(lines, string.format("| Current Gold:   %s", self:FormatMoney(char.money, true)))
 

@@ -73,26 +73,121 @@ local KNOWN_SECONDARY_PROFS = {
 }
 
 -- ----------------------------------------------------------------------------
--- Format Helper: Race and Class Clean Display
+-- Format Helper: Race and Class Clean Display (3-Letter Retro TUI Codes)
 -- ----------------------------------------------------------------------------
-function CLIAlts:FormatRaceClass(char)
+local RACE_CODES = {
+    ["Human"]               = "HUM",
+    ["HUMAN"]               = "HUM",
+    ["Dwarf"]               = "DWA",
+    ["DWARF"]               = "DWA",
+    ["Night Elf"]           = "NEL",
+    ["NightElf"]            = "NEL",
+    ["NIGHTELF"]            = "NEL",
+    ["Gnome"]               = "GNO",
+    ["GNOME"]               = "GNO",
+    ["Draenei"]             = "DRA",
+    ["DRAENEI"]             = "DRA",
+    ["Orc"]                 = "ORC",
+    ["ORC"]                 = "ORC",
+    ["Undead"]              = "UND",
+    ["Scourge"]             = "UND",
+    ["SCOURGE"]             = "UND",
+    ["Tauren"]              = "TAU",
+    ["TAUREN"]              = "TAU",
+    ["Troll"]               = "TRO",
+    ["TROLL"]               = "TRO",
+    ["Blood Elf"]           = "BEL",
+    ["BloodElf"]            = "BEL",
+    ["BLOODELF"]            = "BEL",
+    ["Goblin"]              = "GOB",
+    ["GOBLIN"]              = "GOB",
+    ["Worgen"]              = "WOR",
+    ["WORGEN"]              = "WOR",
+    ["Pandaren"]            = "PAN",
+    ["PANDAREN"]            = "PAN",
+    ["Dracthyr"]            = "DTH",
+    ["DRACTHYR"]            = "DTH",
+    ["Skyborne"]            = "SKY",
+    ["SKYBORNE"]            = "SKY",
+    ["High Order Skyborne"] = "SKY",
+    ["HIGHORDERSKYBORNE"]   = "SKY",
+}
+
+function CLIAlts:GetRaceCode(char)
+    if not char then return "UNK" end
+
+    -- Prefer stored localized race over internal engine raceFile token
+    local r = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or char.raceFile
+    if not r or r == "" or r == "Unknown" then
+        return "UNK"
+    end
+
+    if RACE_CODES[r] then
+        return RACE_CODES[r]
+    end
+
+    local upper = string.upper(r)
+    if RACE_CODES[upper] then
+        return RACE_CODES[upper]
+    end
+
+    -- Pattern matches for custom / composite race names
+    if upper:find("SKYBORNE") then return "SKY" end
+    if upper:find("NIGHT") then return "NEL" end
+    if upper:find("BLOOD") then return "BEL" end
+    if upper:find("SCOURGE") or upper:find("UNDEAD") then return "UND" end
+    if upper:find("DWARF") then return "DWA" end
+    if upper:find("GNOME") then return "GNO" end
+    if upper:find("HUMAN") then return "HUM" end
+    if upper:find("DRAENEI") then return "DRA" end
+    if upper:find("TAUREN") then return "TAU" end
+    if upper:find("TROLL") then return "TRO" end
+    if upper:find("ORC") then return "ORC" end
+    if upper:find("GOBLIN") then return "GOB" end
+    if upper:find("WORGEN") then return "WOR" end
+    if upper:find("PANDA") then return "PAN" end
+    if upper:find("DRAC") then return "DTH" end
+
+    -- Fallback: first 3 non-whitespace characters uppercased
+    local clean = upper:gsub("%s+", "")
+    if #clean >= 3 then
+        return string.sub(clean, 1, 3)
+    elseif #clean > 0 then
+        return clean
+    end
+    return "UNK"
+end
+
+function CLIAlts:FormatRace(char)
     if not char then return "Unknown" end
 
-    -- Extract clean race (prefer raceFile or simplified name over long titles)
-    local race = char.raceFile or char.race or "Unknown"
-    if race == "Unknown" and char.race and char.race ~= "" then
-        race = char.race
+    -- Prefer stored localized race
+    local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or nil
+    if not race then
+        local rf = char.raceFile
+        if rf == "Scourge" then
+            race = "Undead"
+        elseif rf == "NightElf" then
+            race = "Night Elf"
+        elseif rf == "BloodElf" then
+            race = "Blood Elf"
+        else
+            race = rf or "Unknown"
+        end
     end
 
-    -- Simplify long multi-word races cleanly
     if race:find("Skyborne") then
         race = "Skyborne"
-    elseif race:find("Scourge") or race:find("Undead") then
-        race = "Undead"
     end
 
+    return race
+end
+
+function CLIAlts:FormatRaceClass(char)
+    if not char then return "Unknown" end
+    local code = self:GetRaceCode(char)
     local class = char.class or "Unknown"
-    return string.format("%s %s", race, class)
+    return string.format("%s %s", code, class)
 end
 
 -- ----------------------------------------------------------------------------
