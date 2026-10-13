@@ -3375,7 +3375,7 @@ function CLIAlts:CalculateRotationScore(char, nowOverride)
     end
 
     -- 3. Rested state & waste
-    local wastedSec, wastedXP = self:GetRestedWaste(char, nowOverride)
+    local _, wastedXP = self:GetRestedWaste(char, nowOverride)
     local rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
     local isCapped = rested and rested.isFull
     local isCore = (char.tier == "CORE")
