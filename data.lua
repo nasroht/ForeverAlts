@@ -1897,6 +1897,19 @@ function CLIAlts:RunSelfTest()
     self:ToggleAlert("cooldowns", true)
     CLIAltsDB.characters = oldChars
 
+    -- 4e. FormatLoginDigestLines appends +N more (/ca digest) when items > 4
+    local mock6Items = {
+        { text = "Item 1", compact = "I1" },
+        { text = "Item 2", compact = "I2" },
+        { text = "Item 3", compact = "I3" },
+        { text = "Item 4", compact = "I4" },
+        { text = "Item 5", compact = "I5" },
+        { text = "Item 6", compact = "I6" },
+    }
+    local formatted6 = self:FormatLoginDigestLines(mock6Items)
+    Assert(#formatted6 == 3, "FormatLoginDigestLines: packs into 3 content lines (at most 5 boxed)")
+    Assert(formatted6[3]:find("+2 more %(/ca digest%)") ~= nil, "FormatLoginDigestLines: appends +2 more (/ca digest)")
+
     -- 5. Leveling Session Planner & Burn Ratio Tests
     -- 5a. Short sample guard (< 1000 rested burned)
     local _, _, stBurn1 = self:EvaluateBurnRatio(500, 1000, 0.5, nil)
@@ -1989,6 +2002,14 @@ function CLIAlts:RunSelfTest()
     Assert(#lList == 1 and lList[1].name == "RaidRogue", "GetUnlockedAlts: identifies RaidRogue as locked")
     local uList2, _, cNameU2 = self:GetUnlockedAlts("mc", T0, mockLockAlts)
     Assert(cNameU2 == "Molten Core" and #uList2 == 1, "GetUnlockedAlts: alias 'mc' resolves to Molten Core")
+
+    -- 7d. Substring query shorter than 3 characters rejected unless in KNOWN_INSTANCES
+    local _, _, _, _, errShort = self:GetUnlockedAlts("a", T0, mockLockAlts)
+    Assert(errShort ~= nil, "GetUnlockedAlts: rejects query shorter than 3 characters")
+
+    -- 7e. Unknown instance fallback minLevel respects GetMaxLevel()
+    local _, _, _, minLvlUnknown = self:GetUnlockedAlts("UnknownInstance", T0, mockLockAlts)
+    Assert(minLvlUnknown == self:GetMaxLevel(), "GetUnlockedAlts: fallback minLevel respects GetMaxLevel()")
 
     -- 8. Watchlist Item ID Parsing & Dropping Counts Tests
     -- 8a. Item link parsing: extracts numeric item ID 14047
@@ -3000,6 +3021,27 @@ function CLIAlts:GetLoginDigestItems(nowOverride)
     return items
 end
 
+function CLIAlts:FormatLoginDigestLines(items)
+    local lines = {}
+    if not items or #items == 0 then return lines end
+
+    if #items <= 3 then
+        for i = 1, #items do
+            table.insert(lines, items[i].text)
+        end
+    else
+        -- Pack into 3 content lines so total with borders is at most 5 lines
+        table.insert(lines, items[1].text)
+        table.insert(lines, items[2].text)
+        local line3 = items[3].compact .. "  |  " .. items[4].compact
+        if #items > 4 then
+            line3 = line3 .. string.format("  |  |cff888888+%d more (/ca digest)|r", #items - 4)
+        end
+        table.insert(lines, line3)
+    end
+    return lines
+end
+
 function CLIAlts:PrintLoginDigest(force)
     local items = self:GetLoginDigestItems()
     local border = "+-----------------[ CLIAlts :: LOGIN DIGEST ]-----------------+"
@@ -3014,17 +3056,7 @@ function CLIAlts:PrintLoginDigest(force)
         return
     end
 
-    local lines = {}
-    if #items <= 3 then
-        for i = 1, #items do
-            table.insert(lines, items[i].text)
-        end
-    else
-        -- 4 items: pack into 3 content lines so total with borders is at most 5 lines!
-        table.insert(lines, items[1].text)
-        table.insert(lines, items[2].text)
-        table.insert(lines, items[3].compact .. "  |  " .. items[4].compact)
-    end
+    local lines = self:FormatLoginDigestLines(items)
 
     DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", border))
     for _, l in ipairs(lines) do
@@ -3447,18 +3479,22 @@ function CLIAlts:GetUnlockedAlts(query, nowTimestamp, mockChars)
     local now = nowTimestamp or time()
     local qLower = cleaned:lower()
 
+    if not KNOWN_INSTANCES[qLower] and string.len(cleaned) < 3 then
+        return nil, nil, nil, nil, "Instance query must be at least 3 characters."
+    end
+
     local canonName = cleaned
-    local minLevel = 60
+    local minLevel = self:GetMaxLevel()
 
     if KNOWN_INSTANCES[qLower] then
         canonName = KNOWN_INSTANCES[qLower].name
-        minLevel = KNOWN_INSTANCES[qLower].minLevel
+        minLevel = KNOWN_INSTANCES[qLower].minLevel or self:GetMaxLevel()
     else
         local chars = mockChars or self:GetCharactersList()
         for _, c in ipairs(chars) do
             if c.lockouts then
                 for instName, _ in pairs(c.lockouts) do
-                    if instName:lower():find(qLower, 1, true) then
+                    if #qLower >= 3 and instName:lower():find(qLower, 1, true) then
                         canonName = instName
                         break
                     end
@@ -3482,7 +3518,7 @@ function CLIAlts:GetUnlockedAlts(query, nowTimestamp, mockChars)
             if c.lockouts then
                 for instName, lockInfo in pairs(c.lockouts) do
                     local matches = (instName:lower() == canonName:lower())
-                        or (instName:lower():find(qLower, 1, true) ~= nil)
+                        or (#qLower >= 3 and instName:lower():find(qLower, 1, true) ~= nil)
                         or (canonName:lower():find(instName:lower(), 1, true) ~= nil)
 
                     if matches then

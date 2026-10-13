@@ -281,6 +281,31 @@ function CLIAlts:InitLDB()
             tooltip:AddLine("|cff888888Right-Click:|r Cycle theme", 0.8, 0.8, 0.8)
         end,
     })
+
+    -- Periodic LDB refresh ticker (every 30s): starts ONLY when ldbObject exists
+    if not self.ldbTickerStarted then
+        self.ldbTickerStarted = true
+        if C_Timer and C_Timer.NewTicker then
+            C_Timer.NewTicker(30, function()
+                if CLIAlts.ldbObject and CLIAlts.UpdateLDB then
+                    CLIAlts:UpdateLDB()
+                end
+            end)
+        else
+            local ldbTicker = CreateFrame("Frame")
+            local ldbElapsed = 0
+            ldbTicker:SetScript("OnUpdate", function(_, elapsed)
+                ldbElapsed = ldbElapsed + (elapsed or 0)
+                if ldbElapsed >= 30 then
+                    ldbElapsed = 0
+                    if CLIAlts.ldbObject and CLIAlts.UpdateLDB then
+                        CLIAlts:UpdateLDB()
+                    end
+                end
+            end)
+        end
+    end
+
     return self.ldbObject
 end
 
@@ -293,17 +318,4 @@ function CLIAlts:UpdateLDB()
         self.ldbObject.text = self:GetLDBText()
     end
 end
-
--- Periodic LDB refresh ticker (every 30s) so display bars stay updated when window is closed
-local ldbTicker = CreateFrame("Frame")
-local ldbElapsed = 0
-ldbTicker:SetScript("OnUpdate", function(self, elapsed)
-    ldbElapsed = ldbElapsed + (elapsed or 0)
-    if ldbElapsed >= 30 then
-        ldbElapsed = 0
-        if CLIAlts.ldbObject and CLIAlts.UpdateLDB then
-            CLIAlts:UpdateLDB()
-        end
-    end
-end)
 
