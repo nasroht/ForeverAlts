@@ -1469,16 +1469,16 @@ function CLIAlts:ApplyTheme()
         mainFrame.btnCompact.label:SetTextColor(isComp and t.highlight[1] or t.primary[1], isComp and t.highlight[2] or t.primary[2], isComp and t.highlight[3] or t.primary[3])
     end
 
-    if mainFrame.promptLabel then
+    if mainFrame.promptLabel and mainFrame.promptLabel.SetTextColor then
         mainFrame.promptLabel:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     end
-    if mainFrame.promptBox then
+    if mainFrame.promptBox and mainFrame.promptBox.SetTextColor then
         mainFrame.promptBox:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
     end
-    if mainFrame.promptSepAscii then
+    if mainFrame.promptSepAscii and mainFrame.promptSepAscii.SetTextColor then
         mainFrame.promptSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
     end
-    if mainFrame.promptStatusTip then
+    if mainFrame.promptStatusTip and mainFrame.promptStatusTip.SetTextColor then
         mainFrame.promptStatusTip:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
     end
 end

@@ -58,6 +58,9 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:LockHighlight(...) end
     function frame:UnlockHighlight(...) end
     function frame:SetHighlightTexture(...) end
+    function frame:SetTextColor(...) end
+    function frame:SetFont(...) end
+    function frame:GetFont(...) return "Fonts\\FRIZQT__.TTF", 12, "" end
     function frame:SetAutoFocus(...) end
     function frame:SetTextInsets(...) end
     function frame:SetMultiLine(...) end
