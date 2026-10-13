@@ -445,6 +445,10 @@ local function SlashHandler(msg)
     elseif cmd == "plan" then
         CLIAlts:PrintPlan(arg)
 
+    elseif cmd == "note" then
+        local targetName, noteText = (arg or ""):match("^(%S+)%s*(.*)$")
+        CLIAlts:SetCharacterNote(targetName, noteText, true)
+
     elseif cmd == "help" then
         CLIAlts:ShowHelpPopup()
 

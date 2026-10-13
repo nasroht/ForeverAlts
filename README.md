@@ -46,6 +46,11 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
   - Computes how long each alt's rested pool will last using a self-calibrating rested burn ratio.
   - Generates an optimal leveling schedule for your requested playtime: e.g. `Thor 90m, then Åse 45m`.
   - Prioritizes capped alts first to stop wasted rested XP, followed by alts with largest available rested pools.
+- **Per-Alt Notes (`> note <name> <text>`)**:
+  - Store customizable notes per character (e.g. `> note thor farm mooncloth`).
+  - Prominently displayed in the Alt Dossier modal and character row hover tooltips.
+  - Searchable via filters (`> filter mooncloth`), sortable (`> sort note`), and included in CSV export.
+  - Cleared anytime with `> note <name> clear`.
 - **Customizable UI Scale & Fonts**:
   - Monospace font rendering with exact column width calculations.
   - `/clialts scale <0.7-1.8>` and title bar `[ SCALE ]` button for 1440p / 4K displays.
@@ -76,6 +81,7 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | `/clialts alerts [cat]` | Toggle login alert categories (`cd`, `rested`, `mail`, `locks`, `on`, `off`) |
 | `/clialts digest` | Display boxed login summary digest on demand |
 | `/clialts plan [hours]` | Compute ordered leveling session schedule (default: 2h) |
+| `/clialts note <name> [text]` | Set or view custom notes for an alt (`clear` to remove) |
 | `/clialts reset` | Reset window position to the center of your screen |
 | `/clialts help` | Open the in-game retro quick guide popup |
 

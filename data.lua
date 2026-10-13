@@ -762,6 +762,7 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         mailCheckedTime = liveMailCheckedTime or (existing and existing.mailCheckedTime),
         watchlistCounts = self:CollectWatchlistCounts(existing and existing.watchlistCounts),
         xpHour = (existing and existing.xpHour) or (cachedCurrentChar and cachedCurrentChar.xpHour),
+        note = (existing and existing.note) or (cachedCurrentChar and cachedCurrentChar.note),
         lastUpdate = now,
         logoutTime = (isLogout and now) or (existing and existing.logoutTime) or now,
     }
@@ -1253,6 +1254,89 @@ end
 -- ----------------------------------------------------------------------------
 -- CRUD Operations & Querying
 -- ----------------------------------------------------------------------------
+function CLIAlts:FindCharacter(query)
+    if not query or query == "" or not CLIAltsDB or not CLIAltsDB.characters then return nil, nil end
+    local qLower = query:lower():match("^%s*(.-)%s*$")
+    if qLower == "" then return nil, nil end
+
+    if CLIAltsDB.characters[query] then
+        return CLIAltsDB.characters[query], query
+    end
+
+    -- 1. Exact case-insensitive match on name, full name, or key
+    for k, char in pairs(CLIAltsDB.characters) do
+        local name = (char.name or ""):lower()
+        local full = (char.fullName or ""):lower()
+        local prim = (char.primaryName or ""):lower()
+        local keyLower = tostring(k):lower()
+        if name == qLower or full == qLower or prim == qLower or keyLower == qLower then
+            return char, k
+        end
+    end
+
+    -- 2. Prefix match (starts with query)
+    for k, char in pairs(CLIAltsDB.characters) do
+        local name = (char.name or ""):lower()
+        local full = (char.fullName or ""):lower()
+        local prim = (char.primaryName or ""):lower()
+        local keyLower = tostring(k):lower()
+        if name:find(qLower, 1, true) == 1 or full:find(qLower, 1, true) == 1 or prim:find(qLower, 1, true) == 1 or keyLower:find(qLower, 1, true) == 1 then
+            return char, k
+        end
+    end
+
+    return nil, nil
+end
+
+function CLIAlts:SetCharacterNote(charQuery, noteText, printChat)
+    if not charQuery or charQuery == "" then
+        local msg = "Usage: note <name> <text> (or 'clear' to remove)"
+        if printChat then self:Print(msg) end
+        return msg, false
+    end
+
+    local char, key = self:FindCharacter(charQuery)
+    if not char then
+        local msg = string.format("Character '%s' not found.", charQuery)
+        if printChat then self:Print(msg) end
+        return msg, false
+    end
+
+    local cName = self:ColorizePlayerName(char.name or charQuery, char.classFile)
+
+    if not noteText or noteText == "" then
+        local msg
+        if char.note and char.note ~= "" then
+            msg = string.format("Note for %s: |cffffd700%s|r", cName, char.note)
+        else
+            msg = string.format("No note set for %s.", cName)
+        end
+        if printChat then self:Print(msg) end
+        return msg, true
+    end
+
+    local trimmed = noteText:match("^%s*(.-)%s*$")
+    if trimmed:lower() == "clear" or trimmed:lower() == "none" or trimmed == "-" then
+        char.note = nil
+        if cachedCurrentChar and (cachedCurrentChar == char or key == self.curPlayerKey) then
+            cachedCurrentChar.note = nil
+        end
+        local msg = string.format("Cleared note for %s.", cName)
+        if printChat then self:Print(msg) end
+        self:RequestRender()
+        return msg, true
+    else
+        char.note = trimmed
+        if cachedCurrentChar and (cachedCurrentChar == char or key == self.curPlayerKey) then
+            cachedCurrentChar.note = trimmed
+        end
+        local msg = string.format("Note set for %s: |cffffd700%s|r", cName, trimmed)
+        if printChat then self:Print(msg) end
+        self:RequestRender()
+        return msg, true
+    end
+end
+
 function CLIAlts:DeleteCharacter(charKey)
     if not CLIAltsDB or not CLIAltsDB.characters or not charKey then return false end
     if CLIAltsDB.characters[charKey] then
@@ -1300,12 +1384,14 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 local loc = (char.location or ""):lower()
                 local p1 = (char.professions and char.professions.primary and char.professions.primary[1] and char.professions.primary[1].name or ""):lower()
                 local p2 = (char.professions and char.professions.primary and char.professions.primary[2] and char.professions.primary[2].name or ""):lower()
+                local note = (char.note or ""):lower()
                 keep = name:find(query, 1, true)
                     or cls:find(query, 1, true)
                     or race:find(query, 1, true)
                     or loc:find(query, 1, true)
                     or p1:find(query, 1, true)
                     or p2:find(query, 1, true)
+                    or note:find(query, 1, true)
             end
         end
         if keep then
@@ -1337,6 +1423,13 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
             if sortAsc then return (a.name or "") < (b.name or "") else return (a.name or "") > (b.name or "") end
         elseif sortBy == "gold" then
             if sortAsc then return (a.money or 0) < (b.money or 0) else return (a.money or 0) > (b.money or 0) end
+        elseif sortBy == "note" then
+            local nA = (a.note or ""):lower()
+            local nB = (b.note or ""):lower()
+            if nA ~= nB then
+                if sortAsc then return nA < nB else return nA > nB end
+            end
+            return (a.name or "") < (b.name or "")
         elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" then
             local valA = sortValues[a] or 0
             local valB = sortValues[b] or 0
@@ -1698,8 +1791,22 @@ function CLIAlts:RunSelfTest()
     Assert(planSched[2].name == "Ase" and planSched[2].mins == 30, "GenerateLevelingPlan: Ase allocated 30m")
     Assert(planSummary:find("Thor", 1, true) ~= nil and planSummary:find("60m", 1, true) ~= nil and planSummary:find("Ase", 1, true) ~= nil and planSummary:find("30m", 1, true) ~= nil, "GenerateLevelingPlan: formatted summary contains 'Thor 60m, then Ase 30m'")
 
+    -- 6. Per-Alt Notes Tests
+    local testNoteChar = { name = "Thorin", classFile = "WARRIOR", level = 60 }
+    local oldCharsN = CLIAltsDB and CLIAltsDB.characters
+    CLIAltsDB.characters = CLIAltsDB.characters or {}
+    CLIAltsDB.characters["Thorin"] = testNoteChar
+    local _, okN1 = self:SetCharacterNote("thor", "farm mooncloth", false)
+    Assert(okN1 == true and testNoteChar.note == "farm mooncloth", "SetCharacterNote: sets note using prefix match 'thor'")
+    local msgN2, okN2 = self:SetCharacterNote("Thorin", nil, false)
+    Assert(okN2 == true and msgN2:find("farm mooncloth", 1, true) ~= nil, "SetCharacterNote: queries existing note")
+    local _, okN3 = self:SetCharacterNote("thor", "clear", false)
+    Assert(okN3 == true and testNoteChar.note == nil, "SetCharacterNote: clears note with 'clear'")
+    CLIAltsDB.characters["Thorin"] = nil
+    CLIAltsDB.characters = oldCharsN
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -2323,7 +2430,7 @@ end
 
 function CLIAlts:GenerateExportCSV()
     local lines = {}
-    table.insert(lines, "Name,Realm,Faction,Race,Class,Level,XP,MaxXP,RestedXP,RestedPct,RestedStatus,WastedXP,Gold,Silver,Copper,Prof1,Prof1Rank,Prof2,Prof2Rank,Location,LastSeen")
+    table.insert(lines, "Name,Realm,Faction,Race,Class,Level,XP,MaxXP,RestedXP,RestedPct,RestedStatus,WastedXP,Gold,Silver,Copper,Prof1,Prof1Rank,Prof2,Prof2Rank,Location,LastSeen,Note")
 
     local chars = self:GetCharactersList("name", true)
     for _, c in ipairs(chars) do
@@ -2367,6 +2474,7 @@ function CLIAlts:GenerateExportCSV()
             tostring(p2Rank),
             CsvQuote(c.location or "Unknown"),
             CsvQuote(lastSeenStr),
+            CsvQuote(c.note or ""),
         }, ",")
         table.insert(lines, row)
     end

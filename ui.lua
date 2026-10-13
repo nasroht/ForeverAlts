@@ -913,6 +913,10 @@ function CLIAlts:CreateMainFrame()
                     end
                 end
 
+                if self.charData.note and self.charData.note ~= "" then
+                    GameTooltip:AddLine(string.format("Note: |cffffd700%s|r", self.charData.note), 1, 0.85, 0.2)
+                end
+
                 GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Delete Character", 0.7, 0.7, 0.7)
                 GameTooltip:Show()
             end
@@ -1565,6 +1569,11 @@ function CLIAlts:ExecutePromptCommand(input)
         local planText = self:PrintPlan(args)
         self:SetPromptFeedback(planText or "Session plan generated.")
 
+    elseif cmd == "note" then
+        local targetName, noteText = (args or ""):match("^(%S+)%s*(.*)$")
+        local msg, ok = self:SetCharacterNote(targetName, noteText, false)
+        self:SetPromptFeedback(msg or "Note updated.", not ok)
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -1588,7 +1597,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "goto", "page", "next", "export",
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
-        "alerts", "digest", "plan",
+        "alerts", "digest", "plan", "note",
         "refresh", "help", "exit", "close"
     }
 
@@ -1596,12 +1605,23 @@ function CLIAlts:AutoCompletePrompt(editBox)
     if cmd then
         cmd = cmd:lower()
         if cmd == "sort" then
-            local sortKeys = { "name", "level", "gold", "rested", "waste", "xp", "location" }
+            local sortKeys = { "name", "level", "gold", "rested", "waste", "xp", "location", "note" }
             for _, k in ipairs(sortKeys) do
                 if k:sub(1, #arg) == arg:lower() and k ~= arg:lower() then
                     editBox:SetText("sort " .. k)
                     editBox:SetCursorPosition(#editBox:GetText())
                     return
+                end
+            end
+        elseif cmd == "note" then
+            if CLIAltsDB and CLIAltsDB.characters and not arg:find("%s") then
+                for _, c in pairs(CLIAltsDB.characters) do
+                    local name = c.name or ""
+                    if name:lower():sub(1, #arg) == arg:lower() and name:lower() ~= arg:lower() then
+                        editBox:SetText("note " .. name .. " ")
+                        editBox:SetCursorPosition(#editBox:GetText())
+                        return
+                    end
                 end
             end
         elseif cmd == "theme" then
@@ -1696,6 +1716,8 @@ function CLIAlts:ShowDossierPopup(char)
     local logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
     table.insert(lines, string.format("| Location:       |cffffffff%s|r %s", char.location or "Unknown", logoutZoneTag))
     table.insert(lines, string.format("| Last Active:    |cffffffff%s|r (%s)", self:GetTimeAgo(char.lastUpdate), date("%b %d, %H:%M", char.lastUpdate or time())))
+    local noteStr = (char.note and char.note ~= "") and string.format("|cffffd700%s|r", char.note) or "|cff888888None (set with > note <name> <text>)|r"
+    table.insert(lines, string.format("| Player Note:    %s", noteStr))
     table.insert(lines, "+------------------------------------------------------------------------------+")
     table.insert(lines, "| LEVEL EXPERIENCE PROGRESS:")
 
@@ -1872,6 +1894,7 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts alerts     - Toggle login alert categories (cd/rest/mail|",
         "|   /clialts digest     - Display boxed login summary digest now     |",
         "|   /clialts plan [hrs] - Print leveling plan schedule (default: 2h) |",
+        "|   /clialts note <who> <txt> - Set/view alt note (clear to remove)   |",
         "|   /clialts reset      - Reset window position to center            |",
         "+--------------------------------------------------------------------+",
         "| Interactive Terminal Command Prompt (>):                           |",
@@ -1889,6 +1912,7 @@ function CLIAlts:ShowHelpPopup()
         "|   > alerts [cat]      - Configure login alert category toggles     |",
         "|   > digest            - Render boxed login alert digest in chat    |",
         "|   > plan [hours]      - Compute ordered leveling session schedule  |",
+        "|   > note <who> <text>  - Set/view alt note (e.g. farm mooncloth)   |",
         "|   > Up / Down arrows  - Browse terminal command history            |",
         "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",
