@@ -693,6 +693,17 @@ local function SlashHandler(msg)
             end
         end
 
+    elseif cmd == "supply" then
+        if not arg or arg == "" then
+            CLIAlts:Print("Usage: |cff00ff66/clialts supply <name> [role]|r (e.g. /ca supply Grok Tailor/Bags, or /ca supply Grok auto)")
+        else
+            local targetName, supplyRole = arg:match("^(%S+)%s*(.*)$")
+            if not supplyRole or supplyRole == "" then supplyRole = "clear" end
+            local ok, msg = CLIAlts:SetCharacterSupplyRole(targetName, supplyRole)
+            CLIAlts:Print((ok and "|cff00ff66" or "|cffff4444") .. msg .. "|r")
+            CLIAlts:RequestRender()
+        end
+
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()
         CLIAlts:Print("Showing Quick Guide. Type |cff00ff66/clialts|r to toggle alt monitor.")

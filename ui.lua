@@ -1469,18 +1469,18 @@ function CLIAlts:Render()
     if isComp then
         local filterTag = self.activeFilter and string.format(" [%s]", self.activeFilter:upper()) or ""
         if self:IsForeverMode() then
-            local coreC, resC, bankC = self:GetCohortCounts()
             local nextList = self:GetNextAltsPriority()
             local topNext = nextList and nextList[1]
+            local cohortSummary = self:FormatCohortSummary()
             if topNext then
                 local tc = topNext.char
                 local capStr = topNext.isCapped and string.format("%d%%*", topNext.maxPercent) or string.format("%d%%", topNext.percent)
                 local tag = (tc.tier == "CORE" and " [C]") or (tc.tier == "RESERVE" and " [A]") or ""
-                mainFrame.statusBarText:SetText(string.format("NEXT: %s%s (L%d) %s | %dC/%dR/%dB%s",
-                    tc.name or "Unknown", tag, tc.level or 1, capStr, coreC, resC, bankC, filterTag))
+                mainFrame.statusBarText:SetText(string.format("NEXT: %s%s (L%d) %s | ROSTER: %s%s",
+                    tc.name or "Unknown", tag, tc.level or 1, capStr, cohortSummary, filterTag))
             else
-                mainFrame.statusBarText:SetText(string.format("ROUTE: %dC/%dR/%dB | ALL TARGETS REACHED%s",
-                    coreC, resC, bankC, filterTag))
+                mainFrame.statusBarText:SetText(string.format("ROSTER: %s | ALL TARGETS REACHED%s",
+                    cohortSummary, filterTag))
             end
         else
             mainFrame.statusBarText:SetText(string.format("ALTS: %d%s | WEALTH: %sg",
@@ -1498,9 +1498,9 @@ function CLIAlts:Render()
         local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
         local sysLabel = self:IsRetail() and "SYSTEM: RETAIL" or "SYSTEM: WOW FOREVER"
         if self:IsForeverMode() then
-            local coreC, resC, bankC = self:GetCohortCounts()
             local nextList = self:GetNextAltsPriority()
             local topNext = nextList and nextList[1]
+            local cohortSummary = self:FormatCohortSummary()
             if topNext then
                 local tc = topNext.char
                 local tag = (tc.tier == "CORE" and " [CORE]") or (tc.tier == "RESERVE" and " [ALT]") or ""
@@ -1515,11 +1515,11 @@ function CLIAlts:Render()
                 else
                     restDetail = string.format("[%d%% Rested (~%s)]", topNext.percent, self:FormatWasteShort(topNext.usableXP))
                 end
-                mainFrame.statusBarText:SetText(string.format("PLAY NEXT: >> %s%s%s %s << | ROUTE: %dC/%dR/%dB | WEALTH: %sg%s",
-                    tc.name or "Unknown", tag, tgtStr, restDetail, coreC, resC, bankC, self:FormatNumber(goldOnly), filterTag))
+                mainFrame.statusBarText:SetText(string.format("PLAY NEXT: >> %s%s%s %s << | ROSTER: %s | WEALTH: %sg%s",
+                    tc.name or "Unknown", tag, tgtStr, restDetail, cohortSummary, self:FormatNumber(goldOnly), filterTag))
             else
-                mainFrame.statusBarText:SetText(string.format("ROUTE: %dC/%dR/%dB | ALL TARGET LEVELS REACHED | TRACKED: %d ALTS%s | WEALTH: %sg",
-                    coreC, resC, bankC, summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+                mainFrame.statusBarText:SetText(string.format("ROSTER: %s | ALL TARGET LEVELS REACHED | TRACKED: %d ALTS%s | WEALTH: %sg",
+                    cohortSummary, summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
             end
         else
             mainFrame.statusBarText:SetText(string.format("%s | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
@@ -2282,7 +2282,7 @@ function CLIAlts:ShowDossierPopup(char)
 
     if not dossierPopup then
         local dp = CreateFrame("Frame", "CLIAltsDossierPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        dp:SetSize(660, 520)
+        dp:SetSize(660, 545)
         dp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dp:SetFrameStrata("DIALOG")
         dp:EnableMouse(true)
@@ -2298,22 +2298,23 @@ function CLIAlts:ShowDossierPopup(char)
         local body = dp:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(body, 13)
         body:SetPoint("TOPLEFT", dp, "TOPLEFT", 16, -16)
-        body:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 45)
+        body:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 70)
         body:SetJustifyH("LEFT")
         body:SetJustifyV("TOP")
         dp.body = body
 
+        -- Row 1 (Bottom, y=14): Cohort Assignment & Management Controls
         local btnDel = CreateRetroButton(dp, "[ PURGE ]", 72, 20, function()
             dp:Hide()
             if dp.charData then
                 CLIAlts:ShowConfirmDelete(dp.charData)
             end
         end)
-        btnDel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 16)
+        btnDel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 14)
 
         local btnSetCore = CreateRetroButton(dp, "[ SET CORE (35) ]", 115, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterRole(dp.charData.name, "CORE")
+                CLIAlts:SetCharacterCohort(dp.charData.name, "CORE")
                 CLIAlts:ShowDossierPopup(dp.charData)
                 CLIAlts:RequestRender()
             end
@@ -2322,7 +2323,7 @@ function CLIAlts:ShowDossierPopup(char)
 
         local btnSetAlt = CreateRetroButton(dp, "[ SET ALT (25) ]", 108, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterRole(dp.charData.name, "RESERVE")
+                CLIAlts:SetCharacterCohort(dp.charData.name, "RESERVE")
                 CLIAlts:ShowDossierPopup(dp.charData)
                 CLIAlts:RequestRender()
             end
@@ -2331,7 +2332,7 @@ function CLIAlts:ShowDossierPopup(char)
 
         local btnSetBank = CreateRetroButton(dp, "[ SET BANK (1) ]", 105, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterRole(dp.charData.name, "BANK")
+                CLIAlts:SetCharacterCohort(dp.charData.name, "BANK")
                 CLIAlts:ShowDossierPopup(dp.charData)
                 CLIAlts:RequestRender()
             end
@@ -2340,7 +2341,7 @@ function CLIAlts:ShowDossierPopup(char)
 
         local btnUnset = CreateRetroButton(dp, "[ UNSET ]", 70, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterRole(dp.charData.name, "UNASSIGNED")
+                CLIAlts:SetCharacterCohort(dp.charData.name, "UNASSIGNED")
                 CLIAlts:ShowDossierPopup(dp.charData)
                 CLIAlts:RequestRender()
             end
@@ -2350,7 +2351,54 @@ function CLIAlts:ShowDossierPopup(char)
         local btnClose = CreateRetroButton(dp, "[ CLOSE ]", 75, 20, function()
             dp:Hide()
         end)
-        btnClose:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 16)
+        btnClose:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 14)
+
+        -- Row 2 (Middle, y=40): 1-Click Supply Role Configuration Bar
+        local roleLabel = dp:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(roleLabel, 12, "BOLD")
+        roleLabel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 42)
+        roleLabel:SetText("ROLE:")
+        dp.roleLabel = roleLabel
+
+        local function OnRoleClick(roleName)
+            if dp.charData then
+                CLIAlts:SetCharacterSupplyRole(dp.charData.name, roleName)
+                CLIAlts:ShowDossierPopup(dp.charData)
+                CLIAlts:RequestRender()
+            end
+        end
+
+        local btnRoleTailor = CreateRetroButton(dp, "[ Tailor/Bags ]", 88, 19, function() OnRoleClick("Tailor/Bags") end)
+        btnRoleTailor:SetPoint("LEFT", roleLabel, "RIGHT", 6, 0)
+        dp.btnRoleTailor = btnRoleTailor
+
+        local btnRoleAlch = CreateRetroButton(dp, "[ Alch/DE ]", 74, 19, function() OnRoleClick("Alch/DE") end)
+        btnRoleAlch:SetPoint("LEFT", btnRoleTailor, "RIGHT", 4, 0)
+        dp.btnRoleAlch = btnRoleAlch
+
+        local btnRoleMiner = CreateRetroButton(dp, "[ Miner/BS ]", 78, 19, function() OnRoleClick("Miner/BS") end)
+        btnRoleMiner:SetPoint("LEFT", btnRoleAlch, "RIGHT", 4, 0)
+        dp.btnRoleMiner = btnRoleMiner
+
+        local btnRoleLW = CreateRetroButton(dp, "[ Skinner/LW ]", 86, 19, function() OnRoleClick("Skinner/LW") end)
+        btnRoleLW:SetPoint("LEFT", btnRoleMiner, "RIGHT", 4, 0)
+        dp.btnRoleLW = btnRoleLW
+
+        local btnRolePassive = CreateRetroButton(dp, "[ Passive LP ]", 82, 19, function() OnRoleClick("Passive LP") end)
+        btnRolePassive:SetPoint("LEFT", btnRoleLW, "RIGHT", 4, 0)
+        dp.btnRolePassive = btnRolePassive
+
+        local btnRoleAuto = CreateRetroButton(dp, "[ Auto ]", 60, 19, function() OnRoleClick("clear") end)
+        btnRoleAuto:SetPoint("LEFT", btnRolePassive, "RIGHT", 4, 0)
+        dp.btnRoleAuto = btnRoleAuto
+
+        local btnRoleCustom = CreateRetroButton(dp, "[ Custom... ]", 76, 19, function()
+            if dp.charData then
+                CLIAlts:ShowCustomRolePrompt(dp.charData)
+            end
+        end)
+        btnRoleCustom:SetPoint("LEFT", btnRoleAuto, "RIGHT", 4, 0)
+        dp.btnRoleCustom = btnRoleCustom
 
         dossierPopup = dp
     end
@@ -2359,6 +2407,26 @@ function CLIAlts:ShowDossierPopup(char)
     local t = self:GetTheme()
     dossierPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
     dossierPopup:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+
+    if dossierPopup.roleLabel then
+        dossierPopup.roleLabel:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    end
+
+    local activeRole = char.supply_role or ""
+    if dossierPopup.btnRoleTailor then
+        dossierPopup.btnRoleTailor.label:SetText(activeRole == "Tailor/Bags" and "|cff00ff66*Tailor/Bags*|r" or "[ Tailor/Bags ]")
+        dossierPopup.btnRoleAlch.label:SetText(activeRole == "Alch/DE" and "|cff00ff66*Alch/DE*|r" or "[ Alch/DE ]")
+        dossierPopup.btnRoleMiner.label:SetText(activeRole == "Miner/BS" and "|cff00ff66*Miner/BS*|r" or "[ Miner/BS ]")
+        dossierPopup.btnRoleLW.label:SetText(activeRole == "Skinner/LW" and "|cff00ff66*Skinner/LW*|r" or "[ Skinner/LW ]")
+        dossierPopup.btnRolePassive.label:SetText(activeRole == "Passive LP" and "|cff00ff66*Passive LP*|r" or "[ Passive LP ]")
+        dossierPopup.btnRoleAuto.label:SetText(activeRole == "" and "|cff00ff66*Auto*|r" or "[ Auto ]")
+        if activeRole ~= "" and activeRole ~= "Tailor/Bags" and activeRole ~= "Alch/DE" and activeRole ~= "Miner/BS" and activeRole ~= "Skinner/LW" and activeRole ~= "Passive LP" then
+            local trunc = (#activeRole > 9) and (activeRole:sub(1, 8) .. "..") or activeRole
+            dossierPopup.btnRoleCustom.label:SetText(string.format("|cff00ff66*%s*|r", trunc))
+        else
+            dossierPopup.btnRoleCustom.label:SetText("[ Custom... ]")
+        end
+    end
 
     local lines = {}
     table.insert(lines, "+==============================================================================+")
@@ -2431,9 +2499,9 @@ function CLIAlts:ShowDossierPopup(char)
         local tgtLvl = char.target_level or ((tierStr == "CORE" and 35) or (tierStr == "RESERVE" and 25) or (tierStr == "BANK" and 1) or 60)
         local curLvl = char.level or 1
         local statusTag = (curLvl >= tgtLvl) and " |cff00ff66[Target Level Reached]|r" or ""
-        table.insert(lines, string.format("| WOW FOREVER ROUTE: |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
-        local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", char.supply_role) or "|cff888888None (set via > role <name> <tier> [role])|r"
-        table.insert(lines, string.format("| Supply Role:       %s", roleStr))
+        table.insert(lines, string.format("| ROSTER COHORT:    |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
+        local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", char.supply_role) or "|cff888888Auto (detecting learned professions)|r"
+        table.insert(lines, string.format("| Supply Role:      %s", roleStr))
     end
 
     table.insert(lines, "+------------------------------------------------------------------------------+")
@@ -2454,6 +2522,88 @@ function CLIAlts:ShowDossierPopup(char)
 
     dossierPopup.body:SetText(table.concat(lines, "\n"))
     dossierPopup:Show()
+end
+
+local customRolePopup = nil
+
+function CLIAlts:ShowCustomRolePrompt(char)
+    if not char then return end
+    local cleanName = char.fullName or char.name
+
+    if not customRolePopup then
+        local cp = CreateFrame("Frame", "CLIAltsCustomRolePopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        cp:SetSize(380, 140)
+        cp:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
+        cp:SetFrameStrata("FULLSCREEN_DIALOG")
+        cp:EnableMouse(true)
+        tinsert(UISpecialFrames, "CLIAltsCustomRolePopup")
+
+        cp:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 2,
+            insets = { left = 2, right = 2, top = 2, bottom = 2 }
+        })
+
+        local title = cp:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(title, 13, "BOLD")
+        title:SetPoint("TOPLEFT", cp, "TOPLEFT", 16, -14)
+        title:SetPoint("TOPRIGHT", cp, "TOPRIGHT", -16, -14)
+        title:SetJustifyH("LEFT")
+        cp.title = title
+
+        local subtitle = cp:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(subtitle, 11)
+        subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+        subtitle:SetPoint("TOPRIGHT", title, "BOTTOMRIGHT", 0, -4)
+        subtitle:SetJustifyH("LEFT")
+        subtitle:SetText("Enter role (or leave empty to auto-detect professions):")
+        cp.subtitle = subtitle
+
+        local eb = CreateFrame("EditBox", "CLIAltsCustomRoleEditBox", cp)
+        self:SetWidgetFont(eb, 13)
+        eb:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -8)
+        eb:SetPoint("RIGHT", cp, "RIGHT", -16, 0)
+        eb:SetHeight(22)
+        eb:SetAutoFocus(true)
+        eb:EnableMouse(true)
+        eb:SetTextInsets(6, 6, 2, 2)
+        cp.editBox = eb
+
+        local function SaveRole()
+            local text = (eb:GetText() or ""):match("^%s*(.-)%s*$")
+            if cp.targetChar then
+                CLIAlts:SetCharacterSupplyRole(cp.targetChar.name, text)
+                CLIAlts:ShowDossierPopup(cp.targetChar)
+                CLIAlts:RequestRender()
+            end
+            cp:Hide()
+        end
+
+        eb:SetScript("OnEnterPressed", SaveRole)
+        eb:SetScript("OnEscapePressed", function() cp:Hide() end)
+
+        local btnSave = CreateRetroButton(cp, "[ SAVE ]", 80, 20, SaveRole)
+        btnSave:SetPoint("BOTTOMRIGHT", cp, "BOTTOMRIGHT", -90, 14)
+
+        local btnCancel = CreateRetroButton(cp, "[ CANCEL ]", 70, 20, function() cp:Hide() end)
+        btnCancel:SetPoint("BOTTOMRIGHT", cp, "BOTTOMRIGHT", -16, 14)
+
+        customRolePopup = cp
+    end
+
+    customRolePopup.targetChar = char
+    local t = self:GetTheme()
+    customRolePopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+    customRolePopup:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+    customRolePopup.title:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    customRolePopup.subtitle:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    customRolePopup.title:SetText(string.format("SET SUPPLY ROLE: %s", cleanName))
+    customRolePopup.editBox:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+    customRolePopup.editBox:SetText(char.supply_role or "")
+    customRolePopup:Show()
+    customRolePopup.editBox:SetFocus()
+    customRolePopup.editBox:HighlightText()
 end
 
 -- ----------------------------------------------------------------------------

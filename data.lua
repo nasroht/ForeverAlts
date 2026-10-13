@@ -1999,7 +1999,7 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
 
     if supplyRole and supplyRole ~= "" then
         local rLower = supplyRole:lower()
-        if rLower == "none" or rLower == "clear" then
+        if rLower == "none" or rLower == "clear" or rLower == "auto" then
             foundChar.supply_role = nil
         else
             foundChar.supply_role = supplyRole
@@ -2029,6 +2029,15 @@ end
 
 function CLIAlts:SetCharacterCohort(targetName, cohort, targetLevel)
     return self:SetCharacterRole(targetName, cohort, nil, targetLevel)
+end
+
+function CLIAlts:SetCharacterSupplyRole(targetName, supplyRole)
+    return self:SetCharacterRole(targetName, nil, supplyRole, nil)
+end
+
+function CLIAlts:FormatCohortSummary()
+    local core, res, bank = self:GetCohortCounts()
+    return string.format("%d Core | %d Alt | %d Bank", core, res, bank)
 end
 
 function CLIAlts:CycleCharacterTier(char)
@@ -3151,6 +3160,13 @@ function CLIAlts:RunSelfTest()
     Assert(okRole1 == true and testCohortDB.characters["New-Realm"].tier == "CORE", "Cohort: SetCharacterRole updates tier to CORE")
     Assert(testCohortDB.characters["New-Realm"].target_level == 35, "Cohort: CORE tier defaults target_level to 35")
     Assert(testCohortDB.characters["New-Realm"].supply_role == "Miner/BS", "Cohort: SetCharacterRole updates supply_role")
+
+    -- 18c2. SetCharacterSupplyRole and FormatCohortSummary
+    local okSupply1, _ = self:SetCharacterSupplyRole("New", "Tailor/Bags")
+    Assert(okSupply1 == true and testCohortDB.characters["New-Realm"].supply_role == "Tailor/Bags", "Cohort: SetCharacterSupplyRole updates supply_role")
+    local okSupplyClear, _ = self:SetCharacterSupplyRole("New", "auto")
+    Assert(okSupplyClear == true and testCohortDB.characters["New-Realm"].supply_role == nil, "Cohort: SetCharacterSupplyRole 'auto' clears supply_role")
+    Assert(self:FormatCohortSummary() == "1 Core | 1 Alt | 1 Bank", "Cohort: FormatCohortSummary returns human-readable '1 Core | 1 Alt | 1 Bank'")
 
     -- 18d. CycleCharacterTier
     local cycledTier = self:CycleCharacterTier(testCohortDB.characters["New-Realm"])
