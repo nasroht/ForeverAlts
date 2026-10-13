@@ -19,7 +19,6 @@ local DOUBLE_BORDER = "+" .. string.rep("=", LINE_WIDTH - 2) .. "+"
 
 local ROWS_COUNT = 12
 local rowFrames = {}
-local headerCells = {}
 local headerButtons = {}
 local currentPage = 1
 local totalPages = 1
@@ -888,7 +887,6 @@ function CLIAlts:CreateMainFrame()
         self:SetWidgetFont(hCell, fontSize)
         hCell:SetWordWrap(false)
         hCell:SetHeight(18)
-        headerCells[i] = hCell
         frame.headerCells[i] = hCell
 
         local btn = CreateFrame("Button", nil, headerFrame)
@@ -1294,7 +1292,6 @@ function CLIAlts:Render()
 
     local t = self:GetTheme()
     local activeTab = CLIAltsDB.settings.activeTab or 1
-    local fontSize = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
 
     -- Highlight active tab button
     local isComp = self:IsCompact()
