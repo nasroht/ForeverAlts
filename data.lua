@@ -362,6 +362,18 @@ function CLIAlts:InitDB()
         CLIAltsDB.dbVersion = CURRENT_DB_VERSION
     end
 
+    -- Repair resting state for characters whose location confirms an inn or resting area
+    if CLIAltsDB and CLIAltsDB.characters then
+        for _, char in pairs(CLIAltsDB.characters) do
+            if char.location and self:IsLocationResting(char.location) then
+                if char.isResting ~= true or char.loggedOutInRestZone ~= true then
+                    char.isResting = true
+                    char.loggedOutInRestZone = true
+                end
+            end
+        end
+    end
+
     if rawget(_G, "NasaltsDB") then
         _G["NasaltsDB"] = nil
     end
@@ -823,8 +835,23 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         bindLocation = existing.bindLocation
     end
 
-    -- Trust only IsResting() at logout and live gameplay without fuzzy location matching
+    -- Robust resting determination for live gameplay, logout & session tracking:
+    -- 1. Live IsResting() if client reports active
+    -- 2. Cached live resting flag tracked during active session (self.isPlayerResting)
+    -- 3. Location matching fallback (inns, capital cities, sanctuaries)
+    -- 4. Preserve existing resting status if client returns uninitialized/nil at logout
     local isResting = liveResting
+    if isResting then
+        self.isPlayerResting = true
+    else
+        if self.isPlayerResting == true then
+            isResting = true
+        elseif self:IsLocationResting(location) then
+            isResting = true
+        elseif isLogout and existing and (existing.loggedOutInRestZone == true or existing.isResting == true) then
+            isResting = true
+        end
+    end
     local cleanLogout = (isLogout == true)
 
     local professions = self:CollectProfessions()
@@ -898,20 +925,83 @@ end
 -- Rested Zone & Location Detection Helpers
 -- ----------------------------------------------------------------------------
 
+function CLIAlts:IsLocationResting(loc)
+    if not loc or loc == "" then return false end
+    local l = loc:lower()
+
+    -- 1. Common inn, tavern, distillery, camp, sanctuary keywords
+    if l:find("inn", 1, true)
+       or l:find("tavern", 1, true)
+       or l:find("distillery", 1, true)
+       or l:find("brewery", 1, true)
+       or l:find("lodge", 1, true)
+       or l:find("saloon", 1, true)
+       or l:find("campsite", 1, true)
+       or l:find("tent", 1, true)
+       or l:find("resting", 1, true)
+       or l:find("haven", 1, true)
+       or l:find("refuge", 1, true)
+       or l:find("sanctuary", 1, true)
+       or l:find("innkeeper", 1, true)
+       or l:find("cantina", 1, true)
+       or l:find("pride", 1, true)
+       or l:find("stoutlager", 1, true) then
+        return true
+    end
+
+    -- 2. Major capital cities & sanctuary hubs (entire zone is a rest area)
+    local cities = {
+        "stormwind", "ironforge", "darnassus", "exodar", "deeprun tram",
+        "orgrimmar", "undercity", "thunder bluff", "silvermoon",
+        "shattrath", "dalaran", "booty bay", "gadgetzan", "everlook", "ratchet"
+    }
+    for _, city in ipairs(cities) do
+        if l:find(city, 1, true) then
+            return true
+        end
+    end
+
+    -- 3. Well-known resting settlements & town subzones with inns
+    local settlements = {
+        "goldshire", "kharanos", "thelsamar", "lakeshire", "darkshire",
+        "sentinel hill", "southshore", "menethil", "auberdine", "astranaar",
+        "feathermoon", "nijel", "thalanaar", "aerie peak", "nethergarde",
+        "razor hill", "bloodhoof", "brill", "crossroads", "tarren mill",
+        "sun rock", "freewind", "shadowprey", "camp taurajo", "camp narache",
+        "camp mojache", "dolanaar", "deathknell", "sepulcher", "kargath",
+        "stonard", "hammerfall", "revantusk", "splintertree", "cenarion hold"
+    }
+    for _, set in ipairs(settlements) do
+        if l:find(set, 1, true) then
+            return true
+        end
+    end
+
+    return false
+end
+
 function CLIAlts:IsCharacterResting(char)
     if not char then return false end
 
     -- 1. If currently logged in as this character, live IsResting() is authoritative
     if self:IsCurrentPlayer(char) then
-        return (IsResting and IsResting() and true or false)
+        if IsResting and IsResting() then
+            return true
+        end
+        if self.isPlayerResting == true then
+            return true
+        end
+        return false
     end
 
-    -- 2. Explicit resting flag recorded at logout (trust only what client reported)
-    if char.loggedOutInRestZone ~= nil then
-        return (char.loggedOutInRestZone == true)
+    -- 2. Explicit resting flag recorded at clean logout
+    if char.loggedOutInRestZone == true or char.isResting == true then
+        return true
     end
-    if char.isResting ~= nil then
-        return (char.isResting == true)
+
+    -- 3. Location heuristic fallback (e.g. character parked in an Inn or Capital City)
+    if char.location and self:IsLocationResting(char.location) then
+        return true
     end
 
     return false
@@ -1730,7 +1820,7 @@ function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride, forceLogoutS
     local maxRested = maxXP * capMult
 
     local isResting
-    if forceLogoutState or (char.loggedOutInRestZone ~= nil) then
+    if forceLogoutState then
         isResting = (char.loggedOutInRestZone == true)
     else
         isResting = self:IsCharacterResting(char)
@@ -2372,6 +2462,23 @@ function CLIAlts:RunSelfTest()
             Assert(dragOk == true, "Minimap: OnDragStop executes cleanly")
         end
     end
+
+    -- 15. Resting Zone & Location Detection Tests
+    -- 15a. Location pattern matching for inns, cities, and resting subzones
+    Assert(self:IsLocationResting("Lion's Pride Inn") == true, "IsLocationResting: 'Lion's Pride Inn' is resting")
+    Assert(self:IsLocationResting("Stormwind City (Cathedral Square)") == true, "IsLocationResting: 'Stormwind City (Cathedral Square)' is resting")
+    Assert(self:IsLocationResting("Dun Morogh (Thunderbrew Distillery)") == true, "IsLocationResting: 'Thunderbrew Distillery' is resting")
+    Assert(self:IsLocationResting("Loch Modan (Stoutlager Inn)") == true, "IsLocationResting: 'Stoutlager Inn' is resting")
+    Assert(self:IsLocationResting("Westfall") == false, "IsLocationResting: 'Westfall' is not resting")
+    Assert(self:IsLocationResting("Elwynn Forest") == false, "IsLocationResting: 'Elwynn Forest' is not resting")
+
+    -- 15b. Offline character resting determination with location fallback
+    local altRestLocation = { name = "InnAlt", location = "Lion's Pride Inn", loggedOutInRestZone = false, isResting = false }
+    Assert(self:IsCharacterResting(altRestLocation) == true, "IsCharacterResting: recognizes resting via location fallback")
+    local altWildLocation = { name = "WildAlt", location = "Westfall", loggedOutInRestZone = false, isResting = false }
+    Assert(self:IsCharacterResting(altWildLocation) == false, "IsCharacterResting: preserves wilderness when location is wild")
+    local altExplicitInn = { name = "ExplicitInnAlt", loggedOutInRestZone = true }
+    Assert(self:IsCharacterResting(altExplicitInn) == true, "IsCharacterResting: respects loggedOutInRestZone = true")
 
     CLIAltsDB = oldLiveDB
 

@@ -221,13 +221,17 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:RequestRender()
 
     elseif event == "PLAYER_LOGOUT" then
-        -- Final snapshot before logout
-        CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
+        -- Final snapshot before logout: preserve cached resting state if client strips world flags
+        if IsResting and IsResting() then
+            CLIAlts.isPlayerResting = true
+        end
         CLIAlts:CollectCurrentCharacter(true)
 
     elseif event == "PLAYER_CAMPING" or event == "PLAYER_QUITING" then
         -- Camping / logout countdown initiated
-        CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
+        if IsResting and IsResting() then
+            CLIAlts.isPlayerResting = true
+        end
         CLIAlts:CollectCurrentCharacter(true)
 
     elseif event == "LOGOUT_CANCEL" then
