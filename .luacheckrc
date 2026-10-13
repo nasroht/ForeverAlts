@@ -83,6 +83,7 @@ globals = {
     "GetUnitSecondaryName",
     "GetUnitSurname",
     "UnitSecondaryName",
+    "UnitSurname",
     "GetBindLocation",
 
     -- WoW Client & Flavor Globals

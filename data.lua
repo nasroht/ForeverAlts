@@ -2546,7 +2546,7 @@ function CLIAlts:RunSelfTest()
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.wellRestedRank = 5
     end
-    local restedRetail = self:GetRestedState(charInn, T0 + 28800)
+    local restedRetail = self:GetRestedData(charInn, true, T0 + 28800)
     Assert(restedRetail.perkRank == 0, "IsRetail: enforces perkRank = 0 on Retail even if wellRestedRank is 5")
     Assert(restedRetail.maxPercent == 150, "IsRetail: enforces 150% rested cap on Retail")
     Assert(restedRetail.speedMult == 1.0, "IsRetail: enforces 1.0x baseline speed multiplier on Retail")
