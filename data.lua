@@ -84,18 +84,25 @@ function CLIAlts:IsForeverClient()
     return false
 end
 
-function CLIAlts:GetClientFlavor()
-    if self.isRetailOverride then
-        return "Retail"
+function CLIAlts:IsRetail()
+    if self.isRetailOverride ~= nil then
+        return self.isRetailOverride
     end
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-        return "Retail"
+        return true
     end
     if GetBuildInfo then
         local _, _, _, tocversion = GetBuildInfo()
         if tocversion and type(tocversion) == "number" and tocversion >= 100000 then
-            return "Retail"
+            return true
         end
+    end
+    return false
+end
+
+function CLIAlts:GetClientFlavor()
+    if self:IsRetail() then
+        return "Retail"
     end
     if self:IsForeverClient() then
         return "WoW Forever"
@@ -104,13 +111,6 @@ function CLIAlts:GetClientFlavor()
         return "Classic Era"
     end
     return "Classic"
-end
-
-function CLIAlts:IsRetail()
-    if self.isRetailOverride ~= nil then
-        return self.isRetailOverride
-    end
-    return self:GetClientFlavor() == "Retail"
 end
 
 function CLIAlts:IsForeverMode()
