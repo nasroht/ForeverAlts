@@ -1137,6 +1137,9 @@ local renderTimerPending = false
 
 function CLIAlts:RequestRender()
     renderDirty = true
+    if self.UpdateLDB then
+        self:UpdateLDB()
+    end
     if not mainFrame or not mainFrame:IsShown() then
         return
     end
@@ -1161,6 +1164,9 @@ end
 
 function CLIAlts:Render()
     renderDirty = false
+    if self.UpdateLDB then
+        self:UpdateLDB()
+    end
     if not mainFrame or not mainFrame:IsShown() then return end
 
     local t = self:GetTheme()

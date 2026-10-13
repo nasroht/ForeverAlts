@@ -2048,8 +2048,37 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB.characters = oldCharsP
     self.curPlayerKey = nil
 
+    -- 10. LibDataBroker Tests
+    -- 10a. FormatWasteShort tests
+    Assert(self:FormatWasteShort(0) == "0", "FormatWasteShort: 0 yields '0'")
+    Assert(self:FormatWasteShort(500) == "500", "FormatWasteShort: 500 yields '500'")
+    Assert(self:FormatWasteShort(12000) == "12k", "FormatWasteShort: 12000 yields '12k'")
+    Assert(self:FormatWasteShort(1500000) == "1.5M", "FormatWasteShort: 1500000 yields '1.5M'")
+
+    -- 10b. GetLDBText with uncapped characters -> "Alts: 0 capped | 0 waste"
+    local mockUncapped = {
+        { name = "Alt1", level = 20, maxXP = 20000, restedXP = 1000, lastUpdate = T0, loggedOutInRestZone = true }
+    }
+    local ldbText1, cap1, waste1 = self:GetLDBText(T0, mockUncapped)
+    Assert(ldbText1 == "Alts: 0 capped | 0 waste" and cap1 == 0 and waste1 == 0, "GetLDBText: uncapped chars yield 'Alts: 0 capped | 0 waste'")
+
+    -- 10c. GetLDBText with 3 capped characters with 12k total waste -> "Alts: 3 capped | 12k waste"
+    local mockCapped3 = {
+        { name = "Capped1", level = 20, maxXP = 20000, restedXP = 30000, lastUpdate = T0, loggedOutInRestZone = true },
+        { name = "Capped2", level = 20, maxXP = 20000, restedXP = 30000, lastUpdate = T0, loggedOutInRestZone = true },
+        { name = "Capped3", level = 20, maxXP = 20000, restedXP = 30000, lastUpdate = T0, loggedOutInRestZone = true },
+    }
+    local ldbText2, cap2, waste2 = self:GetLDBText(T0 + 115200, mockCapped3)
+    Assert(ldbText2 == "Alts: 3 capped | 12k waste" and cap2 == 3 and waste2 == 12000, "GetLDBText: 3 capped alts with 12k waste yield 'Alts: 3 capped | 12k waste'")
+
+    -- 10d. LibDataBroker silent fallback when absent
+    if self.InitLDB and not (LibStub and LibStub("LibDataBroker-1.1", true)) then
+        local ldbObj = self:InitLDB()
+        Assert(ldbObj == nil, "InitLDB: returns nil cleanly when LibDataBroker-1.1 is absent")
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -2113,6 +2142,50 @@ function CLIAlts:GetRestedWaste(char, nowOverride)
 
     local formattedWaste = string.format("Capped %s (~%s XP lost)", timeStr, self:FormatNumber(wastedXP))
     return wastedSeconds, wastedXP, formattedWaste, timeStr
+end
+
+-- ----------------------------------------------------------------------------
+-- LibDataBroker Summary & Text Formatting (Feature 10)
+-- ----------------------------------------------------------------------------
+function CLIAlts:FormatWasteShort(waste)
+    waste = math.max(0, tonumber(waste) or 0)
+    if waste >= 1000000 then
+        local m = waste / 1000000
+        if m == math.floor(m) then
+            return string.format("%dM", m)
+        else
+            return string.format("%.1fM", m)
+        end
+    elseif waste >= 1000 then
+        return string.format("%dk", math.floor(waste / 1000 + 0.5))
+    else
+        return tostring(math.floor(waste))
+    end
+end
+
+function CLIAlts:GetLDBText(now, charListOverride)
+    local chars = charListOverride or self:GetCharactersList()
+    local maxLevel = self:GetMaxLevel()
+    local cappedCount = 0
+    local totalWastedXP = 0
+
+    for _, char in ipairs(chars) do
+        local level = char.level or 1
+        if level < maxLevel then
+            local rested = self:GetRestedData(char, now ~= nil, now)
+            if rested and rested.isFull then
+                cappedCount = cappedCount + 1
+            end
+            local wastedSec, wastedXP = self:GetRestedWaste(char, now)
+            if wastedXP and wastedXP > 0 then
+                totalWastedXP = totalWastedXP + wastedXP
+            end
+        end
+    end
+
+    local wasteStr = self:FormatWasteShort(totalWastedXP)
+    local text = string.format("Alts: %d capped | %s waste", cappedCount, wasteStr)
+    return text, cappedCount, totalWastedXP
 end
 
 function CLIAlts:GetNextAltsPriority()

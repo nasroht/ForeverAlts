@@ -11,6 +11,9 @@ local CLIAlts = addonTable
 local minimapBtn = nil
 
 function CLIAlts:CreateMinimapButton()
+    if self.InitLDB then
+        self:InitLDB()
+    end
     if minimapBtn then return minimapBtn end
 
     minimapBtn = CreateFrame("Button", "CLIAltsMinimapButton", Minimap)
@@ -216,3 +219,72 @@ function CLIAlts:ToggleMinimap(show)
         CLIAltsDB.settings.minimapShow = false
     end
 end
+
+-- ============================================================================
+-- LibDataBroker-1.1 Integration (Feature 10)
+-- Optional data broker plugin for display bars (Titan Panel, Bazooka, ChocolateBar).
+-- Guarded with LibStub("LibDataBroker-1.1", true) so zero cost if absent.
+-- ============================================================================
+function CLIAlts:InitLDB()
+    if self.ldbObject then return self.ldbObject end
+    local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
+    if not LDB then return nil end
+
+    self.ldbObject = LDB:NewDataObject("CLIAlts", {
+        type = "data source",
+        text = self.GetLDBText and self:GetLDBText() or "CLIAlts",
+        icon = "Interface\\Icons\\INV_Misc_Book_09",
+        label = "CLIAlts",
+        OnClick = function(clickedframe, button)
+            if button == "LeftButton" then
+                if CLIAlts.Toggle then CLIAlts:Toggle() end
+            elseif button == "RightButton" then
+                if CLIAlts.CycleTheme then CLIAlts:CycleTheme() end
+            end
+        end,
+        OnTooltipShow = function(tooltip)
+            if not tooltip or not tooltip.AddLine then return end
+            tooltip:AddLine("CLIAlts", 0, 1, 0.4)
+            local text, cappedCount, totalWastedXP = CLIAlts.GetLDBText and CLIAlts:GetLDBText()
+            local summary = CLIAlts.GetAccountSummary and CLIAlts:GetAccountSummary()
+            if summary then
+                tooltip:AddDoubleLine("Total Alts:", tostring(summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)
+                tooltip:AddDoubleLine("Total Gold:", CLIAlts:FormatMoney(summary.totalGold, true), 0.7, 0.7, 0.7, 1, 1, 1)
+            end
+            if cappedCount then
+                tooltip:AddDoubleLine("Capped Alts:", tostring(cappedCount), 0.7, 0.7, 0.7, cappedCount > 0 and 1 or 0.3, cappedCount > 0 and 0.3 or 1, 0.3)
+            end
+            if totalWastedXP and totalWastedXP > 0 then
+                tooltip:AddDoubleLine("XP Wasted:", CLIAlts:FormatNumber(totalWastedXP) .. " XP", 0.7, 0.7, 0.7, 1, 0.3, 0.3)
+            end
+            tooltip:AddLine(" ")
+            tooltip:AddLine("|cff888888Left-Click:|r Toggle window", 0.8, 0.8, 0.8)
+            tooltip:AddLine("|cff888888Right-Click:|r Cycle theme", 0.8, 0.8, 0.8)
+        end,
+    })
+    return self.ldbObject
+end
+
+function CLIAlts:UpdateLDB()
+    if not self.ldbObject then
+        self:InitLDB()
+    end
+    if not self.ldbObject then return end
+    if self.GetLDBText then
+        self.ldbObject.text = self:GetLDBText()
+    end
+end
+
+-- Periodic LDB refresh ticker (every 30s) so display bars stay updated when window is closed
+local ldbTicker = CreateFrame("Frame")
+local ldbElapsed = 0
+ldbTicker:SetScript("OnUpdate", function(self, elapsed)
+    ldbElapsed = ldbElapsed + (elapsed or 0)
+    if ldbElapsed >= 30 then
+        ldbElapsed = 0
+        if CLIAlts.ldbObject and CLIAlts.UpdateLDB then
+            CLIAlts:UpdateLDB()
+        end
+    end
+end)
+

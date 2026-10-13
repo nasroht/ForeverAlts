@@ -4,6 +4,7 @@
 ## Author: CLIAlts
 ## Version: 1.1.0
 ## SavedVariables: CLIAltsDB
+## OptionalDeps: LibDataBroker-1.1
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## Category: Character
 ## X-License: MIT

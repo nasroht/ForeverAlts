@@ -143,6 +143,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             CLIAlts:CreateMinimapButton()
             CLIAlts:CreateMainFrame()
             CLIAlts:ApplyTheme()
+            if CLIAlts.InitLDB then CLIAlts:InitLDB() end
+            if CLIAlts.UpdateLDB then CLIAlts:UpdateLDB() end
         end
 
     elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
@@ -151,6 +153,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:CreateMinimapButton()
         CLIAlts:CreateMainFrame()
         CLIAlts:ApplyTheme()
+        if CLIAlts.InitLDB then CLIAlts:InitLDB() end
+        if CLIAlts.UpdateLDB then CLIAlts:UpdateLDB() end
         CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
 
         -- Self-calibrating rested model check against last clean logout
