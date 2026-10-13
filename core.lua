@@ -125,6 +125,7 @@ local safeEvents = {
     "BANKFRAME_CLOSED",
     "MAIL_INBOX_UPDATE",
     "MAIL_SHOW",
+    "HEARTHSTONE_BOUND",
 }
 for _, ev in ipairs(safeEvents) do
     pcall(function() eventFrame:RegisterEvent(ev) end)
@@ -259,6 +260,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
 
     elseif event == "MAIL_INBOX_UPDATE" or event == "MAIL_SHOW" then
         CLIAlts:ScanMailInbox()
+        CLIAlts:RequestRender()
+
+    elseif event == "HEARTHSTONE_BOUND" then
+        CLIAlts:CollectCurrentCharacter()
         CLIAlts:RequestRender()
     end
 end)
@@ -464,6 +469,30 @@ local function SlashHandler(msg)
 
     elseif cmd == "unlocked" or cmd == "lockout" or cmd == "lockouts" then
         CLIAlts:PrintUnlockedAlts(arg)
+
+    elseif cmd == "prune" then
+        local daysStr, optConfirm = (arg or ""):match("^(%d+)%s*(.*)$")
+        local days = tonumber(daysStr)
+        if not days or days < 1 then
+            CLIAlts:Print("Usage: |cff00ff66/clialts prune <days> [confirm]|r (e.g. /ca prune 30)")
+        else
+            local count, names = CLIAlts:GetPrunableCharacters(days)
+            if count == 0 then
+                CLIAlts:Print(string.format("No alts found inactive for %d+ days.", days))
+            elseif optConfirm and (optConfirm:lower() == "confirm" or optConfirm:lower() == "now" or optConfirm:lower() == "yes") then
+                local prunedCount, prunedNames = CLIAlts:PruneCharacters(days)
+                local sample = table.concat(prunedNames, ", ")
+                CLIAlts:Print(string.format("Pruned %d alts inactive for %d+ days: |cffffd700%s|r", prunedCount, sample))
+                CLIAlts:RequestRender()
+            else
+                CLIAlts:Toggle(true)
+                local sample = table.concat(names, ", ", 1, math.min(5, #names))
+                if #names > 5 then sample = sample .. "..." end
+                CLIAlts:Print(string.format("Found %d alts inactive for %d+ days (%s). Confirm in popup or run: |cff00ff66/ca prune %d confirm|r",
+                    count, sample, days))
+                CLIAlts:ShowConfirmPrunePopup(days, count, names)
+            end
+        end
 
     elseif cmd == "help" then
         CLIAlts:ShowHelpPopup()

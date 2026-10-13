@@ -319,6 +319,13 @@ end
 local function FmtName(char)
     local name = char.fullName or char.name or "Unknown"
     local _, _, _, hex = CLIAlts:GetClassColor(char.classFile)
+    local isStale = CLIAlts.IsCharStale and CLIAlts:IsCharStale(char)
+    if isStale then
+        local maxLen = 12
+        local shortName = (#name > maxLen) and name:sub(1, maxLen) or name
+        local padSpaces = string.rep(" ", math.max(0, 16 - #shortName - 4))
+        return string.format("|cff%s%s|r |cffff5555[S]|r%s", hex, shortName, padSpaces)
+    end
     return CLIAlts:Pad(name, 16, "LEFT", hex)
 end
 
@@ -464,11 +471,11 @@ local function FmtSecProf(char, t)
     return CLIAlts:Pad(str, 14, "LEFT", t.dimHex)
 end
 
--- Tab 4 Economy Formatters
+-- Tab 4 Economy & Location Formatters
 local function FmtGoldLong(char)
     local gold = math.floor((char.money or 0) / 10000)
     local str = CLIAlts:FormatNumber(gold) .. "g"
-    return CLIAlts:Pad(str, 12, "RIGHT", "ffd700")
+    return CLIAlts:Pad(str, 11, "RIGHT", "ffd700")
 end
 
 local function FmtWealthShare(char, t)
@@ -476,26 +483,18 @@ local function FmtWealthShare(char, t)
     local total = summary.totalGold or 0
     local money = char.money or 0
     local pct = total > 0 and (money / total * 100) or 0
-    local str = string.format("%5.1f%%", pct)
-    return CLIAlts:Pad(str, 8, "RIGHT", t.primaryHex)
-end
-
-local function FmtWealthBar(char, t)
-    local summary = CLIAlts:GetAccountSummary()
-    local total = summary.totalGold or 0
-    local money = char.money or 0
-    local ratio = total > 0 and math.min(1.0, math.max(0, money / total)) or 0
-    local fill = math.min(10, math.max(0, math.floor(ratio * 10)))
-    local empty = 10 - fill
-    local fillStr = string.rep("=", fill)
-    local emptyStr = string.rep(".", empty)
-    return string.format("|cff%s[|r|cffffd700%s|r|cff%s%s|r|cff%s]|r  ",
-        t.borderHex, fillStr, t.dimHex, emptyStr, t.borderHex)
+    local str = string.format("%.1f%%", pct)
+    return CLIAlts:Pad(str, 6, "RIGHT", t.primaryHex)
 end
 
 local function FmtLocation(char, t)
     local loc = char.location or "Unknown"
-    return CLIAlts:Pad(loc, 23, "LEFT", t.dimHex)
+    return CLIAlts:Pad(loc, 18, "LEFT", t.dimHex)
+end
+
+local function FmtHearth(char, t)
+    local bind = char.bindLocation or "Unknown"
+    return CLIAlts:Pad(bind, 18, "LEFT", t.highlightHex)
 end
 
 -- Tab 5 Cooldowns & Lockouts Formatters
@@ -580,14 +579,14 @@ local COLS = {
         { key = "prof2",     title = "PRIMARY PROF 2",  w = 20, align = "LEFT",   fmt = FmtProf2 },
         { key = "sec",       title = "SECONDARY",       w = 14, align = "LEFT",   fmt = FmtSecProf },
     },
-    [4] = { -- ECONOMY / WEALTH (Width = 85 chars)
+    [4] = { -- ECONOMY & LOCATIONS (Width = 85 chars)
         { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
-        { key = "gold",      title = "GOLD",            w = 12, align = "RIGHT",  sort = "gold",   fmt = FmtGoldLong },
-        { key = "share",     title = "SHARE",           w = 8,  align = "RIGHT",  fmt = FmtWealthShare },
-        { key = "bar",       title = "WEALTH SHARE",    w = 14, align = "LEFT",   fmt = FmtWealthBar },
-        { key = "location",  title = "LAST LOCATION",   w = 23, align = "LEFT",   fmt = FmtLocation },
+        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",    fmt = FmtLevel },
+        { key = "gold",      title = "GOLD",            w = 11, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "share",     title = "SHARE",           w = 6,  align = "RIGHT",  fmt = FmtWealthShare },
+        { key = "location",  title = "LAST ZONE",       w = 18, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",     w = 18, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [5] = { -- COOLDOWNS & SAVED LOCKS (Width = 85 chars)
         { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
@@ -890,6 +889,13 @@ function CLIAlts:CreateMainFrame()
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local coloredName = CLIAlts:ColorizePlayerName(self.charData.fullName or self.charData.name, self.charData.classFile)
                 GameTooltip:AddLine(string.format("%s - %s", coloredName, self.charData.location or "Unknown"), 1, 1, 1)
+                if self.charData.bindLocation and self.charData.bindLocation ~= "" then
+                    GameTooltip:AddLine(string.format("Hearth: |cffffffff%s|r", self.charData.bindLocation), 0.8, 0.8, 0.8)
+                end
+                local isStale, daysInactive = CLIAlts:IsCharStale(self.charData)
+                if isStale then
+                    GameTooltip:AddLine(string.format("|cffff4444[STALE]|r Inactive for %d days", daysInactive), 1, 0.3, 0.3)
+                end
 
                 local xpData = CLIAlts:GetLevelProgressData(self.charData)
                 if xpData and not xpData.isMaxLevel then
@@ -1433,13 +1439,20 @@ function CLIAlts:ExecutePromptCommand(input)
                 fac = "name",
                 loc = "location",
                 location = "location",
+                zone = "location",
+                hearth = "hearth",
+                inn = "hearth",
+                bind = "hearth",
+                seen = "seen",
+                last = "seen",
+                stale = "seen",
             }
             local key = map[args:lower()] or args:lower()
             self:ToggleSortKey(key)
             local dir = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc) and "ASC" or "DESC"
             self:SetPromptFeedback(string.format("Sorted by %s (%s)", key:upper(), dir))
         else
-            self:SetPromptFeedback("Usage: sort <name|level|gold|rested|waste|xp>", true)
+            self:SetPromptFeedback("Usage: sort <name|level|gold|rested|waste|xp|location|hearth|seen>", true)
         end
 
     elseif cmd == "filter" or cmd == "find" then
@@ -1598,6 +1611,27 @@ function CLIAlts:ExecutePromptCommand(input)
         local fb, ok = self:PrintUnlockedAlts(args)
         self:SetPromptFeedback(fb or "Lockout check complete.", not ok)
 
+    elseif cmd == "prune" then
+        local daysStr, optConfirm = args:match("^(%d+)%s*(.*)$")
+        local days = tonumber(daysStr)
+        if not days or days < 1 then
+            self:SetPromptFeedback("Usage: prune <days> [confirm] (e.g. prune 30)", true)
+        else
+            local count, names = self:GetPrunableCharacters(days)
+            if count == 0 then
+                self:SetPromptFeedback(string.format("No alts found inactive for %d+ days.", days))
+            elseif optConfirm and (optConfirm:lower() == "confirm" or optConfirm:lower() == "now" or optConfirm:lower() == "yes") then
+                local prunedCount, prunedNames = self:PruneCharacters(days)
+                local sample = table.concat(prunedNames, ", ", 1, math.min(3, #prunedNames))
+                if #prunedNames > 3 then sample = sample .. "..." end
+                self:SetPromptFeedback(string.format("Pruned %d alts (%s)", prunedCount, sample))
+                self:Render()
+            else
+                self:ShowConfirmPrunePopup(days, count, names)
+                self:SetPromptFeedback(string.format("Found %d alts inactive for %d+ days. Confirm in popup.", count, days))
+            end
+        end
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -1621,7 +1655,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "goto", "page", "next", "export",
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
-        "alerts", "digest", "plan", "note", "unlocked",
+        "alerts", "digest", "plan", "note", "unlocked", "prune",
         "refresh", "help", "exit", "close"
     }
 
@@ -1629,7 +1663,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
     if cmd then
         cmd = cmd:lower()
         if cmd == "sort" then
-            local sortKeys = { "name", "level", "gold", "rested", "waste", "xp", "location", "note" }
+            local sortKeys = { "name", "level", "gold", "rested", "waste", "xp", "location", "hearth", "seen", "note" }
             for _, k in ipairs(sortKeys) do
                 if k:sub(1, #arg) == arg:lower() and k ~= arg:lower() then
                     editBox:SetText("sort " .. k)
@@ -1765,7 +1799,10 @@ function CLIAlts:ShowDossierPopup(char)
     local isResting = self:IsCharacterResting(char)
     local logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
     table.insert(lines, string.format("| Location:       |cffffffff%s|r %s", char.location or "Unknown", logoutZoneTag))
-    table.insert(lines, string.format("| Last Active:    |cffffffff%s|r (%s)", self:GetTimeAgo(char.lastUpdate), date("%b %d, %H:%M", char.lastUpdate or time())))
+    table.insert(lines, string.format("| Hearthstone:    |cffffffff%s|r", char.bindLocation or "Unknown"))
+    local isStale, daysInactive = self:IsCharStale(char)
+    local staleTag = isStale and string.format(" |cffff4444[STALE: %dd inactive]|r", daysInactive) or ""
+    table.insert(lines, string.format("| Last Active:    |cffffffff%s|r (%s)%s", self:GetTimeAgo(char.lastUpdate), date("%b %d, %H:%M", char.lastUpdate or time()), staleTag))
     local noteStr = (char.note and char.note ~= "") and string.format("|cffffd700%s|r", char.note) or "|cff888888None (set with > note <name> <text>)|r"
     table.insert(lines, string.format("| Player Note:    %s", noteStr))
     table.insert(lines, "+------------------------------------------------------------------------------+")
@@ -1849,8 +1886,11 @@ function CLIAlts:ShowConfirmDelete(char)
         cp.body = body
 
         local btnConfirm = CreateRetroButton(cp, "[ YES, PURGE ]", 110, 20, function()
-            if cp.charKey then
+            if cp.onConfirm then
+                cp.onConfirm()
+            elseif cp.charKey then
                 CLIAlts:DeleteCharacter(cp.charKey)
+                CLIAlts:Render()
             end
             cp:Hide()
         end)
@@ -1866,6 +1906,7 @@ function CLIAlts:ShowConfirmDelete(char)
 
     local cleanKey = char.fullName or char.name or char.key
     confirmPopup.charKey = cleanKey
+    confirmPopup.onConfirm = nil
     local t = self:GetTheme()
     confirmPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
     confirmPopup:SetBackdropBorderColor(1, 0.2, 0.2, 1)
@@ -1879,6 +1920,42 @@ function CLIAlts:ShowConfirmDelete(char)
         string.format("|cffff4444%s|r", cleanKey),
         "from the local CLIAlts database?",
         "",
+    }
+    confirmPopup.body:SetText(table.concat(msg, "\n"))
+    confirmPopup:Show()
+end
+
+function CLIAlts:ShowConfirmPrunePopup(days, count, names)
+    if not mainFrame then return end
+    if not confirmPopup then
+        self:ShowConfirmDeletePopup({ name = "dummy" })
+        confirmPopup:Hide()
+    end
+
+    local sampleStr = table.concat(names, ", ", 1, math.min(4, #names))
+    if #names > 4 then
+        sampleStr = sampleStr .. string.format(" (+%d more)", #names - 4)
+    end
+
+    local t = self:GetTheme()
+    confirmPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+    confirmPopup:SetBackdropBorderColor(1, 0.2, 0.2, 1)
+
+    confirmPopup.charKey = nil
+    confirmPopup.onConfirm = function()
+        local prunedCount, prunedNames = CLIAlts:PruneCharacters(days)
+        CLIAlts:SetPromptFeedback(string.format("Pruned %d alts inactive for %d+ days", prunedCount, days))
+        CLIAlts:Render()
+    end
+
+    local msg = {
+        "+=======================================+",
+        "|         BULK PRUNE STALE ALTS?        |",
+        "+=======================================+",
+        "",
+        string.format("Delete |cffff4444%d characters|r inactive for %d+ days?", count, days),
+        string.format("|cffffaa00%s|r", sampleStr),
+        "from the local CLIAlts database?",
     }
     confirmPopup.body:SetText(table.concat(msg, "\n"))
     confirmPopup:Show()
@@ -1946,12 +2023,13 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts plan [hrs] - Print leveling plan schedule (default: 2h) |",
         "|   /clialts note <who> <txt> - Set/view alt note (clear to remove)   |",
         "|   /clialts unlocked <inst> - List alts with no active lock (gap finder)|",
+        "|   /clialts prune <days> [confirm] - Bulk purge alts inactive for N days|",
         "|   /clialts reset      - Reset window position to center            |",
         "+--------------------------------------------------------------------+",
         "| Interactive Terminal Command Prompt (>):                           |",
         "|   > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)|",
         "|   > sort <column>     - Sort table (name, lvl, gold, rest, waste)  |",
-        "|   > filter <query>    - Filter alts (alliance, horde, <60, mining) |",
+        "|   > filter <query>    - Filter alts (alliance, horde, stale, <60)  |",
         "|   > find <text>       - Search character names, classes, or zones  |",
         "|   > clear             - Clear active filter query                  |",
         "|   > next              - Print alts with highest rested waste       |",
@@ -1965,6 +2043,7 @@ function CLIAlts:ShowHelpPopup()
         "|   > plan [hours]      - Compute ordered leveling session schedule  |",
         "|   > note <who> <text>  - Set/view alt note (e.g. farm mooncloth)   |",
         "|   > unlocked <inst>   - List alts with no active lock (gap finder)     |",
+        "|   > prune <days>      - Bulk purge alts inactive for N days        |",
         "|   > Up / Down arrows  - Browse terminal command history            |",
         "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",

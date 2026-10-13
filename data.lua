@@ -217,6 +217,7 @@ function CLIAlts:InitDB()
     if CLIAltsDB.settings.alerts.mail == nil then CLIAltsDB.settings.alerts.mail = true end
     if CLIAltsDB.settings.alerts.lockouts == nil then CLIAltsDB.settings.alerts.lockouts = true end
     if CLIAltsDB.settings.restedBurnRatio == nil then CLIAltsDB.settings.restedBurnRatio = 0.5 end
+    CLIAltsDB.settings.staleDays = tonumber(CLIAltsDB.settings.staleDays) or 30
     CLIAltsDB.characters = CLIAltsDB.characters or {}
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
     CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
@@ -729,6 +730,11 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         location = existing.location
     end
 
+    local bindLocation = (GetBindLocation and GetBindLocation()) or ""
+    if (not bindLocation or bindLocation == "") and existing and existing.bindLocation and existing.bindLocation ~= "" then
+        bindLocation = existing.bindLocation
+    end
+
     -- Trust only IsResting() at logout and live gameplay without fuzzy location matching
     local isResting = liveResting
     local cleanLogout = (isLogout == true)
@@ -770,6 +776,7 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         cleanLogout = cleanLogout,
         money = money,
         location = location,
+        bindLocation = (bindLocation ~= "" and bindLocation) or "Unknown",
         professions = professions,
         tradeCooldowns = self:CollectTradeCooldowns(existing and existing.tradeCooldowns),
         lockouts = self:CollectLockouts(existing and existing.lockouts),
@@ -1369,6 +1376,92 @@ function CLIAlts:DeleteCharacter(charKey)
     return false
 end
 
+function CLIAlts:GetDaysInactive(char, now)
+    if not char then return 0 end
+    now = now or time()
+    local last = char.lastUpdate or char.logoutTime or now
+    return math.max(0, math.floor((now - last) / 86400))
+end
+
+function CLIAlts:IsCharStale(char, staleDays, now)
+    if not char then return false, 0 end
+    -- The currently logged in character is NEVER stale
+    local curKey = self.curPlayerKey
+    local _, _, curFull = self:GetPlayerNames()
+    if curKey and (char.key == curKey or char.fullName == curKey) then
+        return false, 0
+    end
+    if curFull and (char.fullName == curFull or char.name == curFull) then
+        return false, 0
+    end
+
+    staleDays = tonumber(staleDays) or (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.staleDays)) or 30
+    local days = self:GetDaysInactive(char, now)
+    return days >= staleDays, days
+end
+
+function CLIAlts:GetPrunableCharacters(days, now)
+    local list = {}
+    if not CLIAltsDB or not CLIAltsDB.characters then return 0, list end
+    days = tonumber(days) or 30
+    now = now or time()
+    local curKey = self.curPlayerKey
+    local _, _, curFull = self:GetPlayerNames()
+
+    for k, c in pairs(CLIAltsDB.characters) do
+        local isCurrent = (curKey and (k == curKey or c.fullName == curKey))
+            or (curFull and (c.fullName == curFull or c.name == curFull))
+        if not isCurrent then
+            local last = c.lastUpdate or c.logoutTime or now
+            local elapsedDays = math.floor((now - last) / 86400)
+            if elapsedDays >= days then
+                table.insert(list, c.name or c.fullName or k)
+            end
+        end
+    end
+    table.sort(list)
+    return #list, list
+end
+
+function CLIAlts:PruneCharacters(days, now)
+    if not CLIAltsDB or not CLIAltsDB.characters then return 0, {} end
+    days = tonumber(days) or 30
+    now = now or time()
+    local prunedKeys = {}
+    local prunedNames = {}
+    local curKey = self.curPlayerKey
+    local _, _, curFull = self:GetPlayerNames()
+
+    for k, c in pairs(CLIAltsDB.characters) do
+        local isCurrent = (curKey and (k == curKey or c.fullName == curKey))
+            or (curFull and (c.fullName == curFull or c.name == curFull))
+        if not isCurrent then
+            local last = c.lastUpdate or c.logoutTime or now
+            local elapsedDays = math.floor((now - last) / 86400)
+            if elapsedDays >= days then
+                table.insert(prunedKeys, k)
+                table.insert(prunedNames, c.name or c.fullName or k)
+            end
+        end
+    end
+
+    for _, k in ipairs(prunedKeys) do
+        CLIAltsDB.characters[k] = nil
+    end
+
+    if #prunedKeys > 0 then
+        if self.CleanWatchlistCounts then
+            self:CleanWatchlistCounts()
+        end
+        if self.InvalidateRestedCache then
+            self:InvalidateRestedCache()
+        end
+        self:RequestRender()
+    end
+
+    return #prunedKeys, prunedNames
+end
+
 function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     local list = {}
     if not CLIAltsDB or not CLIAltsDB.characters then
@@ -1387,6 +1480,8 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 keep = (char.faction == "Alliance")
             elseif query == "horde" or query == "h" then
                 keep = (char.faction == "Horde")
+            elseif query == "stale" then
+                keep = self:IsCharStale(char)
             elseif query:sub(1, 1) == "<" then
                 local maxLvl = tonumber(query:sub(2))
                 keep = maxLvl and ((char.level or 1) < maxLvl)
@@ -1398,6 +1493,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 local cls = (char.class or ""):lower()
                 local race = (char.race or ""):lower()
                 local loc = (char.location or ""):lower()
+                local hearth = (char.bindLocation or ""):lower()
                 local p1 = (char.professions and char.professions.primary and char.professions.primary[1] and char.professions.primary[1].name or ""):lower()
                 local p2 = (char.professions and char.professions.primary and char.professions.primary[2] and char.professions.primary[2].name or ""):lower()
                 local note = (char.note or ""):lower()
@@ -1405,6 +1501,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                     or cls:find(query, 1, true)
                     or race:find(query, 1, true)
                     or loc:find(query, 1, true)
+                    or hearth:find(query, 1, true)
                     or p1:find(query, 1, true)
                     or p2:find(query, 1, true)
                     or note:find(query, 1, true)
@@ -1444,6 +1541,27 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
             local nB = (b.note or ""):lower()
             if nA ~= nB then
                 if sortAsc then return nA < nB else return nA > nB end
+            end
+            return (a.name or "") < (b.name or "")
+        elseif sortBy == "hearth" then
+            local hA = (a.bindLocation or ""):lower()
+            local hB = (b.bindLocation or ""):lower()
+            if hA ~= hB then
+                if sortAsc then return hA < hB else return hA > hB end
+            end
+            return (a.name or "") < (b.name or "")
+        elseif sortBy == "location" then
+            local lA = (a.location or ""):lower()
+            local lB = (b.location or ""):lower()
+            if lA ~= lB then
+                if sortAsc then return lA < lB else return lA > lB end
+            end
+            return (a.name or "") < (b.name or "")
+        elseif sortBy == "seen" or sortBy == "stale" then
+            local sA = a.lastUpdate or 0
+            local sB = b.lastUpdate or 0
+            if sA ~= sB then
+                if sortAsc then return sA < sB else return sA > sB end
             end
             return (a.name or "") < (b.name or "")
         elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" then
@@ -1894,8 +2012,44 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB.watchlist = oldWatchlist
     CLIAltsDB.characters = oldCharsW
 
+    -- 9. Hearthstone Location, Stale Flag & Prune Tests
+    -- 9a. Inactive calculation
+    local charOld = { name = "OldAlt", classFile = "WARRIOR", lastUpdate = T0 - (45 * 86400) }
+    local daysOld = self:GetDaysInactive(charOld, T0)
+    Assert(daysOld == 45, "GetDaysInactive: calculates 45 days inactive")
+
+    -- 9b. Stale threshold check
+    local isStale1 = self:IsCharStale(charOld, 30, T0)
+    Assert(isStale1 == true, "IsCharStale: flags alt inactive for 45 days as stale at 30d threshold")
+    local isStale2 = self:IsCharStale(charOld, 60, T0)
+    Assert(isStale2 == false, "IsCharStale: does not flag alt inactive for 45 days when threshold is 60d")
+
+    -- 9c. Current player protection
+    self.curPlayerKey = "LiveChar"
+    local charLive = { key = "LiveChar", name = "LiveChar", lastUpdate = T0 - (100 * 86400) }
+    local isStaleLive = self:IsCharStale(charLive, 30, T0)
+    Assert(isStaleLive == false, "IsCharStale: current player is NEVER flagged stale")
+
+    -- 9d. Bulk prune identification
+    local oldCharsP = CLIAltsDB and CLIAltsDB.characters
+    CLIAltsDB.characters = { ["OldAlt"] = charOld, ["LiveChar"] = charLive }
+    local pruneCount, pruneList = self:GetPrunableCharacters(30, T0)
+    Assert(pruneCount == 1 and pruneList[1] == "OldAlt", "GetPrunableCharacters: identifies only OldAlt for pruning")
+
+    -- 9e. Bulk prune execution
+    local prunedCount, prunedNames = self:PruneCharacters(30, T0)
+    Assert(prunedCount == 1 and prunedNames[1] == "OldAlt", "PruneCharacters: prunes OldAlt")
+    Assert(CLIAltsDB.characters["OldAlt"] == nil and CLIAltsDB.characters["LiveChar"] ~= nil, "PruneCharacters: removes OldAlt while preserving current player LiveChar")
+
+    -- 9f. Hearthstone location field
+    local mockCharH = { name = "HearthAlt", bindLocation = "The Crossroads" }
+    Assert(mockCharH.bindLocation == "The Crossroads", "Hearthstone: preserves bindLocation field")
+
+    CLIAltsDB.characters = oldCharsP
+    self.curPlayerKey = nil
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -2686,7 +2840,7 @@ end
 
 function CLIAlts:GenerateExportCSV()
     local lines = {}
-    table.insert(lines, "Name,Realm,Faction,Race,Class,Level,XP,MaxXP,RestedXP,RestedPct,RestedStatus,WastedXP,Gold,Silver,Copper,Prof1,Prof1Rank,Prof2,Prof2Rank,Location,LastSeen,Note")
+    table.insert(lines, "Name,Realm,Faction,Race,Class,Level,XP,MaxXP,RestedXP,RestedPct,RestedStatus,WastedXP,Gold,Silver,Copper,Prof1,Prof1Rank,Prof2,Prof2Rank,Location,Hearthstone,LastSeen,Note")
 
     local chars = self:GetCharactersList("name", true)
     for _, c in ipairs(chars) do
@@ -2729,6 +2883,7 @@ function CLIAlts:GenerateExportCSV()
             CsvQuote(p2Name),
             tostring(p2Rank),
             CsvQuote(c.location or "Unknown"),
+            CsvQuote(c.bindLocation or "Unknown"),
             CsvQuote(lastSeenStr),
             CsvQuote(c.note or ""),
         }, ",")
