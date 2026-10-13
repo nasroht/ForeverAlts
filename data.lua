@@ -3133,7 +3133,6 @@ function CLIAlts:UpdateSessionXP()
         return
     end
     if not UnitXP or not UnitXPMax or not UnitLevel then return end
-    local now = time()
     local curXP = UnitXP("player") or 0
     local maxXP = UnitXPMax("player") or 0
     local curLvl = UnitLevel("player") or 1
