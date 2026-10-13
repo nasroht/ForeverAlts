@@ -799,8 +799,12 @@ function CLIAlts:CreateMainFrame()
     frame.statusBarText = statusBarText
 
     -- Well Rested Perk quick toggle button
-    local btnPerk = CreateRetroButton(frame, "[ PERK: R0 (+0%) ]", 145, 18, function()
+    local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    local btnPerk = CreateRetroButton(frame, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 145, 18, function(self)
         CLIAlts:CycleWellRestedPerk()
+        if MouseIsOver(self) and self:GetScript("OnEnter") then
+            self:GetScript("OnEnter")(self)
+        end
     end)
     btnPerk:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -51)
     btnPerk:SetScript("OnEnter", function(self)
@@ -1323,6 +1327,10 @@ function CLIAlts:Render()
     if mainFrame.botAscii then mainFrame.botAscii:SetText(borderLine) end
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
+    end
+    if mainFrame.btnPerk and mainFrame.btnPerk.label then
+        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
     end
 
     -- Update Status Bar

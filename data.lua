@@ -1019,11 +1019,20 @@ function CLIAlts:SetWellRestedRank(rank)
     CLIAltsDB.settings = CLIAltsDB.settings or {}
     CLIAltsDB.settings.wellRestedRank = rank
 
+    if self.InvalidateRestedCache then
+        self:InvalidateRestedCache()
+    end
+
     local speedBonus = rank * 4
     local capPercent = 150 + (rank * 6)
     self:Print(string.format("Well Rested perk set to |cffffffffRank %d/5|r (+%d%% rest speed, %d%% cap).", rank, speedBonus, capPercent))
 
-    if CLIAltsMainFrame and CLIAltsMainFrame:IsShown() then
+    local frame = self.mainFrame or _G["CLIAltsMainFrame"]
+    if frame and frame.btnPerk and frame.btnPerk.label then
+        frame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", rank, speedBonus))
+    end
+
+    if frame and frame:IsShown() then
         self:Render()
     end
 end
