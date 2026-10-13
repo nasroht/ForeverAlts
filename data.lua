@@ -725,9 +725,8 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
     if maxXP <= 0 and existing and existing.maxXP and existing.maxXP > 0 then
         maxXP = existing.maxXP
     end
-    if existing and existing.level and level > existing.level then
-        -- Leveled up: start fresh at current level
-    elseif curXP <= 0 and existing and existing.xp and existing.xp > 0 then
+    local isLevelUp = existing and existing.level and level > existing.level
+    if not isLevelUp and curXP <= 0 and existing and existing.xp and existing.xp > 0 then
         curXP = existing.xp
     end
     if money <= 0 and existing and existing.money and existing.money > 0 then
@@ -1034,8 +1033,8 @@ function CLIAlts:GetRestedData(char, force, nowOverride)
     local isFull = (currentRested >= maxRested)
 
     local timeToFull = 0
-    local fullDate = "N/A"
-    local timeLeftStr = string.format("FULL (%d%%)", maxPercent)
+    local fullDate
+    local timeLeftStr
 
     if isFull then
         timeLeftStr = string.format("FULL (%d%%)", maxPercent)
@@ -1605,13 +1604,12 @@ end
 
 function CLIAlts:GetAccountSummary()
     local totalGold = 0
-    local totalAlts = 0
     local fullyRested = 0
     local nextFullAlt = nil
     local lowestTimeToFull = 999999999
 
     local chars = self:GetCharactersList()
-    totalAlts = #chars
+    local totalAlts = #chars
 
     for _, char in ipairs(chars) do
         totalGold = totalGold + (char.money or 0)
@@ -2225,7 +2223,7 @@ function CLIAlts:GetLDBText(now, charListOverride)
             if rested and rested.isFull then
                 cappedCount = cappedCount + 1
             end
-            local wastedSec, wastedXP = self:GetRestedWaste(char, now)
+            local _, wastedXP = self:GetRestedWaste(char, now)
             if wastedXP and wastedXP > 0 then
                 totalWastedXP = totalWastedXP + wastedXP
             end
@@ -2245,12 +2243,11 @@ function CLIAlts:GetNextAltsPriority()
     for _, char in ipairs(chars) do
         local level = char.level or 1
         if level < maxLevel then
-            local wastedSec, wastedXP, formattedWaste, timeStr = self:GetRestedWaste(char)
+            local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
             local rested = self:GetRestedData(char)
             local isCapped = rested and rested.isFull
 
-            local score = 0
-            local reason = ""
+            local score, reason
             if isCapped then
                 score = 100000000 + (wastedSec or 0)
                 reason = string.format("Capped for %s (%s XP wasted)", timeStr, self:FormatNumber(wastedXP))
@@ -2675,7 +2672,7 @@ function CLIAlts:ToggleAlert(category, explicitState)
     if explicitState ~= nil then
         a[category] = (explicitState == true)
     else
-        a[category] = not (a[category] ~= false)
+        a[category] = (a[category] == false)
     end
     local stateStr = a[category] and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
     self:Print(string.format("Alert category '|cffffffff%s|r' is now %s.", category, stateStr))
@@ -2967,7 +2964,7 @@ function CLIAlts:GenerateExportCSV()
     local chars = self:GetCharactersList("name", true)
     for _, c in ipairs(chars) do
         local rested = self:GetRestedData(c)
-        local wastedSec, wastedXP = self:GetRestedWaste(c)
+        local _, wastedXP = self:GetRestedWaste(c)
         local money = c.money or 0
         local gold = math.floor(money / 10000)
         local silver = math.floor((money % 10000) / 100)
@@ -3185,9 +3182,9 @@ function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
                 local speedMult = 1 + (((CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0) * 0.04)
                 local maxRested = maxXP * 1.5 * speedMult
                 local isCapped = (restedXP >= maxRested * 0.99)
-                local wastedSec, wastedXP = 0, 0
+                local wastedXP = 0
                 if not mockChars then
-                    wastedSec, wastedXP = self:GetRestedWaste(c, now)
+                    _, wastedXP = self:GetRestedWaste(c, now)
                 end
 
                 table.insert(candidates, {

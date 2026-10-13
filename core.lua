@@ -131,8 +131,10 @@ for _, ev in ipairs(safeEvents) do
     pcall(function() eventFrame:RegisterEvent(ev) end)
 end
 
-local ok = pcall(eventFrame.RegisterEvent, eventFrame, "BAG_UPDATE_DELAYED")
-if not ok then pcall(eventFrame.RegisterEvent, eventFrame, "BAG_UPDATE") end
+do
+    local ok = pcall(eventFrame.RegisterEvent, eventFrame, "BAG_UPDATE_DELAYED")
+    if not ok then pcall(eventFrame.RegisterEvent, eventFrame, "BAG_UPDATE") end
+end
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "ADDON_LOADED" then

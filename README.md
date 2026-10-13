@@ -1,5 +1,7 @@
 # CLIAlts - Retro ASCII / TUI Alt & Rested XP Tracker
 
+[![CI & Release](https://github.com/nasroht/clialts/actions/workflows/ci.yml/badge.svg)](https://github.com/nasroht/clialts/actions/workflows/ci.yml)
+
 A retro-styled Text User Interface (TUI) character and alt tracking addon for **World of Warcraft** (compatible with *World of Warcraft: Forever*, *Classic Era*, and modern Classic).
 
 Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold**, and **Saved Rested Experience** — including real-time offline accumulation and **exact countdowns and dates for when rested XP will reach 150% (capped)**.

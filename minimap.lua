@@ -129,13 +129,17 @@ function CLIAlts:CreateMinimapButton()
         local summary = CLIAlts:GetAccountSummary()
         local moneyStr = CLIAlts:FormatMoney(summary.totalGold, true)
 
-        local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
-        local br, bg, bb = t and t.border[1] or 0, t and t.border[2] or 1, t and t.border[3] or 0.4
-        local hr, hg, hb = t and t.highlight[1] or 0.2, t and t.highlight[2] or 1, t and t.highlight[3] or 0.6
+        local themeData = (CLIAlts.GetTheme and CLIAlts:GetTheme())
+        local br = themeData and themeData.border[1] or 0
+        local bgCol = themeData and themeData.border[2] or 1
+        local bb = themeData and themeData.border[3] or 0.4
+        local hr = themeData and themeData.highlight[1] or 0.2
+        local hg = themeData and themeData.highlight[2] or 1
+        local hb = themeData and themeData.highlight[3] or 0.6
 
-        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bgCol, bb)
         GameTooltip:AddLine("|  .:: [ CLIALTS ] - RETRO ALT MONITOR ::.     |", hr, hg, hb)
-        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bgCol, bb)
         GameTooltip:AddDoubleLine("| Total Tracked Alts:", string.format("%d alts |", summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)
         GameTooltip:AddDoubleLine("| Total Account Wealth:", string.format("%s |", moneyStr), 0.7, 0.7, 0.7, 1, 1, 1)
 
@@ -148,11 +152,11 @@ function CLIAlts:CreateMinimapButton()
             GameTooltip:AddDoubleLine("| Next Full Alt:", string.format("%s (%s) |", coloredName, summary.nextFullAlt.timeLeftStr), 0.7, 0.7, 0.7, 1, 0.85, 0.2)
         end
 
-        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bgCol, bb)
         GameTooltip:AddDoubleLine("| <Left-Click>", "Toggle Alt Monitor |", 0.6, 0.8, 0.7, 0.9, 0.9, 0.9)
         GameTooltip:AddDoubleLine("| <Right-Click>", "Refresh Timers |", 0.6, 0.8, 0.7, 0.9, 0.9, 0.9)
         GameTooltip:AddDoubleLine("| <Drag Left/Right>", "Move Around Minimap |", 0.6, 0.8, 0.7, 0.9, 0.9, 0.9)
-        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bgCol, bb)
 
         GameTooltip:Show()
     end)
@@ -254,7 +258,11 @@ function CLIAlts:InitLDB()
             local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
             local hr, hg, hb = t and t.highlight[1] or 0.2, t and t.highlight[2] or 1, t and t.highlight[3] or 0.6
             tooltip:AddLine("CLIAlts", hr, hg, hb)
-            local text, cappedCount, totalWastedXP = CLIAlts.GetLDBText and CLIAlts:GetLDBText()
+            local cappedCount, totalWastedXP
+            if CLIAlts.GetLDBText then
+                local _
+                _, cappedCount, totalWastedXP = CLIAlts:GetLDBText()
+            end
             local summary = CLIAlts.GetAccountSummary and CLIAlts:GetAccountSummary()
             if summary then
                 tooltip:AddDoubleLine("Total Alts:", tostring(summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)

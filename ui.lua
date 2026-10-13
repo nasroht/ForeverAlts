@@ -27,6 +27,7 @@ local dossierPopup = nil
 local confirmPopup = nil
 local helpPopup = nil
 local probeString = nil
+local renderDirty = false
 
 -- ----------------------------------------------------------------------------
 -- CRT Theme Definitions (With Syntax Coloring Hex Codes)
@@ -397,7 +398,7 @@ local function FmtETA(char, t)
     if not rested then return CLIAlts:Pad("---", 7, "RIGHT", "666666") end
     if rested.isMaxLevel then return CLIAlts:Pad("MAX", 7, "RIGHT", "888888") end
     if rested.isFull then
-        local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(char)
+        local wastedSec, _, _, timeStr = CLIAlts:GetRestedWaste(char)
         if wastedSec and wastedSec > 3600 then
             -- Alert marker '!' + time string, colored in amber/yellow for universal colorblind safety
             return CLIAlts:Pad("!" .. (timeStr or "1h"), 7, "RIGHT", "ffaa00")
@@ -803,7 +804,6 @@ function CLIAlts:CreateMainFrame()
         GameTooltip:Show()
     end)
     btnCompact:SetScript("OnLeave", function(self)
-        local t = CLIAlts:GetTheme()
         self:SetBackdropColor(0, 0, 0, 0.6)
         GameTooltip:Hide()
     end)
@@ -853,7 +853,6 @@ function CLIAlts:CreateMainFrame()
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
-        local t = CLIAlts:GetTheme()
         self:SetBackdropColor(0, 0, 0, 0.6)
         GameTooltip:Hide()
     end)
@@ -1281,7 +1280,6 @@ end
 -- ----------------------------------------------------------------------------
 -- Terminal Render Engine (Coalesced with Dirty Flag)
 -- ----------------------------------------------------------------------------
-local renderDirty = false
 local renderTimerPending = false
 
 function CLIAlts:RequestRender()
@@ -1986,7 +1984,6 @@ function CLIAlts:ShowDossierPopup(char)
     table.insert(lines, string.format("| Class / Level:  %s (Level |cffffffff%d|r)", self:ColorizePlayerName(char.class or "Unknown", char.classFile), char.level or 1))
     table.insert(lines, string.format("| Current Gold:   %s", self:FormatMoney(char.money, true)))
 
-    local isResting = self:IsCharacterResting(char)
     local logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
     table.insert(lines, string.format("| Location:       |cffffffff%s|r %s", char.location or "Unknown", logoutZoneTag))
     table.insert(lines, string.format("| Hearthstone:    |cffffffff%s|r", char.bindLocation or "Unknown"))
@@ -2133,7 +2130,7 @@ function CLIAlts:ShowConfirmPrunePopup(days, count, names)
 
     confirmPopup.charKey = nil
     confirmPopup.onConfirm = function()
-        local prunedCount, prunedNames = CLIAlts:PruneCharacters(days)
+        local prunedCount = CLIAlts:PruneCharacters(days)
         CLIAlts:SetPromptFeedback(string.format("Pruned %d alts inactive for %d+ days", prunedCount, days))
         CLIAlts:Render()
     end

@@ -20,7 +20,7 @@ jobs:
       - name: Run Luacheck linter
         uses: lunarmodules/luacheck@v1
         with:
-          args: .
+          args: . --config .luacheckrc
 
   release:
     name: Package Addon

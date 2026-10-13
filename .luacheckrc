@@ -6,6 +6,7 @@ std = "lua51"
 
 -- Addon callbacks frequently declare unused parameters (self, event, ...)
 unused_args = false
+self = false
 
 -- Files or directories to exclude from linting
 exclude_files = {
@@ -16,6 +17,17 @@ exclude_files = {
 -- Code style rules to ignore
 ignore = {
     "631", -- line is too long
+    "211/addonName", -- unused addonName in standard addon file headers
+    "212", -- unused argument in standard event/callback signatures
+    "411", -- variable shadows global
+    "412", -- variable shadows global
+    "421", -- variable shadows local
+    "422", -- argument shadows local
+    "423", -- loop variable shadows local
+    "431", -- variable shadows upvalue
+    "432", -- argument shadows upvalue
+    "433", -- loop variable shadows upvalue
+    "542", -- empty if branch
 }
 
 -- Global environment: WoW API Globals & Addon Global Variables
@@ -25,6 +37,7 @@ globals = {
     "CLIAltsMainFrame",
     "CLIAltsFocusEnterBtn",
     "CLIAltsFocusSlashBtn",
+    "CLIAltsCompactBtn",
     "SLASH_CLIALTS1",
     "SLASH_CLIALTS2",
     "SLASH_CLIALTS3",
@@ -44,6 +57,8 @@ globals = {
     "RAID_CLASS_COLORS",
     "ITEM_QUALITY_COLORS",
     "UISpecialFrames",
+    "BackdropTemplateMixin",
+    "GetCursorPosition",
 
     -- WoW Player & Character APIs
     "GetTime",
@@ -65,6 +80,7 @@ globals = {
     "GetUnitName",
     "GetUnitSecondaryName",
     "GetUnitSurname",
+    "GetBindLocation",
 
     -- WoW Skills, Craft & Trade APIs
     "GetNumSkillLines",
@@ -92,16 +108,27 @@ globals = {
     -- WoW Items, Bags & Mail
     "GetItemCount",
     "GetItemInfo",
+    "GetItemInfoInstant",
     "C_Item",
     "GetInboxNumItems",
     "GetInboxHeaderInfo",
+    "ChatEdit_InsertLink",
 
-    -- WoW Profiling, System & Utilities
+    -- WoW Hooking, Libraries & Profiling
+    "hooksecurefunc",
+    "LibStub",
+    "utf8",
     "GetAddOnMemoryUsage",
     "UpdateAddOnMemoryUsage",
     "debugprofilestop",
     "debugprofilestart",
     "C_Timer",
+
+    -- WoW-exposed standard Lua extensions / globals
+    "time",
+    "date",
+    "tinsert",
+    "tremove",
     "strtrim",
     "strsplit",
     "strlenutf8",
