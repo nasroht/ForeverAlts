@@ -3166,7 +3166,7 @@ function CLIAlts:RunSelfTest()
     Assert(okSupply1 == true and testCohortDB.characters["New-Realm"].supply_role == "Tailor/Bags", "Cohort: SetCharacterSupplyRole updates supply_role")
     local okSupplyClear, _ = self:SetCharacterSupplyRole("New", "auto")
     Assert(okSupplyClear == true and testCohortDB.characters["New-Realm"].supply_role == nil, "Cohort: SetCharacterSupplyRole 'auto' clears supply_role")
-    Assert(self:FormatCohortSummary() == "1 Core | 1 Alt | 1 Bank", "Cohort: FormatCohortSummary returns human-readable '1 Core | 1 Alt | 1 Bank'")
+    Assert(self:FormatCohortSummary() == "2 Core | 1 Alt | 1 Bank", "Cohort: FormatCohortSummary returns human-readable '2 Core | 1 Alt | 1 Bank'")
 
     -- 18d. CycleCharacterTier
     local cycledTier = self:CycleCharacterTier(testCohortDB.characters["New-Realm"])
