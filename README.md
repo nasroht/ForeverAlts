@@ -87,6 +87,7 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | `/clialts plan [hours]` | Compute ordered leveling session schedule (default: 2h) |
 | `/clialts note <name> [text]` | Set or view custom notes for an alt (`clear` to remove) |
 | `/clialts unlocked <instance>` | List alts at appropriate level with no active lockout (gap finder) |
+| `/clialts compact` | Toggle one-key compact mode (hides XP bars, slim 630px window) |
 | `/clialts reset` | Reset window position to the center of your screen |
 | `/clialts help` | Open the in-game retro quick guide popup |
 
@@ -99,8 +100,24 @@ Cycle through authentic retro CRT color themes by clicking the `[ THEME ]` butto
 2. **VT220 Amber (`AMB`)**: Warm retro amber phosphor display.
 3. **Cyberdeck Cyan (`CYN`)**: BBS / neon cyberspace cyan.
 4. **VT100 Monochrome (`MON`)**: Classic white phosphor on black.
-5. **Synthwave (`SYN`)**: Neon magenta and retro-wave styling.
-6. **Dracula (`DRA`)**: Gothic purple and mint terminal palette.
+5. **Phosphor Safe (`SAFE`)**: High-contrast colorblind-safe cerulean/slate/amber palette.
+6. **Synthwave (`SYN`)**: Neon magenta and retro-wave styling.
+7. **Dracula (`DRA`)**: Gothic purple and mint terminal palette.
+
+---
+
+## Packaging & Publishing
+
+CLIAlts is configured for automated build and multi-platform distribution using **BigWigs Packager** (`BigWigsMods/packager@v2`) via GitHub Actions:
+- **`.pkgmeta`**: Defines package distribution name (`clialts`), integrates `CHANGELOG.md` with markdown parsing, and excludes development files and media.
+- **`CHANGELOG.md`**: Maintained following [Keep a Changelog](https://keepachangelog.com/) standards.
+- **Platform Project IDs**: Once published on CurseForge, Wago Addons, or WoWInterface, insert your project IDs into `clialts.toc`:
+  ```text
+  ## X-Curse-Project-ID: <CurseForge Project ID>
+  ## X-Wago-ID: <Wago Project ID>
+  ## X-WoWI-ID: <WoWInterface ID>
+  ```
+- **API Secrets**: Add your API tokens to GitHub repository secrets (`CF_API_KEY`, `WAGO_API_TOKEN`, `WOWI_API_TOKEN`). Pushing a release tag (e.g. `v1.1.0`) triggers the automated multi-platform release.
 
 ---
 
