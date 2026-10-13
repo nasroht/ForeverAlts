@@ -33,7 +33,12 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:Show() self.shown = true end
     function frame:Hide() self.shown = false end
     function frame:IsShown() return self.shown == true end
-    function frame:SetText(txt) self.text = txt end
+    function frame:SetText(txt)
+        if self.type == "FontString" and not self.font then
+            error("FontString:SetText(): Font not set")
+        end
+        self.text = txt
+    end
     function frame:GetText() return self.text or "" end
     function frame:SetScale(s) self.scale = s end
     function frame:GetScale() return self.scale or 1 end
@@ -62,8 +67,25 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:UnlockHighlight(...) end
     function frame:SetHighlightTexture(...) end
     function frame:SetTextColor(...) end
-    function frame:SetFont(...) end
-    function frame:GetFont(...) return "Fonts\\FRIZQT__.TTF", 12, "" end
+    function frame:SetFont(fontPath, size, flags)
+        if flags == "BOLD" then
+            return nil
+        end
+        self.font = fontPath or "Fonts\\FRIZQT__.TTF"
+        self.fontSize = size or 12
+        self.fontFlags = flags or ""
+        return true
+    end
+    function frame:GetFont()
+        if not self.font then return nil end
+        return self.font, self.fontSize, self.fontFlags
+    end
+    function frame:SetFontObject(obj)
+        self.font = "Fonts\\FRIZQT__.TTF"
+        self.fontSize = 12
+        self.fontFlags = ""
+        self.fontObject = obj
+    end
     function frame:SetAutoFocus(...) end
     function frame:SetTextInsets(...) end
     function frame:SetMultiLine(...) end

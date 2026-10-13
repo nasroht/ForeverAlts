@@ -145,7 +145,9 @@ end
 function CLIAlts:SetWidgetFont(fontString, size, flags)
     if not fontString or not fontString.SetFont then return end
     size = size or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
-    flags = flags or ""
+    if not flags or type(flags) ~= "string" or flags == "BOLD" then
+        flags = ""
+    end
     local setOk = false
     pcall(function()
         setOk = fontString:SetFont(FONT_PATH, size, flags)
@@ -153,7 +155,24 @@ function CLIAlts:SetWidgetFont(fontString, size, flags)
     if not setOk then
         pcall(function()
             local fallback = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
-            fontString:SetFont(fallback, size, flags)
+            setOk = fontString:SetFont(fallback, size, flags)
+        end)
+    end
+    if not setOk then
+        pcall(function()
+            local fallback = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
+            setOk = fontString:SetFont(fallback, size, "")
+        end)
+    end
+    local hasFont = false
+    pcall(function()
+        if fontString.GetFont and fontString:GetFont() then
+            hasFont = true
+        end
+    end)
+    if not hasFont and fontString.SetFontObject then
+        pcall(function()
+            fontString:SetFontObject("GameFontHighlight")
         end)
     end
 end
@@ -201,7 +220,7 @@ local function PlayRetroSound()
     end
 end
 
-local function CreateRetroButton(parent, text, width, height, onClick)
+local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
     local btn = CreateFrame("Button", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btn:SetSize(width or 80, height or 20)
 
@@ -215,7 +234,7 @@ local function CreateRetroButton(parent, text, width, height, onClick)
     btn:SetBackdropBorderColor(0.2, 0.6, 0.3, 0.8)
 
     local label = btn:CreateFontString(nil, "OVERLAY")
-    CLIAlts:SetWidgetFont(label, 14, "")
+    CLIAlts:SetWidgetFont(label, fontSz or 12, "")
     label:SetPoint("CENTER", 0, 0)
     label:SetText(text or "")
     btn.label = label
@@ -1223,7 +1242,7 @@ function CLIAlts:CreateMainFrame()
 
     -- Interactive Command Prompt (EditBox with > prompt)
     local promptLabel = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(promptLabel, fontSize, "BOLD")
+    self:SetWidgetFont(promptLabel, fontSize, "")
     promptLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 30)
     promptLabel:SetText("> ")
     frame.promptLabel = promptLabel
@@ -2298,6 +2317,10 @@ function CLIAlts:ShowDossierPopup(char)
         dp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dp:SetFrameStrata("DIALOG")
         dp:EnableMouse(true)
+        dp:SetMovable(true)
+        dp:RegisterForDrag("LeftButton")
+        dp:SetScript("OnDragStart", function(self) self:StartMoving() end)
+        dp:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
         tinsert(UISpecialFrames, "CLIAltsDossierPopup")
 
         dp:SetBackdrop({
@@ -2324,72 +2347,78 @@ function CLIAlts:ShowDossierPopup(char)
             if dp.charData then
                 CLIAlts:ShowConfirmDelete(dp.charData)
             end
-        end)
+        end, 11)
         btnDel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 14)
+        dp.btnDel = btnDel
 
-        local btnSetCore = CreateRetroButton(dp, "[ SET CORE (35) ]", 115, 20, function()
+        local btnSetCore = CreateRetroButton(dp, "[ SET CORE (35) ]", 116, 20, function()
             if dp.charData then
-                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
                     CLIAlts:SetCharacterCohort(charName, "CORE")
                     CLIAlts:ShowDossierPopup(dp.charData)
                     CLIAlts:RequestRender()
                 end
             end
-        end)
+        end, 11)
         btnSetCore:SetPoint("LEFT", btnDel, "RIGHT", 6, 0)
+        dp.btnSetCore = btnSetCore
 
-        local btnSetAlt = CreateRetroButton(dp, "[ SET ALT (25) ]", 108, 20, function()
+        local btnSetAlt = CreateRetroButton(dp, "[ SET ALT (25) ]", 110, 20, function()
             if dp.charData then
-                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
                     CLIAlts:SetCharacterCohort(charName, "RESERVE")
                     CLIAlts:ShowDossierPopup(dp.charData)
                     CLIAlts:RequestRender()
                 end
             end
-        end)
+        end, 11)
         btnSetAlt:SetPoint("LEFT", btnSetCore, "RIGHT", 6, 0)
+        dp.btnSetAlt = btnSetAlt
 
-        local btnSetBank = CreateRetroButton(dp, "[ SET BANK (1) ]", 105, 20, function()
+        local btnSetBank = CreateRetroButton(dp, "[ SET BANK (1) ]", 108, 20, function()
             if dp.charData then
-                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
                     CLIAlts:SetCharacterCohort(charName, "BANK")
                     CLIAlts:ShowDossierPopup(dp.charData)
                     CLIAlts:RequestRender()
                 end
             end
-        end)
+        end, 11)
         btnSetBank:SetPoint("LEFT", btnSetAlt, "RIGHT", 6, 0)
+        dp.btnSetBank = btnSetBank
 
-        local btnUnset = CreateRetroButton(dp, "[ UNSET ]", 70, 20, function()
+        local btnUnset = CreateRetroButton(dp, "[ UNSET ]", 72, 20, function()
             if dp.charData then
-                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
                     CLIAlts:SetCharacterCohort(charName, "UNASSIGNED")
                     CLIAlts:ShowDossierPopup(dp.charData)
                     CLIAlts:RequestRender()
                 end
             end
-        end)
+        end, 11)
         btnUnset:SetPoint("LEFT", btnSetBank, "RIGHT", 6, 0)
+        dp.btnUnset = btnUnset
 
         local btnClose = CreateRetroButton(dp, "[ CLOSE ]", 75, 20, function()
             dp:Hide()
-        end)
+        end, 11)
         btnClose:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 14)
+        dp.btnClose = btnClose
 
         -- Row 2 (Middle, y=42): 1-Click Supply Role Configuration Bar
         local roleLabel = dp:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(roleLabel, 12, "BOLD")
+        self:SetWidgetFont(roleLabel, 11, "")
         roleLabel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 42)
         roleLabel:SetText("ROLE:")
         dp.roleLabel = roleLabel
 
         local function OnRoleClick(roleName)
             if dp.charData then
-                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
                     CLIAlts:SetCharacterSupplyRole(charName, roleName)
                     CLIAlts:ShowDossierPopup(dp.charData)
@@ -2398,35 +2427,35 @@ function CLIAlts:ShowDossierPopup(char)
             end
         end
 
-        local btnRoleTailor = CreateRetroButton(dp, "[ Tailor/Bags ]", 88, 19, function() OnRoleClick("Tailor/Bags") end)
+        local btnRoleTailor = CreateRetroButton(dp, "[ Tailor/Bags ]", 92, 19, function() OnRoleClick("Tailor/Bags") end, 11)
         btnRoleTailor:SetPoint("LEFT", roleLabel, "RIGHT", 6, 0)
         dp.btnRoleTailor = btnRoleTailor
 
-        local btnRoleAlch = CreateRetroButton(dp, "[ Alch/DE ]", 74, 19, function() OnRoleClick("Alch/DE") end)
+        local btnRoleAlch = CreateRetroButton(dp, "[ Alch/DE ]", 76, 19, function() OnRoleClick("Alch/DE") end, 11)
         btnRoleAlch:SetPoint("LEFT", btnRoleTailor, "RIGHT", 4, 0)
         dp.btnRoleAlch = btnRoleAlch
 
-        local btnRoleMiner = CreateRetroButton(dp, "[ Miner/BS ]", 78, 19, function() OnRoleClick("Miner/BS") end)
+        local btnRoleMiner = CreateRetroButton(dp, "[ Miner/BS ]", 80, 19, function() OnRoleClick("Miner/BS") end, 11)
         btnRoleMiner:SetPoint("LEFT", btnRoleAlch, "RIGHT", 4, 0)
         dp.btnRoleMiner = btnRoleMiner
 
-        local btnRoleLW = CreateRetroButton(dp, "[ Skinner/LW ]", 86, 19, function() OnRoleClick("Skinner/LW") end)
+        local btnRoleLW = CreateRetroButton(dp, "[ Skinner/LW ]", 88, 19, function() OnRoleClick("Skinner/LW") end, 11)
         btnRoleLW:SetPoint("LEFT", btnRoleMiner, "RIGHT", 4, 0)
         dp.btnRoleLW = btnRoleLW
 
-        local btnRolePassive = CreateRetroButton(dp, "[ Passive LP ]", 82, 19, function() OnRoleClick("Passive LP") end)
+        local btnRolePassive = CreateRetroButton(dp, "[ Passive LP ]", 84, 19, function() OnRoleClick("Passive LP") end, 11)
         btnRolePassive:SetPoint("LEFT", btnRoleLW, "RIGHT", 4, 0)
         dp.btnRolePassive = btnRolePassive
 
-        local btnRoleAuto = CreateRetroButton(dp, "[ Auto ]", 60, 19, function() OnRoleClick("clear") end)
+        local btnRoleAuto = CreateRetroButton(dp, "[ Auto ]", 62, 19, function() OnRoleClick("clear") end, 11)
         btnRoleAuto:SetPoint("LEFT", btnRolePassive, "RIGHT", 4, 0)
         dp.btnRoleAuto = btnRoleAuto
 
-        local btnRoleCustom = CreateRetroButton(dp, "[ Custom... ]", 76, 19, function()
+        local btnRoleCustom = CreateRetroButton(dp, "[ Custom... ]", 78, 19, function()
             if dp.charData then
                 CLIAlts:ShowCustomRolePrompt(dp.charData)
             end
-        end)
+        end, 11)
         btnRoleCustom:SetPoint("LEFT", btnRoleAuto, "RIGHT", 4, 0)
         dp.btnRoleCustom = btnRoleCustom
 
@@ -2446,6 +2475,16 @@ function CLIAlts:ShowDossierPopup(char)
         dossierPopup.roleLabel:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
     end
 
+    -- Highlight active Cohort
+    local activeTier = char.tier or "UNASSIGNED"
+    if dossierPopup.btnSetCore then
+        dossierPopup.btnSetCore.label:SetText(activeTier == "CORE" and "|cff00ff66*CORE (35)*|r" or "[ SET CORE (35) ]")
+        dossierPopup.btnSetAlt.label:SetText(activeTier == "RESERVE" and "|cff00ff66*ALT (25)*|r" or "[ SET ALT (25) ]")
+        dossierPopup.btnSetBank.label:SetText(activeTier == "BANK" and "|cff00ff66*BANK (1)*|r" or "[ SET BANK (1) ]")
+        dossierPopup.btnUnset.label:SetText(activeTier == "UNASSIGNED" and "|cff00ff66*UNASSIGNED*|r" or "[ UNSET ]")
+    end
+
+    -- Highlight active Supply Role
     local activeRole = char.supply_role or ""
     if dossierPopup.btnRoleTailor then
         dossierPopup.btnRoleTailor.label:SetText(activeRole == "Tailor/Bags" and "|cff00ff66*Tailor/Bags*|r" or "[ Tailor/Bags ]")
@@ -2605,7 +2644,7 @@ function CLIAlts:ShowCustomRolePrompt(char)
         cp:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
         local title = cp:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(title, 13, "BOLD")
+        self:SetWidgetFont(title, 13, "")
         title:SetPoint("TOPLEFT", cp, "TOPLEFT", 16, -14)
         title:SetPoint("TOPRIGHT", cp, "TOPRIGHT", -16, -14)
         title:SetJustifyH("LEFT")
@@ -2632,7 +2671,7 @@ function CLIAlts:ShowCustomRolePrompt(char)
         local function SaveRole()
             local text = (eb:GetText() or ""):match("^%s*(.-)%s*$")
             if cp.targetChar then
-                local charName = cp.targetChar.name or (cp.targetChar.fullName and cp.targetChar.fullName:match("^(%S+)"))
+                local charName = cp.targetChar.fullName or cp.targetChar.name or (cp.targetChar.fullName and cp.targetChar.fullName:match("^(%S+)"))
                 if charName then
                     CLIAlts:SetCharacterSupplyRole(charName, text)
                     CLIAlts:ShowDossierPopup(cp.targetChar)
@@ -2936,7 +2975,7 @@ function CLIAlts:ShowExportPopup()
         ep:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
         local title = ep:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(title, 14, "BOLD")
+        self:SetWidgetFont(title, 14, "OUTLINE")
         title:SetPoint("TOPLEFT", ep, "TOPLEFT", 16, -14)
         title:SetText("CLIALTS :: CSV EXPORT (PRESS CTRL+C TO COPY)")
         ep.title = title
