@@ -9,4 +9,6 @@ ignore:
   - .luacheckrc
   - .pkgmeta
   - .gitignore
+  - .gitattributes
+  - tests
   - media

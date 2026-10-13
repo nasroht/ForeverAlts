@@ -5,13 +5,17 @@
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable
+local CLIAlts = addonTable or _G["CLIAlts"] or {}
 
 -- ----------------------------------------------------------------------------
 -- Chat Output Helper
 -- ----------------------------------------------------------------------------
 function CLIAlts:Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r %s", msg or ""))
+    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r %s", msg or ""))
+    else
+        print(string.format("[CLIAlts] %s", msg or ""))
+    end
 end
 
 local SafeAfter = CLIAlts.SafeAfter or function(delay, callback)

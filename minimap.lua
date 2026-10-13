@@ -6,7 +6,7 @@
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable
+local CLIAlts = addonTable or _G["CLIAlts"] or {}
 
 local minimapBtn = nil
 

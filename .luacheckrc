@@ -12,6 +12,7 @@ self = false
 exclude_files = {
     ".github/",
     "media/",
+    "tests/",
 }
 
 -- Code style rules to ignore

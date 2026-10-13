@@ -5,9 +5,17 @@
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable
+local CLIAlts = addonTable or _G["CLIAlts"] or {}
 _G["CLIAlts"] = CLIAlts
 _G["clialts"] = CLIAlts
+
+function CLIAlts:Print(msg)
+    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r %s", msg or ""))
+    else
+        print(string.format("[CLIAlts] %s", msg or ""))
+    end
+end
 
 -- ----------------------------------------------------------------------------
 -- Constants & Reference Tables
@@ -1780,6 +1788,9 @@ end
 -- Self-Test Verification Suite (/clialts selftest)
 -- ----------------------------------------------------------------------------
 function CLIAlts:RunSelfTest()
+    if self.InitDB then
+        self:InitDB()
+    end
     local passed = 0
     local failed = 0
     local errors = {}
@@ -2244,7 +2255,11 @@ function CLIAlts:RunSelfTest()
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cffff3333* FAILED:|r %s", err))
+            if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+                DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cffff3333* FAILED:|r %s", err))
+            else
+                print(string.format("  * FAILED: %s", err))
+            end
         end
     end
 
