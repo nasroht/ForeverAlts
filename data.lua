@@ -1974,8 +1974,10 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
     end
 
     local defaultTarget = (normalizedTier == "CORE" and 35) or (normalizedTier == "RESERVE" and 25) or (normalizedTier == "BANK" and 1) or 60
-    if targetLevel then
-        foundChar.target_level = tonumber(targetLevel) or foundChar.target_level or defaultTarget
+    if targetLevel and tonumber(targetLevel) then
+        foundChar.target_level = tonumber(targetLevel)
+    elseif tier and tier ~= "" then
+        foundChar.target_level = defaultTarget
     else
         foundChar.target_level = foundChar.target_level or defaultTarget
     end
@@ -1993,8 +1995,7 @@ end
 function CLIAlts:CycleCharacterTier(char)
     if not char then return "UNASSIGNED" end
     local cur = char.tier or "UNASSIGNED"
-    local nextTier = "CORE"
-    local nextTarget = 35
+    local nextTier, nextTarget
 
     if cur == "CORE" then
         nextTier = "RESERVE"
