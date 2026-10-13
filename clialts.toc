@@ -8,6 +8,7 @@
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## Category: Character
 ## X-License: MIT
+## X-Curse-Project-ID: 1742004
 
 data.lua
 minimap.lua
