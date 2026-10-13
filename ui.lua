@@ -993,6 +993,7 @@ function CLIAlts:CreateMainFrame()
         local text = self:GetText() or ""
         self:SetText("")
         historyIndex = 0
+        self:ClearFocus()
         CLIAlts:ExecutePromptCommand(text)
     end)
 
@@ -1028,11 +1029,43 @@ function CLIAlts:CreateMainFrame()
         end
     end)
 
+    -- Hidden Buttons for Enter and / keyboard focus overrides
+    local btnFocusEnter = CreateFrame("Button", "CLIAltsFocusEnterBtn", frame)
+    btnFocusEnter:SetScript("OnClick", function()
+        if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
+            frame.promptBox:SetFocus()
+        end
+    end)
+
+    local btnFocusSlash = CreateFrame("Button", "CLIAltsFocusSlashBtn", frame)
+    btnFocusSlash:SetScript("OnClick", function()
+        if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
+            frame.promptBox:SetFocus()
+            frame.promptBox:SetText("")
+        end
+    end)
+
+    -- Propagate keyboard input support (WoW Classic Era / modern client)
+    if frame.SetPropagateKeyboardInput then
+        frame:SetPropagateKeyboardInput(true)
+        frame:EnableKeyboard(true)
+        frame:SetScript("OnKeyDown", function(self, key)
+            if frame.promptBox and not frame.promptBox:HasFocus() then
+                if key == "ENTER" or key == "SLASH" or key == "/" then
+                    frame.promptBox:SetFocus()
+                    if key == "SLASH" or key == "/" then
+                        frame.promptBox:SetText("")
+                    end
+                end
+            end
+        end)
+    end
+
     -- Prompt Hint & Feedback Line
     local promptStatusTip = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(promptStatusTip, fontSize - 2)
     promptStatusTip:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 14)
-    promptStatusTip:SetText("|cff888888[Commands: 1-5, sort <col>, filter <query>, find <text>, watch <item>, next, export, help]|r")
+    promptStatusTip:SetText("|cff888888[Press Enter or / to type: 1-5, sort <col>, filter <query>, next, export, help]|r")
     frame.promptStatusTip = promptStatusTip
 
     local botAscii = frame:CreateFontString(nil, "OVERLAY")
@@ -1052,8 +1085,24 @@ function CLIAlts:CreateMainFrame()
     end)
     frame:SetScript("OnShow", function(self)
         tickerElapsed = 0
+        pcall(function()
+            if SetOverrideBindingClick then
+                SetOverrideBindingClick(self, false, "ENTER", "CLIAltsFocusEnterBtn")
+                SetOverrideBindingClick(self, false, "/", "CLIAltsFocusSlashBtn")
+            end
+        end)
         if renderDirty then
             CLIAlts:Render()
+        end
+    end)
+    frame:SetScript("OnHide", function(self)
+        pcall(function()
+            if ClearOverrideBindings then
+                ClearOverrideBindings(self)
+            end
+        end)
+        if frame.promptBox then
+            frame.promptBox:ClearFocus()
         end
     end)
 

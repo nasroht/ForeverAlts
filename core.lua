@@ -14,22 +14,13 @@ function CLIAlts:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r %s", msg or ""))
 end
 
-local function SafeAfter(delay, callback)
+local SafeAfter = CLIAlts.SafeAfter or function(delay, callback)
     if C_Timer and C_Timer.After then
         C_Timer.After(delay, callback)
-        return
     end
-    local timerFrame = CreateFrame("Frame")
-    local elapsed = 0
-    timerFrame:SetScript("OnUpdate", function(self, dt)
-        elapsed = elapsed + dt
-        if elapsed >= delay then
-            self:SetScript("OnUpdate", nil)
-            callback()
-        end
-    end)
 end
-CLIAlts.SafeAfter = SafeAfter
+
+local hasRequestedRaidInfo = false
 
 -- ----------------------------------------------------------------------------
 -- Event Handler Frame
@@ -58,6 +49,7 @@ local safeEvents = {
     "CRAFT_SHOW",
     "CRAFT_UPDATE",
     "UPDATE_INSTANCE_INFO",
+    "BAG_UPDATE_DELAYED",
     "BAG_UPDATE",
     "BANKFRAME_CLOSED",
     "MAIL_INBOX_UPDATE",
@@ -93,7 +85,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:RecordGoldSnapshot()
 
         -- Scan watchlist item counts across bags & bank
-        CLIAlts:CollectWatchlistCounts()
+        CLIAlts:UpdateWatchCounts()
 
         -- Immediate snapshot
         local char = CLIAlts:CollectCurrentCharacter(false, true)
@@ -111,24 +103,32 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             CLIAlts:CheckMailExpiryAlert()
         end
 
+        -- Request raid/instance lockouts ONCE per session 2s after entering the world
+        if event == "PLAYER_ENTERING_WORLD" and not hasRequestedRaidInfo then
+            hasRequestedRaidInfo = true
+            SafeAfter(2.0, function()
+                if RequestRaidInfo then pcall(RequestRaidInfo) end
+            end)
+        end
+
         -- Delayed sync after 1.5s, 3.0s, and 5.0s to ensure server-synced money, XP, and resting state
         SafeAfter(1.5, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
-            CLIAlts:CollectWatchlistCounts()
+            CLIAlts:UpdateWatchCounts()
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:RequestRender()
         end)
 
         SafeAfter(3.0, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
-            CLIAlts:CollectWatchlistCounts()
+            CLIAlts:UpdateWatchCounts()
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:RequestRender()
         end)
 
         SafeAfter(5.0, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
-            CLIAlts:CollectWatchlistCounts()
+            CLIAlts:UpdateWatchCounts()
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:RequestRender()
         end)
@@ -178,8 +178,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:RequestRender()
 
-    elseif event == "BAG_UPDATE" or event == "BANKFRAME_CLOSED" then
-        CLIAlts:CollectWatchlistCounts()
+    elseif event == "BAG_UPDATE_DELAYED" or event == "BAG_UPDATE" or event == "BANKFRAME_CLOSED" then
+        CLIAlts:UpdateWatchCounts()
         CLIAlts:RequestRender()
 
     elseif event == "MAIL_INBOX_UPDATE" or event == "MAIL_SHOW" then

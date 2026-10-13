@@ -2,8 +2,10 @@
 ## Title: |cff00ff66CLIAlts|r [Retro Alt Tracker]
 ## Notes: Retro ASCII TUI-styled character and alt tracker. Tracks Faction, Race, Level, Rested XP with ETA, Professions, and Gold.
 ## Author: CLIAlts
-## Version: 1.0.0
+## Version: 1.1.0
 ## SavedVariables: CLIAltsDB
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+## Category: Character
 ## X-License: MIT
 
 data.lua

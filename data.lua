@@ -387,23 +387,12 @@ end
 
 function CLIAlts:IsCurrentPlayer(char)
     if not char then return false end
-    if not self.curPlayerFullName then
+    if not self.curPlayerKey then
         self:CacheCurrentPlayer()
     end
-    local curFull = self.curPlayerFullName
-    local curPrim = self.curPlayerPrimary
-
-    if curFull then
-        if char.fullName == curFull or char.name == curFull or char.key == curFull then
-            return true
-        end
-    end
-    if curPrim then
-        if char.primaryName == curPrim or char.name == curPrim or char.key == curPrim then
-            return true
-        end
-    end
-    return false
+    local curKey = self.curPlayerKey
+    if not curKey then return false end
+    return (char.key == curKey) or (char.fullName == curKey) or (char.name == curKey)
 end
 
 function CLIAlts:GetCharacterKey(name, realm)
@@ -570,7 +559,6 @@ function CLIAlts:CollectLockouts(existing)
         for k, v in pairs(existing) do locks[k] = v end
     end
     pcall(function()
-        if RequestRaidInfo then pcall(RequestRaidInfo) end
         if GetNumSavedInstances and GetSavedInstanceInfo then
             local n = GetNumSavedInstances() or 0
             local now = time()
@@ -611,6 +599,19 @@ function CLIAlts:CollectWatchlistCounts(existing)
         end
     end)
     return counts
+end
+
+function CLIAlts:UpdateWatchCounts()
+    if not CLIAltsDB or not CLIAltsDB.characters then return end
+    local curKey = self.curPlayerKey
+    if not curKey then
+        local _, _, full = self:GetPlayerNames()
+        curKey = full and self:GetCharacterKey(full)
+    end
+    local char = curKey and CLIAltsDB.characters[curKey]
+    if char then
+        char.watchlistCounts = self:CollectWatchlistCounts(char.watchlistCounts)
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -773,48 +774,6 @@ end
 -- ----------------------------------------------------------------------------
 -- Rested Zone & Location Detection Helpers
 -- ----------------------------------------------------------------------------
-function CLIAlts:IsLocationResting(loc)
-    if not loc or loc == "" then return false end
-    local l = loc:lower()
-
-    -- Common inn/tavern/camp/tent keywords
-    if l:find("inn") or l:find("tavern") or l:find("lodge") or l:find("saloon")
-       or l:find("camp") or l:find("campsite") or l:find("tent") or l:find("resting")
-       or l:find("haven") or l:find("refuge") or l:find("sanctuary") then
-        return true
-    end
-
-    -- Major cities & sanctuary hubs
-    local cities = {
-        "stormwind", "ironforge", "darnassus", "exodar", "deeprun tram",
-        "orgrimmar", "undercity", "thunder bluff", "silvermoon",
-        "shattrath", "dalaran", "booty bay", "gadgetzan", "everlook", "ratchet"
-    }
-    for _, city in ipairs(cities) do
-        if l:find(city) then
-            return true
-        end
-    end
-
-    -- Well-known resting subzones & settlements
-    local settlements = {
-        "goldshire", "kharanos", "thelsamar", "lakeshire", "darkshire",
-        "sentinel hill", "southshore", "menethil", "auberdine", "astranaar",
-        "feathermoon", "nijel", "thalanaar", "aerie peak", "nethergarde",
-        "stoutlager", "pride", "razor hill", "bloodhoof", "brill",
-        "the crossroads", "crossroads", "tarren mill", "sun rock", "freewind",
-        "shadowprey", "camp taurajo", "camp narache", "camp mojache",
-        "kargath", "hammerfall", "stonard", "revantusk", "light's hope",
-        "thorium point", "cenarion"
-    }
-    for _, town in ipairs(settlements) do
-        if l:find(town) then
-            return true
-        end
-    end
-
-    return false
-end
 
 function CLIAlts:IsCharacterResting(char)
     if not char then return false end
@@ -1132,9 +1091,49 @@ function CLIAlts:StripColors(str)
     return str
 end
 
+local function SafeStrLenUtf8(s)
+    if not s then return 0 end
+    if strlenutf8 then return strlenutf8(s) end
+    if utf8 and utf8.len then
+        local l = utf8.len(s)
+        if l then return l end
+    end
+    return string.len(s)
+end
+
+local function Utf8Sub(str, startChar, numChars)
+    if not str then return "" end
+    local curChar = 0
+    local startByte = 1
+    local endByte = #str
+    local i = 1
+    local len = #str
+    while i <= len do
+        curChar = curChar + 1
+        if curChar == startChar then
+            startByte = i
+        end
+        if curChar == startChar + numChars then
+            endByte = i - 1
+            break
+        end
+        local b = str:byte(i)
+        if b < 128 then
+            i = i + 1
+        elseif b < 224 then
+            i = i + 2
+        elseif b < 240 then
+            i = i + 3
+        else
+            i = i + 4
+        end
+    end
+    return str:sub(startByte, endByte)
+end
+
 function CLIAlts:VisibleLen(str)
     if not str then return 0 end
-    return string.len(self:StripColors(str))
+    return SafeStrLenUtf8(self:StripColors(str))
 end
 
 function CLIAlts:Pad(text, width, align, colorHex)
@@ -1146,7 +1145,7 @@ function CLIAlts:Pad(text, width, align, colorHex)
     local visLen = self:VisibleLen(text)
     if visLen >= width then
         if visLen > width then
-            local clean = self:StripColors(text):sub(1, width)
+            local clean = Utf8Sub(self:StripColors(text), 1, width)
             if colorHex then
                 return string.format("|cff%s%s|r", colorHex, clean)
             else
@@ -1267,7 +1266,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         return list
     end
 
-    local query = filterQuery or self.activeFilter
+    local query = filterQuery
     if query then query = query:lower():match("^%s*(.-)%s*$") end
     if query == "" then query = nil end
 
@@ -1306,20 +1305,21 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     end
 
     sortBy = sortBy or CLIAltsDB.settings.sortBy or "level"
-    -- Precompute sort keys once per character to avoid expensive repeated calculations in comparator
+    local sortValues = {}
     if sortBy == "rested" then
         for _, char in ipairs(list) do
             local r = self:GetRestedData(char)
-            char._sortRested = (r and r.percent) or 0
+            sortValues[char] = (r and r.percent) or 0
         end
     elseif sortBy == "xp" or sortBy == "progress" then
         for _, char in ipairs(list) do
-            char._sortProgress = (char.maxXP and char.maxXP > 0) and ((char.xp or 0) / char.maxXP) or 0
+            sortValues[char] = (char.maxXP and char.maxXP > 0) and ((char.xp or 0) / char.maxXP) or 0
         end
     elseif sortBy == "waste" then
         for _, char in ipairs(list) do
-            local _, wastedXP = self:GetRestedWaste(char)
-            char._sortWaste = wastedXP or 0
+            local wastedSec, wastedXP = self:GetRestedWaste(char)
+            local frac = (char.maxXP and char.maxXP > 0) and (wastedXP / char.maxXP) or 0
+            sortValues[char] = (wastedSec or 0) * 1000 + frac
         end
     end
 
@@ -1328,27 +1328,13 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
             if sortAsc then return (a.name or "") < (b.name or "") else return (a.name or "") > (b.name or "") end
         elseif sortBy == "gold" then
             if sortAsc then return (a.money or 0) < (b.money or 0) else return (a.money or 0) > (b.money or 0) end
-        elseif sortBy == "xp" or sortBy == "progress" then
-            local pA = a._sortProgress or 0
-            local pB = b._sortProgress or 0
-            if pA == pB then
+        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" then
+            local valA = sortValues[a] or 0
+            local valB = sortValues[b] or 0
+            if valA == valB then
                 return (a.level or 0) > (b.level or 0)
             end
-            if sortAsc then return pA < pB else return pA > pB end
-        elseif sortBy == "rested" then
-            local pA = a._sortRested or 0
-            local pB = b._sortRested or 0
-            if pA == pB then
-                return (a.level or 0) > (b.level or 0)
-            end
-            if sortAsc then return pA < pB else return pA > pB end
-        elseif sortBy == "waste" then
-            local wA = a._sortWaste or 0
-            local wB = b._sortWaste or 0
-            if wA == wB then
-                return (a.level or 0) > (b.level or 0)
-            end
-            if sortAsc then return wA < wB else return wA > wB end
+            if sortAsc then return valA < valB else return valA > valB end
         else -- default "level"
             local lvlA = a.level or 0
             local lvlB = b.level or 0
@@ -1358,13 +1344,6 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
             if sortAsc then return lvlA < lvlB else return lvlA > lvlB end
         end
     end)
-
-    -- Clean up temporary sort keys from character objects
-    for _, char in ipairs(list) do
-        char._sortRested = nil
-        char._sortProgress = nil
-        char._sortWaste = nil
-    end
 
     return list
 end
@@ -1410,7 +1389,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Self-Calibrating Rested Model (Feature 1)
 -- ----------------------------------------------------------------------------
-function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride)
+function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride, forceLogoutState)
     if not char then return 0 end
     local maxXP = char.maxXP or 0
     if maxXP <= 0 then return char.restedXP or 0 end
@@ -1423,7 +1402,12 @@ function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride)
     local capMult = 1.5 * speedMult
     local maxRested = maxXP * capMult
 
-    local isResting = self:IsCharacterResting(char)
+    local isResting
+    if forceLogoutState or (char.loggedOutInRestZone ~= nil) then
+        isResting = (char.loggedOutInRestZone == true)
+    else
+        isResting = self:IsCharacterResting(char)
+    end
     local baseRate = isResting and (maxXP / 576000) or (maxXP / 2304000)
     local ratePerSec = baseRate * speedMult
 
@@ -1443,16 +1427,26 @@ function CLIAlts:CalibrateRestedModel()
     local old = CLIAltsDB.characters[charKey]
     if not old or not old.cleanLogout or not old.lastUpdate then return end
 
+    local curLevel = (UnitLevel and UnitLevel("player")) or 1
+    if old.level and curLevel ~= old.level then return end
+
+    local maxXP = old.maxXP or (UnitXPMax and UnitXPMax("player")) or 0
+    if maxXP <= 0 then return end
+
+    local curRank = (CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    local speedMult = 1 + (curRank * 0.04)
+    local maxRested = maxXP * 1.5 * speedMult
+
+    local actualRested = GetXPExhaustion() or 0
+    -- Skip sample if old or actual rested XP is at or near cap (truncated offline delta)
+    if (old.restedXP or 0) >= maxRested * 0.98 or actualRested >= maxRested * 0.98 then return end
+
     local now = time()
     local elapsed = now - old.lastUpdate
     -- Require at least 10 minutes (600s) of offline time for a meaningful calibration sample
     if elapsed < 600 then return end
 
-    local actualRested = GetXPExhaustion() or 0
-    local maxXP = old.maxXP or (UnitXPMax and UnitXPMax("player")) or 0
-    if maxXP <= 0 then return end
-
-    local predicted = self:ProjectRested(old, now)
+    local predicted = self:ProjectRested(old, now, curRank, true)
     local drift = (actualRested - predicted) / maxXP
 
     -- Only calibrate if drift exceeds 2% of level max XP
@@ -1463,7 +1457,8 @@ function CLIAlts:CalibrateRestedModel()
             local baseInnRate = maxXP / 576000
             local baseWildRate = maxXP / 2304000
 
-            local isInn = (observedRate >= baseWildRate * 2.0)
+            -- Use stored logout rest state
+            local isInn = (old.loggedOutInRestZone == true)
             local baseRate = isInn and baseInnRate or baseWildRate
 
             local inferredSpeedMult = observedRate / baseRate
@@ -1471,13 +1466,22 @@ function CLIAlts:CalibrateRestedModel()
             if inferredRank < 0 then inferredRank = 0 end
             if inferredRank > 5 then inferredRank = 5 end
 
-            local prevRank = (CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-            if inferredRank ~= prevRank then
-                CLIAltsDB.settings.wellRestedRank = inferredRank
-                CLIAltsDB.settings.calibrated = true
-                self:InvalidateRestedCache()
-                self:Print(string.format("Rested model self-calibrated: Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
-                    inferredRank, inferredRank * 4, drift * 100))
+            if inferredRank == curRank then
+                -- Sample matches current setting: clear any pending change
+                CLIAltsDB.settings.pendingCalibratedRank = nil
+            else
+                if CLIAltsDB.settings.pendingCalibratedRank == inferredRank then
+                    -- Confirmed second consistent sample: commit change
+                    CLIAltsDB.settings.wellRestedRank = inferredRank
+                    CLIAltsDB.settings.calibrated = true
+                    CLIAltsDB.settings.pendingCalibratedRank = nil
+                    self:InvalidateRestedCache()
+                    self:Print(string.format("Rested model self-calibrated (confirmed): Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
+                        inferredRank, inferredRank * 4, drift * 100))
+                else
+                    -- First sample: hold pending confirmation on next login
+                    CLIAltsDB.settings.pendingCalibratedRank = inferredRank
+                end
             end
         end
     end
@@ -1553,7 +1557,7 @@ function CLIAlts:GetNextAltsPriority()
             local score = 0
             local reason = ""
             if isCapped then
-                score = 100000000 + (wastedXP or 0)
+                score = 100000000 + (wastedSec or 0)
                 reason = string.format("Capped for %s (%s XP wasted)", timeStr, self:FormatNumber(wastedXP))
             else
                 local timeToFull = (rested and rested.timeToFull) or 9999999
@@ -1629,7 +1633,7 @@ function CLIAlts:AddWatchItem(itemName)
         end
     end
     table.insert(CLIAltsDB.watchlist, itemName)
-    self:CollectWatchlistCounts()
+    self:UpdateWatchCounts()
     return true
 end
 
@@ -1645,6 +1649,9 @@ function CLIAlts:RemoveWatchItem(itemName)
         end
     end
     CLIAltsDB.watchlist = newWatch
+    if found then
+        self:UpdateWatchCounts()
+    end
     return found
 end
 
@@ -1740,10 +1747,6 @@ function CLIAlts:GetGoldHistoryDeltas()
         end
     end
 
-    if #hist > 0 and g1d == curGold and #hist > 1 then
-        g1d = hist[#hist - 1].gold
-    end
-
     return (curGold - g1d), (curGold - g7d), (curGold - g30d)
 end
 
@@ -1823,6 +1826,12 @@ end
 -- ----------------------------------------------------------------------------
 -- CSV Data Export (Feature 8)
 -- ----------------------------------------------------------------------------
+local function CsvQuote(val)
+    local s = tostring(val or "")
+    s = s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
+    return '"' .. s:gsub('"', '""') .. '"'
+end
+
 function CLIAlts:GenerateExportCSV()
     local lines = {}
     table.insert(lines, "Name,Realm,Faction,Race,Class,Level,XP,MaxXP,RestedXP,RestedPct,RestedStatus,WastedXP,Gold,Silver,Copper,Prof1,Prof1Rank,Prof2,Prof2Rank,Location,LastSeen")
@@ -1842,25 +1851,34 @@ function CLIAlts:GenerateExportCSV()
         local p2Name = (profs[2] and profs[2].name) or ""
         local p2Rank = (profs[2] and profs[2].rank) or 0
 
-        local row = string.format("%q,%q,%q,%q,%q,%d,%d,%d,%d,%d,%q,%d,%d,%d,%d,%q,%d,%q,%d,%q,%q",
-            c.fullName or c.name or "Unknown",
-            c.realm or "Forever",
-            c.faction or "Neutral",
-            c.race or "Unknown",
-            c.class or "Unknown",
-            c.level or 1,
-            c.xp or 0,
-            c.maxXP or 0,
-            c.restedXP or 0,
-            (rested and rested.percent) or 0,
-            (rested and rested.statusStr) or "Unknown",
-            wastedXP or 0,
-            gold, silver, copper,
-            p1Name, p1Rank,
-            p2Name, p2Rank,
-            c.location or "Unknown",
-            self:GetTimeAgo(c.lastUpdate)
-        )
+        local lastSeenStr = ""
+        if c.lastUpdate and c.lastUpdate > 0 then
+            lastSeenStr = date("%Y-%m-%d %H:%M:%S", c.lastUpdate)
+        end
+
+        local row = table.concat({
+            CsvQuote(c.fullName or c.name or "Unknown"),
+            CsvQuote(c.realm or "Forever"),
+            CsvQuote(c.faction or "Neutral"),
+            CsvQuote(c.race or "Unknown"),
+            CsvQuote(c.class or "Unknown"),
+            tostring(c.level or 1),
+            tostring(c.xp or 0),
+            tostring(c.maxXP or 0),
+            tostring(c.restedXP or 0),
+            tostring((rested and rested.percent) or 0),
+            CsvQuote((rested and rested.statusStr) or "Unknown"),
+            tostring(wastedXP or 0),
+            tostring(gold),
+            tostring(silver),
+            tostring(copper),
+            CsvQuote(p1Name),
+            tostring(p1Rank),
+            CsvQuote(p2Name),
+            tostring(p2Rank),
+            CsvQuote(c.location or "Unknown"),
+            CsvQuote(lastSeenStr),
+        }, ",")
         table.insert(lines, row)
     end
 
