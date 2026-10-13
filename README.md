@@ -41,6 +41,11 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
   - Alerts you at login if any alt has mail expiring in $\le 3$ days.
 - **CSV Data Export**:
   - `/clialts export` (or `> export`) opens an in-game copyable dialog formatted for easy import into spreadsheets (Excel, Google Sheets).
+- **Leveling Session Planner (`> plan <hours>`)**:
+  - Automatically tracks observed XP/hour per alt on `PLAYER_XP_UPDATE` using session XP over session time.
+  - Computes how long each alt's rested pool will last using a self-calibrating rested burn ratio.
+  - Generates an optimal leveling schedule for your requested playtime: e.g. `Thor 90m, then Åse 45m`.
+  - Prioritizes capped alts first to stop wasted rested XP, followed by alts with largest available rested pools.
 - **Customizable UI Scale & Fonts**:
   - Monospace font rendering with exact column width calculations.
   - `/clialts scale <0.7-1.8>` and title bar `[ SCALE ]` button for 1440p / 4K displays.
@@ -70,6 +75,7 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | `/clialts selftest` | Run self-test unit assertions on Rested XP, Waste & Calibration |
 | `/clialts alerts [cat]` | Toggle login alert categories (`cd`, `rested`, `mail`, `locks`, `on`, `off`) |
 | `/clialts digest` | Display boxed login summary digest on demand |
+| `/clialts plan [hours]` | Compute ordered leveling session schedule (default: 2h) |
 | `/clialts reset` | Reset window position to the center of your screen |
 | `/clialts help` | Open the in-game retro quick guide popup |
 

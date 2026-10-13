@@ -216,6 +216,7 @@ function CLIAlts:InitDB()
     if CLIAltsDB.settings.alerts.rested == nil then CLIAltsDB.settings.alerts.rested = true end
     if CLIAltsDB.settings.alerts.mail == nil then CLIAltsDB.settings.alerts.mail = true end
     if CLIAltsDB.settings.alerts.lockouts == nil then CLIAltsDB.settings.alerts.lockouts = true end
+    if CLIAltsDB.settings.restedBurnRatio == nil then CLIAltsDB.settings.restedBurnRatio = 0.5 end
     CLIAltsDB.characters = CLIAltsDB.characters or {}
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
     CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
@@ -760,6 +761,7 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         minMailDays = liveMinMailDays or (existing and existing.minMailDays),
         mailCheckedTime = liveMailCheckedTime or (existing and existing.mailCheckedTime),
         watchlistCounts = self:CollectWatchlistCounts(existing and existing.watchlistCounts),
+        xpHour = (existing and existing.xpHour) or (cachedCurrentChar and cachedCurrentChar.xpHour),
         lastUpdate = now,
         logoutTime = (isLogout and now) or (existing and existing.logoutTime) or now,
     }
@@ -1647,8 +1649,57 @@ function CLIAlts:RunSelfTest()
     self:ToggleAlert("cooldowns", true)
     CLIAltsDB.characters = oldChars
 
+    -- 5. Leveling Session Planner & Burn Ratio Tests
+    -- 5a. Short sample guard (< 1000 rested burned)
+    local _, _, stBurn1 = self:EvaluateBurnRatio(500, 1000, 0.5, nil)
+    Assert(stBurn1 == "SHORT_SAMPLE", "EvaluateBurnRatio: guards against short samples (<1000 rested)")
+
+    -- 5b. Match within 5% drift
+    local infB2, driftB2, stBurn2 = self:EvaluateBurnRatio(2000, 4000, 0.5, nil)
+    Assert(stBurn2 == "MATCH" and infB2 == 0.5 and math.abs(driftB2) < 0.001, "EvaluateBurnRatio: matches standard 0.50 burn ratio")
+
+    -- 5c. Drift detected (observed 0.75, current 0.50) -> PENDING on 1st sample
+    local infB3, _, stBurn3 = self:EvaluateBurnRatio(3000, 4000, 0.5, nil)
+    Assert(stBurn3 == "PENDING" and infB3 == 0.75, "EvaluateBurnRatio: detects drift to 0.75 and sets PENDING on 1st sample")
+
+    -- 5d. Second consistent sample confirms burn ratio change
+    local infB4, _, stBurn4 = self:EvaluateBurnRatio(3000, 4000, 0.5, 0.75)
+    Assert(stBurn4 == "CONFIRMED" and infB4 == 0.75, "EvaluateBurnRatio: confirms burn ratio 0.75 on 2nd sample")
+
+    -- 5e. GenerateLevelingPlan allocation & ordering
+    local mockAlts = {
+        {
+            name = "Thor",
+            classFile = "WARRIOR",
+            level = 30,
+            maxLevel = 60,
+            maxXP = 20000,
+            restedXP = 10000,
+            xpHour = 20000,
+            lastUpdate = T0,
+            loggedOutInRestZone = true,
+        },
+        {
+            name = "Ase",
+            classFile = "PRIEST",
+            level = 20,
+            maxLevel = 60,
+            maxXP = 15000,
+            restedXP = 5000,
+            xpHour = 10000,
+            lastUpdate = T0,
+            loggedOutInRestZone = true,
+        },
+    }
+    local planSched, planSummary, totalAlloc, targetMins = self:GenerateLevelingPlan(1.5, mockAlts, T0)
+    Assert(#planSched == 2, "GenerateLevelingPlan: allocates across both mock alts")
+    Assert(totalAlloc == 90 and targetMins == 90, "GenerateLevelingPlan: allocates exactly requested 90 minutes")
+    Assert(planSched[1].name == "Thor" and planSched[1].mins == 60, "GenerateLevelingPlan: Thor allocated 60m")
+    Assert(planSched[2].name == "Ase" and planSched[2].mins == 30, "GenerateLevelingPlan: Ase allocated 30m")
+    Assert(planSummary:find("Thor", 1, true) ~= nil and planSummary:find("60m", 1, true) ~= nil and planSummary:find("Ase", 1, true) ~= nil and planSummary:find("30m", 1, true) ~= nil, "GenerateLevelingPlan: formatted summary contains 'Thor 60m, then Ase 30m'")
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -2322,3 +2373,284 @@ function CLIAlts:GenerateExportCSV()
 
     return table.concat(lines, "\n")
 end
+
+-- ----------------------------------------------------------------------------
+-- Leveling Session Planner & XP Tracking (Feature 10: > plan <hours>)
+-- ----------------------------------------------------------------------------
+function CLIAlts:InitSessionXP()
+    if not UnitXP or not UnitXPMax or not UnitLevel then return end
+    local curXP = UnitXP("player") or 0
+    local maxXP = UnitXPMax("player") or 0
+    local curLvl = UnitLevel("player") or 1
+    local curRested = (GetXPExhaustion and GetXPExhaustion()) or 0
+    self.sessionXP = {
+        startTime = time(),
+        lastXP = curXP,
+        maxXP = maxXP,
+        level = curLvl,
+        lastRested = curRested,
+        xpGained = 0,
+        restedBurned = 0,
+        restedXPGained = 0,
+    }
+end
+
+function CLIAlts:UpdateSessionXP()
+    if not self.sessionXP then
+        self:InitSessionXP()
+        return
+    end
+    if not UnitXP or not UnitXPMax or not UnitLevel then return end
+    local now = time()
+    local curXP = UnitXP("player") or 0
+    local maxXP = UnitXPMax("player") or 0
+    local curLvl = UnitLevel("player") or 1
+    local curRested = (GetXPExhaustion and GetXPExhaustion()) or 0
+
+    local deltaXP = 0
+    if curLvl == self.sessionXP.level then
+        if curXP >= self.sessionXP.lastXP then
+            deltaXP = curXP - self.sessionXP.lastXP
+        end
+    elseif curLvl > self.sessionXP.level then
+        deltaXP = math.max(0, (self.sessionXP.maxXP - self.sessionXP.lastXP) + curXP)
+        if curLvl > self.sessionXP.level + 1 then
+            deltaXP = deltaXP + ((curLvl - self.sessionXP.level - 1) * maxXP)
+        end
+    end
+
+    local deltaRested = 0
+    if self.sessionXP.lastRested and curRested < self.sessionXP.lastRested then
+        deltaRested = self.sessionXP.lastRested - curRested
+    end
+
+    self.sessionXP.xpGained = (self.sessionXP.xpGained or 0) + deltaXP
+    if deltaRested > 0 then
+        self.sessionXP.restedBurned = (self.sessionXP.restedBurned or 0) + deltaRested
+        self.sessionXP.restedXPGained = (self.sessionXP.restedXPGained or 0) + deltaXP
+    end
+
+    self.sessionXP.lastXP = curXP
+    self.sessionXP.maxXP = maxXP
+    self.sessionXP.level = curLvl
+    self.sessionXP.lastRested = curRested
+
+    -- Check burn ratio drift if at least 1,000 rested XP has been burned this session
+    if (self.sessionXP.restedBurned or 0) >= 1000 then
+        self:CheckBurnRatioDrift()
+    end
+
+    -- Update observed XP/hour for current character after at least 60 seconds
+    local elapsed = now - (self.sessionXP.startTime or now)
+    if elapsed >= 60 and (self.sessionXP.xpGained or 0) > 0 then
+        local currentRate = (self.sessionXP.xpGained / elapsed) * 3600
+        local curKey = self.curPlayerKey
+        if curKey and CLIAltsDB and CLIAltsDB.characters and CLIAltsDB.characters[curKey] then
+            local char = CLIAltsDB.characters[curKey]
+            if char.xpHour and char.xpHour > 0 then
+                char.xpHour = math.floor(char.xpHour * 0.75 + currentRate * 0.25 + 0.5)
+            else
+                char.xpHour = math.floor(currentRate + 0.5)
+            end
+        end
+    end
+end
+
+function CLIAlts:GetEstimatedXpHour(char)
+    if char and char.xpHour and char.xpHour > 0 then
+        return char.xpHour
+    end
+    local lvl = (char and char.level) or 1
+    return math.max(5000, math.floor(lvl * 650 + 4000))
+end
+
+function CLIAlts:EvaluateBurnRatio(restedBurned, restedXPGained, currentRatio, pendingRatio)
+    if not restedBurned or not restedXPGained or restedBurned < 1000 or restedXPGained <= 0 then
+        return nil, 0, "SHORT_SAMPLE"
+    end
+    currentRatio = currentRatio or 0.5
+    local observedRatio = restedBurned / restedXPGained
+    local drift = (observedRatio - currentRatio) / currentRatio
+
+    -- Require at least 5% drift from current ratio to consider adjusting
+    if math.abs(drift) <= 0.05 then
+        return currentRatio, drift, "MATCH"
+    end
+
+    -- Discretize / round inferred ratio to nearest 0.05, clamped between 0.20 and 1.00
+    local inferredRatio = math.floor((observedRatio * 20) + 0.5) / 20
+    if inferredRatio < 0.20 then inferredRatio = 0.20 end
+    if inferredRatio > 1.00 then inferredRatio = 1.00 end
+
+    if math.abs(inferredRatio - currentRatio) < 0.01 then
+        return currentRatio, drift, "MATCH"
+    end
+
+    local confirmed = (pendingRatio and math.abs(pendingRatio - inferredRatio) < 0.01)
+    return inferredRatio, drift, confirmed and "CONFIRMED" or "PENDING"
+end
+
+function CLIAlts:CheckBurnRatioDrift()
+    if not self.sessionXP then return end
+    local restedBurned = self.sessionXP.restedBurned or 0
+    local restedXPGained = self.sessionXP.restedXPGained or 0
+    local curRatio = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.restedBurnRatio) or 0.5
+    local pendingRatio = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.pendingBurnRatio
+
+    local inferred, drift, status = self:EvaluateBurnRatio(restedBurned, restedXPGained, curRatio, pendingRatio)
+    if status == "MATCH" then
+        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.pendingBurnRatio = nil end
+    elseif status == "PENDING" then
+        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.pendingBurnRatio = inferred end
+    elseif status == "CONFIRMED" then
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.restedBurnRatio = inferred
+            CLIAltsDB.settings.pendingBurnRatio = nil
+        end
+        self:Print(string.format("Rested burn ratio self-calibrated (confirmed): %.2f (drift was %+.1f%%).",
+            inferred, drift * 100))
+    end
+end
+
+function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
+    targetHours = tonumber(targetHours) or 2
+    if targetHours <= 0 then targetHours = 2 end
+    local targetMinutes = math.floor(targetHours * 60 + 0.5)
+
+    local now = nowTimestamp or time()
+    local burnRatio = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.restedBurnRatio) or 0.5
+    local chars = mockChars or self:GetCharactersList()
+    local candidates = {}
+
+    for _, c in ipairs(chars) do
+        local lvl = c.level or 1
+        local maxLvl = c.maxLevel or self:GetMaxLevel() or 60
+        if lvl < maxLvl then
+            local restedXP, restedState
+            if mockChars then
+                restedXP = c.restedXP or 0
+                restedState = (restedXP >= (c.maxXP or 1) * 1.5) and "FULL" or "RESTING"
+            else
+                restedXP, restedState = self:GetRestedData(c, false, now)
+            end
+
+            if restedXP and restedXP > 0 then
+                local xpHour = self:GetEstimatedXpHour(c)
+                local burnRatePerHour = xpHour * burnRatio
+                local burnHours = restedXP / math.max(1, burnRatePerHour)
+                local burnMinutes = math.max(1, math.floor(burnHours * 60 + 0.5))
+
+                local maxXP = c.maxXP or 1
+                local speedMult = 1 + (((CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0) * 0.04)
+                local maxRested = maxXP * 1.5 * speedMult
+                local isCapped = (restedXP >= maxRested * 0.99)
+                local wastedSec, wastedXP = 0, 0
+                if not mockChars then
+                    wastedSec, wastedXP = self:GetRestedWaste(c, now)
+                end
+
+                table.insert(candidates, {
+                    char = c,
+                    name = c.name or "Unknown",
+                    classFile = c.classFile,
+                    level = lvl,
+                    restedXP = restedXP,
+                    restedState = restedState,
+                    xpHour = xpHour,
+                    burnMinutes = burnMinutes,
+                    isCapped = isCapped,
+                    wastedXP = wastedXP or 0,
+                })
+            end
+        end
+    end
+
+    if #candidates == 0 then
+        return {}, "No alts with rested XP available to plan for.", 0, targetMinutes
+    end
+
+    -- Priority ordering:
+    -- 1. Capped alts (urgency: stop rested waste), higher wasted XP first
+    -- 2. Rested burn minutes descending
+    -- 3. Level descending, then name ascending
+    table.sort(candidates, function(a, b)
+        if a.isCapped ~= b.isCapped then
+            return a.isCapped == true
+        end
+        if a.isCapped and b.isCapped then
+            if (a.wastedXP or 0) ~= (b.wastedXP or 0) then
+                return (a.wastedXP or 0) > (b.wastedXP or 0)
+            end
+        end
+        if a.burnMinutes ~= b.burnMinutes then
+            return a.burnMinutes > b.burnMinutes
+        end
+        if a.level ~= b.level then
+            return a.level > b.level
+        end
+        return (a.name or "") < (b.name or "")
+    end)
+
+    local schedule = {}
+    local remaining = targetMinutes
+    local scheduleParts = {}
+
+    for _, cand in ipairs(candidates) do
+        local allocated = math.min(cand.burnMinutes, remaining)
+        if allocated > 0 then
+            table.insert(schedule, {
+                char = cand.char,
+                name = cand.name,
+                classFile = cand.classFile,
+                level = cand.level,
+                mins = allocated,
+                burnMinutes = cand.burnMinutes,
+                restedXP = cand.restedXP,
+                xpHour = cand.xpHour,
+                isCapped = cand.isCapped,
+                wastedXP = cand.wastedXP,
+            })
+            local coloredName = self:ColorizePlayerName(cand.name, cand.classFile)
+            table.insert(scheduleParts, string.format("%s %dm", coloredName, allocated))
+            remaining = remaining - allocated
+        end
+        if remaining <= 0 then
+            break
+        end
+    end
+
+    local summaryText = table.concat(scheduleParts, ", then ")
+    local totalAllocated = targetMinutes - remaining
+    return schedule, summaryText, totalAllocated, targetMinutes
+end
+
+function CLIAlts:PrintPlan(targetHours)
+    local schedule, summaryText, totalAllocated, targetMinutes = self:GenerateLevelingPlan(targetHours)
+    if #schedule == 0 then
+        self:Print(summaryText)
+        return summaryText
+    end
+
+    local hoursLabel = (targetMinutes % 60 == 0) and string.format("%dh", targetMinutes / 60) or string.format("%.1fh", targetMinutes / 60)
+    local border = string.format("+-----------------[ LEVELING PLAN :: %s ]-----------------+", hoursLabel)
+    local bottom = "+-------------------------------------------------------------+"
+
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", border))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r|cffffffffSchedule:|r %s", summaryText))
+    for i, it in ipairs(schedule) do
+        local coloredName = self:ColorizePlayerName(it.name, it.classFile)
+        local rateStr = string.format("%s XP/h", self:FormatNumber(it.xpHour))
+        local poolStr = string.format("%s rested", self:FormatNumber(it.restedXP))
+        local note = it.isCapped and " |cffff6666(CAPPED)|r" or ""
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r  |cff00ff66%d.|r %s (Lvl %d) -> |cffffd700%dm|r of %dm pool (%s, %s)%s",
+            i, coloredName, it.level, it.mins, it.burnMinutes, poolStr, rateStr, note))
+    end
+    if totalAllocated < targetMinutes then
+        local remMins = targetMinutes - totalAllocated
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r|cff888888Notice: Rested pools exhausted with %dm unallocated in session.|r", remMins))
+    end
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", bottom))
+
+    return summaryText
+end
+

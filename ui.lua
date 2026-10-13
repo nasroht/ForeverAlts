@@ -1561,6 +1561,10 @@ function CLIAlts:ExecutePromptCommand(input)
         self:PrintLoginDigest(true)
         self:SetPromptFeedback("Login digest printed to chat.")
 
+    elseif cmd == "plan" then
+        local planText = self:PrintPlan(args)
+        self:SetPromptFeedback(planText or "Session plan generated.")
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -1584,7 +1588,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "goto", "page", "next", "export",
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
-        "alerts", "digest",
+        "alerts", "digest", "plan",
         "refresh", "help", "exit", "close"
     }
 
@@ -1867,6 +1871,7 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts selftest   - Run unit assertions with fake timestamps   |",
         "|   /clialts alerts     - Toggle login alert categories (cd/rest/mail|",
         "|   /clialts digest     - Display boxed login summary digest now     |",
+        "|   /clialts plan [hrs] - Print leveling plan schedule (default: 2h) |",
         "|   /clialts reset      - Reset window position to center            |",
         "+--------------------------------------------------------------------+",
         "| Interactive Terminal Command Prompt (>):                           |",
@@ -1883,6 +1888,7 @@ function CLIAlts:ShowHelpPopup()
         "|   > selftest          - Execute automated test suite in chat       |",
         "|   > alerts [cat]      - Configure login alert category toggles     |",
         "|   > digest            - Render boxed login alert digest in chat    |",
+        "|   > plan [hours]      - Compute ordered leveling session schedule  |",
         "|   > Up / Down arrows  - Browse terminal command history            |",
         "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",

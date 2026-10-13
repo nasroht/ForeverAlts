@@ -161,6 +161,9 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         -- Scan watchlist item counts across bags & bank
         CLIAlts:UpdateWatchCounts()
 
+        -- Initialize session XP tracking (Feature 10: > plan)
+        CLIAlts:InitSessionXP()
+
         -- Immediate snapshot
         local char = CLIAlts:CollectCurrentCharacter(false, true)
         if char and not self.hasAnnounced then
@@ -227,6 +230,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:RequestRender()
 
     elseif event == "PLAYER_XP_UPDATE" or event == "UPDATE_EXHAUSTION" or event == "PLAYER_LEVEL_UP" then
+        CLIAlts:UpdateSessionXP()
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:RequestRender()
 
@@ -437,6 +441,9 @@ local function SlashHandler(msg)
 
     elseif cmd == "digest" then
         CLIAlts:PrintLoginDigest(true)
+
+    elseif cmd == "plan" then
+        CLIAlts:PrintPlan(arg)
 
     elseif cmd == "help" then
         CLIAlts:ShowHelpPopup()
