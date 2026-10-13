@@ -13,7 +13,7 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 -- ----------------------------------------------------------------------------
 local FONT_PATH = "Interface\\AddOns\\" .. (addonName or "clialts") .. "\\media\\VT323-Regular.ttf"
 local DEFAULT_FONT_SIZE = 15
-local LINE_WIDTH = 85
+local LINE_WIDTH = 110
 local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
 local DOUBLE_BORDER = "+" .. string.rep("=", LINE_WIDTH - 2) .. "+"
 
@@ -157,19 +157,35 @@ function CLIAlts:SetWidgetFont(fontString, size, flags)
 end
 
 function CLIAlts:GetCharWidth(fontSize)
+    local sz = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     if not probeString and mainFrame then
         probeString = mainFrame:CreateFontString(nil, "BACKGROUND")
         probeString:Hide()
     end
     if probeString then
-        self:SetWidgetFont(probeString, fontSize or DEFAULT_FONT_SIZE)
-        probeString:SetText(string.rep("X", LINE_WIDTH))
+        self:SetWidgetFont(probeString, sz)
+        probeString:SetText("==================================================")
         local w = probeString:GetStringWidth()
         if w and w > 0 then
-            return w / LINE_WIDTH
+            local perChar = w / 50
+            if perChar >= 4 and perChar <= 25 then
+                return perChar
+            end
         end
     end
-    return (fontSize or DEFAULT_FONT_SIZE) * 0.52
+    return sz * 0.54
+end
+
+function CLIAlts:GetBarString(charPattern, targetPixelWidth, fontSize)
+    targetPixelWidth = targetPixelWidth or (mainFrame and (mainFrame:GetWidth() - 24)) or 896
+    local sz = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+    local charW = self:GetCharWidth(sz)
+    if not charW or charW < 4 or charW > 25 then
+        charW = sz * 0.54
+    end
+    local count = math.floor(targetPixelWidth / charW)
+    if count < 10 then count = 10 end
+    return "+" .. string.rep(charPattern, math.max(2, count - 2)) .. "+"
 end
 
 -- ----------------------------------------------------------------------------
@@ -626,61 +642,61 @@ end
 
 local FOREVER_COLS = {
     { key = "tier",     title = "COHORT",      w = 8,  pw = 75,  cpw = 70,  align = "CENTER", sort = "cohort", fmt = FmtTier },
-    { key = "name",     title = "NAME",        w = 15, pw = 130, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
-    { key = "lvlTgt",   title = "LVL/TGT",     w = 8,  pw = 65,  cpw = 65,  align = "RIGHT",  sort = "level",  fmt = FmtLevelTarget },
-    { key = "prof",     title = "PROFESSIONS", w = 14, pw = 125, cpw = 100, align = "LEFT",                    fmt = FmtProfessionsAuto },
-    { key = "status",   title = "ROUTE STATUS",w = 18, pw = 160, cpw = 142, align = "LEFT",   sort = "rested", fmt = FmtForeverStatus },
-    { key = "gold",     title = "GOLD",        w = 9,  pw = 85,  cpw = 80,  align = "RIGHT",  sort = "gold",   fmt = FmtGold },
-    { key = "eta",      title = "ETA",         w = 7,  pw = 92,  cpw = 0,   align = "RIGHT",                   fmt = FmtETA },
+    { key = "name",     title = "NAME",        w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
+    { key = "lvlTgt",   title = "LVL/TGT",     w = 8,  pw = 75,  cpw = 65,  align = "CENTER", sort = "level",  fmt = FmtLevelTarget },
+    { key = "prof",     title = "PROFESSIONS", w = 18, pw = 185, cpw = 140, align = "LEFT",                    fmt = FmtProfessionsAuto },
+    { key = "status",   title = "STATUS",      w = 18, pw = 175, cpw = 140, align = "LEFT",   sort = "rested", fmt = FmtForeverStatus },
+    { key = "gold",     title = "GOLD",        w = 9,  pw = 110, cpw = 80,  align = "RIGHT",  sort = "gold",   fmt = FmtGold },
+    { key = "eta",      title = "ETA",         w = 7,  pw = 100, cpw = 0,   align = "RIGHT",                   fmt = FmtETA },
 }
 
 -- ----------------------------------------------------------------------------
--- Data-Driven Columns Table (COLS) - Explicit Pixel Widths (Sum = 732px / 582px)
+-- Data-Driven Columns Table (COLS) - Explicit Pixel Widths (Sum = 860px / 620px)
 -- ----------------------------------------------------------------------------
 local COLS = {
     [1] = { -- ALTS OVERVIEW
-        { key = "fac",       title = "FAC",            w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",           w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",    fmt = FmtName },
-        { key = "lvl",       title = "LVL",            w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",   fmt = FmtLevel },
-        { key = "raceClass", title = "RACE/CLASS",     w = 11, pw = 105, cpw = 105, align = "LEFT",   fmt = FmtRaceClass },
-        { key = "xp",        title = "LEVEL PROGRESS", w = 16, pw = 145, cpw = 0,   align = "LEFT",   sort = "xp",      fmt = FmtLevelProgress },
-        { key = "gold",      title = "GOLD",           w = 10, pw = 95,  cpw = 95,  align = "RIGHT",  sort = "gold",    fmt = FmtGold },
-        { key = "rested",    title = "RESTED",         w = 8,  pw = 86,  cpw = 86,  align = "RIGHT",  sort = "rested",  fmt = FmtRested },
-        { key = "eta",       title = "ETA",            w = 7,  pw = 91,  cpw = 91,  align = "RIGHT",  fmt = FmtETA },
+        { key = "fac",       title = "FAC",            w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",           w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",    fmt = FmtName },
+        { key = "lvl",       title = "LVL",            w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",   fmt = FmtLevel },
+        { key = "raceClass", title = "RACE/CLASS",     w = 11, pw = 125, cpw = 110, align = "LEFT",   fmt = FmtRaceClass },
+        { key = "xp",        title = "LEVEL PROGRESS", w = 16, pw = 180, cpw = 0,   align = "LEFT",   sort = "xp",      fmt = FmtLevelProgress },
+        { key = "gold",      title = "GOLD",           w = 10, pw = 115, cpw = 100, align = "RIGHT",  sort = "gold",    fmt = FmtGold },
+        { key = "rested",    title = "RESTED",         w = 8,  pw = 110, cpw = 95,  align = "RIGHT",  sort = "rested",  fmt = FmtRested },
+        { key = "eta",       title = "ETA",            w = 7,  pw = 109, cpw = 90,  align = "RIGHT",  fmt = FmtETA },
     },
     [2] = { -- RESTED XP MONITOR
-        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
-        { key = "pool",      title = "RESTED / CAP",    w = 17, pw = 145, cpw = 150, align = "RIGHT",  sort = "rested", fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS", w = 17, pw = 145, cpw = 0,   align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",            w = 8,  pw = 75,  cpw = 75,  align = "RIGHT",  fmt = FmtRate },
-        { key = "state",     title = "STATE",           w = 7,  pw = 68,  cpw = 68,  align = "CENTER", fmt = FmtState },
-        { key = "eta",       title = "ETA/WST",         w = 7,  pw = 89,  cpw = 84,  align = "RIGHT",  sort = "waste",  fmt = FmtETA },
+        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",  fmt = FmtLevel },
+        { key = "pool",      title = "RESTED / CAP",    w = 17, pw = 165, cpw = 150, align = "RIGHT",  sort = "rested", fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS", w = 17, pw = 180, cpw = 0,   align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",            w = 8,  pw = 95,  cpw = 80,  align = "RIGHT",  fmt = FmtRate },
+        { key = "state",     title = "STATE",           w = 7,  pw = 85,  cpw = 75,  align = "CENTER", fmt = FmtState },
+        { key = "eta",       title = "ETA/WST",         w = 7,  pw = 114, cpw = 90,  align = "RIGHT",  sort = "waste",  fmt = FmtETA },
     },
     [3] = { -- PROFESSIONS
-        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
-        { key = "prof1",     title = "PRIMARY PROF 1",  w = 23, pw = 205, cpw = 160, align = "LEFT",   fmt = FmtProf1 },
-        { key = "prof2",     title = "PRIMARY PROF 2",  w = 20, pw = 185, cpw = 145, align = "LEFT",   fmt = FmtProf2 },
-        { key = "sec",       title = "SECONDARY",       w = 14, pw = 132, cpw = 72,  align = "LEFT",   fmt = FmtSecProf },
+        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",  fmt = FmtLevel },
+        { key = "prof1",     title = "PRIMARY PROF 1",  w = 23, pw = 250, cpw = 180, align = "LEFT",   fmt = FmtProf1 },
+        { key = "prof2",     title = "PRIMARY PROF 2",  w = 20, pw = 230, cpw = 165, align = "LEFT",   fmt = FmtProf2 },
+        { key = "sec",       title = "SECONDARY",       w = 14, pw = 159, cpw = 80,  align = "LEFT",   fmt = FmtSecProf },
     },
     [4] = { -- ECONOMY & LOCATIONS
-        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD",            w = 11, pw = 105, cpw = 95,  align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
-        { key = "share",     title = "SHARE",           w = 6,  pw = 60,  cpw = 55,  align = "RIGHT",  fmt = FmtWealthShare },
-        { key = "location",  title = "LAST ZONE",       w = 18, pw = 180, cpw = 115, align = "LEFT",   sort = "location", fmt = FmtLocation },
-        { key = "hearth",    title = "HEARTHSTONE",     w = 18, pw = 177, cpw = 113, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
+        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "gold",      title = "GOLD",            w = 11, pw = 120, cpw = 100, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "share",     title = "SHARE",           w = 6,  pw = 65,  cpw = 55,  align = "RIGHT",  fmt = FmtWealthShare },
+        { key = "location",  title = "LAST ZONE",       w = 18, pw = 230, cpw = 140, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",     w = 18, pw = 224, cpw = 130, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [5] = { -- COOLDOWNS & SAVED LOCKS
-        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS", w = 25, pw = 230, cpw = 175, align = "LEFT",   fmt = FmtTradeCooldowns },
-        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 30, pw = 292, cpw = 202, align = "LEFT", fmt = FmtRaidLocks },
+        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",  fmt = FmtLevel },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS", w = 25, pw = 340, cpw = 230, align = "LEFT",   fmt = FmtTradeCooldowns },
+        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 30, pw = 299, cpw = 205, align = "LEFT", fmt = FmtRaidLocks },
     },
 }
 
@@ -707,19 +723,34 @@ function CLIAlts:GetColumns(activeTab)
     return filtered
 end
 
-function CLIAlts:GetLineWidth(activeTab)
-    local cols = self:GetColumns(activeTab or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1)
-    local totalW = 4 + (#cols - 1)
-    for _, col in ipairs(cols) do
-        totalW = totalW + col.w
+function CLIAlts:GetLineWidth()
+    local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 696 or 896)
+    local charW = self:GetCharWidth()
+    if not charW or charW < 4 or charW > 25 then
+        charW = DEFAULT_FONT_SIZE * 0.54
     end
-    return totalW
+    return math.max(20, math.floor(targetW / charW))
 end
 
-function CLIAlts:GetBorderLine(isDouble, activeTab)
-    local w = self:GetLineWidth(activeTab)
+function CLIAlts:GetBorderLine(isDouble)
     local char = isDouble and "=" or "-"
-    return "+" .. string.rep(char, w - 2) .. "+"
+    local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 696 or 896)
+    return self:GetBarString(char, targetW)
+end
+
+function CLIAlts:UpdateBorders()
+    if not mainFrame then return end
+    local doubleBar = self:GetBorderLine(true)
+    local singleBar = self:GetBorderLine(false)
+
+    if mainFrame.topAscii then mainFrame.topAscii:SetText(doubleBar) end
+    if mainFrame.midAscii1 then mainFrame.midAscii1:SetText(singleBar) end
+    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText(singleBar) end
+    if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetText(doubleBar) end
+    if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetText(singleBar) end
+    if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetText(doubleBar) end
+    if mainFrame.promptSepAscii then mainFrame.promptSepAscii:SetText(singleBar) end
+    if mainFrame.botAscii then mainFrame.botAscii:SetText(singleBar) end
 end
 
 -- ----------------------------------------------------------------------------
@@ -728,7 +759,7 @@ end
 function CLIAlts:ApplyLayoutSize()
     if not mainFrame then return end
     local isComp = self:IsCompact()
-    local targetWidth = isComp and 630 or 780
+    local targetWidth = isComp and 720 or 920
     mainFrame:SetWidth(targetWidth)
     if mainFrame.headerFrame then
         mainFrame.headerFrame:SetWidth(targetWidth - 24)
@@ -740,8 +771,8 @@ function CLIAlts:ApplyLayoutSize()
         row:SetWidth(targetWidth - 24)
     end
 
-    local tabW = isComp and 115 or 142
-    local spacing = isComp and 6 or 7
+    local tabW = isComp and 125 or 168
+    local spacing = isComp and 6 or 8
     local prevTab = nil
     for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
         tabBtn:SetWidth(tabW)
@@ -760,6 +791,8 @@ function CLIAlts:ApplyLayoutSize()
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
     end
+
+    self:UpdateBorders()
 end
 
 -- ----------------------------------------------------------------------------
@@ -770,7 +803,7 @@ function CLIAlts:CreateMainFrame()
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:Hide()
-    frame:SetSize(780, 535)
+    frame:SetSize(920, 535)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -948,7 +981,7 @@ function CLIAlts:CreateMainFrame()
 
     -- Column Header Line (Individual Cells) & Clickable Hit Frame
     local headerFrame = CreateFrame("Frame", nil, frame)
-    headerFrame:SetSize(756, 18)
+    headerFrame:SetSize(896, 18)
     headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -120)
     frame.headerFrame = headerFrame
 
@@ -1004,7 +1037,7 @@ function CLIAlts:CreateMainFrame()
 
     -- Rows Container
     local rowsContainer = CreateFrame("Frame", nil, frame)
-    rowsContainer:SetSize(756, ROWS_COUNT * 21)
+    rowsContainer:SetSize(896, ROWS_COUNT * 21)
     rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -150)
     frame.rowsContainer = rowsContainer
 
@@ -1029,7 +1062,7 @@ function CLIAlts:CreateMainFrame()
     -- Create 12 Monospace Row Buttons (Each with explicit column cells)
     for i = 1, ROWS_COUNT do
         local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        row:SetSize(756, 20)
+        row:SetSize(896, 20)
         row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 21))
 
         row:SetBackdrop({
@@ -1407,17 +1440,8 @@ function CLIAlts:Render()
         end
     end
 
-    -- Update dynamic ASCII border lines based on active tab line width
-    local borderLine = self:GetBorderLine(false, activeTab)
-    local doubleBorder = self:GetBorderLine(true, activeTab)
-    if mainFrame.topAscii then mainFrame.topAscii:SetText(doubleBorder) end
-    if mainFrame.midAscii1 then mainFrame.midAscii1:SetText(borderLine) end
-    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText(borderLine) end
-    if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetText(doubleBorder) end
-    if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetText(borderLine) end
-    if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetText(doubleBorder) end
-    if mainFrame.promptSepAscii then mainFrame.promptSepAscii:SetText(borderLine) end
-    if mainFrame.botAscii then mainFrame.botAscii:SetText(borderLine) end
+    -- Update dynamic ASCII border lines based on active frame width
+    self:UpdateBorders()
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
     end
@@ -1473,7 +1497,7 @@ function CLIAlts:Render()
     -- Render Table Header Cells & Clickable Header Buttons
     local cols = self:GetColumns(activeTab)
     local isComp = self:IsCompact()
-    local xOffset = 12
+    local xOffset = 16
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
 
@@ -1575,7 +1599,7 @@ function CLIAlts:Render()
             row.charData = char
             row:SetBackdropColor(0, 0, 0, (rowIndex % 2 == 0) and 0.25 or 0.1)
 
-            local rowXOffset = 12
+            local rowXOffset = 16
             for idx = 1, 8 do
                 local cell = row.cells and row.cells[idx]
                 local col = cols[idx]
