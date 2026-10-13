@@ -304,18 +304,31 @@ local function SlashHandler(msg)
 
     elseif cmd == "watch" then
         if arg and arg ~= "" then
-            CLIAlts:AddWatchItem(arg)
+            local ok, item = CLIAlts:AddWatchItem(arg)
+            if ok then
+                local name = CLIAlts:GetWatchItemDisplayName(item)
+                CLIAlts:Print(string.format("Added %s to watchlist.", name:find("|c") and name or ("|cffffd700" .. name .. "|r")))
+            else
+                local name = CLIAlts:GetWatchItemPlainName(item or arg)
+                CLIAlts:Print(string.format("Item '%s' is already in watchlist.", name))
+            end
             CLIAlts:RequestRender()
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts watch <Item Name or ID>|r")
+            CLIAlts:Print("Usage: |cff00ff66/clialts watch <Item Link, ID, or Name>|r")
         end
 
     elseif cmd == "unwatch" then
         if arg and arg ~= "" then
-            CLIAlts:RemoveWatchItem(arg)
+            local ok, item = CLIAlts:RemoveWatchItem(arg)
+            if ok then
+                local name = CLIAlts:GetWatchItemDisplayName(item)
+                CLIAlts:Print(string.format("Removed %s from watchlist.", name:find("|c") and name or ("|cffffd700" .. name .. "|r")))
+            else
+                CLIAlts:Print(string.format("Item '%s' was not found in watchlist.", arg))
+            end
             CLIAlts:RequestRender()
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts unwatch <Item Name>|r")
+            CLIAlts:Print("Usage: |cff00ff66/clialts unwatch <Item Link, ID, or Name>|r")
         end
 
     elseif cmd == "watchlist" then

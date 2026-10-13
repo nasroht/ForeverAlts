@@ -590,13 +590,26 @@ end
 
 function CLIAlts:CollectWatchlistCounts(existing)
     local counts = {}
-    if existing then
-        for k, v in pairs(existing) do counts[k] = v end
+    local watchlist = (CLIAltsDB and CLIAltsDB.watchlist) or {}
+    if not CLIAltsDB or not CLIAltsDB.watchlist or #watchlist == 0 then
+        return counts
     end
-    if not CLIAltsDB or not CLIAltsDB.watchlist then return counts end
+
+    -- Keep only existing counts that match an active item in CLIAltsDB.watchlist
+    if existing then
+        for k, v in pairs(existing) do
+            for _, item in ipairs(watchlist) do
+                if self:IsWatchItemMatch(item, k) then
+                    counts[item] = v
+                    break
+                end
+            end
+        end
+    end
+
     pcall(function()
         if GetItemCount then
-            for _, item in ipairs(CLIAltsDB.watchlist) do
+            for _, item in ipairs(watchlist) do
                 if item and item ~= "" then
                     local count = GetItemCount(item, true)
                     counts[item] = count or 0
@@ -617,6 +630,9 @@ function CLIAlts:UpdateWatchCounts()
     local char = curKey and CLIAltsDB.characters[curKey]
     if char then
         char.watchlistCounts = self:CollectWatchlistCounts(char.watchlistCounts)
+        if cachedCurrentChar and cachedCurrentChar ~= char then
+            cachedCurrentChar.watchlistCounts = char.watchlistCounts
+        end
     end
 end
 
@@ -1835,8 +1851,51 @@ function CLIAlts:RunSelfTest()
     local uList2, _, cNameU2 = self:GetUnlockedAlts("mc", T0, mockLockAlts)
     Assert(cNameU2 == "Molten Core" and #uList2 == 1, "GetUnlockedAlts: alias 'mc' resolves to Molten Core")
 
+    -- 8. Watchlist Item ID Parsing & Dropping Counts Tests
+    -- 8a. Item link parsing: extracts numeric item ID 14047
+    local rawLink = "|cffffffff|Hitem:14047:0:0:0:0:0:0:0:0|h[Runecloth]|h|r"
+    local resolvedId = self:ResolveWatchItem(rawLink)
+    Assert(resolvedId == 14047 and type(resolvedId) == "number", "ResolveWatchItem: parses numeric ID 14047 from item link")
+
+    -- 8b. Numeric string parsing
+    local resolvedNum = self:ResolveWatchItem("14047")
+    Assert(resolvedNum == 14047 and type(resolvedNum) == "number", "ResolveWatchItem: parses numeric string '14047' to number")
+
+    -- 8c. AddWatchItem stores item ID
+    local oldWatchlist = CLIAltsDB and CLIAltsDB.watchlist
+    local oldCharsW = CLIAltsDB and CLIAltsDB.characters
+    CLIAltsDB.watchlist = {}
+    CLIAltsDB.characters = {}
+
+    local okAdd1, itemAdd1 = self:AddWatchItem(rawLink)
+    Assert(okAdd1 == true and itemAdd1 == 14047 and CLIAltsDB.watchlist[1] == 14047, "AddWatchItem: stores item ID 14047 in watchlist")
+
+    -- 8d. Duplicate check matches ID vs link
+    local okAddDup, _ = self:AddWatchItem(14047)
+    Assert(okAddDup == false, "AddWatchItem: rejects duplicate watch item by ID")
+
+    -- 8e. Dropping counts on RemoveWatchItem across alts
+    local mockAltW = {
+        name = "TailorAlt",
+        classFile = "MAGE",
+        watchlistCounts = { [14047] = 80, ["Iron Ore"] = 25 }
+    }
+    CLIAltsDB.characters["TailorAlt"] = mockAltW
+
+    -- Before removal, CollectWatchlistCounts preserves 14047 but drops untracked "Iron Ore"
+    local collectedCounts = self:CollectWatchlistCounts(mockAltW.watchlistCounts)
+    Assert(collectedCounts[14047] == 80 and collectedCounts["Iron Ore"] == nil, "CollectWatchlistCounts: drops untracked 'Iron Ore' key")
+
+    -- Remove 14047: drops from watchlist and wipes count from mockAltW
+    local okRem1, _ = self:RemoveWatchItem(rawLink)
+    Assert(okRem1 == true and #CLIAltsDB.watchlist == 0, "RemoveWatchItem: removes item using link")
+    Assert(mockAltW.watchlistCounts[14047] == nil, "CleanWatchlistCounts: dropped removed item 14047 from character record")
+
+    CLIAltsDB.watchlist = oldWatchlist
+    CLIAltsDB.characters = oldCharsW
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -1984,35 +2043,187 @@ end
 -- ----------------------------------------------------------------------------
 -- Watchlist System (Feature 5)
 -- ----------------------------------------------------------------------------
-function CLIAlts:AddWatchItem(itemName)
-    if not itemName or itemName == "" then return false end
-    CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
-    for _, existing in ipairs(CLIAltsDB.watchlist) do
-        if existing:lower() == itemName:lower() then
-            return false
+function CLIAlts:ResolveWatchItem(input)
+    if not input then return nil end
+    if type(input) == "number" then return input end
+    local str = tostring(input):match("^%s*(.-)%s*$")
+    if not str or str == "" then return nil end
+
+    -- 1. Extract numeric item ID from item link if present: |Hitem:(%d+)
+    local idFromLink = str:match("|Hitem:(%d+)")
+    if idFromLink then
+        local num = tonumber(idFromLink)
+        if num and num > 0 then return num end
+    end
+
+    -- 2. Pure numeric item ID input
+    local numId = tonumber(str)
+    if numId and numId > 0 then
+        return numId
+    end
+
+    -- 3. Resolve item name via GetItemInfoInstant or GetItemInfo if available
+    if GetItemInfoInstant then
+        local instantId = GetItemInfoInstant(str)
+        local n = tonumber(instantId)
+        if n and n > 0 then return n end
+    end
+    if GetItemInfo then
+        local _, itemLink = GetItemInfo(str)
+        if itemLink then
+            local id = itemLink:match("|Hitem:(%d+)")
+            local n = tonumber(id)
+            if n and n > 0 then return n end
         end
     end
-    table.insert(CLIAltsDB.watchlist, itemName)
-    self:UpdateWatchCounts()
-    return true
+
+    -- 4. Fallback to raw string
+    return str
 end
 
-function CLIAlts:RemoveWatchItem(itemName)
-    if not itemName or not CLIAltsDB or not CLIAltsDB.watchlist then return false end
-    local found = false
-    local newWatch = {}
+function CLIAlts:IsWatchItemMatch(existing, target)
+    if existing == nil or target == nil then return false end
+    if existing == target then return true end
+    if tostring(existing):lower() == tostring(target):lower() then return true end
+
+    local exId = tonumber(existing) or (type(existing) == "string" and tonumber(existing:match("|Hitem:(%d+)")))
+    local tgId = tonumber(target) or (type(target) == "string" and tonumber(target:match("|Hitem:(%d+)")))
+    if exId and tgId and exId == tgId then
+        return true
+    end
+
+    if GetItemInfo then
+        if exId and type(target) == "string" then
+            local name = GetItemInfo(exId)
+            if name and name:lower() == target:lower() then return true end
+        end
+        if tgId and type(existing) == "string" then
+            local name = GetItemInfo(tgId)
+            if name and name:lower() == existing:lower() then return true end
+        end
+    end
+    return false
+end
+
+function CLIAlts:GetWatchItemPlainName(item)
+    if not item then return "Unknown" end
+    local num = tonumber(item)
+    if num and num > 0 then
+        if GetItemInfo then
+            local name = GetItemInfo(num)
+            if name then return name end
+        end
+        return "Item #" .. num
+    end
+    return tostring(item)
+end
+
+function CLIAlts:GetWatchItemDisplayName(item)
+    if not item then return "Unknown" end
+    local num = tonumber(item)
+    if num and num > 0 then
+        if GetItemInfo then
+            local name, link = GetItemInfo(num)
+            if link then return link end
+            if name then return name end
+        end
+        return "Item #" .. num
+    end
+    if type(item) == "string" and GetItemInfo then
+        local _, link = GetItemInfo(item)
+        if link then return link end
+    end
+    return tostring(item)
+end
+
+function CLIAlts:AddWatchItem(input)
+    if not input or input == "" then return false, nil end
+    local resolved = self:ResolveWatchItem(input)
+    if not resolved then return false, nil end
+
+    CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
     for _, existing in ipairs(CLIAltsDB.watchlist) do
-        if existing:lower() == itemName:lower() then
+        if self:IsWatchItemMatch(existing, resolved) then
+            return false, existing
+        end
+    end
+
+    table.insert(CLIAltsDB.watchlist, resolved)
+    self:UpdateWatchCounts()
+    return true, resolved
+end
+
+function CLIAlts:CleanWatchlistCounts(removedItem, target)
+    if not CLIAltsDB or not CLIAltsDB.characters then return end
+    local watchlist = CLIAltsDB.watchlist or {}
+
+    local function cleanTable(counts)
+        if not counts then return end
+        if removedItem ~= nil then
+            counts[removedItem] = nil
+            counts[tostring(removedItem)] = nil
+            local rNum = tonumber(removedItem)
+            if rNum then counts[rNum] = nil end
+            if GetItemInfo then
+                local rName = GetItemInfo(removedItem)
+                if rName then counts[rName] = nil end
+            end
+        end
+        if target ~= nil then
+            counts[target] = nil
+            counts[tostring(target)] = nil
+            local tNum = tonumber(target)
+            if tNum then counts[tNum] = nil end
+            if GetItemInfo then
+                local tName = GetItemInfo(target)
+                if tName then counts[tName] = nil end
+            end
+        end
+        for k in pairs(counts) do
+            local kept = false
+            for _, item in ipairs(watchlist) do
+                if self:IsWatchItemMatch(item, k) then
+                    kept = true
+                    break
+                end
+            end
+            if not kept then
+                counts[k] = nil
+            end
+        end
+    end
+
+    for _, char in pairs(CLIAltsDB.characters) do
+        cleanTable(char.watchlistCounts)
+    end
+    if cachedCurrentChar then
+        cleanTable(cachedCurrentChar.watchlistCounts)
+    end
+end
+
+function CLIAlts:RemoveWatchItem(input)
+    if not input or not CLIAltsDB or not CLIAltsDB.watchlist then return false, nil end
+    local target = self:ResolveWatchItem(input) or input
+    local found = false
+    local removedItem = nil
+    local newWatch = {}
+
+    for _, existing in ipairs(CLIAltsDB.watchlist) do
+        if not found and self:IsWatchItemMatch(existing, target) then
             found = true
+            removedItem = existing
         else
             table.insert(newWatch, existing)
         end
     end
-    CLIAltsDB.watchlist = newWatch
+
     if found then
+        CLIAltsDB.watchlist = newWatch
+        self:CleanWatchlistCounts(removedItem, target)
         self:UpdateWatchCounts()
     end
-    return found
+
+    return found, (removedItem or target)
 end
 
 function CLIAlts:GetWatchlistSummary()
@@ -2024,7 +2235,19 @@ function CLIAlts:GetWatchlistSummary()
         local total = 0
         local breakdown = {}
         for _, c in ipairs(chars) do
-            local cnt = (c.watchlistCounts and c.watchlistCounts[item]) or 0
+            local cnt = 0
+            if c.watchlistCounts then
+                if c.watchlistCounts[item] then
+                    cnt = c.watchlistCounts[item]
+                else
+                    for k, v in pairs(c.watchlistCounts) do
+                        if self:IsWatchItemMatch(item, k) then
+                            cnt = v
+                            break
+                        end
+                    end
+                end
+            end
             if cnt > 0 then
                 total = total + cnt
                 table.insert(breakdown, { name = c.name, count = cnt, classFile = c.classFile })
@@ -2042,18 +2265,21 @@ end
 function CLIAlts:PrintWatchlist()
     local summary = self:GetWatchlistSummary()
     if #summary == 0 then
-        self:Print("Watchlist is empty. Use |cff00ff66/ca watch <Item Name>|r to track specific items across alts.")
+        self:Print("Watchlist is empty. Use |cff00ff66/ca watch <Item Link, ID, or Name>|r to track specific items across alts.")
         return
     end
     self:Print("--- CLIAlts Watchlist Summary ---")
     for _, entry in ipairs(summary) do
         local parts = {}
         for _, b in ipairs(entry.breakdown) do
-            table.insert(parts, string.format("%s: %s", b.name, self:FormatNumber(b.count)))
+            local coloredName = self:ColorizePlayerName(b.name, b.classFile)
+            table.insert(parts, string.format("%s: %s", coloredName, self:FormatNumber(b.count)))
         end
-        local detail = #parts > 0 and (" (" .. table.concat(parts, ", ") .. ")") or ""
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("  * |cffffd700%s|r :: |cff00ff66%s total|r%s",
-            entry.item, self:FormatNumber(entry.total), detail))
+        local detail = #parts > 0 and (" (" .. table.concat(parts, ", ") .. ")") or " (none)"
+        local displayName = self:GetWatchItemDisplayName(entry.item)
+        local itemLabel = displayName:find("|c") and displayName or string.format("|cffffd700%s|r", displayName)
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("  * %s :: |cff00ff66%s total|r%s",
+            itemLabel, self:FormatNumber(entry.total), detail))
     end
 end
 

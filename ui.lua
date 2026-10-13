@@ -1034,6 +1034,15 @@ function CLIAlts:CreateMainFrame()
         end
     end)
 
+    -- Hook ChatEdit_InsertLink so Shift-clicking items into prompt works
+    if hooksecurefunc then
+        pcall(hooksecurefunc, "ChatEdit_InsertLink", function(text)
+            if text and promptBox:HasFocus() then
+                promptBox:Insert(text)
+            end
+        end)
+    end
+
     -- Hidden Buttons for Enter and / keyboard focus overrides
     local btnFocusEnter = CreateFrame("Button", "CLIAltsFocusEnterBtn", frame)
     btnFocusEnter:SetScript("OnClick", function()
@@ -1465,20 +1474,31 @@ function CLIAlts:ExecutePromptCommand(input)
 
     elseif cmd == "watch" then
         if args and args ~= "" then
-            self:AddWatchItem(args)
-            self:SetPromptFeedback(string.format("Added '%s' to watchlist", args))
+            local ok, item = self:AddWatchItem(args)
+            if ok then
+                local name = self:GetWatchItemPlainName(item)
+                self:SetPromptFeedback(string.format("Added '%s' to watchlist", name))
+            else
+                local name = self:GetWatchItemPlainName(item or args)
+                self:SetPromptFeedback(string.format("Already watched: '%s'", name), true)
+            end
             self:Render()
         else
-            self:SetPromptFeedback("Usage: watch <Item Name or ID>", true)
+            self:SetPromptFeedback("Usage: watch <Item Link, ID, or Name>", true)
         end
 
     elseif cmd == "unwatch" then
         if args and args ~= "" then
-            self:RemoveWatchItem(args)
-            self:SetPromptFeedback(string.format("Removed '%s' from watchlist", args))
+            local ok, item = self:RemoveWatchItem(args)
+            if ok then
+                local name = self:GetWatchItemPlainName(item)
+                self:SetPromptFeedback(string.format("Removed '%s' from watchlist", name))
+            else
+                self:SetPromptFeedback(string.format("Item '%s' not in watchlist", args), true)
+            end
             self:Render()
         else
-            self:SetPromptFeedback("Usage: unwatch <Item Name>", true)
+            self:SetPromptFeedback("Usage: unwatch <Item Link, ID, or Name>", true)
         end
 
     elseif cmd == "watchlist" then
@@ -1641,6 +1661,17 @@ function CLIAlts:AutoCompletePrompt(editBox)
                     editBox:SetText("unlocked " .. r)
                     editBox:SetCursorPosition(#editBox:GetText())
                     return
+                end
+            end
+        elseif cmd == "unwatch" then
+            if CLIAltsDB and CLIAltsDB.watchlist and #CLIAltsDB.watchlist > 0 then
+                for _, item in ipairs(CLIAltsDB.watchlist) do
+                    local name = CLIAlts.GetWatchItemPlainName and CLIAlts:GetWatchItemPlainName(item) or tostring(item)
+                    if name:lower():sub(1, #arg) == arg:lower() and name:lower() ~= arg:lower() then
+                        editBox:SetText("unwatch " .. name)
+                        editBox:SetCursorPosition(#editBox:GetText())
+                        return
+                    end
                 end
             end
         elseif cmd == "theme" then
