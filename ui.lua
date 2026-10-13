@@ -161,7 +161,7 @@ function CLIAlts:SetWidgetFont(fontString, size, flags)
     if not setOk then
         pcall(function()
             local fallback = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
-            setOk = fontString:SetFont(fallback, size, "")
+            fontString:SetFont(fallback, size, "")
         end)
     end
     local hasFont = false
