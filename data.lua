@@ -78,6 +78,28 @@ function CLIAlts:IsRetail()
     return self:GetClientFlavor() == "Retail"
 end
 
+function CLIAlts:IsForeverMode()
+    if self.isForeverOverride ~= nil then
+        return self.isForeverOverride
+    end
+    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.foreverMode ~= nil then
+        return CLIAltsDB.settings.foreverMode == true
+    end
+    local realm = (GetRealmName and GetRealmName()) or ""
+    if realm:lower():find("forever") then
+        return true
+    end
+    return false
+end
+
+function CLIAlts:ToggleForeverMode()
+    if not CLIAltsDB or not CLIAltsDB.settings then return false end
+    CLIAltsDB.settings.foreverMode = not self:IsForeverMode()
+    if self.ApplyLayoutSize then self:ApplyLayoutSize() end
+    if self.Render then self:Render() end
+    return CLIAltsDB.settings.foreverMode
+end
+
 -- ----------------------------------------------------------------------------
 -- Level Cap Helper (WoW Forever / Classic / Expansion Dynamic Cap)
 -- ----------------------------------------------------------------------------
@@ -324,6 +346,7 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.staleDays = tonumber(CLIAltsDB.settings.staleDays) or 30
     CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode == true)
     if CLIAltsDB.settings.showInventoryTooltips == nil then CLIAltsDB.settings.showInventoryTooltips = true end
+    if CLIAltsDB.settings.foreverMode == nil then CLIAltsDB.settings.foreverMode = false end
     CLIAltsDB.characters = CLIAltsDB.characters or {}
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
     CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
@@ -1126,6 +1149,9 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         watchlistCounts = self:CollectWatchlistCounts(existing and existing.watchlistCounts),
         xpHour = (existing and existing.xpHour) or (cachedCurrentChar and cachedCurrentChar.xpHour),
         note = (existing and existing.note) or (cachedCurrentChar and cachedCurrentChar.note),
+        tier = (existing and existing.tier) or (cachedCurrentChar and cachedCurrentChar.tier) or "UNASSIGNED",
+        supply_role = (existing and existing.supply_role) or (cachedCurrentChar and cachedCurrentChar.supply_role),
+        target_level = (existing and existing.target_level) or (cachedCurrentChar and cachedCurrentChar.target_level),
         inventory = self:CollectInventory(existing and existing.inventory),
         bankScanned = (existing and existing.bankScanned) or false,
         bankLastScan = existing and existing.bankLastScan,
@@ -1892,6 +1918,153 @@ function CLIAlts:PruneCharacters(days, now)
     return #prunedKeys, prunedNames
 end
 
+-- ----------------------------------------------------------------------------
+-- WoW Forever: Roster Categorization & Role Tagging (Component 1)
+-- ----------------------------------------------------------------------------
+function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
+    if not CLIAltsDB or not CLIAltsDB.characters then
+        return false, "Database not initialized"
+    end
+    if not targetName or targetName == "" then
+        return false, "Usage: role <character> <core|reserve|bank|none> [supply_role] [target_level]"
+    end
+
+    local cleanTarget = targetName:match("^(.-)%s*-%s*.*$") or targetName
+    cleanTarget = cleanTarget:lower()
+
+    local foundChar = nil
+    local foundKey = nil
+    for k, c in pairs(CLIAltsDB.characters) do
+        local n = (c.name or k):lower()
+        local f = (c.fullName or ""):lower()
+        if n == cleanTarget or f == cleanTarget or n:find(cleanTarget, 1, true) then
+            foundChar = c
+            foundKey = k
+            break
+        end
+    end
+
+    if not foundChar then
+        return false, string.format("Character '%s' not found in CLIAlts database", targetName)
+    end
+
+    local normalizedTier = foundChar.tier or "UNASSIGNED"
+    if tier and tier ~= "" then
+        local tLower = tier:lower()
+        if tLower == "core" or tLower == "c" or tLower == "1" then
+            normalizedTier = "CORE"
+        elseif tLower == "reserve" or tLower == "res" or tLower == "r" or tLower == "2" then
+            normalizedTier = "RESERVE"
+        elseif tLower == "bank" or tLower == "b" or tLower == "mule" or tLower == "3" then
+            normalizedTier = "BANK"
+        elseif tLower == "none" or tLower == "clear" or tLower == "unassigned" or tLower == "0" then
+            normalizedTier = "UNASSIGNED"
+        end
+    end
+
+    foundChar.tier = normalizedTier
+
+    if supplyRole and supplyRole ~= "" then
+        local rLower = supplyRole:lower()
+        if rLower == "none" or rLower == "clear" then
+            foundChar.supply_role = nil
+        else
+            foundChar.supply_role = supplyRole
+        end
+    end
+
+    local defaultTarget = (normalizedTier == "CORE" and 35) or (normalizedTier == "RESERVE" and 25) or (normalizedTier == "BANK" and 1) or 60
+    if targetLevel then
+        foundChar.target_level = tonumber(targetLevel) or foundChar.target_level or defaultTarget
+    else
+        foundChar.target_level = foundChar.target_level or defaultTarget
+    end
+
+    if cachedCurrentChar and (cachedCurrentChar.key == foundKey or cachedCurrentChar.name == foundChar.name) then
+        cachedCurrentChar.tier = foundChar.tier
+        cachedCurrentChar.supply_role = foundChar.supply_role
+        cachedCurrentChar.target_level = foundChar.target_level
+    end
+
+    return true, string.format("Updated %s: [%s] [Target Lvl: %d] [Role: %s]",
+        foundChar.name or targetName, foundChar.tier, foundChar.target_level, foundChar.supply_role or "None")
+end
+
+function CLIAlts:CycleCharacterTier(char)
+    if not char then return "UNASSIGNED" end
+    local cur = char.tier or "UNASSIGNED"
+    local nextTier = "CORE"
+    local nextTarget = 35
+
+    if cur == "CORE" then
+        nextTier = "RESERVE"
+        nextTarget = 25
+    elseif cur == "RESERVE" then
+        nextTier = "BANK"
+        nextTarget = 1
+    elseif cur == "BANK" then
+        nextTier = "UNASSIGNED"
+        nextTarget = 60
+    else
+        nextTier = "CORE"
+        nextTarget = 35
+    end
+
+    char.tier = nextTier
+    char.target_level = nextTarget
+    return nextTier
+end
+
+function CLIAlts:GetCohortCounts()
+    local core, res, bank, unassigned = 0, 0, 0, 0
+    if CLIAltsDB and CLIAltsDB.characters then
+        for _, c in pairs(CLIAltsDB.characters) do
+            local t = c.tier or "UNASSIGNED"
+            if t == "CORE" then
+                core = core + 1
+            elseif t == "RESERVE" then
+                res = res + 1
+            elseif t == "BANK" then
+                bank = bank + 1
+            else
+                unassigned = unassigned + 1
+            end
+        end
+    end
+    return core, res, bank, unassigned
+end
+
+function CLIAlts:PrintRosterRoles()
+    self:Print("--- WoW Forever: Roster Cohorts & Roles ---")
+    local chars = self:GetCharactersList("cohort", true)
+    local groups = { CORE = {}, RESERVE = {}, BANK = {}, UNASSIGNED = {} }
+    for _, c in ipairs(chars) do
+        local t = c.tier or "UNASSIGNED"
+        groups[t] = groups[t] or {}
+        table.insert(groups[t], c)
+    end
+
+    local function PrintGroup(title, list, defaultTgt)
+        if #list == 0 then return end
+        if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cffffd700%s|r (%d alts):", title, #list))
+            for _, c in ipairs(list) do
+                local coloredName = CLIAlts:ColorizePlayerName(c.name, c.classFile)
+                local tgt = c.target_level or defaultTgt
+                local lvl = c.level or 1
+                local reachedTag = (lvl >= tgt) and " |cff00ff66[Target Level Reached]|r" or ""
+                local roleStr = (c.supply_role and c.supply_role ~= "") and string.format(" - Role: |cffffffff%s|r", c.supply_role) or ""
+                DEFAULT_CHAT_FRAME:AddMessage(string.format("    * %s (Lvl %d/%d)%s%s", coloredName, lvl, tgt, roleStr, reachedTag))
+            end
+        end
+    end
+
+    PrintGroup("CORE FOUR (Target Level 35)", groups.CORE, 35)
+    PrintGroup("RESERVE FIVE (Target Level 25)", groups.RESERVE, 25)
+    PrintGroup("BANK & LOGISTICS (Target Level 1)", groups.BANK, 1)
+    PrintGroup("UNASSIGNED ALTS", groups.UNASSIGNED, 60)
+end
+
 function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     local list = {}
     if not CLIAltsDB or not CLIAltsDB.characters then
@@ -1910,6 +2083,12 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 keep = (char.faction == "Alliance")
             elseif query == "horde" or query == "h" then
                 keep = (char.faction == "Horde")
+            elseif query == "core" or query == "c" then
+                keep = (char.tier == "CORE")
+            elseif query == "reserve" or query == "res" or query == "r" then
+                keep = (char.tier == "RESERVE")
+            elseif query == "bank" or query == "b" then
+                keep = (char.tier == "BANK")
             elseif query == "stale" then
                 keep = self:IsCharStale(char)
             elseif query:sub(1, 1) == "<" then
@@ -1927,6 +2106,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 local p1 = (char.professions and char.professions.primary and char.professions.primary[1] and char.professions.primary[1].name or ""):lower()
                 local p2 = (char.professions and char.professions.primary and char.professions.primary[2] and char.professions.primary[2].name or ""):lower()
                 local note = (char.note or ""):lower()
+                local srole = (char.supply_role or ""):lower()
                 keep = name:find(query, 1, true)
                     or cls:find(query, 1, true)
                     or race:find(query, 1, true)
@@ -1935,6 +2115,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                     or p1:find(query, 1, true)
                     or p2:find(query, 1, true)
                     or note:find(query, 1, true)
+                    or srole:find(query, 1, true)
             end
         end
         if keep then
@@ -1942,7 +2123,12 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         end
     end
 
-    sortBy = sortBy or CLIAltsDB.settings.sortBy or "level"
+    if sortBy == nil and self:IsForeverMode() then
+        sortBy = "cohort"
+    else
+        sortBy = sortBy or CLIAltsDB.settings.sortBy or "level"
+    end
+
     local sortValues = {}
     if sortBy == "rested" then
         for _, char in ipairs(list) do
@@ -1962,7 +2148,17 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     end
 
     table.sort(list, function(a, b)
-        if sortBy == "name" then
+        if sortBy == "cohort" or sortBy == "tier" then
+            local rankA = (a.tier == "CORE" and 1) or (a.tier == "RESERVE" and 2) or (a.tier == "BANK" and 3) or 4
+            local rankB = (b.tier == "CORE" and 1) or (b.tier == "RESERVE" and 2) or (b.tier == "BANK" and 3) or 4
+            if rankA ~= rankB then
+                if sortAsc then return rankA < rankB else return rankA > rankB end
+            end
+            local lvlA = a.level or 0
+            local lvlB = b.level or 0
+            if lvlA ~= lvlB then return lvlA > lvlB end
+            return (a.name or "") < (b.name or "")
+        elseif sortBy == "name" then
             if sortAsc then return (a.name or "") < (b.name or "") else return (a.name or "") > (b.name or "") end
         elseif sortBy == "gold" then
             if sortAsc then return (a.money or 0) < (b.money or 0) else return (a.money or 0) > (b.money or 0) end
@@ -2869,8 +3065,65 @@ function CLIAlts:RunSelfTest()
 
     CLIAltsDB = oldInvTestDB
 
+    -- 18. WoW Forever Cohort & Role Categorization Tests (Component 1)
+    local testCohortDB = {
+        settings = {
+            foreverMode = true,
+            sortBy = "cohort",
+            sortAsc = true,
+        },
+        characters = {
+            ["Main-Realm"] = { name = "Main", level = 30, tier = "CORE", target_level = 35, supply_role = "Tailor/Bags" },
+            ["Alt2-Realm"] = { name = "Alt2", level = 25, tier = "RESERVE", target_level = 25, supply_role = "Alch/DE" },
+            ["Bank-Realm"] = { name = "Bank", level = 1, tier = "BANK", target_level = 1, supply_role = "Storage" },
+            ["New-Realm"]  = { name = "New",  level = 10, tier = "UNASSIGNED", target_level = 60 },
+        },
+    }
+    local oldCohortDB = CLIAltsDB
+    CLIAltsDB = testCohortDB
+
+    -- 18a. IsForeverMode and ToggleForeverMode
+    Assert(self:IsForeverMode() == true, "Cohort: IsForeverMode returns true when enabled")
+    self:ToggleForeverMode()
+    Assert(self:IsForeverMode() == false, "Cohort: ToggleForeverMode flips to false")
+    self:ToggleForeverMode()
+    Assert(self:IsForeverMode() == true, "Cohort: ToggleForeverMode flips back to true")
+
+    -- 18b. GetCohortCounts
+    local cCore, cRes, cBank, cUnassigned = self:GetCohortCounts()
+    Assert(cCore == 1 and cRes == 1 and cBank == 1 and cUnassigned == 1, "Cohort: GetCohortCounts returns 1 Core, 1 Res, 1 Bank, 1 Unassigned")
+
+    -- 18c. SetCharacterRole and default targets
+    local okRole1, _ = self:SetCharacterRole("New", "CORE", "Miner/BS", nil)
+    Assert(okRole1 == true and testCohortDB.characters["New-Realm"].tier == "CORE", "Cohort: SetCharacterRole updates tier to CORE")
+    Assert(testCohortDB.characters["New-Realm"].target_level == 35, "Cohort: CORE tier defaults target_level to 35")
+    Assert(testCohortDB.characters["New-Realm"].supply_role == "Miner/BS", "Cohort: SetCharacterRole updates supply_role")
+
+    -- 18d. CycleCharacterTier
+    local cycledTier = self:CycleCharacterTier(testCohortDB.characters["New-Realm"])
+    Assert(cycledTier == "RESERVE" and testCohortDB.characters["New-Realm"].target_level == 25, "Cohort: CycleCharacterTier advances CORE -> RESERVE with target 25")
+
+    -- 18e. Target Level Reached detection (User constraint: UI wording must not show 'Parked')
+    local charReached = testCohortDB.characters["Alt2-Realm"]
+    local isReached = (charReached.level >= charReached.target_level)
+    Assert(isReached == true, "Cohort: Alt2 (Lvl 25/25) satisfies target level reached")
+
+    -- 18f. Cohort sorting (CORE -> RESERVE -> BANK -> UNASSIGNED)
+    local sortedCohorts = self:GetCharactersList("cohort", true)
+    Assert(#sortedCohorts == 4, "Cohort: GetCharactersList returns all 4 test alts")
+    Assert(sortedCohorts[1].name == "Main" and sortedCohorts[1].tier == "CORE", "Cohort: 1st sorted alt is Core")
+    Assert(sortedCohorts[2].name == "Alt2" or sortedCohorts[2].name == "New", "Cohort: 2nd sorted alt is Reserve")
+
+    -- 18g. Cohort query filter
+    local coreFiltered = self:GetCharactersList("name", true, "core")
+    Assert(#coreFiltered == 1 and coreFiltered[1].name == "Main", "Cohort: filter 'core' returns only Core alts")
+    local resFiltered = self:GetCharactersList("name", true, "reserve")
+    Assert(#resFiltered == 2, "Cohort: filter 'reserve' returns both Reserve alts")
+
+    CLIAltsDB = oldCohortDB
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

@@ -581,6 +581,41 @@ local function SlashHandler(msg)
         local state = CLIAltsDB.settings.showInventoryTooltips and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
         CLIAlts:Print(string.format("Inventory hover tooltips are now %s.", state))
 
+    elseif cmd == "forever" or cmd == "wf" then
+        CLIAlts:ToggleForeverMode()
+        local isForever = CLIAlts:IsForeverMode()
+        if isForever then
+            CLIAltsDB.settings.activeTab = 1
+            CLIAlts:Print("WoW Forever Mode: |cff00ff66ENABLED|r. Cohort routing & roles active.")
+        else
+            CLIAlts:Print("WoW Forever Mode: |cffff8800DISABLED|r. Standard alt monitor active.")
+        end
+        CLIAlts:RequestRender()
+
+    elseif cmd == "role" or cmd == "tier" or cmd == "cohort" then
+        if not arg or arg == "" then
+            CLIAlts:PrintRosterRoles()
+        else
+            local targetName, tier, remaining = arg:match("^(%S+)%s+(%S+)%s*(.*)$")
+            if not targetName or not tier then
+                CLIAlts:Print("Usage: |cff00ff66/clialts role <name> <core|reserve|bank|none> [supply_role] [target_level]|r")
+            else
+                local supplyRole, targetLvl = remaining:match("^(.-)%s+(%d+)$")
+                if not supplyRole then
+                    if tonumber(remaining) then
+                        targetLvl = tonumber(remaining)
+                        supplyRole = nil
+                    else
+                        supplyRole = (remaining ~= "") and remaining or nil
+                        targetLvl = nil
+                    end
+                end
+                local ok, msg = CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLvl)
+                CLIAlts:Print((ok and "|cff00ff66" or "|cffff4444") .. msg .. "|r")
+                CLIAlts:RequestRender()
+            end
+        end
+
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()
         CLIAlts:Print("Showing Quick Guide. Type |cff00ff66/clialts|r to toggle alt monitor.")

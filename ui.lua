@@ -563,6 +563,66 @@ local function FmtRaidLocks(char, t)
     return string.format("|cff%s%s|r", t.dimHex, table.concat(parts, ", "))
 end
 
+-- Tab 1 WoW Forever Route Formatters
+local function FmtTier(char)
+    local tier = char.tier or "UNASSIGNED"
+    if tier == "CORE" then
+        return "|cffffd700[CORE]|r"
+    elseif tier == "RESERVE" then
+        return "|cff00ccff[RES]|r"
+    elseif tier == "BANK" then
+        return "|cffff9900[BANK]|r"
+    else
+        return "|cff666666[---]|r"
+    end
+end
+
+local function FmtLevelTarget(char, t)
+    local lvl = char.level or 1
+    local tgt = char.target_level or ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or (char.tier == "BANK" and 1) or 60)
+    if lvl >= tgt then
+        return string.format("|cff00ff66%d/%d|r", lvl, tgt)
+    else
+        return string.format("|cff%s%d|r|cff%s/%d|r", t.primaryHex, lvl, t.dimHex, tgt)
+    end
+end
+
+local function FmtSupplyRole(char)
+    local role = char.supply_role
+    if not role or role == "" then
+        return "|cff666666---|r"
+    end
+    return string.format("|cffffffff%s|r", role)
+end
+
+local function FmtForeverStatus(char, t)
+    local lvl = char.level or 1
+    local tgt = char.target_level or ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or (char.tier == "BANK" and 1) or 60)
+    if lvl >= tgt then
+        return "|cff00ff66Target Level Reached|r"
+    end
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested then return "|cff666666Accruing|r" end
+    if rested.isMaxLevel then return "|cff888888MAX LEVEL|r" end
+    if rested.isFull then
+        local capPct = rested.maxPercent or 150
+        return string.format("|cff%s%d%% Capped*|r", t.highlightHex, capPct)
+    end
+    local pct = rested.percent or 0
+    local est = rested.isEstimate and "~" or ""
+    return string.format("|cff%s%d%%%s Rested|r", t.primaryHex, pct, est)
+end
+
+local FOREVER_COLS = {
+    { key = "tier",     title = "TIER",         w = 8,  pw = 75,  cpw = 70,  align = "CENTER", sort = "cohort", fmt = FmtTier },
+    { key = "name",     title = "NAME",         w = 15, pw = 130, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
+    { key = "lvlTgt",   title = "LVL/TGT",      w = 8,  pw = 65,  cpw = 65,  align = "RIGHT",  sort = "level",  fmt = FmtLevelTarget },
+    { key = "role",     title = "SUPPLY ROLE",  w = 14, pw = 125, cpw = 100, align = "LEFT",                    fmt = FmtSupplyRole },
+    { key = "status",   title = "ROUTE STATUS", w = 18, pw = 160, cpw = 142, align = "LEFT",   sort = "rested", fmt = FmtForeverStatus },
+    { key = "gold",     title = "GOLD",         w = 9,  pw = 85,  cpw = 80,  align = "RIGHT",  sort = "gold",   fmt = FmtGold },
+    { key = "eta",      title = "ETA",          w = 7,  pw = 92,  cpw = 0,   align = "RIGHT",                   fmt = FmtETA },
+}
+
 -- ----------------------------------------------------------------------------
 -- Data-Driven Columns Table (COLS) - Explicit Pixel Widths (Sum = 732px / 582px)
 -- ----------------------------------------------------------------------------
@@ -614,7 +674,12 @@ local COLS = {
 }
 
 function CLIAlts:GetColumns(activeTab)
-    local tabCols = COLS[activeTab] or COLS[1]
+    local tabCols
+    if (activeTab == 1 or activeTab == nil) and self:IsForeverMode() then
+        tabCols = FOREVER_COLS
+    else
+        tabCols = COLS[activeTab] or COLS[1]
+    end
     if not self:IsCompact() then
         return tabCols
     end
@@ -624,7 +689,7 @@ function CLIAlts:GetColumns(activeTab)
         -- In compact mode, hide columns with cpw == 0 or nil/disabled
         if col.cpw and col.cpw > 0 then
             table.insert(filtered, col)
-        elseif col.cpw == nil and col.key ~= "xp" and col.key ~= "restBar" then
+        elseif col.cpw == nil and col.key ~= "xp" and col.key ~= "restBar" and col.key ~= "eta" then
             table.insert(filtered, col)
         end
     end
@@ -1308,6 +1373,9 @@ function CLIAlts:Render()
     local isComp = self:IsCompact()
     for _, tabBtn in ipairs(mainFrame.tabButtons) do
         local base = isComp and tabBtn.compactText or tabBtn.baseText
+        if tabBtn.tabId == 1 and self:IsForeverMode() then
+            base = isComp and "[ 1: ROUTE ]" or "[ FOREVER ROUTE ]"
+        end
         if tabBtn.tabId == activeTab then
             tabBtn.label:SetText(string.format(">> %s <<", base))
             tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
@@ -1355,8 +1423,14 @@ function CLIAlts:Render()
 
     if isComp then
         local filterTag = self.activeFilter and string.format(" [%s]", self.activeFilter:upper()) or ""
-        mainFrame.statusBarText:SetText(string.format("ALTS: %d%s | WEALTH: %sg",
-            summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+        if self:IsForeverMode() then
+            local coreC, resC, bankC = self:GetCohortCounts()
+            mainFrame.statusBarText:SetText(string.format("ROUTE: %dC/%dR/%dB | WEALTH: %sg%s",
+                coreC, resC, bankC, self:FormatNumber(goldOnly), filterTag))
+        else
+            mainFrame.statusBarText:SetText(string.format("ALTS: %d%s | WEALTH: %sg",
+                summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+        end
     elseif activeTab == 4 then
         local spark = self:GenerateAsciiSparkline(14)
         local d1, d7, d30 = self:GetGoldHistoryDeltas()
@@ -1368,8 +1442,14 @@ function CLIAlts:Render()
     else
         local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
         local sysLabel = self:IsRetail() and "SYSTEM: RETAIL" or "SYSTEM: WOW FOREVER"
-        mainFrame.statusBarText:SetText(string.format("%s | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
-            sysLabel, curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+        if self:IsForeverMode() then
+            local coreC, resC, bankC = self:GetCohortCounts()
+            mainFrame.statusBarText:SetText(string.format("FOREVER ROUTE: %d CORE | %d RESERVE | %d BANK | TRACKED: %d ALTS%s | WEALTH: %sg",
+                coreC, resC, bankC, summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+        else
+            mainFrame.statusBarText:SetText(string.format("%s | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
+                sysLabel, curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+        end
     end
 
     -- Render Table Header Cells & Clickable Header Buttons
@@ -1696,6 +1776,9 @@ function CLIAlts:ExecutePromptCommand(input)
                 money = "gold",
                 rest = "rested",
                 rested = "rested",
+                cohort = "cohort",
+                tier = "cohort",
+                role = "cohort",
                 xp = "xp",
                 exp = "xp",
                 progress = "xp",
@@ -1922,6 +2005,59 @@ function CLIAlts:ExecutePromptCommand(input)
         local ok, msg = self:RestoreDB()
         self:SetPromptFeedback(msg, not ok)
 
+    elseif cmd == "forever" or cmd == "wf" then
+        self:ToggleForeverMode()
+        local isForever = self:IsForeverMode()
+        if isForever then
+            CLIAltsDB.settings.activeTab = 1
+            self:SetPromptFeedback("WoW Forever Mode: ENABLED (Tab 1 Cohorts active)")
+        else
+            self:SetPromptFeedback("WoW Forever Mode: DISABLED (Standard view restored)")
+        end
+        self:Render()
+
+    elseif cmd == "role" or cmd == "tier" or cmd == "cohort" then
+        if not args or args == "" then
+            self:PrintRosterRoles()
+            self:SetPromptFeedback("Printed roster cohorts to chat. Usage: role <name> <core|reserve|bank|none> [role] [tgt]")
+        else
+            local targetName, tier, remaining = args:match("^(%S+)%s+(%S+)%s*(.*)$")
+            if not targetName or not tier then
+                local singleName = args:match("^(%S+)$")
+                local foundChar = nil
+                if singleName and CLIAltsDB and CLIAltsDB.characters then
+                    for _, c in pairs(CLIAltsDB.characters) do
+                        local n = (c.name or ""):lower()
+                        if n == singleName:lower() or n:find(singleName:lower(), 1, true) then
+                            foundChar = c
+                            break
+                        end
+                    end
+                end
+                if foundChar then
+                    local newT = self:CycleCharacterTier(foundChar)
+                    self:Render()
+                    self:SetPromptFeedback(string.format("Cycled %s -> %s (Target Level %d)", foundChar.name, newT, foundChar.target_level))
+                else
+                    self:SetPromptFeedback("Usage: role <name> <core|reserve|bank|none> [supply_role] [target_level]", true)
+                end
+            else
+                local supplyRole, targetLvl = remaining:match("^(.-)%s+(%d+)$")
+                if not supplyRole then
+                    if tonumber(remaining) then
+                        targetLvl = tonumber(remaining)
+                        supplyRole = nil
+                    else
+                        supplyRole = (remaining ~= "") and remaining or nil
+                        targetLvl = nil
+                    end
+                end
+                local ok, msg = self:SetCharacterRole(targetName, tier, supplyRole, targetLvl)
+                self:Render()
+                self:SetPromptFeedback(msg, not ok)
+            end
+        end
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -1947,6 +2083,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "theme", "scale", "perk", "perf", "selftest",
         "alerts", "digest", "plan", "note", "unlocked", "prune",
         "backup", "restore", "tooltips", "inv",
+        "forever", "role",
         "refresh", "help", "exit", "close"
     }
 
@@ -1954,7 +2091,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
     if cmd then
         cmd = cmd:lower()
         if cmd == "sort" then
-            local sortKeys = { "name", "level", "gold", "rested", "waste", "xp", "location", "hearth", "seen", "note" }
+            local sortKeys = { "name", "level", "cohort", "gold", "rested", "waste", "xp", "location", "hearth", "seen", "note" }
             for _, k in ipairs(sortKeys) do
                 if k:sub(1, #arg) == arg:lower() and k ~= arg:lower() then
                     editBox:SetText("sort " .. k)
@@ -2029,7 +2166,7 @@ function CLIAlts:ShowDossierPopup(char)
 
     if not dossierPopup then
         local dp = CreateFrame("Frame", "CLIAltsDossierPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        dp:SetSize(660, 480)
+        dp:SetSize(660, 520)
         dp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dp:SetFrameStrata("DIALOG")
         dp:EnableMouse(true)
@@ -2043,7 +2180,7 @@ function CLIAlts:ShowDossierPopup(char)
         })
 
         local body = dp:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(body, 14)
+        self:SetWidgetFont(body, 13)
         body:SetPoint("TOPLEFT", dp, "TOPLEFT", 16, -16)
         body:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 45)
         body:SetJustifyH("LEFT")
@@ -2057,6 +2194,16 @@ function CLIAlts:ShowDossierPopup(char)
             end
         end)
         btnDel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 16)
+
+        local btnCycleRole = CreateRetroButton(dp, "[ CYCLE COHORT ]", 130, 20, function()
+            if dp.charData then
+                CLIAlts:CycleCharacterTier(dp.charData)
+                CLIAlts:ShowDossierPopup(dp.charData)
+                CLIAlts:RequestRender()
+            end
+        end)
+        btnCycleRole:SetPoint("LEFT", btnDel, "RIGHT", 10, 0)
+        dp.btnCycleRole = btnCycleRole
 
         local btnClose = CreateRetroButton(dp, "[ CLOSE ]", 80, 20, function()
             dp:Hide()
@@ -2134,6 +2281,17 @@ function CLIAlts:ShowDossierPopup(char)
         end
     else
         table.insert(lines, "| Rest Status:    |cff888888N/A (Max Level characters do not accumulate Rested XP)|r")
+    end
+
+    if self:IsForeverMode() or (char.tier and char.tier ~= "UNASSIGNED") then
+        table.insert(lines, "+------------------------------------------------------------------------------+")
+        local tierStr = char.tier or "UNASSIGNED"
+        local tgtLvl = char.target_level or ((tierStr == "CORE" and 35) or (tierStr == "RESERVE" and 25) or (tierStr == "BANK" and 1) or 60)
+        local curLvl = char.level or 1
+        local statusTag = (curLvl >= tgtLvl) and " |cff00ff66[Target Level Reached]|r" or ""
+        table.insert(lines, string.format("| WOW FOREVER ROUTE: |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
+        local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", char.supply_role) or "|cff888888None (set via > role <name> <tier> [role])|r"
+        table.insert(lines, string.format("| Supply Role:       %s", roleStr))
     end
 
     table.insert(lines, "+------------------------------------------------------------------------------+")
@@ -2326,6 +2484,8 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts unlocked <inst> - List alts with no active lock (gap finder)|",
         "|   /clialts prune <days> [confirm] - Bulk purge alts inactive for N days|",
         "|   /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)|",
+        "|   /clialts forever    - Toggle WoW Forever Cohort mode (Core/Res)  |",
+        "|   /clialts role <who> <tier> [role] [tgt] - Assign cohort & role   |",
         "|   /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup |",
         "|   /clialts restore    - Restore database from CLIAltsDB.backup     |",
         "|   /clialts reset      - Reset window position to center            |",
@@ -2333,13 +2493,15 @@ function CLIAlts:ShowHelpPopup()
         "| Interactive Terminal Command Prompt (>):                           |",
         "|   > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)|",
         "|   > compact           - Toggle compact view (hide XP bar, slim)    |",
-        "|   > sort <column>     - Sort table (name, lvl, gold, rest, waste)  |",
+        "|   > sort <column>     - Sort table (name, lvl, cohort, gold, rest) |",
         "|   > filter <query>    - Filter alts (alliance, horde, stale, <60)  |",
         "|   > find <text>       - Search character names, classes, or zones  |",
         "|   > clear             - Clear active filter query                  |",
         "|   > next              - Print alts with highest rested waste       |",
         "|   > watch <item>      - Add item to bag/bank inventory tracker     |",
         "|   > tooltips / inv    - Toggle item hover tooltips (bags/bank alts)|",
+        "|   > forever           - Toggle WoW Forever Cohort mode (Core/Res)  |",
+        "|   > role <who> <tier> [role] [tgt] - Assign cohort & role          |",
         "|   > export            - Open CSV export modal dialog               |",
         "|   > theme [name]      - Cycle or set color theme (incl. safe/cb)   |",
         "|   > perf              - Output profiling exponential moving average|",
