@@ -11,7 +11,7 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 -- ----------------------------------------------------------------------------
 -- Constants & Terminal Configuration
 -- ----------------------------------------------------------------------------
-local FONT_PATH = "Interface\\AddOns\\clialts\\media\\VT323-Regular.ttf"
+local FONT_PATH = "Interface\\AddOns\\" .. (addonName or "clialts") .. "\\media\\VT323-Regular.ttf"
 local DEFAULT_FONT_SIZE = 15
 local LINE_WIDTH = 85
 local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
@@ -19,6 +19,7 @@ local DOUBLE_BORDER = "+" .. string.rep("=", LINE_WIDTH - 2) .. "+"
 
 local ROWS_COUNT = 12
 local rowFrames = {}
+local headerCells = {}
 local headerButtons = {}
 local currentPage = 1
 local totalPages = 1
@@ -144,10 +145,11 @@ function CLIAlts:SetWidgetFont(fontString, size, flags)
     if not fontString or not fontString.SetFont then return end
     size = size or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     flags = flags or ""
-    local success = pcall(function()
-        fontString:SetFont(FONT_PATH, size, flags)
+    local setOk = false
+    pcall(function()
+        setOk = fontString:SetFont(FONT_PATH, size, flags)
     end)
-    if not success or not fontString:GetFont() then
+    if not setOk then
         pcall(function()
             local fallback = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
             fontString:SetFont(fallback, size, flags)
@@ -310,7 +312,11 @@ function CLIAlts:UpdateAllFonts(fontSize)
     self:SetWidgetFont(mainFrame.statusBarText, fontSize)
     self:SetWidgetFont(mainFrame.midAscii2, fontSize)
     self:SetWidgetFont(mainFrame.tableTopAscii, fontSize)
-    self:SetWidgetFont(mainFrame.tableHeaderString, fontSize)
+    if mainFrame.headerBorderL then self:SetWidgetFont(mainFrame.headerBorderL, fontSize) end
+    if mainFrame.headerBorderR then self:SetWidgetFont(mainFrame.headerBorderR, fontSize) end
+    for _, hCell in ipairs(mainFrame.headerCells or {}) do
+        self:SetWidgetFont(hCell, fontSize)
+    end
     self:SetWidgetFont(mainFrame.tableSepAscii, fontSize)
     self:SetWidgetFont(mainFrame.tableBotAscii, fontSize)
     self:SetWidgetFont(mainFrame.botAscii, fontSize)
@@ -318,7 +324,11 @@ function CLIAlts:UpdateAllFonts(fontSize)
     self:SetWidgetFont(mainFrame.statusTip, fontSize)
 
     for _, row in ipairs(rowFrames) do
-        self:SetWidgetFont(row.text, fontSize)
+        if row.borderL then self:SetWidgetFont(row.borderL, fontSize) end
+        if row.borderR then self:SetWidgetFont(row.borderR, fontSize) end
+        for _, cell in ipairs(row.cells or {}) do
+            self:SetWidgetFont(cell, fontSize)
+        end
     end
 end
 
@@ -341,38 +351,32 @@ local function FmtName(char)
     local _, _, _, hex = CLIAlts:GetClassColor(char.classFile)
     local isStale = CLIAlts.IsCharStale and CLIAlts:IsCharStale(char)
     if isStale then
-        local maxLen = 12
-        local shortName = (#name > maxLen) and name:sub(1, maxLen) or name
-        local padSpaces = string.rep(" ", math.max(0, 16 - #shortName - 4))
-        return string.format("|cff%s%s|r |cffff5555[S]|r%s", hex, shortName, padSpaces)
+        return string.format("|cff%s%s|r |cffff5555[S]|r", hex, name)
     end
-    return CLIAlts:Pad(name, 16, "LEFT", hex)
+    return string.format("|cff%s%s|r", hex, name)
 end
 
 local function FmtLevel(char)
-    local lvl = tostring(char.level or 1)
-    return CLIAlts:Pad(lvl, 3, "RIGHT", "ffffff")
+    return tostring(char.level or 1)
 end
 
 local function FmtRaceClass(char)
     local code = CLIAlts:GetRaceCode(char)
     local class = char.class or "Unknown"
-    local str = string.format("%s %s", code, class)
-    return CLIAlts:Pad(str, 11, "LEFT", "cccccc")
+    return string.format("|cffcccccc%s %s|r", code, class)
 end
 
 local function FmtLevelProgress(char, t)
     local xpData = CLIAlts:GetLevelProgressData(char)
     if not xpData or xpData.isMaxLevel then
-        return string.format("|cff%s[|r|cff%s%s|r|cff%s]|r |cff%sMAX |r",
-            t.borderHex, t.dimHex, string.rep("=", 10), t.borderHex, t.highlightHex)
+        return string.format("|cff%s[==========]|r |cff%sMAX|r", t.dimHex, t.highlightHex)
     end
 
     local fill = math.min(10, math.max(0, math.floor((xpData.ratio or 0) * 10)))
     local empty = 10 - fill
     local fillStr = string.rep("=", fill)
     local emptyStr = string.rep(".", empty)
-    local pctStr = string.format("%3d%%", xpData.percent)
+    local pctStr = string.format("%d%%", xpData.percent)
 
     return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
         t.borderHex, t.highlightHex, fillStr, t.dimHex, emptyStr, t.borderHex, t.primaryHex, pctStr)
@@ -380,55 +384,49 @@ end
 
 local function FmtGold(char)
     local gold = math.floor((char.money or 0) / 10000)
-    local str = CLIAlts:FormatNumber(gold) .. "g"
-    return CLIAlts:Pad(str, 10, "RIGHT", "ffd700")
+    return "|cffffd700" .. CLIAlts:FormatNumber(gold) .. "g|r"
 end
 
 local function FmtRested(char, t)
     local rested = CLIAlts:GetRestedData(char)
-    if not rested then return CLIAlts:Pad("---", 8, "RIGHT", "666666") end
-    if rested.isMaxLevel then return CLIAlts:Pad("MAX", 8, "RIGHT", "888888") end
+    if not rested then return "|cff666666---|r" end
+    if rested.isMaxLevel then return "|cff888888MAX|r" end
 
-    local est = rested.isEstimate and "~" or " "
-    local capMark = rested.isFull and "*" or " "
-    local pct = string.format("%3d%%%s%s", rested.percent, capMark, est)
+    local est = rested.isEstimate and "~" or ""
+    local capMark = rested.isFull and "*" or ""
+    local pct = string.format("%d%%%s%s", rested.percent, capMark, est)
     local color = rested.isFull and t.highlightHex or t.primaryHex
-    return CLIAlts:Pad(pct, 8, "RIGHT", color)
+    return string.format("|cff%s%s|r", color, pct)
 end
 
 local function FmtETA(char, t)
     local rested = CLIAlts:GetRestedData(char)
-    if not rested then return CLIAlts:Pad("---", 7, "RIGHT", "666666") end
-    if rested.isMaxLevel then return CLIAlts:Pad("MAX", 7, "RIGHT", "888888") end
+    if not rested then return "|cff666666---|r" end
+    if rested.isMaxLevel then return "|cff888888MAX|r" end
     if rested.isFull then
         local wastedSec, _, _, timeStr = CLIAlts:GetRestedWaste(char)
         if wastedSec and wastedSec > 3600 then
-            -- Alert marker '!' + time string, colored in amber/yellow for universal colorblind safety
-            return CLIAlts:Pad("!" .. (timeStr or "1h"), 7, "RIGHT", "ffaa00")
+            return string.format("|cffffaa00!%s|r", timeStr or "1h")
         else
-            return CLIAlts:Pad("[CAP]", 7, "RIGHT", t.highlightHex)
+            return string.format("|cff%s[CAP]|r", t.highlightHex)
         end
     end
-
-    local s = rested.timeLeftStr or "---"
-    return CLIAlts:Pad(s, 7, "RIGHT", t.dimHex)
+    return string.format("|cff%s%s|r", t.dimHex, rested.timeLeftStr or "---")
 end
 
 -- Tab 2 Rested Monitor Formatters
 local function FmtRestedPool(char, t)
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return CLIAlts:Pad("MAX LEVEL", 17, "RIGHT", "888888")
+        return "|cff888888MAX LEVEL|r"
     end
-    local s = string.format("%s / %s", CLIAlts:FormatNumber(rested.currentRested), CLIAlts:FormatNumber(rested.maxRested))
-    return CLIAlts:Pad(s, 17, "RIGHT", t.primaryHex)
+    return string.format("|cff%s%s / %s|r", t.primaryHex, CLIAlts:FormatNumber(rested.currentRested), CLIAlts:FormatNumber(rested.maxRested))
 end
 
 local function FmtRestedBar(char, t)
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s[|r|cff%s%s|r|cff%s]|r |cff%sMAX  |r",
-            t.borderHex, t.dimHex, string.rep("=", 10), t.borderHex, t.highlightHex)
+        return string.format("|cff%s[==========]|r |cff%sMAX|r", t.dimHex, t.highlightHex)
     end
 
     local isFull = rested.isFull
@@ -438,32 +436,33 @@ local function FmtRestedBar(char, t)
     local fillChar = isFull and "#" or "="
     local fillStr = string.rep(fillChar, fill)
     local emptyStr = string.rep(".", empty)
-    local est = rested.isEstimate and "~" or " "
-    local capMark = isFull and "*" or " "
-    local pctStr = string.format("%3d%%%s%s", rested.percent, capMark, est)
+    local est = rested.isEstimate and "~" or ""
+    local capMark = isFull and "*" or ""
+    local pctStr = string.format("%d%%%s%s", rested.percent, capMark, est)
+    local color = isFull and t.highlightHex or t.primaryHex
 
     return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
-        t.borderHex, isFull and t.highlightHex or t.primaryHex, fillStr, t.dimHex, emptyStr, t.borderHex, isFull and t.highlightHex or t.primaryHex, pctStr)
+        t.borderHex, color, fillStr, t.dimHex, emptyStr, t.borderHex, color, pctStr)
 end
 
 local function FmtRate(char, t)
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return CLIAlts:Pad("---", 8, "RIGHT", "666666")
+        return "|cff666666---|r"
     end
     local s = rested.isResting and "+5.0%/8h" or "+1.25%/8h"
-    return CLIAlts:Pad(s, 8, "RIGHT", t.dimHex)
+    return string.format("|cff%s%s|r", t.dimHex, s)
 end
 
-local function FmtState(char, t)
+local function FmtState(char)
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return CLIAlts:Pad("---", 7, "CENTER", "666666")
+        return "|cff666666---|r"
     end
     if rested.isResting then
-        return "|cff00ff66[REST]|r "
+        return "|cff00ff66[REST]|r"
     else
-        return "|cffffaa00[WILD]|r "
+        return "|cffffaa00[WILD]|r"
     end
 end
 
@@ -471,36 +470,32 @@ end
 local function FmtProf1(char, t)
     local profs = char.professions and char.professions.primary
     local p = profs and profs[1]
-    if not p then return CLIAlts:Pad("---", 23, "LEFT", "666666") end
-    local str = string.format("%s %d/%d", p.name or "Prof", p.rank or 0, p.maxRank or 0)
-    return CLIAlts:Pad(str, 23, "LEFT", t.primaryHex)
+    if not p then return "|cff666666---|r" end
+    return string.format("|cff%s%s %d/%d|r", t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
 end
 
 local function FmtProf2(char, t)
     local profs = char.professions and char.professions.primary
     local p = profs and profs[2]
-    if not p then return CLIAlts:Pad("---", 20, "LEFT", "666666") end
-    local str = string.format("%s %d/%d", p.name or "Prof", p.rank or 0, p.maxRank or 0)
-    return CLIAlts:Pad(str, 20, "LEFT", t.primaryHex)
+    if not p then return "|cff666666---|r" end
+    return string.format("|cff%s%s %d/%d|r", t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
 end
 
 local function FmtSecProf(char, t)
     local secs = char.professions and char.professions.secondary
-    if not secs or #secs == 0 then return CLIAlts:Pad("---", 14, "LEFT", "666666") end
+    if not secs or #secs == 0 then return "|cff666666---|r" end
     local parts = {}
     for _, s in ipairs(secs) do
         local shortName = s.name:sub(1, 4)
         table.insert(parts, string.format("%s %d", shortName, s.rank or 0))
     end
-    local str = table.concat(parts, ", ")
-    return CLIAlts:Pad(str, 14, "LEFT", t.dimHex)
+    return string.format("|cff%s%s|r", t.dimHex, table.concat(parts, ", "))
 end
 
 -- Tab 4 Economy & Location Formatters
 local function FmtGoldLong(char)
     local gold = math.floor((char.money or 0) / 10000)
-    local str = CLIAlts:FormatNumber(gold) .. "g"
-    return CLIAlts:Pad(str, 11, "RIGHT", "ffd700")
+    return "|cffffd700" .. CLIAlts:FormatNumber(gold) .. "g|r"
 end
 
 local function FmtWealthShare(char, t)
@@ -508,25 +503,24 @@ local function FmtWealthShare(char, t)
     local total = summary.totalGold or 0
     local money = char.money or 0
     local pct = total > 0 and (money / total * 100) or 0
-    local str = string.format("%.1f%%", pct)
-    return CLIAlts:Pad(str, 6, "RIGHT", t.primaryHex)
+    return string.format("|cff%s%.1f%%|r", t.primaryHex, pct)
 end
 
 local function FmtLocation(char, t)
     local loc = char.location or "Unknown"
-    return CLIAlts:Pad(loc, 18, "LEFT", t.dimHex)
+    return string.format("|cff%s%s|r", t.dimHex, loc)
 end
 
 local function FmtHearth(char, t)
     local bind = char.bindLocation or "Unknown"
-    return CLIAlts:Pad(bind, 18, "LEFT", t.highlightHex)
+    return string.format("|cff%s%s|r", t.highlightHex, bind)
 end
 
 -- Tab 5 Cooldowns & Lockouts Formatters
 local function FmtTradeCooldowns(char, t)
     local cds = char.tradeCooldowns
     if not cds or not next(cds) then
-        return CLIAlts:Pad("NO COOLDOWNS", 25, "LEFT", "666666")
+        return "|cff666666NO COOLDOWNS|r"
     end
     local parts = {}
     local now = time()
@@ -543,15 +537,14 @@ local function FmtTradeCooldowns(char, t)
             table.insert(parts, string.format("%s:%s", short, timStr))
         end
     end
-    if #parts == 0 then return CLIAlts:Pad("READY", 25, "LEFT", "00ff66") end
-    local str = table.concat(parts, ", ")
-    return CLIAlts:Pad(str, 25, "LEFT", t.primaryHex)
+    if #parts == 0 then return "|cff00ff66READY|r" end
+    return string.format("|cff%s%s|r", t.primaryHex, table.concat(parts, ", "))
 end
 
 local function FmtRaidLocks(char, t)
     local locks = char.lockouts
     if not locks or not next(locks) then
-        return CLIAlts:Pad("NO SAVED LOCKS", 30, "LEFT", "666666")
+        return "|cff666666NO SAVED LOCKS|r"
     end
     local parts = {}
     local now = time()
@@ -567,58 +560,57 @@ local function FmtRaidLocks(char, t)
             table.insert(parts, string.format("%s:%s", short, tStr))
         end
     end
-    if #parts == 0 then return CLIAlts:Pad("NO ACTIVE LOCKS", 30, "LEFT", "666666") end
-    local str = table.concat(parts, ", ")
-    return CLIAlts:Pad(str, 30, "LEFT", t.dimHex)
+    if #parts == 0 then return "|cff666666NO ACTIVE LOCKS|r" end
+    return string.format("|cff%s%s|r", t.dimHex, table.concat(parts, ", "))
 end
 
 -- ----------------------------------------------------------------------------
--- Data-Driven Columns Table (COLS) - Exactly 85 Characters Per Tab
+-- Data-Driven Columns Table (COLS) - Explicit Pixel Widths (Sum = 732px / 582px)
 -- ----------------------------------------------------------------------------
 local COLS = {
-    [1] = { -- ALTS OVERVIEW (Width = 85 chars)
-        { key = "fac",       title = "FAC",            w = 3,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",           w = 16, align = "LEFT",   sort = "name",    fmt = FmtName },
-        { key = "lvl",       title = "LVL",            w = 3,  align = "RIGHT",  sort = "level",   fmt = FmtLevel },
-        { key = "raceClass", title = "RACE/CLASS",     w = 11, align = "LEFT",   fmt = FmtRaceClass },
-        { key = "xp",        title = "LEVEL PROGRESS", w = 16, align = "LEFT",   sort = "xp",      fmt = FmtLevelProgress },
-        { key = "gold",      title = "GOLD",           w = 10, align = "RIGHT",  sort = "gold",    fmt = FmtGold },
-        { key = "rested",    title = "RESTED",         w = 8,  align = "RIGHT",  sort = "rested",  fmt = FmtRested },
-        { key = "eta",       title = "ETA",            w = 7,  align = "RIGHT",  fmt = FmtETA },
+    [1] = { -- ALTS OVERVIEW
+        { key = "fac",       title = "FAC",            w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",           w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",    fmt = FmtName },
+        { key = "lvl",       title = "LVL",            w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",   fmt = FmtLevel },
+        { key = "raceClass", title = "RACE/CLASS",     w = 11, pw = 105, cpw = 105, align = "LEFT",   fmt = FmtRaceClass },
+        { key = "xp",        title = "LEVEL PROGRESS", w = 16, pw = 145, cpw = 0,   align = "LEFT",   sort = "xp",      fmt = FmtLevelProgress },
+        { key = "gold",      title = "GOLD",           w = 10, pw = 95,  cpw = 95,  align = "RIGHT",  sort = "gold",    fmt = FmtGold },
+        { key = "rested",    title = "RESTED",         w = 8,  pw = 86,  cpw = 86,  align = "RIGHT",  sort = "rested",  fmt = FmtRested },
+        { key = "eta",       title = "ETA",            w = 7,  pw = 91,  cpw = 91,  align = "RIGHT",  fmt = FmtETA },
     },
-    [2] = { -- RESTED XP MONITOR (Width = 85 chars)
-        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
-        { key = "pool",      title = "RESTED / CAP",    w = 17, align = "RIGHT",  sort = "rested", fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS", w = 17, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",            w = 8,  align = "RIGHT",  fmt = FmtRate },
-        { key = "state",     title = "STATE",           w = 7,  align = "CENTER", fmt = FmtState },
-        { key = "eta",       title = "ETA/WST",         w = 7,  align = "RIGHT",  sort = "waste",  fmt = FmtETA },
+    [2] = { -- RESTED XP MONITOR
+        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
+        { key = "pool",      title = "RESTED / CAP",    w = 17, pw = 145, cpw = 150, align = "RIGHT",  sort = "rested", fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS", w = 17, pw = 145, cpw = 0,   align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",            w = 8,  pw = 75,  cpw = 75,  align = "RIGHT",  fmt = FmtRate },
+        { key = "state",     title = "STATE",           w = 7,  pw = 68,  cpw = 68,  align = "CENTER", fmt = FmtState },
+        { key = "eta",       title = "ETA/WST",         w = 7,  pw = 89,  cpw = 84,  align = "RIGHT",  sort = "waste",  fmt = FmtETA },
     },
-    [3] = { -- PROFESSIONS (Width = 85 chars)
-        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
-        { key = "prof1",     title = "PRIMARY PROF 1",  w = 23, align = "LEFT",   fmt = FmtProf1 },
-        { key = "prof2",     title = "PRIMARY PROF 2",  w = 20, align = "LEFT",   fmt = FmtProf2 },
-        { key = "sec",       title = "SECONDARY",       w = 14, align = "LEFT",   fmt = FmtSecProf },
+    [3] = { -- PROFESSIONS
+        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
+        { key = "prof1",     title = "PRIMARY PROF 1",  w = 23, pw = 205, cpw = 160, align = "LEFT",   fmt = FmtProf1 },
+        { key = "prof2",     title = "PRIMARY PROF 2",  w = 20, pw = 185, cpw = 145, align = "LEFT",   fmt = FmtProf2 },
+        { key = "sec",       title = "SECONDARY",       w = 14, pw = 132, cpw = 72,  align = "LEFT",   fmt = FmtSecProf },
     },
-    [4] = { -- ECONOMY & LOCATIONS (Width = 85 chars)
-        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD",            w = 11, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
-        { key = "share",     title = "SHARE",           w = 6,  align = "RIGHT",  fmt = FmtWealthShare },
-        { key = "location",  title = "LAST ZONE",       w = 18, align = "LEFT",   sort = "location", fmt = FmtLocation },
-        { key = "hearth",    title = "HEARTHSTONE",     w = 18, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
+    [4] = { -- ECONOMY & LOCATIONS
+        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",    fmt = FmtLevel },
+        { key = "gold",      title = "GOLD",            w = 11, pw = 105, cpw = 95,  align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "share",     title = "SHARE",           w = 6,  pw = 60,  cpw = 55,  align = "RIGHT",  fmt = FmtWealthShare },
+        { key = "location",  title = "LAST ZONE",       w = 18, pw = 180, cpw = 115, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",     w = 18, pw = 177, cpw = 113, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
-    [5] = { -- COOLDOWNS & SAVED LOCKS (Width = 85 chars)
-        { key = "fac",       title = "FAC",             w = 3,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS", w = 25, align = "LEFT",   fmt = FmtTradeCooldowns },
-        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 30, align = "LEFT", fmt = FmtRaidLocks },
+    [5] = { -- COOLDOWNS & SAVED LOCKS
+        { key = "fac",       title = "FAC",             w = 3,  pw = 34,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "NAME",            w = 16, pw = 140, cpw = 135, align = "LEFT",   sort = "name",   fmt = FmtName },
+        { key = "lvl",       title = "LVL",             w = 3,  pw = 36,  cpw = 36,  align = "RIGHT",  sort = "level",  fmt = FmtLevel },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS", w = 25, pw = 230, cpw = 175, align = "LEFT",   fmt = FmtTradeCooldowns },
+        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 30, pw = 292, cpw = 202, align = "LEFT", fmt = FmtRaidLocks },
     },
 }
 
@@ -630,13 +622,11 @@ function CLIAlts:GetColumns(activeTab)
 
     local filtered = {}
     for _, col in ipairs(tabCols) do
-        -- In compact mode, hide the XP bar column ("xp" in Tab 1, "restBar" in Tab 2)
-        if col.key ~= "xp" and col.key ~= "restBar" then
-            if activeTab == 2 and col.key == "pool" then
-                table.insert(filtered, { key = col.key, title = "RESTED/CAP", w = 14, align = col.align, sort = col.sort, fmt = col.fmt })
-            else
-                table.insert(filtered, col)
-            end
+        -- In compact mode, hide columns with cpw == 0 or nil/disabled
+        if col.cpw and col.cpw > 0 then
+            table.insert(filtered, col)
+        elseif col.cpw == nil and col.key ~= "xp" and col.key ~= "restBar" then
+            table.insert(filtered, col)
         end
     end
     return filtered
@@ -655,29 +645,6 @@ function CLIAlts:GetBorderLine(isDouble, activeTab)
     local w = self:GetLineWidth(activeTab)
     local char = isDouble and "=" or "-"
     return "+" .. string.rep(char, w - 2) .. "+"
-end
-
-function CLIAlts:BuildHeaderLine(activeTab, t)
-    local cols = self:GetColumns(activeTab)
-    local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
-    local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
-    local parts = {}
-
-    for _, col in ipairs(cols) do
-        local title = col.title
-        if col.sort and col.sort == sortBy then
-            local arrow = sortAsc and "^" or "v"
-            if col.align == "RIGHT" then
-                title = arrow .. title
-            else
-                title = title .. arrow
-            end
-        end
-        local padded = self:Pad(title, col.w, col.align or "LEFT", t.highlightHex)
-        table.insert(parts, padded)
-    end
-
-    return "| " .. table.concat(parts, " ") .. " |"
 end
 
 -- ----------------------------------------------------------------------------
@@ -713,7 +680,7 @@ function CLIAlts:ApplyLayoutSize()
     end
 
     if mainFrame.titleText then
-        mainFrame.titleText:SetText(isComp and "[#] CLIALTS" or ("[#] CLIALTS :: RETRO TERMINAL ALT MONITOR v" .. (self.VERSION or "1.1.0")))
+        mainFrame.titleText:SetText(isComp and ("[#] CLIALTS v" .. (self.VERSION or "1.0.0")) or ("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.0.0")))
     end
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
@@ -771,30 +738,30 @@ function CLIAlts:CreateMainFrame()
     local titleText = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(titleText, fontSize + 1, "OUTLINE")
     titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -22)
-    titleText:SetText("[#] CLIALTS :: RETRO TERMINAL ALT MONITOR v" .. CLIAlts.VERSION)
+    titleText:SetText("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.0.0"))
     frame.titleText = titleText
 
-    -- Window Controls on Title Bar (Scale, Compact, Theme, Help, Refresh, Close)
-    local btnClose = CreateRetroButton(frame, "[ X ]", 34, 18, function()
+    -- Window Controls on Title Bar (Scale, Compact, Theme, Help, Close)
+    local btnClose = CreateRetroButton(frame, "[ X ]", 28, 18, function()
         CLIAlts:Toggle(false)
     end)
     btnClose:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -20)
 
-    local btnHelp = CreateRetroButton(frame, "[ ? ]", 34, 18, function()
+    local btnHelp = CreateRetroButton(frame, "[ ? ]", 28, 18, function()
         CLIAlts:ShowHelpPopup()
     end)
-    btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -6, 0)
+    btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -5, 0)
 
-    local btnScale = CreateRetroButton(frame, string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)), 95, 18, function()
+    local btnScale = CreateRetroButton(frame, string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)), 90, 18, function()
         CLIAlts:CycleScale()
     end)
-    btnScale:SetPoint("RIGHT", btnHelp, "LEFT", -6, 0)
+    btnScale:SetPoint("RIGHT", btnHelp, "LEFT", -5, 0)
     frame.btnScale = btnScale
 
-    local btnCompact = CreateRetroButton(frame, "[ COMPACT ]", 95, 18, function()
+    local btnCompact = CreateRetroButton(frame, "[ COMPACT ]", 85, 18, function()
         CLIAlts:ToggleCompact()
     end)
-    btnCompact:SetPoint("RIGHT", btnScale, "LEFT", -6, 0)
+    btnCompact:SetPoint("RIGHT", btnScale, "LEFT", -5, 0)
     btnCompact:SetScript("OnEnter", function(self)
         local t = CLIAlts:GetTheme()
         self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.8)
@@ -812,16 +779,11 @@ function CLIAlts:CreateMainFrame()
     end)
     frame.btnCompact = btnCompact
 
-    local btnTheme = CreateRetroButton(frame, "[ THEME: GRN ]", 100, 18, function()
+    local btnTheme = CreateRetroButton(frame, "[ THEME: GRN ]", 95, 18, function()
         CLIAlts:CycleTheme()
     end)
-    btnTheme:SetPoint("RIGHT", btnCompact, "LEFT", -6, 0)
+    btnTheme:SetPoint("RIGHT", btnCompact, "LEFT", -5, 0)
     frame.btnTheme = btnTheme
-
-    local btnRefresh = CreateRetroButton(frame, "[ REFRESH ]", 80, 18, function()
-        CLIAlts:Refresh()
-    end)
-    btnRefresh:SetPoint("RIGHT", btnTheme, "LEFT", -6, 0)
 
     -- Subheader border ASCII line
     local midAscii1 = frame:CreateFontString(nil, "OVERLAY")
@@ -902,20 +864,33 @@ function CLIAlts:CreateMainFrame()
     tableTopAscii:SetText(DOUBLE_BORDER)
     frame.tableTopAscii = tableTopAscii
 
-    -- Column Header Line (Monospace Text) & Clickable Hit Frame
+    -- Column Header Line (Individual Cells) & Clickable Hit Frame
     local headerFrame = CreateFrame("Frame", nil, frame)
     headerFrame:SetSize(756, 18)
     headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -120)
     frame.headerFrame = headerFrame
 
-    local tableHeaderString = headerFrame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(tableHeaderString, fontSize)
-    tableHeaderString:SetPoint("LEFT", headerFrame, "LEFT", 0, 0)
-    tableHeaderString:SetJustifyH("LEFT")
-    frame.tableHeaderString = tableHeaderString
+    local headerBorderL = headerFrame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(headerBorderL, fontSize)
+    headerBorderL:SetPoint("LEFT", headerFrame, "LEFT", 4, 0)
+    headerBorderL:SetText("|")
+    frame.headerBorderL = headerBorderL
 
-    -- Clickable Header Buttons for Sorting
+    local headerBorderR = headerFrame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(headerBorderR, fontSize)
+    headerBorderR:SetPoint("RIGHT", headerFrame, "RIGHT", -4, 0)
+    headerBorderR:SetText("|")
+    frame.headerBorderR = headerBorderR
+
+    frame.headerCells = {}
     for i = 1, 8 do
+        local hCell = headerFrame:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(hCell, fontSize)
+        hCell:SetWordWrap(false)
+        hCell:SetHeight(18)
+        headerCells[i] = hCell
+        frame.headerCells[i] = hCell
+
         local btn = CreateFrame("Button", nil, headerFrame)
         btn:SetHeight(18)
         btn:EnableMouse(true)
@@ -970,7 +945,7 @@ function CLIAlts:CreateMainFrame()
         end
     end)
 
-    -- Create 12 Monospace Row Buttons (One FontString Per Row)
+    -- Create 12 Monospace Row Buttons (Each with explicit column cells)
     for i = 1, ROWS_COUNT do
         local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
         row:SetSize(756, 20)
@@ -985,12 +960,26 @@ function CLIAlts:CreateMainFrame()
         row:SetBackdropColor(0, 0, 0, 0.2)
         row:SetBackdropBorderColor(0, 0, 0, 0)
 
-        local rowText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(rowText, fontSize)
-        rowText:SetPoint("LEFT", row, "LEFT", 0, 0)
-        rowText:SetJustifyH("LEFT")
-        rowText:SetWordWrap(false)
-        row.text = rowText
+        local borderL = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(borderL, fontSize)
+        borderL:SetPoint("LEFT", row, "LEFT", 4, 0)
+        borderL:SetText("|")
+        row.borderL = borderL
+
+        local borderR = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(borderR, fontSize)
+        borderR:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+        borderR:SetText("|")
+        row.borderR = borderR
+
+        row.cells = {}
+        for j = 1, 8 do
+            local cell = row:CreateFontString(nil, "OVERLAY")
+            self:SetWidgetFont(cell, fontSize)
+            cell:SetWordWrap(false)
+            cell:SetHeight(18)
+            row.cells[j] = cell
+        end
 
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         row:SetScript("OnClick", function(self, button)
@@ -1363,29 +1352,61 @@ function CLIAlts:Render()
             curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
     end
 
-    -- Render Table Header (Monospace Text)
-    mainFrame.tableHeaderString:SetText(self:BuildHeaderLine(activeTab, t))
-
-    -- Position Clickable Header Buttons
-    local charW = self:GetCharWidth(fontSize)
+    -- Render Table Header Cells & Clickable Header Buttons
     local cols = self:GetColumns(activeTab)
-    local curCharOffset = 3 -- after "| "
+    local isComp = self:IsCompact()
+    local xOffset = 12
+    local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
+    local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
 
     for idx = 1, 8 do
+        local hCell = mainFrame.headerCells and mainFrame.headerCells[idx]
         local btn = headerButtons[idx]
         local col = cols[idx]
-        if col and col.sort then
-            btn:ClearAllPoints()
-            btn:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", (curCharOffset - 1) * charW, 0)
-            btn:SetSize(col.w * charW, 18)
-            btn.sortKey = col.sort
-            btn.colTitle = col.title
-            btn:Show()
-        else
-            btn:Hide()
-        end
+
         if col then
-            curCharOffset = curCharOffset + col.w + 1
+            local colW = isComp and (col.cpw or col.pw) or col.pw
+            if hCell then
+                hCell:ClearAllPoints()
+                hCell:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", xOffset, 0)
+                hCell:SetWidth(colW)
+                hCell:SetJustifyH(col.align or "LEFT")
+
+                local title = col.title
+                if col.sort and col.sort == sortBy then
+                    local arrow = sortAsc and "^" or "v"
+                    if col.align == "RIGHT" then
+                        title = arrow .. title
+                    else
+                        title = title .. arrow
+                    end
+                    hCell:SetText(string.format("|cff%s%s|r", t.highlightHex, title))
+                else
+                    hCell:SetText(string.format("|cff%s%s|r", t.primaryHex, title))
+                end
+                hCell:Show()
+            end
+
+            if btn and col.sort then
+                btn:ClearAllPoints()
+                btn:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", xOffset, 0)
+                btn:SetSize(colW, 18)
+                btn.sortKey = col.sort
+                btn.colTitle = col.title
+                btn:Show()
+            elseif btn then
+                btn:Hide()
+            end
+
+            xOffset = xOffset + colW
+        else
+            if hCell then
+                hCell:SetText("")
+                hCell:Hide()
+            end
+            if btn then
+                btn:Hide()
+            end
         end
     end
 
@@ -1396,11 +1417,37 @@ function CLIAlts:Render()
     if currentPage < 1 then currentPage = 1 end
 
     local filterSuffix = self.activeFilter and " FILTERED" or ""
-    mainFrame.pageText:SetText(string.format("PAGE %d OF %d (%d ALTS%s)", currentPage, totalPages, #chars, filterSuffix))
-    mainFrame.btnPrev:SetEnabled(currentPage > 1)
-    mainFrame.btnNext:SetEnabled(currentPage < totalPages)
+    if totalPages > 1 then
+        mainFrame.btnPrev:Show()
+        mainFrame.btnNext:Show()
+        mainFrame.btnPrev:SetEnabled(currentPage > 1)
+        mainFrame.btnNext:SetEnabled(currentPage < totalPages)
+        if mainFrame.btnPrev.label then
+            if currentPage > 1 then
+                mainFrame.btnPrev.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+            else
+                mainFrame.btnPrev.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3], 0.5)
+            end
+        end
+        if mainFrame.btnNext.label then
+            if currentPage < totalPages then
+                mainFrame.btnNext.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+            else
+                mainFrame.btnNext.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3], 0.5)
+            end
+        end
+        mainFrame.pageText:ClearAllPoints()
+        mainFrame.pageText:SetPoint("LEFT", mainFrame.btnNext, "RIGHT", 10, 0)
+        mainFrame.pageText:SetText(string.format("PAGE %d OF %d (%d ALTS%s)", currentPage, totalPages, #chars, filterSuffix))
+    else
+        mainFrame.btnPrev:Hide()
+        mainFrame.btnNext:Hide()
+        mainFrame.pageText:ClearAllPoints()
+        mainFrame.pageText:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 18, 68)
+        mainFrame.pageText:SetText(string.format("TRACKED: %d ALTS%s", #chars, filterSuffix))
+    end
 
-    -- Render 12 Monospace Rows (Single FontString Per Row)
+    -- Render 12 Monospace Rows (Each with dedicated column cells)
     for rowIndex = 1, ROWS_COUNT do
         local row = rowFrames[rowIndex]
         local charIndex = (currentPage - 1) * ROWS_COUNT + rowIndex
@@ -1410,16 +1457,36 @@ function CLIAlts:Render()
             row.charData = char
             row:SetBackdropColor(0, 0, 0, (rowIndex % 2 == 0) and 0.25 or 0.1)
 
-            local parts = {}
-            for _, col in ipairs(cols) do
-                table.insert(parts, col.fmt(char, t))
+            local rowXOffset = 12
+            for idx = 1, 8 do
+                local cell = row.cells and row.cells[idx]
+                local col = cols[idx]
+                if cell then
+                    if col then
+                        local colW = isComp and (col.cpw or col.pw) or col.pw
+                        cell:ClearAllPoints()
+                        cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
+                        cell:SetWidth(colW)
+                        cell:SetJustifyH(col.align or "LEFT")
+                        cell:SetText(col.fmt(char, t) or "")
+                        cell:Show()
+                        rowXOffset = rowXOffset + colW
+                    else
+                        cell:SetText("")
+                        cell:Hide()
+                    end
+                end
             end
-            local line = "| " .. table.concat(parts, " ") .. " |"
-            row.text:SetText(line)
             row:Show()
         else
             row.charData = nil
-            row.text:SetText("")
+            for idx = 1, 8 do
+                local cell = row.cells and row.cells[idx]
+                if cell then
+                    cell:SetText("")
+                    cell:Hide()
+                end
+            end
             row:Hide()
         end
     end
@@ -1444,6 +1511,12 @@ function CLIAlts:ApplyTheme()
     if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.botAscii then mainFrame.botAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.headerBorderL then mainFrame.headerBorderL:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.headerBorderR then mainFrame.headerBorderR:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    for _, row in ipairs(rowFrames) do
+        if row.borderL then row.borderL:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+        if row.borderR then row.borderR:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    end
     if mainFrame.pageText then mainFrame.pageText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
 
     if mainFrame.btnTheme then
