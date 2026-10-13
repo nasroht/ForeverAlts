@@ -198,6 +198,65 @@ function CLIAlts:FormatRaceClass(char)
 end
 
 -- ----------------------------------------------------------------------------
+-- Database Snapshot Backup & Restore (/clialts backup, /clialts restore)
+-- ----------------------------------------------------------------------------
+function CLIAlts:CopyTable(src, seen)
+    if type(src) ~= "table" then return src end
+    if seen and seen[src] then return seen[src] end
+    local s = seen or {}
+    local copy = {}
+    s[src] = copy
+    for k, v in pairs(src) do
+        if type(v) == "table" then
+            copy[k] = self:CopyTable(v, s)
+        else
+            copy[k] = v
+        end
+    end
+    return copy
+end
+
+function CLIAlts:BackupDB(reason)
+    if not CLIAltsDB then return false, "No database to backup." end
+    local backup = {}
+    for k, v in pairs(CLIAltsDB) do
+        if k ~= "backup" then
+            backup[k] = (type(v) == "table") and self:CopyTable(v) or v
+        end
+    end
+    backup._backupTime = time()
+    backup._backupReason = reason or "manual"
+    CLIAltsDB.backup = backup
+    return true, "Backup saved to CLIAltsDB.backup."
+end
+
+function CLIAlts:RestoreDB()
+    if not CLIAltsDB or not CLIAltsDB.backup then
+        return false, "No backup available to restore."
+    end
+    local backupSlot = CLIAltsDB.backup
+    for k in pairs(CLIAltsDB) do
+        if k ~= "backup" then
+            CLIAltsDB[k] = nil
+        end
+    end
+    for k, v in pairs(backupSlot) do
+        if k ~= "backup" and k ~= "_backupTime" and k ~= "_backupReason" then
+            CLIAltsDB[k] = (type(v) == "table") and self:CopyTable(v) or v
+        end
+    end
+    CLIAltsDB.backup = backupSlot
+    self.dbInitialized = false
+    self:InitDB()
+    if self.RequestRender then
+        self:RequestRender()
+    end
+    local tStr = backupSlot._backupTime and date and date("%Y-%m-%d %H:%M:%S", backupSlot._backupTime) or "recent"
+    local vStr = tostring(backupSlot.dbVersion or "?")
+    return true, string.format("Database restored from backup (v%s, saved %s).", vStr, tStr)
+end
+
+-- ----------------------------------------------------------------------------
 -- Database Initialization & Two-Name Migration
 -- ----------------------------------------------------------------------------
 function CLIAlts:InitDB()
@@ -235,6 +294,9 @@ function CLIAlts:InitDB()
 
     -- Run one-time migration and repair only if dbVersion is older than CURRENT_DB_VERSION
     if (tonumber(CLIAltsDB.dbVersion) or 0) < CURRENT_DB_VERSION then
+        -- Automatically backup CLIAltsDB to a one-slot CLIAltsDB.backup before any migration
+        self:BackupDB("migration")
+
         -- Merge / restore character data and professions from old NasaltsDB if available
         if oldDB and oldDB ~= CLIAltsDB and oldDB.characters then
             for oldKey, oldChar in pairs(oldDB.characters) do
@@ -2250,8 +2312,39 @@ function CLIAlts:RunSelfTest()
         Assert(false, "LivePath: Exception during live path integration test: " .. tostring(liveTestErr))
     end
 
+    -- 13. Backup & Restore Tests (/clialts backup, /clialts restore)
+    local testBackupDB = {
+        characters = {
+            ["TestHero"] = { name = "TestHero", level = 20, maxXP = 20000, restedXP = 5000 },
+        },
+        settings = { theme = "AMBER" },
+        dbVersion = 3,
+    }
+    local oldLiveDB = CLIAltsDB
+    CLIAltsDB = testBackupDB
+
+    -- 13a. Create backup
+    local okB1, _ = self:BackupDB("test")
+    Assert(okB1 == true and CLIAltsDB.backup ~= nil, "BackupDB: creates backup slot in CLIAltsDB.backup")
+    Assert(CLIAltsDB.backup.characters ~= nil and CLIAltsDB.backup.characters["TestHero"] ~= nil, "BackupDB: backup contains copy of character data")
+
+    -- 13b. Modifying live DB does not mutate backup slot (deep copy isolation)
+    CLIAltsDB.characters["TestHero"].level = 25
+    CLIAltsDB.characters["NewAlt"] = { name = "NewAlt", level = 1 }
+    Assert(CLIAltsDB.backup.characters["TestHero"].level == 20, "BackupDB: deep copy isolates backup from live character mutation")
+    Assert(CLIAltsDB.backup.characters["NewAlt"] == nil, "BackupDB: deep copy isolates backup from new alt additions")
+
+    -- 13c. RestoreDB restores previous state and preserves backup slot
+    local okR1, _ = self:RestoreDB()
+    Assert(okR1 == true, "RestoreDB: executes restore cleanly")
+    Assert(CLIAltsDB.characters["TestHero"].level == 20, "RestoreDB: character restored to backup level 20")
+    Assert(CLIAltsDB.characters["NewAlt"] == nil, "RestoreDB: removed unbacked alt upon restore")
+    Assert(CLIAltsDB.backup ~= nil, "RestoreDB: preserves one-slot backup after restore")
+
+    CLIAltsDB = oldLiveDB
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

@@ -1804,6 +1804,14 @@ function CLIAlts:ExecutePromptCommand(input)
             end
         end
 
+    elseif cmd == "backup" then
+        local ok, msg = self:BackupDB("manual")
+        self:SetPromptFeedback(ok and "Backup saved to CLIAltsDB.backup." or msg, not ok)
+
+    elseif cmd == "restore" then
+        local ok, msg = self:RestoreDB()
+        self:SetPromptFeedback(msg, not ok)
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -1828,6 +1836,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
         "alerts", "digest", "plan", "note", "unlocked", "prune",
+        "backup", "restore",
         "refresh", "help", "exit", "close"
     }
 
@@ -2196,11 +2205,13 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts note <who> <txt> - Set/view alt note (clear to remove)   |",
         "|   /clialts unlocked <inst> - List alts with no active lock (gap finder)|",
         "|   /clialts prune <days> [confirm] - Bulk purge alts inactive for N days|",
+        "|   /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup |",
+        "|   /clialts restore    - Restore database from CLIAltsDB.backup     |",
         "|   /clialts reset      - Reset window position to center            |",
         "+--------------------------------------------------------------------+",
         "| Interactive Terminal Command Prompt (>):                           |",
         "|   > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)|",
-        "|   > compact (Key: C)  - Toggle compact view (hide XP bar, slim)    |",
+        "|   > compact           - Toggle compact view (hide XP bar, slim)    |",
         "|   > sort <column>     - Sort table (name, lvl, gold, rest, waste)  |",
         "|   > filter <query>    - Filter alts (alliance, horde, stale, <60)  |",
         "|   > find <text>       - Search character names, classes, or zones  |",
@@ -2217,11 +2228,12 @@ function CLIAlts:ShowHelpPopup()
         "|   > note <who> <text>  - Set/view alt note (e.g. farm mooncloth)   |",
         "|   > unlocked <inst>   - List alts with no active lock (gap finder)     |",
         "|   > prune <days>      - Bulk purge alts inactive for N days        |",
+        "|   > backup / restore  - Create database snapshot or roll back      |",
         "|   > Up / Down arrows  - Browse terminal command history            |",
         "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",
         "| Interactions:                                                      |",
-        "|   - Press 'C' or click [COMPACT] to toggle slim compact view (no XP)|",
+        "|   - Click [COMPACT] on title bar or type > compact in prompt       |",
         "|   - Click [SCALE] on title bar to cycle 100%, 115%, 130%, 145%, 90%|",
         "|   - Click [THEME] on title bar to cycle CRT retro color palettes   |",
         "|   - Click column title in header line to sort ascending/descending |",

@@ -512,6 +512,14 @@ local function SlashHandler(msg)
             end
         end
 
+    elseif cmd == "backup" then
+        local ok, msg = CLIAlts:BackupDB("manual")
+        CLIAlts:Print(ok and "|cff00ff66Database backup created in CLIAltsDB.backup.|r" or msg)
+
+    elseif cmd == "restore" then
+        local ok, msg = CLIAlts:RestoreDB()
+        CLIAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
+
     elseif cmd == "help" then
         CLIAlts:ShowHelpPopup()
 
