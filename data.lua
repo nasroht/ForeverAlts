@@ -2194,6 +2194,10 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
             local frac = (char.maxXP and char.maxXP > 0) and (wastedXP / char.maxXP) or 0
             sortValues[char] = (wastedSec or 0) * 1000 + frac
         end
+    elseif sortBy == "rotation" or sortBy == "next" then
+        for _, char in ipairs(list) do
+            sortValues[char] = self:CalculateRotationScore(char)
+        end
     end
 
     table.sort(list, function(a, b)
@@ -2239,7 +2243,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 if sortAsc then return sA < sB else return sA > sB end
             end
             return (a.name or "") < (b.name or "")
-        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" then
+        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" or sortBy == "rotation" or sortBy == "next" then
             local valA = sortValues[a] or 0
             local valB = sortValues[b] or 0
             if valA == valB then
@@ -3191,8 +3195,54 @@ function CLIAlts:RunSelfTest()
 
     CLIAltsDB = oldCohortDB
 
+    -- 19. WoW Forever Smart Rotation Recommendation & Usable Rested Ranking Tests (Component 2)
+    local testRotDB = {
+        settings = {
+            foreverMode = true,
+            wellRestedRank = 5, -- 180% cap (+20%)
+        },
+        characters = {
+            ["CoreLeveling"] = { name = "CoreLeveling", level = 28, maxXP = 20000, restedXP = 10000, lastUpdate = 1000000, tier = "CORE", target_level = 35, isResting = true },
+            ["CoreCapped"]   = { name = "CoreCapped",   level = 30, maxXP = 20000, restedXP = 36000, lastUpdate = 1000000, tier = "CORE", target_level = 35, isResting = true },
+            ["ReserveAccr"]  = { name = "ReserveAccr",  level = 20, maxXP = 15000, restedXP = 5000,  lastUpdate = 1000000, tier = "RESERVE", target_level = 25, isResting = true },
+            ["TargetHit"]    = { name = "TargetHit",    level = 25, maxXP = 20000, restedXP = 20000, lastUpdate = 1000000, tier = "RESERVE", target_level = 25, isResting = true },
+            ["BankMule"]     = { name = "BankMule",     level = 1,  maxXP = 400,   restedXP = 600,   lastUpdate = 1000000, tier = "BANK", target_level = 1, isResting = true },
+        },
+    }
+    local oldRotDB = CLIAltsDB
+    CLIAltsDB = testRotDB
+
+    -- 19a. CalculateRotationScore classifications
+    local scoreBank = self:CalculateRotationScore(testRotDB.characters["BankMule"], 1000000)
+    Assert(scoreBank < -900000, "Rotation: Bank mule score is < -900,000 (" .. tostring(scoreBank) .. ")")
+
+    local scoreHit = self:CalculateRotationScore(testRotDB.characters["TargetHit"], 1000000)
+    Assert(scoreHit < -400000 and scoreHit > -600000, "Rotation: Target reached alt score is around -500,000 (" .. tostring(scoreHit) .. ")")
+
+    local scoreCapped = self:CalculateRotationScore(testRotDB.characters["CoreCapped"], 1000000)
+    Assert(scoreCapped >= 1000000, "Rotation: Capped alt score is >= 1,000,000 (" .. tostring(scoreCapped) .. ")")
+
+    local scoreAccr = self:CalculateRotationScore(testRotDB.characters["CoreLeveling"], 1000000)
+    Assert(scoreAccr > 0 and scoreAccr < 1000000, "Rotation: Accruing alt score is positive and < 1,000,000 (" .. tostring(scoreAccr) .. ")")
+
+    -- 19b. GetNextAltsPriority excludes Bank and Target Hit alts
+    local nextList = self:GetNextAltsPriority(1000000)
+    Assert(#nextList == 3, "Rotation: GetNextAltsPriority returns exactly 3 active leveling alts (excludes Bank and TargetHit)")
+    Assert(nextList[1].char.name == "CoreCapped", "Rotation: 1st priority is capped alt")
+    Assert(nextList[1].maxPercent == 180, "Rotation: 180% cap reflected with Well Rested rank 5")
+    Assert(nextList[1].tierTag == "[CORE]", "Rotation: Core cohort tag attached to priority item")
+
+    -- 19c. Sorting by rotation in GetCharactersList
+    local sortedRot = self:GetCharactersList("rotation", false)
+    Assert(#sortedRot == 5, "Rotation: GetCharactersList returns all 5 alts")
+    Assert(sortedRot[1].name == "CoreCapped", "Rotation sort: 1st is CoreCapped")
+    Assert(sortedRot[5].name == "BankMule", "Rotation sort: 5th (last) is BankMule")
+    Assert(sortedRot[4].name == "TargetHit", "Rotation sort: 4th (above bank) is TargetHit")
+
+    CLIAltsDB = oldRotDB
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -3306,36 +3356,98 @@ function CLIAlts:GetLDBText(now, charListOverride)
     return text, cappedCount, totalWastedXP
 end
 
-function CLIAlts:GetNextAltsPriority()
-    local chars = self:GetCharactersList()
+function CLIAlts:CalculateRotationScore(char, nowOverride)
+    if not char then return -9999999 end
+    local lvl = char.level or 1
+    local maxLevel = self:GetMaxLevel()
+
+    -- 1. Bank mules: excluded from leveling rotation (sort to absolute bottom)
+    if char.tier == "BANK" then
+        return -1000000 + lvl
+    end
+
+    -- 2. Target level reached: deprioritized below active levelers
+    local isForever = self:IsForeverMode()
+    local defaultTgt = isForever and ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or 60) or maxLevel
+    local tgt = char.target_level or defaultTgt
+    if lvl >= tgt or lvl >= maxLevel then
+        return -500000 + lvl
+    end
+
+    -- 3. Rested state & waste
+    local wastedSec, wastedXP = self:GetRestedWaste(char, nowOverride)
+    local rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
+    local isCapped = rested and rested.isFull
+    local isCore = (char.tier == "CORE")
+    local coreBonus = isCore and 25000 or 0
+
+    if isCapped then
+        -- Capped characters: score 1,000,000 + wasted XP + core bonus
+        return 1000000 + (wastedXP or 0) + coreBonus
+    else
+        -- Accruing characters: score usable XP + (percent * 50) + core bonus
+        local curRested = (rested and rested.currentRested) or 0
+        local pct = (rested and rested.percent) or 0
+        return curRested + (pct * 50) + coreBonus
+    end
+end
+
+function CLIAlts:GetNextAltsPriority(nowOverride, charListOverride)
+    local chars = charListOverride or self:GetCharactersList()
     local scored = {}
     local maxLevel = self:GetMaxLevel()
+    local isForever = self:IsForeverMode()
 
     for _, char in ipairs(chars) do
         local level = char.level or 1
-        if level < maxLevel then
-            local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
-            local rested = self:GetRestedData(char)
-            local isCapped = rested and rested.isFull
+        -- Exclude Bank mules from leveling recommendations
+        if char.tier ~= "BANK" and level < maxLevel then
+            local defaultTgt = isForever and ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or 60) or maxLevel
+            local tgt = char.target_level or defaultTgt
 
-            local score, reason
-            if isCapped then
-                score = 100000000 + (wastedSec or 0)
-                reason = string.format("Capped for %s (%s XP wasted)", timeStr, self:FormatNumber(wastedXP))
-            else
-                local timeToFull = (rested and rested.timeToFull) or 9999999
-                score = math.max(1, 10000000 - timeToFull)
-                reason = string.format("%d%% rested (Caps in %s)", rested and rested.percent or 0, rested and rested.timeLeftStr or "---")
+            -- Skip characters that have reached their target level
+            if level < tgt then
+                local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char, nowOverride)
+                local rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
+                local isCapped = rested and rested.isFull
+                local maxPercent = (rested and rested.maxPercent) or 150
+                local curPercent = (rested and rested.percent) or 0
+                local usableXP = (rested and rested.currentRested) or 0
+                local timeLeftStr = (rested and rested.timeLeftStr) or "---"
+
+                local score = self:CalculateRotationScore(char, nowOverride)
+
+                local reason
+                if isCapped then
+                    if wastedXP and wastedXP > 0 then
+                        reason = string.format("%d%% CAPPED* (+%s XP waste)", maxPercent, self:FormatNumber(wastedXP))
+                    else
+                        reason = string.format("%d%% CAPPED* (Ready to play!)", maxPercent)
+                    end
+                else
+                    reason = string.format("%d%% Rested (~%s XP, caps in %s)", curPercent, self:FormatNumber(usableXP), timeLeftStr)
+                end
+
+                local tierTag = ""
+                if isForever and char.tier then
+                    tierTag = (char.tier == "CORE" and "[CORE]") or (char.tier == "RESERVE" and "[ALT]") or ""
+                end
+
+                table.insert(scored, {
+                    char = char,
+                    score = score,
+                    isCapped = isCapped,
+                    wastedXP = wastedXP or 0,
+                    wastedSec = wastedSec or 0,
+                    timeStr = timeStr,
+                    usableXP = usableXP,
+                    percent = curPercent,
+                    maxPercent = maxPercent,
+                    reason = reason,
+                    tierTag = tierTag,
+                    targetLevel = tgt,
+                })
             end
-
-            table.insert(scored, {
-                char = char,
-                score = score,
-                isCapped = isCapped,
-                wastedXP = wastedXP,
-                timeStr = timeStr,
-                reason = reason,
-            })
         end
     end
 
@@ -3349,7 +3461,11 @@ end
 function CLIAlts:PrintNextAlts()
     local list = self:GetNextAltsPriority()
     if #list == 0 then
-        self:Print("No leveling alts found or all alts are at maximum level.")
+        if self:IsForeverMode() then
+            self:Print("All alts have reached their phase target level (or are Bank mules).")
+        else
+            self:Print("No leveling alts found or all alts are at maximum level.")
+        end
         return
     end
 
@@ -3359,8 +3475,10 @@ function CLIAlts:PrintNextAlts()
         local item = list[i]
         local c = item.char
         local coloredName = self:ColorizePlayerName(c.name, c.classFile)
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cff00ff66%d.|r %s (Lvl %d %s) :: |cffffd700%s|r",
-            i, coloredName, c.level or 1, self:FormatRaceClass(c), item.reason))
+        local cohortStr = (item.tierTag and item.tierTag ~= "") and (" " .. item.tierTag) or ""
+        local tgtStr = item.targetLevel and string.format(" (Lvl %d/%d)", c.level or 1, item.targetLevel) or string.format(" (Lvl %d)", c.level or 1)
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cff00ff66%d.|r %s%s%s %s :: |cffffd700%s|r",
+            i, coloredName, cohortStr, tgtStr, self:FormatRaceClass(c), item.reason))
     end
 end
 

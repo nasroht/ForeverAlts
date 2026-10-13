@@ -623,8 +623,11 @@ local function FmtProfessionsAuto(char)
 end
 
 local function FmtForeverStatus(char, t)
+    if char.tier == "BANK" then
+        return "|cffff9900Bank Mule|r"
+    end
     local lvl = char.level or 1
-    local tgt = char.target_level or ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or (char.tier == "BANK" and 1) or 60)
+    local tgt = char.target_level or ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or 60)
     if lvl >= tgt then
         return "|cff00ff66Target Level Reached|r"
     end
@@ -645,7 +648,7 @@ local FOREVER_COLS = {
     { key = "name",     title = "NAME",        w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
     { key = "lvlTgt",   title = "LVL/TGT",     w = 8,  pw = 75,  cpw = 65,  align = "CENTER", sort = "level",  fmt = FmtLevelTarget },
     { key = "prof",     title = "PROFESSIONS", w = 18, pw = 185, cpw = 140, align = "LEFT",                    fmt = FmtProfessionsAuto },
-    { key = "status",   title = "STATUS",      w = 18, pw = 175, cpw = 140, align = "LEFT",   sort = "rested", fmt = FmtForeverStatus },
+    { key = "status",   title = "STATUS",      w = 18, pw = 175, cpw = 140, align = "LEFT",   sort = "rotation", fmt = FmtForeverStatus },
     { key = "gold",     title = "GOLD",        w = 9,  pw = 110, cpw = 80,  align = "RIGHT",  sort = "gold",   fmt = FmtGold },
     { key = "eta",      title = "ETA",         w = 7,  pw = 100, cpw = 0,   align = "RIGHT",                   fmt = FmtETA },
 }
@@ -1467,8 +1470,18 @@ function CLIAlts:Render()
         local filterTag = self.activeFilter and string.format(" [%s]", self.activeFilter:upper()) or ""
         if self:IsForeverMode() then
             local coreC, resC, bankC = self:GetCohortCounts()
-            mainFrame.statusBarText:SetText(string.format("ROUTE: %dC/%dR/%dB | WEALTH: %sg%s",
-                coreC, resC, bankC, self:FormatNumber(goldOnly), filterTag))
+            local nextList = self:GetNextAltsPriority()
+            local topNext = nextList and nextList[1]
+            if topNext then
+                local tc = topNext.char
+                local capStr = topNext.isCapped and string.format("%d%%*", topNext.maxPercent) or string.format("%d%%", topNext.percent)
+                local tag = (tc.tier == "CORE" and " [C]") or (tc.tier == "RESERVE" and " [A]") or ""
+                mainFrame.statusBarText:SetText(string.format("NEXT: %s%s (L%d) %s | %dC/%dR/%dB%s",
+                    tc.name or "Unknown", tag, tc.level or 1, capStr, coreC, resC, bankC, filterTag))
+            else
+                mainFrame.statusBarText:SetText(string.format("ROUTE: %dC/%dR/%dB | ALL TARGETS REACHED%s",
+                    coreC, resC, bankC, filterTag))
+            end
         else
             mainFrame.statusBarText:SetText(string.format("ALTS: %d%s | WEALTH: %sg",
                 summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
@@ -1486,8 +1499,28 @@ function CLIAlts:Render()
         local sysLabel = self:IsRetail() and "SYSTEM: RETAIL" or "SYSTEM: WOW FOREVER"
         if self:IsForeverMode() then
             local coreC, resC, bankC = self:GetCohortCounts()
-            mainFrame.statusBarText:SetText(string.format("FOREVER ROUTE: %d CORE | %d RESERVE | %d BANK | TRACKED: %d ALTS%s | WEALTH: %sg",
-                coreC, resC, bankC, summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+            local nextList = self:GetNextAltsPriority()
+            local topNext = nextList and nextList[1]
+            if topNext then
+                local tc = topNext.char
+                local tag = (tc.tier == "CORE" and " [CORE]") or (tc.tier == "RESERVE" and " [ALT]") or ""
+                local tgtStr = topNext.targetLevel and string.format(" (%d/%d)", tc.level or 1, topNext.targetLevel) or string.format(" (Lvl %d)", tc.level or 1)
+                local restDetail
+                if topNext.isCapped then
+                    if topNext.wastedXP and topNext.wastedXP > 0 then
+                        restDetail = string.format("[%d%% CAPPED* (+%s)]", topNext.maxPercent, self:FormatWasteShort(topNext.wastedXP))
+                    else
+                        restDetail = string.format("[%d%% CAPPED*]", topNext.maxPercent)
+                    end
+                else
+                    restDetail = string.format("[%d%% Rested (~%s)]", topNext.percent, self:FormatWasteShort(topNext.usableXP))
+                end
+                mainFrame.statusBarText:SetText(string.format("PLAY NEXT: >> %s%s%s %s << | ROUTE: %dC/%dR/%dB | WEALTH: %sg%s",
+                    tc.name or "Unknown", tag, tgtStr, restDetail, coreC, resC, bankC, self:FormatNumber(goldOnly), filterTag))
+            else
+                mainFrame.statusBarText:SetText(string.format("ROUTE: %dC/%dR/%dB | ALL TARGET LEVELS REACHED | TRACKED: %d ALTS%s | WEALTH: %sg",
+                    coreC, resC, bankC, summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+            end
         else
             mainFrame.statusBarText:SetText(string.format("%s | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
                 sysLabel, curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
@@ -1836,6 +1869,10 @@ function CLIAlts:ExecutePromptCommand(input)
                 seen = "seen",
                 last = "seen",
                 stale = "seen",
+                rotation = "rotation",
+                rot = "rotation",
+                next = "rotation",
+                status = "rotation",
             }
             local key = map[args:lower()] or args:lower()
             self:ToggleSortKey(key)
@@ -2170,7 +2207,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
     if cmd then
         cmd = cmd:lower()
         if cmd == "sort" then
-            local sortKeys = { "name", "level", "cohort", "gold", "rested", "waste", "xp", "location", "hearth", "seen", "note" }
+            local sortKeys = { "name", "level", "cohort", "gold", "rested", "waste", "xp", "rotation", "next", "location", "hearth", "seen", "note" }
             for _, k in ipairs(sortKeys) do
                 if k:sub(1, #arg) == arg:lower() and k ~= arg:lower() then
                     editBox:SetText("sort " .. k)

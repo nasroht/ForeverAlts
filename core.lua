@@ -368,6 +368,43 @@ local function SlashHandler(msg)
     elseif cmd == "next" then
         CLIAlts:PrintNextAlts()
 
+    elseif cmd == "sort" then
+        if arg and arg ~= "" then
+            CLIAlts:Toggle(true)
+            local map = {
+                name = "name",
+                char = "name",
+                lvl = "level",
+                level = "level",
+                gold = "gold",
+                money = "gold",
+                rest = "rested",
+                rested = "rested",
+                cohort = "cohort",
+                tier = "cohort",
+                role = "cohort",
+                xp = "xp",
+                exp = "xp",
+                progress = "xp",
+                waste = "waste",
+                wst = "waste",
+                rotation = "rotation",
+                rot = "rotation",
+                next = "rotation",
+                status = "rotation",
+                location = "location",
+                loc = "location",
+                hearth = "hearth",
+                seen = "seen",
+            }
+            local key = map[arg:lower()] or arg:lower()
+            if CLIAlts.ToggleSortKey then
+                CLIAlts:ToggleSortKey(key)
+            end
+        else
+            CLIAlts:Print("Usage: |cff00ff66/clialts sort <name|level|rotation|cohort|gold|rested|waste|xp>|r")
+        end
+
     elseif cmd == "watch" then
         if arg and arg ~= "" then
             local ok, item = CLIAlts:AddWatchItem(arg)
