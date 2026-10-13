@@ -323,6 +323,7 @@ function CLIAlts:InitDB()
     if CLIAltsDB.settings.restedBurnRatio == nil then CLIAltsDB.settings.restedBurnRatio = 0.5 end
     CLIAltsDB.settings.staleDays = tonumber(CLIAltsDB.settings.staleDays) or 30
     CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode == true)
+    if CLIAltsDB.settings.showInventoryTooltips == nil then CLIAltsDB.settings.showInventoryTooltips = true end
     CLIAltsDB.characters = CLIAltsDB.characters or {}
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
     CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
@@ -776,6 +777,194 @@ function CLIAlts:UpdateWatchCounts()
 end
 
 -- ----------------------------------------------------------------------------
+-- Cross-Character Inventory Scanner & Query API (Feature 6)
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetContainerItemData(bagID, slot)
+    if C_Container and C_Container.GetContainerItemInfo then
+        local info = C_Container.GetContainerItemInfo(bagID, slot)
+        if info then
+            local id = info.itemID
+            if not id and info.hyperlink then
+                id = tonumber(info.hyperlink:match("item:(%d+)"))
+            end
+            return id, (info.stackCount or 1), info.hyperlink
+        end
+    elseif GetContainerItemInfo then
+        local _, count, _, _, _, _, link = GetContainerItemInfo(bagID, slot)
+        if link then
+            local id = tonumber(link:match("item:(%d+)"))
+            return id, (count or 1), link
+        end
+    end
+    return nil, 0, nil
+end
+
+function CLIAlts:GetNumContainerSlots(bagID)
+    if C_Container and C_Container.GetContainerNumSlots then
+        return C_Container.GetContainerNumSlots(bagID) or 0
+    elseif GetContainerNumSlots then
+        return GetContainerNumSlots(bagID) or 0
+    end
+    return 0
+end
+
+function CLIAlts:CollectInventory(existingInventory, forceScanBank)
+    local inventory = {}
+    local isBankOpen = forceScanBank
+    if isBankOpen == nil then
+        isBankOpen = (self.isBankOpen == true)
+    end
+
+    local newBag = {}
+    local numBags = NUM_BAG_SLOTS or 4
+    if self.IsRetail and self:IsRetail() then numBags = 5 end
+
+    pcall(function()
+        for bag = 0, numBags do
+            local numSlots = self:GetNumContainerSlots(bag)
+            for slot = 1, numSlots do
+                local itemID, count = self:GetContainerItemData(bag, slot)
+                if itemID and count and count > 0 then
+                    newBag[itemID] = (newBag[itemID] or 0) + count
+                end
+            end
+        end
+    end)
+
+    local newBank = nil
+    if isBankOpen then
+        newBank = {}
+        pcall(function()
+            -- Main bank container (-1)
+            local mainSlots = self:GetNumContainerSlots(-1)
+            for slot = 1, mainSlots do
+                local itemID, count = self:GetContainerItemData(-1, slot)
+                if itemID and count and count > 0 then
+                    newBank[itemID] = (newBank[itemID] or 0) + count
+                end
+            end
+            -- Bank bag containers
+            local firstBankBag = (NUM_BAG_SLOTS or 4) + 1
+            local lastBankBag = (NUM_BAG_SLOTS or 4) + (NUM_BANKBAGSLOTS or 7)
+            for bag = firstBankBag, lastBankBag do
+                local numSlots = self:GetNumContainerSlots(bag)
+                for slot = 1, numSlots do
+                    local itemID, count = self:GetContainerItemData(bag, slot)
+                    if itemID and count and count > 0 then
+                        newBank[itemID] = (newBank[itemID] or 0) + count
+                    end
+                end
+            end
+            -- Reagent Bank (-3) if present
+            local reagentSlots = self:GetNumContainerSlots(-3)
+            if reagentSlots > 0 then
+                for slot = 1, reagentSlots do
+                    local itemID, count = self:GetContainerItemData(-3, slot)
+                    if itemID and count and count > 0 then
+                        newBank[itemID] = (newBank[itemID] or 0) + count
+                    end
+                end
+            end
+        end)
+    end
+
+    -- Merge bag and bank
+    local allIDs = {}
+    for id in pairs(newBag) do allIDs[id] = true end
+    if newBank then
+        for id in pairs(newBank) do allIDs[id] = true end
+    elseif existingInventory then
+        for id, data in pairs(existingInventory) do
+            if data and data.bank and data.bank > 0 then
+                allIDs[id] = true
+            end
+        end
+    end
+
+    for id in pairs(allIDs) do
+        local b = newBag[id] or 0
+        local k = 0
+        if newBank then
+            k = newBank[id] or 0
+        elseif existingInventory and existingInventory[id] then
+            k = existingInventory[id].bank or 0
+        end
+        if b > 0 or k > 0 then
+            inventory[id] = {
+                bag = (b > 0) and b or nil,
+                bank = (k > 0) and k or nil,
+            }
+        end
+    end
+
+    return inventory, isBankOpen
+end
+
+function CLIAlts:ScanCurrentInventory(scanBank)
+    if not CLIAltsDB or not CLIAltsDB.characters then return end
+    local curKey = self.curPlayerKey
+    if not curKey then
+        local _, _, full = self:GetPlayerNames()
+        curKey = full and self:GetCharacterKey(full)
+    end
+    if not curKey then return end
+
+    local char = CLIAltsDB.characters[curKey]
+    if not char then return end
+
+    local inv, wasBankScanned = self:CollectInventory(char.inventory, scanBank)
+    char.inventory = inv
+    if wasBankScanned then
+        char.bankScanned = true
+        char.bankLastScan = time()
+    end
+
+    if cachedCurrentChar and cachedCurrentChar ~= char then
+        cachedCurrentChar.inventory = char.inventory
+        if wasBankScanned then
+            cachedCurrentChar.bankScanned = true
+            cachedCurrentChar.bankLastScan = char.bankLastScan
+        end
+    end
+end
+
+function CLIAlts:GetItemInventorySummary(targetItem)
+    local itemID = self:ResolveWatchItem(targetItem)
+    if not itemID or type(itemID) ~= "number" then
+        return 0, {}
+    end
+
+    local totalCount = 0
+    local breakdown = {}
+    local chars = self:GetCharactersList("name", true)
+    local curKey = self.curPlayerKey
+
+    for _, c in ipairs(chars) do
+        if c.inventory and c.inventory[itemID] then
+            local inv = c.inventory[itemID]
+            local b = inv.bag or 0
+            local k = inv.bank or 0
+            local sum = b + k
+            if sum > 0 then
+                totalCount = totalCount + sum
+                table.insert(breakdown, {
+                    char = c,
+                    name = c.fullName or c.name,
+                    classFile = c.classFile or "WARRIOR",
+                    realm = c.realm,
+                    isCurrent = (c.key == curKey),
+                    bag = b,
+                    bank = k,
+                    total = sum,
+                })
+            end
+        end
+    end
+
+    return totalCount, breakdown, itemID
+end
+
+-- ----------------------------------------------------------------------------
 -- Data Collection: Current Logged-in Character (Throttled to 1s)
 -- ----------------------------------------------------------------------------
 local lastCollectTime = 0
@@ -937,6 +1126,9 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         watchlistCounts = self:CollectWatchlistCounts(existing and existing.watchlistCounts),
         xpHour = (existing and existing.xpHour) or (cachedCurrentChar and cachedCurrentChar.xpHour),
         note = (existing and existing.note) or (cachedCurrentChar and cachedCurrentChar.note),
+        inventory = self:CollectInventory(existing and existing.inventory),
+        bankScanned = (existing and existing.bankScanned) or false,
+        bankLastScan = existing and existing.bankLastScan,
         lastUpdate = now,
         logoutTime = (isLogout and now) or (existing and existing.logoutTime) or now,
     }
@@ -2566,8 +2758,118 @@ function CLIAlts:RunSelfTest()
 
     CLIAltsDB = oldLiveDB
 
+    -- 17. Cross-Character Inventory Scanner & Tooltip Summary Tests (Feature 6)
+    local testInvDB = {
+        settings = {
+            showInventoryTooltips = true,
+            sortBy = "name",
+            sortAsc = true,
+        },
+        characters = {
+            ["CharA-Realm1"] = {
+                name = "CharA",
+                realm = "Realm1",
+                classFile = "MAGE",
+                inventory = {
+                    [14047] = { bag = 40, bank = 100 }, -- Runecloth: 40 in bags, 100 in bank
+                    [2447]  = { bag = 15 },             -- Peacebloom: 15 in bags
+                },
+            },
+            ["CharB-Realm1"] = {
+                name = "CharB",
+                realm = "Realm1",
+                classFile = "ROGUE",
+                inventory = {
+                    [14047] = { bag = 20, bank = 30 },  -- Runecloth: 20 in bags, 30 in bank
+                    [7005]  = { bank = 5 },             -- Skinning Knife in bank
+                },
+            },
+            ["CharC-Realm2"] = {
+                name = "CharC",
+                realm = "Realm2",
+                classFile = "PRIEST",
+                inventory = {
+                    [14047] = { bank = 50 },            -- Runecloth: 50 in bank
+                },
+            },
+        },
+    }
+    local oldInvTestDB = CLIAltsDB
+    CLIAltsDB = testInvDB
+
+    -- 17a. GetItemInventorySummary aggregates all alts
+    local totRune, breakRune, idRune = self:GetItemInventorySummary(14047)
+    Assert(totRune == 240, "GetItemInventorySummary: Runecloth total equals 240 across 3 alts")
+    Assert(#breakRune == 3, "GetItemInventorySummary: Runecloth returns 3 character entries")
+    Assert(idRune == 14047, "GetItemInventorySummary: returns resolved itemID 14047")
+
+    -- 17b. Character breakdown verifies bag and bank counts
+    local charAEntry, charBEntry, charCEntry
+    for _, b in ipairs(breakRune) do
+        if b.name == "CharA" then charAEntry = b end
+        if b.name == "CharB" then charBEntry = b end
+        if b.name == "CharC" then charCEntry = b end
+    end
+    Assert(charAEntry and charAEntry.bag == 40 and charAEntry.bank == 100 and charAEntry.total == 140,
+        "GetItemInventorySummary: CharA has 40 bags, 100 bank, 140 total")
+    Assert(charBEntry and charBEntry.bag == 20 and charBEntry.bank == 30 and charBEntry.total == 50,
+        "GetItemInventorySummary: CharB has 20 bags, 30 bank, 50 total")
+    Assert(charCEntry and (charCEntry.bag == 0 or not charCEntry.bag) and charCEntry.bank == 50 and charCEntry.total == 50,
+        "GetItemInventorySummary: CharC has 0 bags, 50 bank, 50 total")
+
+    -- 17c. Item present on only one character
+    local totPeace, breakPeace = self:GetItemInventorySummary(2447)
+    Assert(totPeace == 15 and #breakPeace == 1 and breakPeace[1].name == "CharA",
+        "GetItemInventorySummary: Peacebloom found only on CharA (15 in bags)")
+
+    -- 17d. Item not present on any alt yields 0 and empty table
+    local totNone, breakNone = self:GetItemInventorySummary(999999)
+    Assert(totNone == 0 and #breakNone == 0, "GetItemInventorySummary: non-existent item yields 0 and empty breakdown")
+
+    -- 17e. AddInventoryInfoToTooltip formatting
+    if self.AddInventoryInfoToTooltip then
+        local mockTooltip = {
+            lines = {},
+            shown = false,
+            AddDoubleLine = function(self, left, right)
+                table.insert(self.lines, { left = left, right = right })
+            end,
+            Show = function(self) self.shown = true end,
+        }
+        self:AddInventoryInfoToTooltip(mockTooltip, 14047)
+        Assert(#mockTooltip.lines >= 4, "AddInventoryInfoToTooltip: appends header line plus 3 alt lines")
+        Assert(mockTooltip.lines[1].left:find("%[CLIAlts%]"), "AddInventoryInfoToTooltip: header contains '[CLIAlts]'")
+        Assert(mockTooltip.shown == true, "AddInventoryInfoToTooltip: calls tooltip:Show()")
+
+        -- 17f. Settings toggle showInventoryTooltips = false disables tooltip lines
+        CLIAltsDB.settings.showInventoryTooltips = false
+        local mockTooltip2 = {
+            lines = {},
+            shown = false,
+            AddDoubleLine = function(self, left, right)
+                table.insert(self.lines, { left = left, right = right })
+            end,
+            Show = function(self) self.shown = true end,
+        }
+        self:AddInventoryInfoToTooltip(mockTooltip2, 14047)
+        Assert(#mockTooltip2.lines == 0, "AddInventoryInfoToTooltip: does not add lines when showInventoryTooltips is false")
+        CLIAltsDB.settings.showInventoryTooltips = true
+    end
+
+    -- 17g. CollectInventory bank preservation
+    local existingCharInv = {
+        [14047] = { bag = 10, bank = 80 },
+        [2447]  = { bank = 20 },
+    }
+    local mergedInv, wasBank = self:CollectInventory(existingCharInv, false)
+    Assert(wasBank == false, "CollectInventory: wasBank returns false when bank is not open")
+    Assert(mergedInv[14047] and mergedInv[14047].bank == 80, "CollectInventory: preserves existing bank count for item 14047")
+    Assert(mergedInv[2447] and mergedInv[2447].bank == 20, "CollectInventory: preserves existing bank count for item 2447")
+
+    CLIAltsDB = oldInvTestDB
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

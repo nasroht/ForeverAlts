@@ -52,9 +52,12 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:GetPoint(...) return "CENTER", nil, "CENTER", 0, 0 end
     function frame:SetPropagateKeyboardInput(...) end
     function frame:EnableKeyboard(...) end
+    frame.lines = {}
     function frame:SetOwner(...) end
-    function frame:AddLine(...) end
-    function frame:AddDoubleLine(...) end
+    function frame:AddLine(left, r, g, b) table.insert(self.lines, { left = left }) end
+    function frame:AddDoubleLine(left, right, ...) table.insert(self.lines, { left = left, right = right }) end
+    function frame:GetItem() return self.itemName, self.itemLink end
+    function frame:ClearLines() self.lines = {} end
     function frame:LockHighlight(...) end
     function frame:UnlockHighlight(...) end
     function frame:SetHighlightTexture(...) end
@@ -112,6 +115,21 @@ PlaySound = PlaySound or function() end
 hooksecurefunc = hooksecurefunc or function() end
 SetOverrideBindingClick = SetOverrideBindingClick or function() end
 ClearOverrideBindings = ClearOverrideBindings or function() end
+ItemRefTooltip = ItemRefTooltip or CreateDummyFrame("Frame", "ItemRefTooltip")
+TooltipDataProcessor = TooltipDataProcessor or {
+    AddTooltipPostCall = function(dataType, callback) end,
+}
+Enum = Enum or {
+    TooltipDataType = { Item = 0 },
+}
+NUM_BAG_SLOTS = NUM_BAG_SLOTS or 4
+NUM_BANKBAGSLOTS = NUM_BANKBAGSLOTS or 6
+BANK_CONTAINER = BANK_CONTAINER or -1
+REAGENTBANK_CONTAINER = REAGENTBANK_CONTAINER or -3
+C_Container = C_Container or {
+    GetContainerNumSlots = function(bagID) return 0 end,
+    GetContainerItemInfo = function(bagID, slot) return nil end,
+}
 
 -- 3. WoW System & Timer APIs
 GetTime = GetTime or function() return os.time() end

@@ -1792,6 +1792,11 @@ function CLIAlts:ExecutePromptCommand(input)
         local isComp = self:IsCompact()
         self:SetPromptFeedback(string.format("Compact mode: %s (XP bars %s)", isComp and "ENABLED" or "DISABLED", isComp and "hidden" or "shown"))
 
+    elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
+        CLIAltsDB.settings.showInventoryTooltips = not (CLIAltsDB.settings.showInventoryTooltips ~= false)
+        local isEnabled = CLIAltsDB.settings.showInventoryTooltips
+        self:SetPromptFeedback(string.format("Inventory hover tooltips: %s", isEnabled and "ENABLED" or "DISABLED"))
+
     elseif cmd == "theme" then
         if args and args ~= "" then
             local map = {
@@ -1941,7 +1946,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
         "alerts", "digest", "plan", "note", "unlocked", "prune",
-        "backup", "restore",
+        "backup", "restore", "tooltips", "inv",
         "refresh", "help", "exit", "close"
     }
 
@@ -2320,6 +2325,7 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts note <who> <txt> - Set/view alt note (clear to remove)   |",
         "|   /clialts unlocked <inst> - List alts with no active lock (gap finder)|",
         "|   /clialts prune <days> [confirm] - Bulk purge alts inactive for N days|",
+        "|   /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)|",
         "|   /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup |",
         "|   /clialts restore    - Restore database from CLIAltsDB.backup     |",
         "|   /clialts reset      - Reset window position to center            |",
@@ -2333,6 +2339,7 @@ function CLIAlts:ShowHelpPopup()
         "|   > clear             - Clear active filter query                  |",
         "|   > next              - Print alts with highest rested waste       |",
         "|   > watch <item>      - Add item to bag/bank inventory tracker     |",
+        "|   > tooltips / inv    - Toggle item hover tooltips (bags/bank alts)|",
         "|   > export            - Open CSV export modal dialog               |",
         "|   > theme [name]      - Cycle or set color theme (incl. safe/cb)   |",
         "|   > perf              - Output profiling exponential moving average|",
@@ -2487,3 +2494,90 @@ function CLIAlts:Refresh()
     self:Render()
     self:Print("Database refreshed.")
 end
+
+-- ----------------------------------------------------------------------------
+-- Cross-Character Inventory Tooltip Hooks & Formatter (Feature 6)
+-- ----------------------------------------------------------------------------
+function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
+    if not tooltip or not itemID then return end
+    if not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showInventoryTooltips ~= false) then
+        return
+    end
+
+    local now = (GetTime and GetTime()) or (time and time()) or 0
+    if tooltip._clialtsLastItem == itemID and tooltip._clialtsLastTime and (now - tooltip._clialtsLastTime) < 0.25 then
+        return
+    end
+    tooltip._clialtsLastItem = itemID
+    tooltip._clialtsLastTime = now
+
+    local totalCount, breakdown = self:GetItemInventorySummary(itemID)
+    if totalCount <= 0 or not breakdown or #breakdown == 0 then
+        return
+    end
+
+    tooltip:AddDoubleLine("|cff00ff66[CLIAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
+    for _, entry in ipairs(breakdown) do
+        local _, _, _, colorHex = self:GetClassColor(entry.classFile)
+        colorHex = colorHex or "ffffff"
+        local nameStr = string.format("|cff%s%s|r", colorHex, entry.name)
+        if entry.isCurrent then
+            nameStr = nameStr .. " |cff888888(you)|r"
+        elseif entry.realm and self.curPlayerRealm and entry.realm ~= self.curPlayerRealm then
+            nameStr = nameStr .. string.format(" |cff888888(%s)|r", entry.realm)
+        end
+
+        local countDetail
+        if entry.bag > 0 and entry.bank > 0 then
+            countDetail = string.format("%d (Bags: %d, Bank: %d)", entry.total, entry.bag, entry.bank)
+        elseif entry.bag > 0 then
+            countDetail = string.format("%d (Bags)", entry.bag)
+        else
+            countDetail = string.format("%d (Bank)", entry.bank)
+        end
+
+        tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
+    end
+
+    if tooltip.Show then
+        tooltip:Show()
+    end
+end
+
+function CLIAlts:InitTooltipHooks()
+    if self.tooltipHooksInitialized then return end
+    self.tooltipHooksInitialized = true
+
+    if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
+        TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
+            if not tooltip or not data then return end
+            local itemID = data.id
+            if not itemID and tooltip.GetItem then
+                local _, link = tooltip:GetItem()
+                if link then itemID = tonumber(link:match("item:(%d+)")) end
+            end
+            if itemID then
+                CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
+            end
+        end)
+    else
+        local function OnTooltipSetItem(tooltip)
+            if not tooltip or not tooltip.GetItem then return end
+            local _, link = tooltip:GetItem()
+            if link then
+                local itemID = tonumber(link:match("item:(%d+)"))
+                if itemID then
+                    CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
+                end
+            end
+        end
+
+        if GameTooltip and GameTooltip.HookScript then
+            GameTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
+        end
+        if ItemRefTooltip and ItemRefTooltip.HookScript then
+            ItemRefTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
+        end
+    end
+end
+

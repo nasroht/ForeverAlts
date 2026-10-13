@@ -130,7 +130,9 @@ local safeEvents = {
     "CRAFT_SHOW",
     "CRAFT_UPDATE",
     "UPDATE_INSTANCE_INFO",
+    "BANKFRAME_OPENED",
     "BANKFRAME_CLOSED",
+    "PLAYERBANKSLOTS_CHANGED",
     "MAIL_INBOX_UPDATE",
     "MAIL_SHOW",
     "HEARTHSTONE_BOUND",
@@ -142,6 +144,25 @@ end
 do
     local ok = pcall(eventFrame.RegisterEvent, eventFrame, "BAG_UPDATE_DELAYED")
     if not ok then pcall(eventFrame.RegisterEvent, eventFrame, "BAG_UPDATE") end
+end
+
+local invScanTimer = nil
+local pendingBankScan = false
+
+function CLIAlts:ScheduleInventoryScan(scanBank)
+    if scanBank then
+        pendingBankScan = true
+    end
+    if invScanTimer then return end
+    invScanTimer = true
+    SafeAfter(0.5, function()
+        invScanTimer = nil
+        local doBank = pendingBankScan or (CLIAlts.isBankOpen == true)
+        pendingBankScan = false
+        if CLIAlts.ScanCurrentInventory then
+            CLIAlts:ScanCurrentInventory(doBank)
+        end
+    end)
 end
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
@@ -179,6 +200,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         -- Initialize session XP tracking (Feature 10: > plan)
         CLIAlts:InitSessionXP()
 
+        -- Initialize item hover tooltip hooks & initial inventory scan (Feature 6)
+        if CLIAlts.InitTooltipHooks then CLIAlts:InitTooltipHooks() end
+        if CLIAlts.ScanCurrentInventory then CLIAlts:ScanCurrentInventory(false) end
+
         -- Immediate snapshot
         local char = CLIAlts:CollectCurrentCharacter(false, true)
         if char and not self.hasAnnounced then
@@ -204,6 +229,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         SafeAfter(1.5, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
             CLIAlts:UpdateWatchCounts()
+            if CLIAlts.ScanCurrentInventory then CLIAlts:ScanCurrentInventory(false) end
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:RequestRender()
         end)
@@ -275,7 +301,25 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:RequestRender()
 
-    elseif event == "BAG_UPDATE_DELAYED" or event == "BAG_UPDATE" or event == "BANKFRAME_CLOSED" then
+    elseif event == "BANKFRAME_OPENED" then
+        CLIAlts.isBankOpen = true
+        CLIAlts:ScheduleInventoryScan(true)
+        CLIAlts:UpdateWatchCounts()
+        CLIAlts:RequestRender()
+
+    elseif event == "BANKFRAME_CLOSED" then
+        CLIAlts.isBankOpen = false
+        CLIAlts:ScheduleInventoryScan(false)
+        CLIAlts:UpdateWatchCounts()
+        CLIAlts:RequestRender()
+
+    elseif event == "PLAYERBANKSLOTS_CHANGED" then
+        CLIAlts:ScheduleInventoryScan(true)
+        CLIAlts:UpdateWatchCounts()
+        CLIAlts:RequestRender()
+
+    elseif event == "BAG_UPDATE_DELAYED" or event == "BAG_UPDATE" then
+        CLIAlts:ScheduleInventoryScan(CLIAlts.isBankOpen == true)
         CLIAlts:UpdateWatchCounts()
         CLIAlts:RequestRender()
 
@@ -531,6 +575,11 @@ local function SlashHandler(msg)
     elseif cmd == "restore" then
         local ok, msg = CLIAlts:RestoreDB()
         CLIAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
+
+    elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
+        CLIAltsDB.settings.showInventoryTooltips = not (CLIAltsDB.settings.showInventoryTooltips ~= false)
+        local state = CLIAltsDB.settings.showInventoryTooltips and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+        CLIAlts:Print(string.format("Inventory hover tooltips are now %s.", state))
 
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()
