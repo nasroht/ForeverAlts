@@ -24,8 +24,10 @@ local currentPage = 1
 local totalPages = 1
 local mainFrame = nil
 local dossierPopup = nil
+local customRolePopup = nil
 local confirmPopup = nil
 local helpPopup = nil
+local exportPopup = nil
 local probeString = nil
 local renderDirty = false
 
@@ -2579,8 +2581,6 @@ function CLIAlts:ShowDossierPopup(char)
     dossierPopup:Show()
 end
 
-local customRolePopup = nil
-
 function CLIAlts:ShowCustomRolePrompt(char)
     if not char then return end
     local cleanName = char.fullName or char.name
@@ -2915,7 +2915,6 @@ end
 -- ----------------------------------------------------------------------------
 -- CSV Export Modal (Copyable Multi-Line Dialog)
 -- ----------------------------------------------------------------------------
-local exportPopup = nil
 function CLIAlts:ShowExportPopup()
     if not exportPopup then
         local ep = CreateFrame("Frame", "CLIAltsExportPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
