@@ -1574,6 +1574,10 @@ function CLIAlts:ExecutePromptCommand(input)
         local msg, ok = self:SetCharacterNote(targetName, noteText, false)
         self:SetPromptFeedback(msg or "Note updated.", not ok)
 
+    elseif cmd == "unlocked" or cmd == "lockout" or cmd == "lockouts" then
+        local fb, ok = self:PrintUnlockedAlts(args)
+        self:SetPromptFeedback(fb or "Lockout check complete.", not ok)
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -1597,7 +1601,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "goto", "page", "next", "export",
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
-        "alerts", "digest", "plan", "note",
+        "alerts", "digest", "plan", "note", "unlocked",
         "refresh", "help", "exit", "close"
     }
 
@@ -1622,6 +1626,21 @@ function CLIAlts:AutoCompletePrompt(editBox)
                         editBox:SetCursorPosition(#editBox:GetText())
                         return
                     end
+                end
+            end
+        elseif cmd == "unlocked" then
+            local raidNames = {
+                '"Molten Core"', '"Onyxia\'s Lair"', '"Blackwing Lair"',
+                '"Zul\'Gurub"', '"Ruins of Ahn\'Qiraj"', '"Temple of Ahn\'Qiraj"',
+                '"Naxxramas"', '"Upper Blackrock Spire"', '"Stratholme"', '"Scholomance"', '"Dire Maul"'
+            }
+            local cleanArg = arg:gsub('^["\']', ''):lower()
+            for _, r in ipairs(raidNames) do
+                local rClean = r:gsub('^["\']', ''):gsub('["\']$', ''):lower()
+                if rClean:sub(1, #cleanArg) == cleanArg and rClean ~= cleanArg then
+                    editBox:SetText("unlocked " .. r)
+                    editBox:SetCursorPosition(#editBox:GetText())
+                    return
                 end
             end
         elseif cmd == "theme" then
@@ -1895,6 +1914,7 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts digest     - Display boxed login summary digest now     |",
         "|   /clialts plan [hrs] - Print leveling plan schedule (default: 2h) |",
         "|   /clialts note <who> <txt> - Set/view alt note (clear to remove)   |",
+        "|   /clialts unlocked <inst> - List alts with no active lock (gap finder)|",
         "|   /clialts reset      - Reset window position to center            |",
         "+--------------------------------------------------------------------+",
         "| Interactive Terminal Command Prompt (>):                           |",
@@ -1913,6 +1933,7 @@ function CLIAlts:ShowHelpPopup()
         "|   > digest            - Render boxed login alert digest in chat    |",
         "|   > plan [hours]      - Compute ordered leveling session schedule  |",
         "|   > note <who> <text>  - Set/view alt note (e.g. farm mooncloth)   |",
+        "|   > unlocked <inst>   - List alts with no active lock (gap finder)     |",
         "|   > Up / Down arrows  - Browse terminal command history            |",
         "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",

@@ -449,6 +449,9 @@ local function SlashHandler(msg)
         local targetName, noteText = (arg or ""):match("^(%S+)%s*(.*)$")
         CLIAlts:SetCharacterNote(targetName, noteText, true)
 
+    elseif cmd == "unlocked" or cmd == "lockout" or cmd == "lockouts" then
+        CLIAlts:PrintUnlockedAlts(arg)
+
     elseif cmd == "help" then
         CLIAlts:ShowHelpPopup()
 

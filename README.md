@@ -51,6 +51,10 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
   - Prominently displayed in the Alt Dossier modal and character row hover tooltips.
   - Searchable via filters (`> filter mooncloth`), sortable (`> sort note`), and included in CSV export.
   - Cleared anytime with `> note <name> clear`.
+- **Lockout Gap Finder (`> unlocked <instance>`)**:
+  - Instantly finds characters at an appropriate level with no active lockout (e.g. `> unlocked "Molten Core"` or `> unlocked mc`).
+  - Displays ready/unlocked alts with their level, race/class, primary professions, and notes.
+  - Lists locked alts with remaining reset countdowns and lockout IDs.
 - **Customizable UI Scale & Fonts**:
   - Monospace font rendering with exact column width calculations.
   - `/clialts scale <0.7-1.8>` and title bar `[ SCALE ]` button for 1440p / 4K displays.
@@ -82,6 +86,7 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | `/clialts digest` | Display boxed login summary digest on demand |
 | `/clialts plan [hours]` | Compute ordered leveling session schedule (default: 2h) |
 | `/clialts note <name> [text]` | Set or view custom notes for an alt (`clear` to remove) |
+| `/clialts unlocked <instance>` | List alts at appropriate level with no active lockout (gap finder) |
 | `/clialts reset` | Reset window position to the center of your screen |
 | `/clialts help` | Open the in-game retro quick guide popup |
 

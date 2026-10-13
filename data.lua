@@ -1805,8 +1805,38 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB.characters["Thorin"] = nil
     CLIAltsDB.characters = oldCharsN
 
+    -- 7. Lockout Gap Finder Tests
+    local mockLockAlts = {
+        {
+            name = "RaidWarrior",
+            classFile = "WARRIOR",
+            level = 60,
+            lockouts = {},
+        },
+        {
+            name = "RaidRogue",
+            classFile = "ROGUE",
+            level = 60,
+            lockouts = {
+                ["Molten Core"] = { resetTime = T0 + 86400, id = 12345 }
+            },
+        },
+        {
+            name = "LowLevelAlt",
+            classFile = "HUNTER",
+            level = 45,
+            lockouts = {},
+        },
+    }
+    local uList, lList, cNameU, minLvlU, errU = self:GetUnlockedAlts('"Molten Core"', T0, mockLockAlts)
+    Assert(errU == nil and cNameU == "Molten Core" and minLvlU == 60, "GetUnlockedAlts: resolves Molten Core and level 60")
+    Assert(#uList == 1 and uList[1].name == "RaidWarrior", "GetUnlockedAlts: identifies RaidWarrior as unlocked")
+    Assert(#lList == 1 and lList[1].name == "RaidRogue", "GetUnlockedAlts: identifies RaidRogue as locked")
+    local uList2, _, cNameU2 = self:GetUnlockedAlts("mc", T0, mockLockAlts)
+    Assert(cNameU2 == "Molten Core" and #uList2 == 1, "GetUnlockedAlts: alias 'mc' resolves to Molten Core")
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -2761,4 +2791,218 @@ function CLIAlts:PrintPlan(targetHours)
 
     return summaryText
 end
+
+-- ----------------------------------------------------------------------------
+-- Lockout Gap Finder (Feature: > unlocked <instance>)
+-- ----------------------------------------------------------------------------
+local KNOWN_INSTANCES = {
+    ["molten core"] = { name = "Molten Core", minLevel = 60 },
+    ["mc"] = { name = "Molten Core", minLevel = 60 },
+    ["blackwing lair"] = { name = "Blackwing Lair", minLevel = 60 },
+    ["bwl"] = { name = "Blackwing Lair", minLevel = 60 },
+    ["onyxia's lair"] = { name = "Onyxia's Lair", minLevel = 60 },
+    ["onyxia"] = { name = "Onyxia's Lair", minLevel = 60 },
+    ["ony"] = { name = "Onyxia's Lair", minLevel = 60 },
+    ["zul'gurub"] = { name = "Zul'Gurub", minLevel = 60 },
+    ["zg"] = { name = "Zul'Gurub", minLevel = 60 },
+    ["ruins of ahn'qiraj"] = { name = "Ruins of Ahn'Qiraj", minLevel = 60 },
+    ["aq20"] = { name = "Ruins of Ahn'Qiraj", minLevel = 60 },
+    ["temple of ahn'qiraj"] = { name = "Temple of Ahn'Qiraj", minLevel = 60 },
+    ["aq40"] = { name = "Temple of Ahn'Qiraj", minLevel = 60 },
+    ["naxxramas"] = { name = "Naxxramas", minLevel = 60 },
+    ["naxx"] = { name = "Naxxramas", minLevel = 60 },
+    ["upper blackrock spire"] = { name = "Upper Blackrock Spire", minLevel = 58 },
+    ["ubrs"] = { name = "Upper Blackrock Spire", minLevel = 58 },
+    ["lower blackrock spire"] = { name = "Lower Blackrock Spire", minLevel = 55 },
+    ["lbrs"] = { name = "Lower Blackrock Spire", minLevel = 55 },
+    ["stratholme"] = { name = "Stratholme", minLevel = 55 },
+    ["strat"] = { name = "Stratholme", minLevel = 55 },
+    ["scholomance"] = { name = "Scholomance", minLevel = 55 },
+    ["scholo"] = { name = "Scholomance", minLevel = 55 },
+    ["dire maul"] = { name = "Dire Maul", minLevel = 55 },
+    ["dm"] = { name = "Dire Maul", minLevel = 55 },
+    ["blackrock depths"] = { name = "Blackrock Depths", minLevel = 50 },
+    ["brd"] = { name = "Blackrock Depths", minLevel = 50 },
+}
+
+function CLIAlts:GetUnlockedAlts(query, nowTimestamp, mockChars)
+    if not query or query == "" then
+        return nil, nil, nil, nil, "Usage: unlocked <instance> (e.g. unlocked \"Molten Core\")"
+    end
+
+    local cleaned = query:gsub('^["\']', ''):gsub('["\']$', ''):match('^%s*(.-)%s*$')
+    if not cleaned or cleaned == "" then
+        return nil, nil, nil, nil, "Usage: unlocked <instance> (e.g. unlocked \"Molten Core\")"
+    end
+
+    local now = nowTimestamp or time()
+    local qLower = cleaned:lower()
+
+    local canonName = cleaned
+    local minLevel = 60
+
+    if KNOWN_INSTANCES[qLower] then
+        canonName = KNOWN_INSTANCES[qLower].name
+        minLevel = KNOWN_INSTANCES[qLower].minLevel
+    else
+        local chars = mockChars or self:GetCharactersList()
+        for _, c in ipairs(chars) do
+            if c.lockouts then
+                for instName, _ in pairs(c.lockouts) do
+                    if instName:lower():find(qLower, 1, true) then
+                        canonName = instName
+                        break
+                    end
+                end
+            end
+            if canonName ~= cleaned then break end
+        end
+    end
+
+    local chars = mockChars or self:GetCharactersList()
+    local unlocked = {}
+    local locked = {}
+
+    for _, c in ipairs(chars) do
+        local lvl = c.level or 1
+        if lvl >= minLevel then
+            local isLocked = false
+            local remainingSec = 0
+            local lockId = nil
+
+            if c.lockouts then
+                for instName, lockInfo in pairs(c.lockouts) do
+                    local matches = (instName:lower() == canonName:lower())
+                        or (instName:lower():find(qLower, 1, true) ~= nil)
+                        or (canonName:lower():find(instName:lower(), 1, true) ~= nil)
+
+                    if matches then
+                        local resetTime = (type(lockInfo) == "table" and lockInfo.resetTime) or lockInfo
+                        if type(resetTime) == "number" then
+                            local rem = resetTime - now
+                            if rem > 0 then
+                                isLocked = true
+                                remainingSec = rem
+                                lockId = (type(lockInfo) == "table" and lockInfo.id) or nil
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+
+            if isLocked then
+                table.insert(locked, {
+                    char = c,
+                    name = c.name or "Unknown",
+                    classFile = c.classFile,
+                    level = lvl,
+                    resetSec = remainingSec,
+                    lockId = lockId,
+                })
+            else
+                table.insert(unlocked, {
+                    char = c,
+                    name = c.name or "Unknown",
+                    classFile = c.classFile,
+                    level = lvl,
+                    professions = c.professions,
+                    note = c.note,
+                })
+            end
+        end
+    end
+
+    table.sort(unlocked, function(a, b)
+        if a.level ~= b.level then return a.level > b.level end
+        return (a.name or "") < (b.name or "")
+    end)
+
+    table.sort(locked, function(a, b)
+        return (a.resetSec or 0) < (b.resetSec or 0)
+    end)
+
+    return unlocked, locked, canonName, minLevel, nil
+end
+
+function CLIAlts:PrintUnlockedAlts(query, nowTimestamp, mockChars)
+    local unlocked, locked, canonName, minLevel, errMsg = self:GetUnlockedAlts(query, nowTimestamp, mockChars)
+    if errMsg then
+        self:Print(errMsg)
+        return errMsg, false
+    end
+
+    local titleTag = string.format("UNLOCKED :: %s (Lvl %d+)", canonName, minLevel)
+    local border = string.format("+-----------------[ %s ]-----------------+", titleTag)
+    local bottom = string.rep("-", #border - 2)
+    bottom = "+" .. bottom .. "+"
+
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", border))
+
+    if #unlocked == 0 and #locked == 0 then
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r|cff888888No characters found at required level %d+ for %s.|r", minLevel, canonName))
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", bottom))
+        local fb = string.format("No alts at level %d+ for %s.", minLevel, canonName)
+        return fb, false
+    end
+
+    if #unlocked > 0 then
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r|cffffffffUNLOCKED (%d alts):|r", #unlocked))
+        for _, u in ipairs(unlocked) do
+            local cName = self:ColorizePlayerName(u.name, u.classFile)
+            local profStr = ""
+            if u.professions and u.professions.primary and #u.professions.primary > 0 then
+                local pList = {}
+                for _, p in ipairs(u.professions.primary) do
+                    table.insert(pList, string.format("%s %d", p.name:sub(1, 6), p.rank or 0))
+                end
+                profStr = string.format(" [%s]", table.concat(pList, ", "))
+            end
+            local noteStr = (u.note and u.note ~= "") and string.format(" |cffffd700(%s)|r", u.note) or ""
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r  * %s (Lvl %d %s) -> |cff00ff66[READY / UNLOCKED]|r%s%s",
+                cName, u.level, self:FormatRaceClass(u.char), profStr, noteStr))
+        end
+    else
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r|cffff8844UNLOCKED (0 alts): All level %d+ alts are currently locked!|r", minLevel))
+    end
+
+    if #locked > 0 then
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r|cffff8844LOCKED (%d alts):|r", #locked))
+        for _, l in ipairs(locked) do
+            local cName = self:ColorizePlayerName(l.name, l.classFile)
+            local d = math.floor(l.resetSec / 86400)
+            local h = math.floor((l.resetSec % 86400) / 3600)
+            local m = math.floor((l.resetSec % 3600) / 60)
+            local timeStr
+            if d > 0 then
+                timeStr = string.format("%dd %dh", d, h)
+            elseif h > 0 then
+                timeStr = string.format("%dh %dm", h, m)
+            else
+                timeStr = string.format("%dm", m)
+            end
+            local idStr = l.lockId and string.format(" (ID: %s)", l.lockId) or ""
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r  * %s (Lvl %d) -> |cffff6666Locked (resets in %s)%s|r",
+                cName, l.level, timeStr, idStr))
+        end
+    end
+
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", bottom))
+
+    local names = {}
+    for i = 1, math.min(3, #unlocked) do
+        table.insert(names, unlocked[i].name)
+    end
+    if #unlocked > 3 then
+        table.insert(names, string.format("+%d more", #unlocked - 3))
+    end
+    local fb
+    if #unlocked > 0 then
+        fb = string.format("Unlocked for %s (%d): %s", canonName, #unlocked, table.concat(names, ", "))
+    else
+        fb = string.format("All %d alts locked for %s.", #locked, canonName)
+    end
+    return fb, true
+end
+
 
