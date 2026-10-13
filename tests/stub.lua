@@ -38,6 +38,7 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:SetScale(s) self.scale = s end
     function frame:GetScale() return self.scale or 1 end
     function frame:EnableMouse(...) end
+    function frame:EnableMouseWheel(...) end
     function frame:SetMovable(...) end
     function frame:SetClampedToScreen(...) end
     function frame:RegisterForClicks(...) end

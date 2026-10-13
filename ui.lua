@@ -1435,16 +1435,16 @@ function CLIAlts:ApplyTheme()
     mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
     mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
 
-    mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
-    mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-    mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
-    mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-    mainFrame.midAscii2:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
-    mainFrame.tableTopAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
-    mainFrame.tableSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
-    mainFrame.tableBotAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
-    mainFrame.botAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8)
-    mainFrame.pageText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+    if mainFrame.topAscii then mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.titleText then mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+    if mainFrame.midAscii1 then mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.statusBarText then mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+    if mainFrame.midAscii2 then mainFrame.midAscii2:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.botAscii then mainFrame.botAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.pageText then mainFrame.pageText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
 
     if mainFrame.btnTheme then
         mainFrame.btnTheme.label:SetText(string.format("[ THEME: %s ]", t.tag))
