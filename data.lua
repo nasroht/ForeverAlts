@@ -1763,6 +1763,22 @@ function CLIAlts:GetTimeAgo(timestamp)
     end
 end
 
+function CLIAlts:FormatDateSafe(timestamp, fmt)
+    timestamp = tonumber(timestamp)
+    if not timestamp or timestamp <= 0 then
+        return "Unknown"
+    end
+    if timestamp > 2147400000 then
+        timestamp = 2147400000
+    end
+    fmt = fmt or "%b %d, %H:%M"
+    local ok, res = pcall(date, fmt, timestamp)
+    if ok and res then
+        return res
+    end
+    return "Unknown"
+end
+
 -- ----------------------------------------------------------------------------
 -- CRUD Operations & Querying
 -- ----------------------------------------------------------------------------
@@ -3252,8 +3268,34 @@ function CLIAlts:RunSelfTest()
     local sortedRot = self:GetCharactersList("rotation", false)
     Assert(#sortedRot == 5, "Rotation: GetCharactersList returns all 5 alts")
     Assert(sortedRot[1].name == "CoreCapped", "Rotation sort: 1st is CoreCapped")
-    Assert(sortedRot[5].name == "BankMule", "Rotation sort: 5th (last) is BankMule")
     Assert(sortedRot[4].name == "TargetHit", "Rotation sort: 4th (above bank) is TargetHit")
+    Assert(sortedRot[5].name == "BankMule", "Rotation sort: 5th (last) is BankMule")
+
+    -- 19d. FormatDateSafe resilience
+    Assert(self:FormatDateSafe(0) == "Unknown", "FormatDateSafe: 0 returns Unknown")
+    Assert(self:FormatDateSafe(nil) == "Unknown", "FormatDateSafe: nil returns Unknown")
+    Assert(self:FormatDateSafe(-50) == "Unknown", "FormatDateSafe: negative returns Unknown")
+    Assert(self:FormatDateSafe(1000000000) ~= "Unknown", "FormatDateSafe: valid timestamp returns date string")
+
+    -- 19e. Dossier Popup modal rendering resilience
+    if self.ShowDossierPopup then
+        self:ShowDossierPopup(testRotDB.characters["CoreLeveling"])
+        local dp = self.GetDossierPopup and self:GetDossierPopup()
+        Assert(dp ~= nil, "Dossier: dossierPopup frame created")
+        if dp then
+            Assert(dp:IsShown() == true, "Dossier: popup is shown")
+            local bodyTxt = dp.body and dp.body:GetText() or ""
+            Assert(bodyTxt:find("CLIALTS :: ALT DOSSIER") ~= nil, "Dossier: header rendered in body text")
+            Assert(bodyTxt:find("ROSTER COHORT") ~= nil, "Dossier: ROSTER COHORT rendered in body text")
+
+            -- Test with minimal character (nil/sparse fields)
+            self:ShowDossierPopup({ name = "SparseAlt" })
+            local sparseTxt = dp.body and dp.body:GetText() or ""
+            Assert(sparseTxt:find("SparseAlt") ~= nil, "Dossier: sparse alt rendered without crashing")
+            dp:Hide()
+            Assert(dp:IsShown() == false, "Dossier: popup successfully closed")
+        end
+    end
 
     CLIAltsDB = oldRotDB
 

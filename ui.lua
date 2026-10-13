@@ -2277,12 +2277,22 @@ end
 -- ----------------------------------------------------------------------------
 -- Alt Dossier Modal (Detailed Character Inspection)
 -- ----------------------------------------------------------------------------
+function CLIAlts:GetDossierPopup()
+    return dossierPopup
+end
+
+function CLIAlts:GetCustomRolePopup()
+    return customRolePopup
+end
+
 function CLIAlts:ShowDossierPopup(char)
     if not char then return end
 
     if not dossierPopup then
+        local t = self:GetTheme()
         local dp = CreateFrame("Frame", "CLIAltsDossierPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        dp:SetSize(660, 545)
+        dp:Hide()
+        dp:SetSize(680, 620)
         dp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dp:SetFrameStrata("DIALOG")
         dp:EnableMouse(true)
@@ -2294,13 +2304,16 @@ function CLIAlts:ShowDossierPopup(char)
             edgeSize = 2,
             insets = { left = 2, right = 2, top = 2, bottom = 2 }
         })
+        dp:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+        dp:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
         local body = dp:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(body, 13)
+        self:SetWidgetFont(body, 12)
         body:SetPoint("TOPLEFT", dp, "TOPLEFT", 16, -16)
-        body:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 70)
+        body:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 72)
         body:SetJustifyH("LEFT")
         body:SetJustifyV("TOP")
+        body:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
         dp.body = body
 
         -- Row 1 (Bottom, y=14): Cohort Assignment & Management Controls
@@ -2314,36 +2327,48 @@ function CLIAlts:ShowDossierPopup(char)
 
         local btnSetCore = CreateRetroButton(dp, "[ SET CORE (35) ]", 115, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterCohort(dp.charData.name, "CORE")
-                CLIAlts:ShowDossierPopup(dp.charData)
-                CLIAlts:RequestRender()
+                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                if charName then
+                    CLIAlts:SetCharacterCohort(charName, "CORE")
+                    CLIAlts:ShowDossierPopup(dp.charData)
+                    CLIAlts:RequestRender()
+                end
             end
         end)
         btnSetCore:SetPoint("LEFT", btnDel, "RIGHT", 6, 0)
 
         local btnSetAlt = CreateRetroButton(dp, "[ SET ALT (25) ]", 108, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterCohort(dp.charData.name, "RESERVE")
-                CLIAlts:ShowDossierPopup(dp.charData)
-                CLIAlts:RequestRender()
+                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                if charName then
+                    CLIAlts:SetCharacterCohort(charName, "RESERVE")
+                    CLIAlts:ShowDossierPopup(dp.charData)
+                    CLIAlts:RequestRender()
+                end
             end
         end)
         btnSetAlt:SetPoint("LEFT", btnSetCore, "RIGHT", 6, 0)
 
         local btnSetBank = CreateRetroButton(dp, "[ SET BANK (1) ]", 105, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterCohort(dp.charData.name, "BANK")
-                CLIAlts:ShowDossierPopup(dp.charData)
-                CLIAlts:RequestRender()
+                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                if charName then
+                    CLIAlts:SetCharacterCohort(charName, "BANK")
+                    CLIAlts:ShowDossierPopup(dp.charData)
+                    CLIAlts:RequestRender()
+                end
             end
         end)
         btnSetBank:SetPoint("LEFT", btnSetAlt, "RIGHT", 6, 0)
 
         local btnUnset = CreateRetroButton(dp, "[ UNSET ]", 70, 20, function()
             if dp.charData then
-                CLIAlts:SetCharacterCohort(dp.charData.name, "UNASSIGNED")
-                CLIAlts:ShowDossierPopup(dp.charData)
-                CLIAlts:RequestRender()
+                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                if charName then
+                    CLIAlts:SetCharacterCohort(charName, "UNASSIGNED")
+                    CLIAlts:ShowDossierPopup(dp.charData)
+                    CLIAlts:RequestRender()
+                end
             end
         end)
         btnUnset:SetPoint("LEFT", btnSetBank, "RIGHT", 6, 0)
@@ -2353,7 +2378,7 @@ function CLIAlts:ShowDossierPopup(char)
         end)
         btnClose:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 14)
 
-        -- Row 2 (Middle, y=40): 1-Click Supply Role Configuration Bar
+        -- Row 2 (Middle, y=42): 1-Click Supply Role Configuration Bar
         local roleLabel = dp:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(roleLabel, 12, "BOLD")
         roleLabel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 42)
@@ -2362,9 +2387,12 @@ function CLIAlts:ShowDossierPopup(char)
 
         local function OnRoleClick(roleName)
             if dp.charData then
-                CLIAlts:SetCharacterSupplyRole(dp.charData.name, roleName)
-                CLIAlts:ShowDossierPopup(dp.charData)
-                CLIAlts:RequestRender()
+                local charName = dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
+                if charName then
+                    CLIAlts:SetCharacterSupplyRole(charName, roleName)
+                    CLIAlts:ShowDossierPopup(dp.charData)
+                    CLIAlts:RequestRender()
+                end
             end
         end
 
@@ -2401,6 +2429,7 @@ function CLIAlts:ShowDossierPopup(char)
         dp.btnRoleCustom = btnRoleCustom
 
         dossierPopup = dp
+        self.dossierPopup = dp
     end
 
     dossierPopup.charData = char
@@ -2408,6 +2437,9 @@ function CLIAlts:ShowDossierPopup(char)
     dossierPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
     dossierPopup:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
+    if dossierPopup.body then
+        dossierPopup.body:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+    end
     if dossierPopup.roleLabel then
         dossierPopup.roleLabel:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
     end
@@ -2428,99 +2460,122 @@ function CLIAlts:ShowDossierPopup(char)
         end
     end
 
-    local lines = {}
-    table.insert(lines, "+==============================================================================+")
-    table.insert(lines, "|                    CLIALTS :: ALT DOSSIER & RECORD                           |")
-    table.insert(lines, "+==============================================================================+")
+    local ok, renderErr = pcall(function()
+        local lines = {}
+        table.insert(lines, "+==============================================================================+")
+        table.insert(lines, "|                    CLIALTS :: ALT DOSSIER & RECORD                           |")
+        table.insert(lines, "+==============================================================================+")
 
-    if char.secondaryName and char.secondaryName ~= "" then
-        table.insert(lines, string.format("| Full Name:      %s", self:ColorizePlayerName(char.fullName or char.name, char.classFile)))
-        table.insert(lines, string.format("|   * First Name: |cffffffff%s|r", char.primaryName or char.name))
-        table.insert(lines, string.format("|   * Surname:    |cffffffff%s|r", char.secondaryName))
-    else
-        table.insert(lines, string.format("| Character Name: %s", self:ColorizePlayerName(char.name, char.classFile)))
-    end
-    table.insert(lines, string.format("| System:         |cffffffff%s|r", self:GetClientFlavor()))
-    if char.realm and char.realm ~= "" and char.realm ~= "Forever" then
-        table.insert(lines, string.format("| Realm:          |cffffffff%s|r", char.realm))
-    end
-    table.insert(lines, string.format("| Faction / Race: %s |cffffffff%s (%s)|r", self:GetFactionTag(char.faction), self:FormatRace(char), self:GetRaceCode(char)))
-    table.insert(lines, string.format("| Class / Level:  %s (Level |cffffffff%d|r)", self:ColorizePlayerName(char.class or "Unknown", char.classFile), char.level or 1))
-    table.insert(lines, string.format("| Current Gold:   %s", self:FormatMoney(char.money, true)))
-
-    local logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
-    table.insert(lines, string.format("| Location:       |cffffffff%s|r %s", char.location or "Unknown", logoutZoneTag))
-    table.insert(lines, string.format("| Hearthstone:    |cffffffff%s|r", char.bindLocation or "Unknown"))
-    local isStale, daysInactive = self:IsCharStale(char)
-    local staleTag = isStale and string.format(" |cffff4444[STALE: %dd inactive]|r", daysInactive) or ""
-    table.insert(lines, string.format("| Last Active:    |cffffffff%s|r (%s)%s", self:GetTimeAgo(char.lastUpdate), date("%b %d, %H:%M", char.lastUpdate or time()), staleTag))
-    local noteStr = (char.note and char.note ~= "") and string.format("|cffffd700%s|r", char.note) or "|cff888888None (set with > note <name> <text>)|r"
-    table.insert(lines, string.format("| Player Note:    %s", noteStr))
-    table.insert(lines, "+------------------------------------------------------------------------------+")
-    table.insert(lines, "| LEVEL EXPERIENCE PROGRESS:")
-
-    local xpData = self:GetLevelProgressData(char)
-    if xpData and not xpData.isMaxLevel then
-        table.insert(lines, string.format("| Current XP:     |cffffffff%s / %s XP|r (%5.1f%% of Level %d)", self:FormatNumber(xpData.curXP), self:FormatNumber(xpData.maxXP), xpData.percentExact, char.level or 1))
-        table.insert(lines, string.format("| Next Level:     |cffffffff%s XP needed|r to reach Level %d", self:FormatNumber(xpData.remainingXP), (char.level or 1) + 1))
-        table.insert(lines, string.format("| Progress Bar:   %s%s|r %d%%", t.barFill, xpData.barStr, xpData.percent))
-    else
-        table.insert(lines, string.format("| Status:         |cff888888MAX LEVEL (Level %d reached)|r", char.level or self:GetMaxLevel()))
-    end
-
-    table.insert(lines, "+------------------------------------------------------------------------------+")
-    table.insert(lines, string.format("| RESTED EXPERIENCE (%s):", self:GetClientFlavor()))
-
-    local rested = self:GetRestedData(char)
-    if rested and not rested.isMaxLevel then
-        local est = rested.isEstimate and "~" or ""
-        local restModeStr = rested.isResting and "+5.0% every 8h (Resting)" or "+1.25% every 8h (Wilderness)"
-        table.insert(lines, string.format("| Rested Points:  |cffffffff%s%s / %s XP|r (%s%d%% of Level)", est, self:FormatNumber(rested.currentRested), self:FormatNumber(rested.maxRested), est, rested.percent))
-        if not self:IsRetail() and rested.perkRank and rested.perkRank > 0 then
-            table.insert(lines, string.format("| Rest Status:    %s (%s | Perk: R%d/5)", rested.statusStr, restModeStr, rested.perkRank))
-            table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r (+%d%% speed bonus)", est, self:FormatNumber(math.floor((rested.ratePerSec or 0) * 3600)), rested.perkRank * 4))
+        if char.secondaryName and char.secondaryName ~= "" then
+            table.insert(lines, string.format("| Full Name:      %s", self:ColorizePlayerName(char.fullName or char.name or "Unknown", char.classFile)))
+            table.insert(lines, string.format("|   * First Name: |cffffffff%s|r", char.primaryName or char.name or "Unknown"))
+            table.insert(lines, string.format("|   * Surname:    |cffffffff%s|r", tostring(char.secondaryName)))
         else
-            table.insert(lines, string.format("| Rest Status:    %s (%s)", rested.statusStr, restModeStr))
-            table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r", est, self:FormatNumber(math.floor((rested.ratePerSec or 0) * 3600))))
+            table.insert(lines, string.format("| Character Name: %s", self:ColorizePlayerName(char.name or "Unknown", char.classFile)))
         end
-        table.insert(lines, string.format("| Progress Bar:   %s%s|r %s%d%%", t.barFill, rested.barStr, est, rested.percent))
-        table.insert(lines, string.format("| Time to %d%%:   |cffffffff%s|r", rested.maxPercent or 150, rested.timeLeftStr))
-        table.insert(lines, string.format("| Projected Date: |cffffffff%s|r", rested.fullDate))
-        if rested.isEstimate then
-            table.insert(lines, "| Note:           |cffffaa00Estimated projection (~disconnect / crash)|r")
+        table.insert(lines, string.format("| System:         |cffffffff%s|r", tostring(self:GetClientFlavor() or "Classic")))
+        if char.realm and char.realm ~= "" and char.realm ~= "Forever" then
+            table.insert(lines, string.format("| Realm:          |cffffffff%s|r", tostring(char.realm)))
         end
-    else
-        table.insert(lines, "| Rest Status:    |cff888888N/A (Max Level characters do not accumulate Rested XP)|r")
-    end
+        table.insert(lines, string.format("| Faction / Race: %s |cffffffff%s (%s)|r", self:GetFactionTag(char.faction), tostring(self:FormatRace(char)), tostring(self:GetRaceCode(char))))
+        table.insert(lines, string.format("| Class / Level:  %s (Level |cffffffff%d|r)", self:ColorizePlayerName(char.class or "Unknown", char.classFile), tonumber(char.level) or 1))
+        table.insert(lines, string.format("| Current Gold:   %s", self:FormatMoney(char.money, true)))
 
-    if self:IsForeverMode() or (char.tier and char.tier ~= "UNASSIGNED") then
+        local logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
+        table.insert(lines, string.format("| Location:       |cffffffff%s|r %s", tostring(char.location or "Unknown"), logoutZoneTag))
+        table.insert(lines, string.format("| Hearthstone:    |cffffffff%s|r", tostring(char.bindLocation or "Unknown")))
+        local isStale, daysInactive = self:IsCharStale(char)
+        local staleTag = (isStale and daysInactive) and string.format(" |cffff4444[STALE: %dd inactive]|r", tonumber(daysInactive) or 0) or ""
+        local lastActiveDate = self:FormatDateSafe(char.lastUpdate)
+        table.insert(lines, string.format("| Last Active:    |cffffffff%s|r (%s)%s", self:GetTimeAgo(char.lastUpdate), lastActiveDate, staleTag))
+        local noteStr = (char.note and char.note ~= "") and string.format("|cffffd700%s|r", tostring(char.note)) or "|cff888888None (set with > note <name> <text>)|r"
+        table.insert(lines, string.format("| Player Note:    %s", noteStr))
         table.insert(lines, "+------------------------------------------------------------------------------+")
-        local tierStr = char.tier or "UNASSIGNED"
-        local tgtLvl = char.target_level or ((tierStr == "CORE" and 35) or (tierStr == "RESERVE" and 25) or (tierStr == "BANK" and 1) or 60)
-        local curLvl = char.level or 1
-        local statusTag = (curLvl >= tgtLvl) and " |cff00ff66[Target Level Reached]|r" or ""
-        table.insert(lines, string.format("| ROSTER COHORT:    |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
-        local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", char.supply_role) or "|cff888888Auto (detecting learned professions)|r"
-        table.insert(lines, string.format("| Supply Role:      %s", roleStr))
+        table.insert(lines, "| LEVEL EXPERIENCE PROGRESS:")
+
+        local xpData = self:GetLevelProgressData(char)
+        if xpData and not xpData.isMaxLevel then
+            local curXP = tonumber(xpData.curXP) or 0
+            local maxXP = tonumber(xpData.maxXP) or 0
+            local pctEx = tonumber(xpData.percentExact) or 0
+            local remXP = tonumber(xpData.remainingXP) or 0
+            local cLvl = tonumber(char.level) or 1
+            table.insert(lines, string.format("| Current XP:     |cffffffff%s / %s XP|r (%5.1f%% of Level %d)", self:FormatNumber(curXP), self:FormatNumber(maxXP), pctEx, cLvl))
+            table.insert(lines, string.format("| Next Level:     |cffffffff%s XP needed|r to reach Level %d", self:FormatNumber(remXP), cLvl + 1))
+            table.insert(lines, string.format("| Progress Bar:   %s%s|r %d%%", t.barFill, tostring(xpData.barStr or "[............]"), tonumber(xpData.percent) or 0))
+        else
+            table.insert(lines, string.format("| Status:         |cff888888MAX LEVEL (Level %d reached)|r", tonumber(char.level) or self:GetMaxLevel()))
+        end
+
+        table.insert(lines, "+------------------------------------------------------------------------------+")
+        table.insert(lines, string.format("| RESTED EXPERIENCE (%s):", tostring(self:GetClientFlavor() or "Classic")))
+
+        local rested = self:GetRestedData(char)
+        if rested and not rested.isMaxLevel then
+            local est = rested.isEstimate and "~" or ""
+            local restModeStr = rested.isResting and "+5.0% every 8h (Resting)" or "+1.25% every 8h (Wilderness)"
+            local curRest = tonumber(rested.currentRested) or 0
+            local maxRest = tonumber(rested.maxRested) or 0
+            local rPct = tonumber(rested.percent) or 0
+            table.insert(lines, string.format("| Rested Points:  |cffffffff%s%s / %s XP|r (%s%d%% of Level)", est, self:FormatNumber(curRest), self:FormatNumber(maxRest), est, rPct))
+            if not self:IsRetail() and rested.perkRank and rested.perkRank > 0 then
+                local pRank = tonumber(rested.perkRank) or 0
+                table.insert(lines, string.format("| Rest Status:    %s (%s | Perk: R%d/5)", tostring(rested.statusStr or "[ REST ]"), restModeStr, pRank))
+                table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r (+%d%% speed bonus)", est, self:FormatNumber(math.floor((tonumber(rested.ratePerSec) or 0) * 3600)), pRank * 4))
+            else
+                table.insert(lines, string.format("| Rest Status:    %s (%s)", tostring(rested.statusStr or "[ REST ]"), restModeStr))
+                table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r", est, self:FormatNumber(math.floor((tonumber(rested.ratePerSec) or 0) * 3600))))
+            end
+            table.insert(lines, string.format("| Progress Bar:   %s%s|r %s%d%%", t.barFill, tostring(rested.barStr or "[............]"), est, rPct))
+            table.insert(lines, string.format("| Time to %d%%:   |cffffffff%s|r", tonumber(rested.maxPercent) or 150, tostring(rested.timeLeftStr or "---")))
+            table.insert(lines, string.format("| Projected Date: |cffffffff%s|r", tostring(rested.fullDate or "---")))
+            if rested.isEstimate then
+                table.insert(lines, "| Note:           |cffffaa00Estimated projection (~disconnect / crash)|r")
+            end
+        else
+            table.insert(lines, "| Rest Status:    |cff888888N/A (Max Level characters do not accumulate Rested XP)|r")
+        end
+
+        if self:IsForeverMode() or (char.tier and char.tier ~= "UNASSIGNED") then
+            table.insert(lines, "+------------------------------------------------------------------------------+")
+            local tierStr = tostring(char.tier or "UNASSIGNED")
+            local tgtLvl = tonumber(char.target_level) or ((tierStr == "CORE" and 35) or (tierStr == "RESERVE" and 25) or (tierStr == "BANK" and 1) or 60)
+            local curLvl = tonumber(char.level) or 1
+            local statusTag = (curLvl >= tgtLvl) and " |cff00ff66[Target Level Reached]|r" or ""
+            table.insert(lines, string.format("| ROSTER COHORT:    |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
+            local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", tostring(char.supply_role)) or "|cff888888Auto (detecting learned professions)|r"
+            table.insert(lines, string.format("| Supply Role:      %s", roleStr))
+        end
+
+        table.insert(lines, "+------------------------------------------------------------------------------+")
+        table.insert(lines, "| PROFESSIONS & CRAFTING:")
+        if char.professions and char.professions.primary and #char.professions.primary > 0 then
+            for _, p in ipairs(char.professions.primary) do
+                local pName = tostring(p.name or "Unknown")
+                local pRank = tonumber(p.rank) or 0
+                local pMax = tonumber(p.maxRank) or 0
+                table.insert(lines, string.format("|  * Primary:   |cffffffff%-16s|r %3d / %-3d", pName, pRank, pMax))
+            end
+        else
+            table.insert(lines, "|  * Primary:   |cff888888None learned|r")
+        end
+        if char.professions and char.professions.secondary and #char.professions.secondary > 0 then
+            for _, s in ipairs(char.professions.secondary) do
+                local sName = tostring(s.name or "Unknown")
+                local sRank = tonumber(s.rank) or 0
+                local sMax = tonumber(s.maxRank) or 0
+                table.insert(lines, string.format("|  * Secondary: |cffffffff%-16s|r %3d / %-3d", sName, sRank, sMax))
+            end
+        end
+        table.insert(lines, "+==============================================================================+")
+
+        dossierPopup.body:SetText(table.concat(lines, "\n"))
+    end)
+
+    if not ok then
+        dossierPopup.body:SetText(string.format("|cffff4444Error rendering Alt Dossier:|r\n%s", tostring(renderErr)))
     end
 
-    table.insert(lines, "+------------------------------------------------------------------------------+")
-    table.insert(lines, "| PROFESSIONS & CRAFTING:")
-    if char.professions and char.professions.primary and #char.professions.primary > 0 then
-        for _, p in ipairs(char.professions.primary) do
-            table.insert(lines, string.format("|  * Primary:   |cffffffff%-16s|r %3d / %-3d", p.name or "Unknown", p.rank or 0, p.maxRank or 0))
-        end
-    else
-        table.insert(lines, "|  * Primary:   |cff888888None learned|r")
-    end
-    if char.professions and char.professions.secondary and #char.professions.secondary > 0 then
-        for _, s in ipairs(char.professions.secondary) do
-            table.insert(lines, string.format("|  * Secondary: |cffffffff%-16s|r %3d / %-3d", s.name or "Unknown", s.rank or 0, s.maxRank or 0))
-        end
-    end
-    table.insert(lines, "+==============================================================================+")
-
-    dossierPopup.body:SetText(table.concat(lines, "\n"))
     dossierPopup:Show()
 end
 
@@ -2532,6 +2587,7 @@ function CLIAlts:ShowCustomRolePrompt(char)
 
     if not customRolePopup then
         local cp = CreateFrame("Frame", "CLIAltsCustomRolePopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        cp:Hide()
         cp:SetSize(380, 140)
         cp:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
         cp:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -2544,6 +2600,9 @@ function CLIAlts:ShowCustomRolePrompt(char)
             edgeSize = 2,
             insets = { left = 2, right = 2, top = 2, bottom = 2 }
         })
+        local t = self:GetTheme()
+        cp:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+        cp:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
         local title = cp:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(title, 13, "BOLD")
@@ -2573,9 +2632,12 @@ function CLIAlts:ShowCustomRolePrompt(char)
         local function SaveRole()
             local text = (eb:GetText() or ""):match("^%s*(.-)%s*$")
             if cp.targetChar then
-                CLIAlts:SetCharacterSupplyRole(cp.targetChar.name, text)
-                CLIAlts:ShowDossierPopup(cp.targetChar)
-                CLIAlts:RequestRender()
+                local charName = cp.targetChar.name or (cp.targetChar.fullName and cp.targetChar.fullName:match("^(%S+)"))
+                if charName then
+                    CLIAlts:SetCharacterSupplyRole(charName, text)
+                    CLIAlts:ShowDossierPopup(cp.targetChar)
+                    CLIAlts:RequestRender()
+                end
             end
             cp:Hide()
         end
@@ -2590,6 +2652,7 @@ function CLIAlts:ShowCustomRolePrompt(char)
         btnCancel:SetPoint("BOTTOMRIGHT", cp, "BOTTOMRIGHT", -16, 14)
 
         customRolePopup = cp
+        self.customRolePopup = cp
     end
 
     customRolePopup.targetChar = char
@@ -2614,6 +2677,7 @@ function CLIAlts:ShowConfirmDelete(char)
 
     if not confirmPopup then
         local cp = CreateFrame("Frame", "CLIAltsConfirmPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        cp:Hide()
         cp:SetSize(360, 160)
         cp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         cp:SetFrameStrata("DIALOG")
@@ -2626,6 +2690,9 @@ function CLIAlts:ShowConfirmDelete(char)
             edgeSize = 2,
             insets = { left = 2, right = 2, top = 2, bottom = 2 }
         })
+        local t = self:GetTheme()
+        cp:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+        cp:SetBackdropBorderColor(1, 0.2, 0.2, 1)
 
         local body = cp:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(body, 14)
@@ -2716,6 +2783,7 @@ end
 function CLIAlts:ShowHelpPopup()
     if not helpPopup then
         local hp = CreateFrame("Frame", "CLIAltsHelpPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        hp:Hide()
         hp:SetSize(560, 560)
         hp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         hp:SetFrameStrata("DIALOG")
@@ -2728,6 +2796,9 @@ function CLIAlts:ShowHelpPopup()
             edgeSize = 2,
             insets = { left = 2, right = 2, top = 2, bottom = 2 }
         })
+        local t = self:GetTheme()
+        hp:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+        hp:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
         local body = hp:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(body, 13)
@@ -2848,6 +2919,7 @@ local exportPopup = nil
 function CLIAlts:ShowExportPopup()
     if not exportPopup then
         local ep = CreateFrame("Frame", "CLIAltsExportPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        ep:Hide()
         ep:SetSize(640, 440)
         ep:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         ep:SetFrameStrata("DIALOG")
@@ -2860,6 +2932,9 @@ function CLIAlts:ShowExportPopup()
             edgeSize = 2,
             insets = { left = 2, right = 2, top = 2, bottom = 2 }
         })
+        local t = self:GetTheme()
+        ep:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+        ep:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
         local title = ep:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(title, 14, "BOLD")
