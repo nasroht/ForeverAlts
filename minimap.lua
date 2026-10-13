@@ -129,23 +129,30 @@ function CLIAlts:CreateMinimapButton()
         local summary = CLIAlts:GetAccountSummary()
         local moneyStr = CLIAlts:FormatMoney(summary.totalGold, true)
 
-        GameTooltip:AddLine("+-----------------------------------------------+", 0, 1, 0.4)
-        GameTooltip:AddLine("|  .:: [ CLIALTS ] - RETRO ALT MONITOR ::.     |", 0.2, 1, 0.6)
-        GameTooltip:AddLine("+-----------------------------------------------+", 0, 1, 0.4)
+        local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
+        local br, bg, bb = t and t.border[1] or 0, t and t.border[2] or 1, t and t.border[3] or 0.4
+        local hr, hg, hb = t and t.highlight[1] or 0.2, t and t.highlight[2] or 1, t and t.highlight[3] or 0.6
+
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
+        GameTooltip:AddLine("|  .:: [ CLIALTS ] - RETRO ALT MONITOR ::.     |", hr, hg, hb)
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
         GameTooltip:AddDoubleLine("| Total Tracked Alts:", string.format("%d alts |", summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)
         GameTooltip:AddDoubleLine("| Total Account Wealth:", string.format("%s |", moneyStr), 0.7, 0.7, 0.7, 1, 1, 1)
-        GameTooltip:AddDoubleLine("| Fully Rested (150%):", string.format("%d of %d |", summary.fullyRested, summary.totalAlts), 0.7, 0.7, 0.7, 0.3, 1, 0.3)
+
+        local fullyStr = summary.fullyRested > 0 and string.format("%d of %d [*] |", summary.fullyRested, summary.totalAlts) or string.format("%d of %d |", summary.fullyRested, summary.totalAlts)
+        local frR, frG, frB = summary.fullyRested > 0 and 1.0 or 0.7, summary.fullyRested > 0 and 0.85 or 0.7, summary.fullyRested > 0 and 0.2 or 0.7
+        GameTooltip:AddDoubleLine("| Fully Rested (150%):", fullyStr, 0.7, 0.7, 0.7, frR, frG, frB)
 
         if summary.nextFullAlt then
             local coloredName = CLIAlts:ColorizePlayerName(summary.nextFullAlt.name, summary.nextFullAlt.classFile)
-            GameTooltip:AddDoubleLine("| Next Full Alt:", string.format("%s (%s) |", coloredName, summary.nextFullAlt.timeLeftStr), 0.7, 0.7, 0.7, 1, 0.8, 0.2)
+            GameTooltip:AddDoubleLine("| Next Full Alt:", string.format("%s (%s) |", coloredName, summary.nextFullAlt.timeLeftStr), 0.7, 0.7, 0.7, 1, 0.85, 0.2)
         end
 
-        GameTooltip:AddLine("+-----------------------------------------------+", 0, 1, 0.4)
-        GameTooltip:AddDoubleLine("| <Left-Click>", "Toggle Alt Monitor |", 0.4, 0.8, 0.5, 0.9, 0.9, 0.9)
-        GameTooltip:AddDoubleLine("| <Right-Click>", "Refresh Timers |", 0.4, 0.8, 0.5, 0.9, 0.9, 0.9)
-        GameTooltip:AddDoubleLine("| <Drag Left/Right>", "Move Around Minimap |", 0.4, 0.8, 0.5, 0.9, 0.9, 0.9)
-        GameTooltip:AddLine("+-----------------------------------------------+", 0, 1, 0.4)
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
+        GameTooltip:AddDoubleLine("| <Left-Click>", "Toggle Alt Monitor |", 0.6, 0.8, 0.7, 0.9, 0.9, 0.9)
+        GameTooltip:AddDoubleLine("| <Right-Click>", "Refresh Timers |", 0.6, 0.8, 0.7, 0.9, 0.9, 0.9)
+        GameTooltip:AddDoubleLine("| <Drag Left/Right>", "Move Around Minimap |", 0.6, 0.8, 0.7, 0.9, 0.9, 0.9)
+        GameTooltip:AddLine("+-----------------------------------------------+", br, bg, bb)
 
         GameTooltip:Show()
     end)
@@ -244,7 +251,9 @@ function CLIAlts:InitLDB()
         end,
         OnTooltipShow = function(tooltip)
             if not tooltip or not tooltip.AddLine then return end
-            tooltip:AddLine("CLIAlts", 0, 1, 0.4)
+            local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
+            local hr, hg, hb = t and t.highlight[1] or 0.2, t and t.highlight[2] or 1, t and t.highlight[3] or 0.6
+            tooltip:AddLine("CLIAlts", hr, hg, hb)
             local text, cappedCount, totalWastedXP = CLIAlts.GetLDBText and CLIAlts:GetLDBText()
             local summary = CLIAlts.GetAccountSummary and CLIAlts:GetAccountSummary()
             if summary then
@@ -252,10 +261,12 @@ function CLIAlts:InitLDB()
                 tooltip:AddDoubleLine("Total Gold:", CLIAlts:FormatMoney(summary.totalGold, true), 0.7, 0.7, 0.7, 1, 1, 1)
             end
             if cappedCount then
-                tooltip:AddDoubleLine("Capped Alts:", tostring(cappedCount), 0.7, 0.7, 0.7, cappedCount > 0 and 1 or 0.3, cappedCount > 0 and 0.3 or 1, 0.3)
+                local cappedStr = cappedCount > 0 and string.format("%d [!]", cappedCount) or string.format("%d", cappedCount)
+                local cr, cg, cb = cappedCount > 0 and 1.0 or 0.7, cappedCount > 0 and 0.85 or 0.7, cappedCount > 0 and 0.2 or 0.7
+                tooltip:AddDoubleLine("Capped Alts:", cappedStr, 0.7, 0.7, 0.7, cr, cg, cb)
             end
             if totalWastedXP and totalWastedXP > 0 then
-                tooltip:AddDoubleLine("XP Wasted:", CLIAlts:FormatNumber(totalWastedXP) .. " XP", 0.7, 0.7, 0.7, 1, 0.3, 0.3)
+                tooltip:AddDoubleLine("XP Wasted:", string.format("!%s XP", CLIAlts:FormatNumber(totalWastedXP)), 0.7, 0.7, 0.7, 1.0, 0.65, 0.0)
             end
             tooltip:AddLine(" ")
             tooltip:AddLine("|cff888888Left-Click:|r Toggle window", 0.8, 0.8, 0.8)

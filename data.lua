@@ -218,6 +218,7 @@ function CLIAlts:InitDB()
     if CLIAltsDB.settings.alerts.lockouts == nil then CLIAltsDB.settings.alerts.lockouts = true end
     if CLIAltsDB.settings.restedBurnRatio == nil then CLIAltsDB.settings.restedBurnRatio = 0.5 end
     CLIAltsDB.settings.staleDays = tonumber(CLIAltsDB.settings.staleDays) or 30
+    CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode == true)
     CLIAltsDB.characters = CLIAltsDB.characters or {}
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
     CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
@@ -315,6 +316,24 @@ local function SafeAfter(delay, callback)
     end)
 end
 CLIAlts.SafeAfter = SafeAfter
+
+function CLIAlts:IsCompact()
+    return (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.compactMode == true)
+end
+
+function CLIAlts:ToggleCompact()
+    if not CLIAltsDB or not CLIAltsDB.settings then
+        self:InitDB()
+    end
+    CLIAltsDB.settings.compactMode = not (CLIAltsDB.settings.compactMode == true)
+    if self.ApplyLayoutSize then
+        self:ApplyLayoutSize()
+    end
+    if self.Render then
+        self:Render()
+    end
+    return CLIAltsDB.settings.compactMode
+end
 
 -- ----------------------------------------------------------------------------
 -- Helper: Primary Name & Secondary Name (WoW Forever Support & Identity Cache)
@@ -2077,8 +2096,38 @@ function CLIAlts:RunSelfTest()
         Assert(ldbObj == nil, "InitLDB: returns nil cleanly when LibDataBroker-1.1 is absent")
     end
 
+    -- 11. Colorblind Palette & Compact Mode Tests
+    -- 11a. Colorblind Theme
+    if self.THEMES then
+        local cbTheme = self.THEMES["COLORBLIND"]
+        Assert(cbTheme ~= nil, "Colorblind: COLORBLIND theme exists in THEMES")
+        Assert(cbTheme and cbTheme.tag == "SAFE", "Colorblind: theme tag is 'SAFE'")
+        Assert(cbTheme and cbTheme.highlightHex == "ffd933", "Colorblind: high-contrast amber highlightHex is ffd933")
+    end
+
+    -- 11b. Compact Mode Toggle & Column Filtering
+    local oldCompact = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.compactMode
+    CLIAltsDB.settings.compactMode = false
+    Assert(self:IsCompact() == false, "CompactMode: IsCompact reports false when disabled")
+    self:ToggleCompact()
+    Assert(self:IsCompact() == true, "CompactMode: ToggleCompact flips state to true")
+
+    if self.GetColumns then
+        CLIAltsDB.settings.compactMode = false
+        local fullCols1 = self:GetColumns(1)
+        CLIAltsDB.settings.compactMode = true
+        local compCols1 = self:GetColumns(1)
+        local hasXPFull = false
+        for _, col in ipairs(fullCols1) do if col.key == "xp" then hasXPFull = true end end
+        local hasXPComp = false
+        for _, col in ipairs(compCols1) do if col.key == "xp" then hasXPComp = true end end
+        Assert(hasXPFull == true and hasXPComp == false, "CompactMode: hides XP bar column in Tab 1")
+    end
+
+    CLIAltsDB.settings.compactMode = oldCompact
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

@@ -347,6 +347,11 @@ local function SlashHandler(msg)
         CLIAlts:Toggle(true)
         CLIAlts:ShowExportPopup()
 
+    elseif cmd == "compact" or cmd == "c" then
+        CLIAlts:ToggleCompact()
+        local isComp = CLIAlts:IsCompact()
+        CLIAlts:Print(string.format("Compact mode: %s (XP bar columns %s).", isComp and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r", isComp and "hidden" or "visible"))
+
     elseif cmd == "filter" or cmd == "find" then
         CLIAlts:Toggle(true)
         if CLIAlts.SetFilter then

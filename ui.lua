@@ -96,9 +96,25 @@ CLIAlts.THEMES = {
         barFill = "|cffd8d8d8",
         barEmpty = "|cff555555",
     },
+    ["COLORBLIND"] = {
+        name = "Phosphor Safe",
+        tag = "SAFE",
+        bg = { 0.02, 0.04, 0.08, 0.96 },
+        border = { 0.25, 0.65, 1.0, 0.85 },
+        primary = { 0.35, 0.75, 1.0 },
+        dim = { 0.40, 0.58, 0.78 },
+        highlight = { 1.0, 0.85, 0.2 },
+        rowHover = { 0.08, 0.20, 0.38, 0.35 },
+        borderHex = "40a6ff",
+        primaryHex = "59bfff",
+        dimHex = "6694c7",
+        highlightHex = "ffd933",
+        barFill = "|cff40a6ff",
+        barEmpty = "|cff14334d",
+    },
 }
 
-local THEME_ORDER = { "GREEN", "AMBER", "CYAN", "MONO" }
+local THEME_ORDER = { "GREEN", "AMBER", "CYAN", "MONO", "COLORBLIND" }
 local SCALES = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
 
 function CLIAlts:GetTheme()
@@ -370,7 +386,8 @@ local function FmtRested(char, t)
     if rested.isMaxLevel then return CLIAlts:Pad("MAX", 8, "RIGHT", "888888") end
 
     local est = rested.isEstimate and "~" or " "
-    local pct = string.format("%3d%%%s", rested.percent, est)
+    local capMark = rested.isFull and "*" or " "
+    local pct = string.format("%3d%%%s%s", rested.percent, capMark, est)
     local color = rested.isFull and t.highlightHex or t.primaryHex
     return CLIAlts:Pad(pct, 8, "RIGHT", color)
 end
@@ -382,9 +399,10 @@ local function FmtETA(char, t)
     if rested.isFull then
         local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(char)
         if wastedSec and wastedSec > 3600 then
-            return CLIAlts:Pad("+" .. (timeStr or "1h"), 7, "RIGHT", "ff5555")
+            -- Alert marker '!' + time string, colored in amber/yellow for universal colorblind safety
+            return CLIAlts:Pad("!" .. (timeStr or "1h"), 7, "RIGHT", "ffaa00")
         else
-            return CLIAlts:Pad("FULL", 7, "RIGHT", t.highlightHex)
+            return CLIAlts:Pad("[CAP]", 7, "RIGHT", t.highlightHex)
         end
     end
 
@@ -409,16 +427,19 @@ local function FmtRestedBar(char, t)
             t.borderHex, t.dimHex, string.rep("=", 10), t.borderHex, t.highlightHex)
     end
 
+    local isFull = rested.isFull
     local ratio = math.min(1.0, math.max(0, rested.ratio or 0))
     local fill = math.min(10, math.max(0, math.floor(ratio * 10)))
     local empty = 10 - fill
-    local fillStr = string.rep("=", fill)
+    local fillChar = isFull and "#" or "="
+    local fillStr = string.rep(fillChar, fill)
     local emptyStr = string.rep(".", empty)
     local est = rested.isEstimate and "~" or " "
-    local pctStr = string.format("%3d%%%s", rested.percent, est)
+    local capMark = isFull and "*" or " "
+    local pctStr = string.format("%3d%%%s%s", rested.percent, capMark, est)
 
     return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
-        t.borderHex, rested.isFull and t.highlightHex or t.primaryHex, fillStr, t.dimHex, emptyStr, t.borderHex, t.primaryHex, pctStr)
+        t.borderHex, isFull and t.highlightHex or t.primaryHex, fillStr, t.dimHex, emptyStr, t.borderHex, isFull and t.highlightHex or t.primaryHex, pctStr)
 end
 
 local function FmtRate(char, t)
@@ -597,8 +618,43 @@ local COLS = {
     },
 }
 
+function CLIAlts:GetColumns(activeTab)
+    local tabCols = COLS[activeTab] or COLS[1]
+    if not self:IsCompact() then
+        return tabCols
+    end
+
+    local filtered = {}
+    for _, col in ipairs(tabCols) do
+        -- In compact mode, hide the XP bar column ("xp" in Tab 1, "restBar" in Tab 2)
+        if col.key ~= "xp" and col.key ~= "restBar" then
+            if activeTab == 2 and col.key == "pool" then
+                table.insert(filtered, { key = col.key, title = "RESTED/CAP", w = 14, align = col.align, sort = col.sort, fmt = col.fmt })
+            else
+                table.insert(filtered, col)
+            end
+        end
+    end
+    return filtered
+end
+
+function CLIAlts:GetLineWidth(activeTab)
+    local cols = self:GetColumns(activeTab or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1)
+    local totalW = 4 + (#cols - 1)
+    for _, col in ipairs(cols) do
+        totalW = totalW + col.w
+    end
+    return totalW
+end
+
+function CLIAlts:GetBorderLine(isDouble, activeTab)
+    local w = self:GetLineWidth(activeTab)
+    local char = isDouble and "=" or "-"
+    return "+" .. string.rep(char, w - 2) .. "+"
+end
+
 function CLIAlts:BuildHeaderLine(activeTab, t)
-    local cols = COLS[activeTab] or COLS[1]
+    local cols = self:GetColumns(activeTab)
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
     local parts = {}
@@ -618,6 +674,46 @@ function CLIAlts:BuildHeaderLine(activeTab, t)
     end
 
     return "| " .. table.concat(parts, " ") .. " |"
+end
+
+-- ----------------------------------------------------------------------------
+-- Compact Mode Layout & Width Adjustment
+-- ----------------------------------------------------------------------------
+function CLIAlts:ApplyLayoutSize()
+    if not mainFrame then return end
+    local isComp = self:IsCompact()
+    local targetWidth = isComp and 630 or 780
+    mainFrame:SetWidth(targetWidth)
+    if mainFrame.headerFrame then
+        mainFrame.headerFrame:SetWidth(targetWidth - 24)
+    end
+    if mainFrame.rowsContainer then
+        mainFrame.rowsContainer:SetWidth(targetWidth - 24)
+    end
+    for _, row in ipairs(rowFrames) do
+        row:SetWidth(targetWidth - 24)
+    end
+
+    local tabW = isComp and 115 or 142
+    local spacing = isComp and 6 or 7
+    local prevTab = nil
+    for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
+        tabBtn:SetWidth(tabW)
+        tabBtn:ClearAllPoints()
+        if not prevTab then
+            tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, -80)
+        else
+            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", spacing, 0)
+        end
+        prevTab = tabBtn
+    end
+
+    if mainFrame.titleText then
+        mainFrame.titleText:SetText(isComp and "[#] CLIALTS" or ("[#] CLIALTS :: RETRO TERMINAL ALT MONITOR v" .. (self.VERSION or "1.1.0")))
+    end
+    if mainFrame.btnCompact then
+        mainFrame.btnCompact.label:SetText(isComp and "[ C: COMPACT* ]" or "[ C: COMPACT ]")
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -674,7 +770,7 @@ function CLIAlts:CreateMainFrame()
     titleText:SetText("[#] CLIALTS :: RETRO TERMINAL ALT MONITOR v" .. CLIAlts.VERSION)
     frame.titleText = titleText
 
-    -- Window Controls on Title Bar (Scale, Theme, Help, Refresh, Close)
+    -- Window Controls on Title Bar (Scale, Compact, Theme, Help, Refresh, Close)
     local btnClose = CreateRetroButton(frame, "[ X ]", 34, 18, function()
         CLIAlts:Toggle(false)
     end)
@@ -691,10 +787,32 @@ function CLIAlts:CreateMainFrame()
     btnScale:SetPoint("RIGHT", btnHelp, "LEFT", -6, 0)
     frame.btnScale = btnScale
 
+    local btnCompact = CreateRetroButton(frame, "[ C: COMPACT ]", 95, 18, function()
+        CLIAlts:ToggleCompact()
+    end)
+    btnCompact:SetPoint("RIGHT", btnScale, "LEFT", -6, 0)
+    btnCompact:SetScript("OnEnter", function(self)
+        local t = CLIAlts:GetTheme()
+        self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.8)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine("Compact Mode (Key: C)", 1, 1, 1)
+        GameTooltip:AddLine("Hides XP bar columns for narrow windows or high scales.", 0.8, 0.8, 0.8)
+        local isComp = CLIAlts:IsCompact()
+        GameTooltip:AddLine(string.format("Status: %s", isComp and "|cff00ff66ENABLED|r" or "|cff888888DISABLED|r"), 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Shortcut: Press |cffffd700C|r anytime in the terminal.", 0.4, 0.8, 0.5)
+        GameTooltip:Show()
+    end)
+    btnCompact:SetScript("OnLeave", function(self)
+        local t = CLIAlts:GetTheme()
+        self:SetBackdropColor(0, 0, 0, 0.6)
+        GameTooltip:Hide()
+    end)
+    frame.btnCompact = btnCompact
+
     local btnTheme = CreateRetroButton(frame, "[ THEME: GRN ]", 100, 18, function()
         CLIAlts:CycleTheme()
     end)
-    btnTheme:SetPoint("RIGHT", btnScale, "LEFT", -6, 0)
+    btnTheme:SetPoint("RIGHT", btnCompact, "LEFT", -6, 0)
     frame.btnTheme = btnTheme
 
     local btnRefresh = CreateRetroButton(frame, "[ REFRESH ]", 80, 18, function()
@@ -749,11 +867,11 @@ function CLIAlts:CreateMainFrame()
 
     -- Retro Tabs
     local tabs = {
-        { id = 1, text = "[ ALTS OVERVIEW ]" },
-        { id = 2, text = "[ RESTED XP ]" },
-        { id = 3, text = "[ PROFESSIONS ]" },
-        { id = 4, text = "[ ECONOMY ]" },
-        { id = 5, text = "[ COOLDOWNS ]" },
+        { id = 1, text = "[ ALTS OVERVIEW ]", compact = "[ 1: ALTS ]" },
+        { id = 2, text = "[ RESTED XP ]",     compact = "[ 2: REST ]" },
+        { id = 3, text = "[ PROFESSIONS ]",   compact = "[ 3: PROF ]" },
+        { id = 4, text = "[ ECONOMY ]",       compact = "[ 4: ECON ]" },
+        { id = 5, text = "[ COOLDOWNS ]",     compact = "[ 5: LOCK ]" },
     }
     frame.tabButtons = {}
     local prevTab = nil
@@ -770,6 +888,7 @@ function CLIAlts:CreateMainFrame()
         end
         tabBtn.tabId = tabData.id
         tabBtn.baseText = tabData.text
+        tabBtn.compactText = tabData.compact
         table.insert(frame.tabButtons, tabBtn)
         prevTab = tabBtn
     end
@@ -1049,7 +1168,7 @@ function CLIAlts:CreateMainFrame()
         end)
     end
 
-    -- Hidden Buttons for Enter and / keyboard focus overrides
+    -- Hidden Buttons for Enter, /, and C (compact) keyboard overrides
     local btnFocusEnter = CreateFrame("Button", "CLIAltsFocusEnterBtn", frame)
     btnFocusEnter:SetScript("OnClick", function()
         if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
@@ -1065,6 +1184,31 @@ function CLIAlts:CreateMainFrame()
         end
     end)
 
+    local btnCompactHidden = CreateFrame("Button", "CLIAltsCompactBtn", frame)
+    btnCompactHidden:SetScript("OnClick", function()
+        if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
+            CLIAlts:ToggleCompact()
+        end
+    end)
+
+    promptBox:SetScript("OnEditFocusGained", function()
+        pcall(function()
+            if ClearOverrideBindings then
+                ClearOverrideBindings(frame)
+            end
+        end)
+    end)
+    promptBox:SetScript("OnEditFocusLost", function()
+        pcall(function()
+            if frame:IsShown() and SetOverrideBindingClick then
+                SetOverrideBindingClick(frame, false, "ENTER", "CLIAltsFocusEnterBtn")
+                SetOverrideBindingClick(frame, false, "/", "CLIAltsFocusSlashBtn")
+                SetOverrideBindingClick(frame, false, "C", "CLIAltsCompactBtn")
+                SetOverrideBindingClick(frame, false, "c", "CLIAltsCompactBtn")
+            end
+        end)
+    end)
+
     -- Propagate keyboard input support (WoW Classic Era / modern client)
     if frame.SetPropagateKeyboardInput then
         frame:SetPropagateKeyboardInput(true)
@@ -1076,6 +1220,8 @@ function CLIAlts:CreateMainFrame()
                     if key == "SLASH" or key == "/" then
                         frame.promptBox:SetText("")
                     end
+                elseif key == "C" or key == "c" then
+                    CLIAlts:ToggleCompact()
                 end
             end
         end)
@@ -1085,7 +1231,7 @@ function CLIAlts:CreateMainFrame()
     local promptStatusTip = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(promptStatusTip, fontSize - 2)
     promptStatusTip:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 14)
-    promptStatusTip:SetText("|cff888888[Press Enter or / to type: 1-5, sort <col>, filter <query>, next, export, help]|r")
+    promptStatusTip:SetText("|cff888888[Press Enter or / to type: 1-5, C: compact, sort <col>, filter <query>, next, export, help]|r")
     frame.promptStatusTip = promptStatusTip
 
     local botAscii = frame:CreateFontString(nil, "OVERLAY")
@@ -1109,8 +1255,11 @@ function CLIAlts:CreateMainFrame()
             if SetOverrideBindingClick then
                 SetOverrideBindingClick(self, false, "ENTER", "CLIAltsFocusEnterBtn")
                 SetOverrideBindingClick(self, false, "/", "CLIAltsFocusSlashBtn")
+                SetOverrideBindingClick(self, false, "C", "CLIAltsCompactBtn")
+                SetOverrideBindingClick(self, false, "c", "CLIAltsCompactBtn")
             end
         end)
+        CLIAlts:ApplyLayoutSize()
         if renderDirty then
             CLIAlts:Render()
         end
@@ -1174,18 +1323,35 @@ function CLIAlts:Render()
     local fontSize = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
 
     -- Highlight active tab button
+    local isComp = self:IsCompact()
     for _, tabBtn in ipairs(mainFrame.tabButtons) do
+        local base = isComp and tabBtn.compactText or tabBtn.baseText
         if tabBtn.tabId == activeTab then
-            tabBtn.label:SetText(string.format(">> %s <<", tabBtn.baseText))
+            tabBtn.label:SetText(string.format(">> %s <<", base))
             tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
             tabBtn:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.3)
             tabBtn:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 1)
         else
-            tabBtn.label:SetText(tabBtn.baseText)
+            tabBtn.label:SetText(base)
             tabBtn.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
             tabBtn:SetBackdropColor(0, 0, 0, 0.6)
             tabBtn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
         end
+    end
+
+    -- Update dynamic ASCII border lines based on active tab line width
+    local borderLine = self:GetBorderLine(false, activeTab)
+    local doubleBorder = self:GetBorderLine(true, activeTab)
+    if mainFrame.topAscii then mainFrame.topAscii:SetText(doubleBorder) end
+    if mainFrame.midAscii1 then mainFrame.midAscii1:SetText(borderLine) end
+    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText(borderLine) end
+    if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetText(doubleBorder) end
+    if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetText(borderLine) end
+    if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetText(doubleBorder) end
+    if mainFrame.promptSepAscii then mainFrame.promptSepAscii:SetText(borderLine) end
+    if mainFrame.botAscii then mainFrame.botAscii:SetText(borderLine) end
+    if mainFrame.btnCompact then
+        mainFrame.btnCompact.label:SetText(isComp and "[ C: COMPACT* ]" or "[ C: COMPACT ]")
     end
 
     -- Update Status Bar
@@ -1194,7 +1360,11 @@ function CLIAlts:Render()
     local goldOnly = math.floor(totalGold / 10000)
     local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
 
-    if activeTab == 4 then
+    if isComp then
+        local filterTag = self.activeFilter and string.format(" [%s]", self.activeFilter:upper()) or ""
+        mainFrame.statusBarText:SetText(string.format("ALTS: %d%s | WEALTH: %sg",
+            summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+    elseif activeTab == 4 then
         local spark = self:GenerateAsciiSparkline(14)
         local d1, d7, d30 = self:GetGoldHistoryDeltas()
         local d1Sign = d1 >= 0 and "+" or ""
@@ -1213,7 +1383,7 @@ function CLIAlts:Render()
 
     -- Position Clickable Header Buttons
     local charW = self:GetCharWidth(fontSize)
-    local cols = COLS[activeTab] or COLS[1]
+    local cols = self:GetColumns(activeTab)
     local curCharOffset = 3 -- after "| "
 
     for idx = 1, 8 do
@@ -1306,6 +1476,12 @@ function CLIAlts:ApplyTheme()
         local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
         mainFrame.btnScale.label:SetText(string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)))
         mainFrame.btnScale.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+    end
+
+    if mainFrame.btnCompact then
+        local isComp = self:IsCompact()
+        mainFrame.btnCompact.label:SetText(isComp and "[ C: COMPACT* ]" or "[ C: COMPACT ]")
+        mainFrame.btnCompact.label:SetTextColor(isComp and t.highlight[1] or t.primary[1], isComp and t.highlight[2] or t.primary[2], isComp and t.highlight[3] or t.primary[3])
     end
 
     if mainFrame.promptLabel then
@@ -1528,6 +1704,11 @@ function CLIAlts:ExecutePromptCommand(input)
         self:ShowExportPopup()
         self:SetPromptFeedback("CSV Export window opened.")
 
+    elseif cmd == "compact" or cmd == "c" then
+        self:ToggleCompact()
+        local isComp = self:IsCompact()
+        self:SetPromptFeedback(string.format("Compact mode: %s (XP bars %s)", isComp and "ENABLED" or "DISABLED", isComp and "hidden" or "shown"))
+
     elseif cmd == "theme" then
         if args and args ~= "" then
             local map = {
@@ -1535,6 +1716,9 @@ function CLIAlts:ExecutePromptCommand(input)
                 amber = "AMBER",
                 cyan = "CYAN",
                 mono = "MONO",
+                safe = "COLORBLIND",
+                colorblind = "COLORBLIND",
+                cb = "COLORBLIND",
                 synthwave = "SYNTHWAVE",
                 dracula = "DRACULA",
             }
@@ -1545,7 +1729,7 @@ function CLIAlts:ExecutePromptCommand(input)
                 self:Render()
                 self:SetPromptFeedback(string.format("Theme set to %s", choice))
             else
-                self:SetPromptFeedback("Themes: green, amber, cyan, mono, synthwave, dracula", true)
+                self:SetPromptFeedback("Themes: green, amber, cyan, mono, safe (colorblind)", true)
             end
         else
             self:CycleTheme()
@@ -1658,7 +1842,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
     local commands = {
         "1", "2", "3", "4", "5",
         "sort", "filter", "find", "clear",
-        "goto", "page", "next", "export",
+        "goto", "page", "next", "export", "compact",
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
         "alerts", "digest", "plan", "note", "unlocked", "prune",
@@ -1715,7 +1899,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
                 end
             end
         elseif cmd == "theme" then
-            local themes = { "green", "amber", "cyan", "mono", "synthwave", "dracula" }
+            local themes = { "green", "amber", "cyan", "mono", "safe", "colorblind", "synthwave", "dracula" }
             for _, th in ipairs(themes) do
                 if th:sub(1, #arg) == arg:lower() and th ~= arg:lower() then
                     editBox:SetText("theme " .. th)
@@ -1973,7 +2157,7 @@ end
 function CLIAlts:ShowHelpPopup()
     if not helpPopup then
         local hp = CreateFrame("Frame", "CLIAltsHelpPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        hp:SetSize(560, 520)
+        hp:SetSize(560, 560)
         hp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
         hp:SetFrameStrata("DIALOG")
         hp:EnableMouse(true)
@@ -2012,6 +2196,7 @@ function CLIAlts:ShowHelpPopup()
         "| Slash Commands:                                                    |",
         "|   /clialts            - Toggle the main TUI monitor                |",
         "|   /clialts [1-5]      - Open directly to specific tab (1-5)        |",
+        "|   /clialts compact    - Toggle compact view (hide XP bar, slim)    |",
         "|   /clialts next       - Recommend top 3 alts with rested XP waste  |",
         "|   /clialts watch <it> - Track item count in bags & bank (e.g. ore) |",
         "|   /clialts watchlist  - Print tracked items summary                |",
@@ -2034,6 +2219,7 @@ function CLIAlts:ShowHelpPopup()
         "+--------------------------------------------------------------------+",
         "| Interactive Terminal Command Prompt (>):                           |",
         "|   > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)|",
+        "|   > compact (Key: C)  - Toggle compact view (hide XP bar, slim)    |",
         "|   > sort <column>     - Sort table (name, lvl, gold, rest, waste)  |",
         "|   > filter <query>    - Filter alts (alliance, horde, stale, <60)  |",
         "|   > find <text>       - Search character names, classes, or zones  |",
@@ -2041,7 +2227,7 @@ function CLIAlts:ShowHelpPopup()
         "|   > next              - Print alts with highest rested waste       |",
         "|   > watch <item>      - Add item to bag/bank inventory tracker     |",
         "|   > export            - Open CSV export modal dialog               |",
-        "|   > theme [name]      - Cycle or set color theme                   |",
+        "|   > theme [name]      - Cycle or set color theme (incl. safe/cb)   |",
         "|   > perf              - Output profiling exponential moving average|",
         "|   > selftest          - Execute automated test suite in chat       |",
         "|   > alerts [cat]      - Configure login alert category toggles     |",
@@ -2054,6 +2240,7 @@ function CLIAlts:ShowHelpPopup()
         "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",
         "| Interactions:                                                      |",
+        "|   - Press 'C' or click [COMPACT] to toggle slim compact view (no XP)|",
         "|   - Click [SCALE] on title bar to cycle 100%, 115%, 130%, 145%, 90%|",
         "|   - Click [THEME] on title bar to cycle CRT retro color palettes   |",
         "|   - Click column title in header line to sort ascending/descending |",
