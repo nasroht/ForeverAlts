@@ -1793,7 +1793,7 @@ function CLIAlts:ExecutePromptCommand(input)
         self:SetPromptFeedback(string.format("Compact mode: %s (XP bars %s)", isComp and "ENABLED" or "DISABLED", isComp and "hidden" or "shown"))
 
     elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
-        CLIAltsDB.settings.showInventoryTooltips = not (CLIAltsDB.settings.showInventoryTooltips ~= false)
+        CLIAltsDB.settings.showInventoryTooltips = (CLIAltsDB.settings.showInventoryTooltips == false)
         local isEnabled = CLIAltsDB.settings.showInventoryTooltips
         self:SetPromptFeedback(string.format("Inventory hover tooltips: %s", isEnabled and "ENABLED" or "DISABLED"))
 
@@ -2500,7 +2500,7 @@ end
 -- ----------------------------------------------------------------------------
 function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
     if not tooltip or not itemID then return end
-    if not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showInventoryTooltips ~= false) then
+    if not CLIAltsDB or not CLIAltsDB.settings or CLIAltsDB.settings.showInventoryTooltips == false then
         return
     end
 

@@ -577,7 +577,7 @@ local function SlashHandler(msg)
         CLIAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
 
     elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
-        CLIAltsDB.settings.showInventoryTooltips = not (CLIAltsDB.settings.showInventoryTooltips ~= false)
+        CLIAltsDB.settings.showInventoryTooltips = (CLIAltsDB.settings.showInventoryTooltips == false)
         local state = CLIAltsDB.settings.showInventoryTooltips and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
         CLIAlts:Print(string.format("Inventory hover tooltips are now %s.", state))
 
