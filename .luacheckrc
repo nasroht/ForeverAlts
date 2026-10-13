@@ -61,6 +61,9 @@ globals = {
     "UISpecialFrames",
     "BackdropTemplateMixin",
     "GetCursorPosition",
+    "IsShiftKeyDown",
+    "IsControlKeyDown",
+    "IsAltKeyDown",
 
     -- WoW Player & Character APIs
     "GetTime",

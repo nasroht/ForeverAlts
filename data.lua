@@ -45,19 +45,6 @@ local FALLBACK_CLASS_COLORS = {
 -- ----------------------------------------------------------------------------
 -- Client Flavor & Retail Detection Helper
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetClientFlavor()
-    if self.isRetailOverride then
-        return "Retail"
-    end
-    if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-        return "Retail"
-    end
-    if GetBuildInfo then
-        local _, _, _, tocversion = GetBuildInfo()
-        if tocversion and type(tocversion) == "number" and tocversion >= 100000 then
-            return "Retail"
-        end
-    end
 function CLIAlts:IsForeverClient()
     if self.isForeverOverride ~= nil then
         return self.isForeverOverride
