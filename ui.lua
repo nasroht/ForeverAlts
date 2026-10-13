@@ -149,7 +149,8 @@ function CLIAlts:SetWidgetFont(fontString, size, flags)
     end)
     if not success or not fontString:GetFont() then
         pcall(function()
-            fontString:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, flags)
+            local fallback = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
+            fontString:SetFont(fallback, size, flags)
         end)
     end
 end

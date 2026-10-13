@@ -188,8 +188,8 @@ function CLIAlts:UpdateMinimapPosition()
         angle = CLIAltsDB.settings.minimapPos
     end
 
-    local mWidth = (Minimap and Minimap:GetWidth()) or 140
-    local mHeight = (Minimap and Minimap:GetHeight()) or 140
+    local mWidth = (Minimap and Minimap.GetWidth and Minimap:GetWidth()) or 140
+    local mHeight = (Minimap and Minimap.GetHeight and Minimap:GetHeight()) or 140
     local defaultRadius = (math.max(mWidth, mHeight) / 2) + 12
 
     local radius = defaultRadius

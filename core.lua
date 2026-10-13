@@ -286,12 +286,6 @@ local function SafeStrTrim(str)
     return (str or ""):match("^%s*(.-)%s*$") or ""
 end
 
-local function SafeStrSplit(delim, text)
-    if strsplit then return strsplit(delim, text) end
-    local first, rest = text:match("^(%S+)%s*(.*)$")
-    return first or text, rest or ""
-end
-
 local function SlashHandler(msg)
     msg = SafeStrTrim(msg or "")
     local cmd, arg = msg:match("^(%S+)%s*(.*)$")

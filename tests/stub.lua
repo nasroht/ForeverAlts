@@ -26,6 +26,10 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:SetSize(...) end
     function frame:SetWidth(...) end
     function frame:SetHeight(...) end
+    function frame:GetWidth() return 140 end
+    function frame:GetHeight() return 140 end
+    function frame:GetCenter() return 100, 100 end
+    function frame:GetEffectiveScale() return 1 end
     function frame:Show() self.shown = true end
     function frame:Hide() self.shown = false end
     function frame:IsShown() return self.shown == true end
