@@ -2344,10 +2344,10 @@ function CLIAlts:RunSelfTest()
     -- 14. UI & Slash Command Integration Tests (/clialts, /clialts help, minimap click)
     if SlashCmdList and SlashCmdList["CLIALTS"] then
         -- 14a. Slash command with no args toggles main window
-        local slashOk, _ = pcall(function()
+        local slashOk, slashErr = pcall(function()
             SlashCmdList["CLIALTS"]("")
         end)
-        Assert(slashOk == true, "SlashCommand: /clialts with empty arg toggles main window without error")
+        Assert(slashOk == true, "SlashCommand: /clialts with empty arg toggles main window without error: " .. tostring(slashErr))
 
         -- 14b. Slash command with 'help' opens guide popup
         local helpOk, _ = pcall(function()

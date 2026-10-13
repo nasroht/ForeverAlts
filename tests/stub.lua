@@ -73,28 +73,22 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:Insert(...) end
     function frame:StartMoving(...) end
     function frame:StopMovingOrSizing(...) end
+    function frame:SetAlpha(a) self.alpha = a end
+    function frame:GetAlpha() return self.alpha or 1 end
     function frame:CreateFontString(...)
-        return {
-            SetFont = function() end,
-            GetFont = function() return "Fonts\\FRIZQT__.TTF", 12, "" end,
-            SetPoint = function() end,
-            SetText = function(s, txt) s.text = txt end,
-            GetText = function(s) return s.text or "" end,
-            SetTextColor = function() end,
-            GetStringWidth = function() return 100 end,
-            SetJustifyH = function() end,
-            SetJustifyV = function() end,
-            SetWordWrap = function() end,
-        }
+        local fs = CreateDummyFrame("FontString")
+        fs.GetStringWidth = function() return 100 end
+        fs.SetJustifyH = function() end
+        fs.SetJustifyV = function() end
+        fs.SetWordWrap = function() end
+        return fs
     end
     function frame:CreateTexture(...)
-        return {
-            SetTexture = function() end,
-            SetPoint = function() end,
-            SetSize = function() end,
-            SetTexCoord = function() end,
-            SetVertexColor = function() end,
-        }
+        local tex = CreateDummyFrame("Texture")
+        tex.SetTexture = function() end
+        tex.SetTexCoord = function() end
+        tex.SetVertexColor = function() end
+        return tex
     end
     return frame
 end
@@ -102,11 +96,14 @@ end
 CreateFrame = CreateFrame or CreateDummyFrame
 UIParent = UIParent or CreateDummyFrame("Frame", "UIParent")
 Minimap = Minimap or CreateDummyFrame("Frame", "Minimap")
+GameTooltip = GameTooltip or CreateDummyFrame("Frame", "GameTooltip")
 DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME or {
     AddMessage = function(self, msg)
         print(msg)
     end
 }
+ChatFrame_OpenChat = ChatFrame_OpenChat or function() end
+STANDARD_TEXT_FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 SlashCmdList = SlashCmdList or {}
 UISpecialFrames = UISpecialFrames or {}
 tinsert = tinsert or table.insert
