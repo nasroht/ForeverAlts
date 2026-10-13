@@ -15,6 +15,7 @@ _G["clialts"] = CLIAlts
 CLIAlts.VERSION = "1.0.0"
 CLIAlts.DB_VERSION = 3
 local CURRENT_DB_VERSION = 3
+local cachedCurrentChar = nil
 
 -- Fallback RAID_CLASS_COLORS if not present in client
 local FALLBACK_CLASS_COLORS = {
@@ -325,7 +326,7 @@ function CLIAlts:ToggleCompact()
     if not CLIAltsDB or not CLIAltsDB.settings then
         self:InitDB()
     end
-    CLIAltsDB.settings.compactMode = not (CLIAltsDB.settings.compactMode == true)
+    CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode ~= true)
     if self.ApplyLayoutSize then
         self:ApplyLayoutSize()
     end
@@ -453,7 +454,7 @@ function CLIAlts:CollectProfessions()
             }
             for _, item in ipairs(list) do
                 if item.slot then
-                    local name, icon, skillLevel, maxSkillLevel = GetProfessionInfo(item.slot)
+                    local name, _, skillLevel, maxSkillLevel = GetProfessionInfo(item.slot)
                     if name and skillLevel and not seen[name] then
                         seen[name] = true
                         local data = {
@@ -590,7 +591,7 @@ function CLIAlts:CollectLockouts(existing)
             local now = time()
             local activeLocks = {}
             for i = 1, n do
-                local name, id, reset, diff, locked, isExtended, isRaid, maxPlayers, diffName = GetSavedInstanceInfo(i)
+                local name, id, reset, diff, locked, _, isRaid, _, diffName = GetSavedInstanceInfo(i)
                 if locked and reset and reset > 0 then
                     activeLocks[name] = {
                         resetTime = now + reset,
@@ -660,7 +661,6 @@ end
 -- Data Collection: Current Logged-in Character (Throttled to 1s)
 -- ----------------------------------------------------------------------------
 local lastCollectTime = 0
-local cachedCurrentChar = nil
 local collectPending = false
 
 function CLIAlts:CollectCurrentCharacter(isLogout, force)

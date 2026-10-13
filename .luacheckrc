@@ -80,9 +80,13 @@ globals = {
     "GetUnitName",
     "GetUnitSecondaryName",
     "GetUnitSurname",
+    "UnitSecondaryName",
+    "UnitSurname",
     "GetBindLocation",
 
     -- WoW Skills, Craft & Trade APIs
+    "GetProfessions",
+    "GetProfessionInfo",
     "GetNumSkillLines",
     "GetSkillLineInfo",
     "ExpandSkillHeader",
