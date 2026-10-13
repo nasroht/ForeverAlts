@@ -233,7 +233,6 @@ local function SlashHandler(msg)
     elseif cmd == "watch" then
         if arg and arg ~= "" then
             CLIAlts:AddWatchItem(arg)
-            CLIAlts:CollectWatchlistCounts()
             CLIAlts:RequestRender()
         else
             CLIAlts:Print("Usage: |cff00ff66/clialts watch <Item Name or ID>|r")
