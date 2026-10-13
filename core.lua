@@ -592,6 +592,46 @@ local function SlashHandler(msg)
         end
         CLIAlts:RequestRender()
 
+    elseif cmd == "core" then
+        if not arg or arg == "" then
+            CLIAlts:Print("Usage: |cff00ff66/clialts core <name> [target_level]|r (defaults to target level 35)")
+        else
+            local targetName, targetLvl = arg:match("^(%S+)%s*(%d*)$")
+            local ok, msg = CLIAlts:SetCharacterCohort(targetName, "CORE", tonumber(targetLvl))
+            CLIAlts:Print((ok and "|cff00ff66" or "|cffff4444") .. msg .. "|r")
+            CLIAlts:RequestRender()
+        end
+
+    elseif cmd == "alt" or cmd == "alts" or cmd == "reserve" then
+        if not arg or arg == "" then
+            CLIAlts:Print("Usage: |cff00ff66/clialts alt <name> [target_level]|r (defaults to target level 25)")
+        else
+            local targetName, targetLvl = arg:match("^(%S+)%s*(%d*)$")
+            local ok, msg = CLIAlts:SetCharacterCohort(targetName, "RESERVE", tonumber(targetLvl))
+            CLIAlts:Print((ok and "|cff00ff66" or "|cffff4444") .. msg .. "|r")
+            CLIAlts:RequestRender()
+        end
+
+    elseif cmd == "bank" or cmd == "mule" then
+        if not arg or arg == "" then
+            CLIAlts:Print("Usage: |cff00ff66/clialts bank <name>|r")
+        else
+            local targetName = arg:match("^(%S+)")
+            local ok, msg = CLIAlts:SetCharacterCohort(targetName, "BANK", 1)
+            CLIAlts:Print((ok and "|cff00ff66" or "|cffff4444") .. msg .. "|r")
+            CLIAlts:RequestRender()
+        end
+
+    elseif cmd == "unassign" or cmd == "unset" then
+        if not arg or arg == "" then
+            CLIAlts:Print("Usage: |cff00ff66/clialts unassign <name>|r")
+        else
+            local targetName = arg:match("^(%S+)")
+            local ok, msg = CLIAlts:SetCharacterCohort(targetName, "UNASSIGNED", 60)
+            CLIAlts:Print((ok and "|cff00ff66" or "|cffff4444") .. msg .. "|r")
+            CLIAlts:RequestRender()
+        end
+
     elseif cmd == "role" or cmd == "tier" or cmd == "cohort" then
         if not arg or arg == "" then
             CLIAlts:PrintRosterRoles()

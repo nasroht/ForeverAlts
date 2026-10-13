@@ -569,7 +569,7 @@ local function FmtTier(char)
     if tier == "CORE" then
         return "|cffffd700[CORE]|r"
     elseif tier == "RESERVE" then
-        return "|cff00ccff[RES]|r"
+        return "|cff00ccff[ALT]|r"
     elseif tier == "BANK" then
         return "|cffff9900[BANK]|r"
     else
@@ -587,12 +587,23 @@ local function FmtLevelTarget(char, t)
     end
 end
 
-local function FmtSupplyRole(char)
-    local role = char.supply_role
-    if not role or role == "" then
-        return "|cff666666---|r"
+local function FmtProfessionsAuto(char)
+    if char.supply_role and char.supply_role ~= "" then
+        return string.format("|cffffffff%s|r", char.supply_role)
     end
-    return string.format("|cffffffff%s|r", role)
+    if char.tier == "BANK" then
+        return "|cffff9900Bank Mule|r"
+    end
+    local profs = char.professions and char.professions.primary
+    if profs and #profs > 0 then
+        local parts = {}
+        for _, p in ipairs(profs) do
+            local short = p.name:sub(1, 6)
+            table.insert(parts, string.format("%s %d", short, p.rank or 0))
+        end
+        return string.format("|cffffffff%s|r", table.concat(parts, ", "))
+    end
+    return "|cff666666---|r"
 end
 
 local function FmtForeverStatus(char, t)
@@ -614,13 +625,13 @@ local function FmtForeverStatus(char, t)
 end
 
 local FOREVER_COLS = {
-    { key = "tier",     title = "TIER",         w = 8,  pw = 75,  cpw = 70,  align = "CENTER", sort = "cohort", fmt = FmtTier },
-    { key = "name",     title = "NAME",         w = 15, pw = 130, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
-    { key = "lvlTgt",   title = "LVL/TGT",      w = 8,  pw = 65,  cpw = 65,  align = "RIGHT",  sort = "level",  fmt = FmtLevelTarget },
-    { key = "role",     title = "SUPPLY ROLE",  w = 14, pw = 125, cpw = 100, align = "LEFT",                    fmt = FmtSupplyRole },
-    { key = "status",   title = "ROUTE STATUS", w = 18, pw = 160, cpw = 142, align = "LEFT",   sort = "rested", fmt = FmtForeverStatus },
-    { key = "gold",     title = "GOLD",         w = 9,  pw = 85,  cpw = 80,  align = "RIGHT",  sort = "gold",   fmt = FmtGold },
-    { key = "eta",      title = "ETA",          w = 7,  pw = 92,  cpw = 0,   align = "RIGHT",                   fmt = FmtETA },
+    { key = "tier",     title = "COHORT",      w = 8,  pw = 75,  cpw = 70,  align = "CENTER", sort = "cohort", fmt = FmtTier },
+    { key = "name",     title = "NAME",        w = 15, pw = 130, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
+    { key = "lvlTgt",   title = "LVL/TGT",     w = 8,  pw = 65,  cpw = 65,  align = "RIGHT",  sort = "level",  fmt = FmtLevelTarget },
+    { key = "prof",     title = "PROFESSIONS", w = 14, pw = 125, cpw = 100, align = "LEFT",                    fmt = FmtProfessionsAuto },
+    { key = "status",   title = "ROUTE STATUS",w = 18, pw = 160, cpw = 142, align = "LEFT",   sort = "rested", fmt = FmtForeverStatus },
+    { key = "gold",     title = "GOLD",        w = 9,  pw = 85,  cpw = 80,  align = "RIGHT",  sort = "gold",   fmt = FmtGold },
+    { key = "eta",      title = "ETA",         w = 7,  pw = 92,  cpw = 0,   align = "RIGHT",                   fmt = FmtETA },
 }
 
 -- ----------------------------------------------------------------------------
@@ -1056,6 +1067,9 @@ function CLIAlts:CreateMainFrame()
             if self.charData then
                 if button == "RightButton" then
                     CLIAlts:ShowConfirmDelete(self.charData)
+                elseif IsShiftKeyDown and IsShiftKeyDown() and CLIAlts:IsForeverMode() then
+                    CLIAlts:CycleCharacterTier(self.charData)
+                    CLIAlts:RequestRender()
                 else
                     CLIAlts:ShowDossierPopup(self.charData)
                 end
@@ -1107,7 +1121,11 @@ function CLIAlts:CreateMainFrame()
                     GameTooltip:AddLine(string.format("Note: |cffffd700%s|r", self.charData.note), 1, 0.85, 0.2)
                 end
 
-                GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Delete Character", 0.7, 0.7, 0.7)
+                if CLIAlts:IsForeverMode() then
+                    GameTooltip:AddLine("Left-Click: Dossier | Shift-Click: Cycle Cohort | Right-Click: Delete", 0.7, 0.7, 0.7)
+                else
+                    GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Delete Character", 0.7, 0.7, 0.7)
+                end
                 GameTooltip:Show()
             end
         end)
@@ -2058,6 +2076,42 @@ function CLIAlts:ExecutePromptCommand(input)
             end
         end
 
+    elseif cmd == "core" then
+        if not args or args == "" then
+            self:SetPromptFeedback("Usage: core <character>", true)
+        else
+            local ok, msg = self:SetCharacterRole(args, "CORE")
+            self:Render()
+            self:SetPromptFeedback(msg, not ok)
+        end
+
+    elseif cmd == "alt" or cmd == "reserve" then
+        if not args or args == "" then
+            self:SetPromptFeedback("Usage: alt <character>", true)
+        else
+            local ok, msg = self:SetCharacterRole(args, "RESERVE")
+            self:Render()
+            self:SetPromptFeedback(msg, not ok)
+        end
+
+    elseif cmd == "bank" then
+        if not args or args == "" then
+            self:SetPromptFeedback("Usage: bank <character>", true)
+        else
+            local ok, msg = self:SetCharacterRole(args, "BANK")
+            self:Render()
+            self:SetPromptFeedback(msg, not ok)
+        end
+
+    elseif cmd == "unassign" or cmd == "unset" then
+        if not args or args == "" then
+            self:SetPromptFeedback("Usage: unassign <character>", true)
+        else
+            local ok, msg = self:SetCharacterRole(args, "UNASSIGNED")
+            self:Render()
+            self:SetPromptFeedback(msg, not ok)
+        end
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -2083,6 +2137,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "theme", "scale", "perk", "perf", "selftest",
         "alerts", "digest", "plan", "note", "unlocked", "prune",
         "backup", "restore", "tooltips", "inv",
+        "core", "alt", "bank", "unassign",
         "forever", "role",
         "refresh", "help", "exit", "close"
     }
@@ -2187,7 +2242,7 @@ function CLIAlts:ShowDossierPopup(char)
         body:SetJustifyV("TOP")
         dp.body = body
 
-        local btnDel = CreateRetroButton(dp, "[ DELETE CHARACTER ]", 140, 20, function()
+        local btnDel = CreateRetroButton(dp, "[ PURGE ]", 72, 20, function()
             dp:Hide()
             if dp.charData then
                 CLIAlts:ShowConfirmDelete(dp.charData)
@@ -2195,17 +2250,43 @@ function CLIAlts:ShowDossierPopup(char)
         end)
         btnDel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 16)
 
-        local btnCycleRole = CreateRetroButton(dp, "[ CYCLE COHORT ]", 130, 20, function()
+        local btnSetCore = CreateRetroButton(dp, "[ SET CORE (35) ]", 115, 20, function()
             if dp.charData then
-                CLIAlts:CycleCharacterTier(dp.charData)
+                CLIAlts:SetCharacterRole(dp.charData.name, "CORE")
                 CLIAlts:ShowDossierPopup(dp.charData)
                 CLIAlts:RequestRender()
             end
         end)
-        btnCycleRole:SetPoint("LEFT", btnDel, "RIGHT", 10, 0)
-        dp.btnCycleRole = btnCycleRole
+        btnSetCore:SetPoint("LEFT", btnDel, "RIGHT", 6, 0)
 
-        local btnClose = CreateRetroButton(dp, "[ CLOSE ]", 80, 20, function()
+        local btnSetAlt = CreateRetroButton(dp, "[ SET ALT (25) ]", 108, 20, function()
+            if dp.charData then
+                CLIAlts:SetCharacterRole(dp.charData.name, "RESERVE")
+                CLIAlts:ShowDossierPopup(dp.charData)
+                CLIAlts:RequestRender()
+            end
+        end)
+        btnSetAlt:SetPoint("LEFT", btnSetCore, "RIGHT", 6, 0)
+
+        local btnSetBank = CreateRetroButton(dp, "[ SET BANK (1) ]", 105, 20, function()
+            if dp.charData then
+                CLIAlts:SetCharacterRole(dp.charData.name, "BANK")
+                CLIAlts:ShowDossierPopup(dp.charData)
+                CLIAlts:RequestRender()
+            end
+        end)
+        btnSetBank:SetPoint("LEFT", btnSetAlt, "RIGHT", 6, 0)
+
+        local btnUnset = CreateRetroButton(dp, "[ UNSET ]", 70, 20, function()
+            if dp.charData then
+                CLIAlts:SetCharacterRole(dp.charData.name, "UNASSIGNED")
+                CLIAlts:ShowDossierPopup(dp.charData)
+                CLIAlts:RequestRender()
+            end
+        end)
+        btnUnset:SetPoint("LEFT", btnSetBank, "RIGHT", 6, 0)
+
+        local btnClose = CreateRetroButton(dp, "[ CLOSE ]", 75, 20, function()
             dp:Hide()
         end)
         btnClose:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 16)
@@ -2484,8 +2565,10 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts unlocked <inst> - List alts with no active lock (gap finder)|",
         "|   /clialts prune <days> [confirm] - Bulk purge alts inactive for N days|",
         "|   /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)|",
-        "|   /clialts forever    - Toggle WoW Forever Cohort mode (Core/Res)  |",
-        "|   /clialts role <who> <tier> [role] [tgt] - Assign cohort & role   |",
+        "|   /clialts forever    - Toggle WoW Forever Cohort mode (auto-active)|",
+        "|   /clialts core <who> - Set Core cohort (Target Level 35)          |",
+        "|   /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)   |",
+        "|   /clialts bank <who> - Set Bank mule (Target Level 1)             |",
         "|   /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup |",
         "|   /clialts restore    - Restore database from CLIAltsDB.backup     |",
         "|   /clialts reset      - Reset window position to center            |",
@@ -2500,8 +2583,10 @@ function CLIAlts:ShowHelpPopup()
         "|   > next              - Print alts with highest rested waste       |",
         "|   > watch <item>      - Add item to bag/bank inventory tracker     |",
         "|   > tooltips / inv    - Toggle item hover tooltips (bags/bank alts)|",
-        "|   > forever           - Toggle WoW Forever Cohort mode (Core/Res)  |",
-        "|   > role <who> <tier> [role] [tgt] - Assign cohort & role          |",
+        "|   > core <who> [tgt]  - Set Core cohort (Target 35)                |",
+        "|   > alt <who> [tgt]   - Set Alt/Reserve cohort (Target 25)         |",
+        "|   > bank <who>        - Set Bank mule (Target 1)                   |",
+        "|   > unassign <who>    - Unassign cohort / restore Target 60        |",
         "|   > export            - Open CSV export modal dialog               |",
         "|   > theme [name]      - Cycle or set color theme (incl. safe/cb)   |",
         "|   > perf              - Output profiling exponential moving average|",
@@ -2522,6 +2607,7 @@ function CLIAlts:ShowHelpPopup()
         "|   - Click [THEME] on title bar to cycle CRT retro color palettes   |",
         "|   - Click column title in header line to sort ascending/descending |",
         "|   - Left-Click any character row to inspect full Dossier           |",
+        "|   - Shift-Click any character row to cycle Cohort (Core/Alt/Bank)  |",
         "|   - Right-Click any character row to delete character record       |",
         "|   - Mouse wheel over table to scroll pages                         |",
         "|   - Drag Minimap icon to move outside of minimap                   |",

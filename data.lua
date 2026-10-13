@@ -58,11 +58,59 @@ function CLIAlts:GetClientFlavor()
             return "Retail"
         end
     end
-    if UnitSecondaryName or UnitSurname or GetUnitSecondaryName or GetUnitSurname then
-        return "WoW Forever"
+function CLIAlts:IsForeverClient()
+    if self.isForeverOverride ~= nil then
+        return self.isForeverOverride
     end
+    if self:IsRetail() then
+        return false
+    end
+    -- 1. Dedicated WoW Forever APIs (Primary & Secondary name engine)
+    if UnitSecondaryName or UnitSurname or GetUnitSecondaryName or GetUnitSurname then
+        return true
+    end
+    -- 2. Cached current player has secondary name
+    if self.curPlayerSecondary and self.curPlayerSecondary ~= "" then
+        return true
+    end
+    -- 3. UnitName("player") returns second parameter that differs from realm name
+    if UnitName then
+        local _, v2 = UnitName("player")
+        local realm = GetRealmName and GetRealmName()
+        if v2 and v2 ~= "" and v2 ~= realm then
+            return true
+        end
+    end
+    -- 4. Tracked characters database contains characters with secondary names
+    if CLIAltsDB and CLIAltsDB.characters then
+        for _, c in pairs(CLIAltsDB.characters) do
+            if c.secondaryName and c.secondaryName ~= "" then
+                return true
+            end
+        end
+    end
+    -- 5. Realm name contains Forever
     local r = GetRealmName and GetRealmName()
     if r and (r:find("Forever") or r == "Forever") then
+        return true
+    end
+    return false
+end
+
+function CLIAlts:GetClientFlavor()
+    if self.isRetailOverride then
+        return "Retail"
+    end
+    if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+        return "Retail"
+    end
+    if GetBuildInfo then
+        local _, _, _, tocversion = GetBuildInfo()
+        if tocversion and type(tocversion) == "number" and tocversion >= 100000 then
+            return "Retail"
+        end
+    end
+    if self:IsForeverClient() then
         return "WoW Forever"
     end
     if WOW_PROJECT_ID and WOW_PROJECT_CLASSIC and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
@@ -85,11 +133,7 @@ function CLIAlts:IsForeverMode()
     if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.foreverMode ~= nil then
         return CLIAltsDB.settings.foreverMode == true
     end
-    local realm = (GetRealmName and GetRealmName()) or ""
-    if realm:lower():find("forever") then
-        return true
-    end
-    return false
+    return self:IsForeverClient()
 end
 
 function CLIAlts:ToggleForeverMode()
@@ -346,7 +390,9 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.staleDays = tonumber(CLIAltsDB.settings.staleDays) or 30
     CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode == true)
     if CLIAltsDB.settings.showInventoryTooltips == nil then CLIAltsDB.settings.showInventoryTooltips = true end
-    if CLIAltsDB.settings.foreverMode == nil then CLIAltsDB.settings.foreverMode = false end
+    if CLIAltsDB.settings.foreverMode == false and self:IsForeverClient() then
+        CLIAltsDB.settings.foreverMode = nil
+    end
     CLIAltsDB.characters = CLIAltsDB.characters or {}
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
     CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
@@ -1953,11 +1999,11 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
         local tLower = tier:lower()
         if tLower == "core" or tLower == "c" or tLower == "1" then
             normalizedTier = "CORE"
-        elseif tLower == "reserve" or tLower == "res" or tLower == "r" or tLower == "2" then
+        elseif tLower == "reserve" or tLower == "res" or tLower == "r" or tLower == "alt" or tLower == "alts" or tLower == "a" or tLower == "2" then
             normalizedTier = "RESERVE"
-        elseif tLower == "bank" or tLower == "b" or tLower == "mule" or tLower == "3" then
+        elseif tLower == "bank" or tLower == "b" or tLower == "mule" or tLower == "storage" or tLower == "3" then
             normalizedTier = "BANK"
-        elseif tLower == "none" or tLower == "clear" or tLower == "unassigned" or tLower == "0" then
+        elseif tLower == "none" or tLower == "clear" or tLower == "unassigned" or tLower == "unset" or tLower == "0" then
             normalizedTier = "UNASSIGNED"
         end
     end
@@ -1988,8 +2034,14 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
         cachedCurrentChar.target_level = foundChar.target_level
     end
 
-    return true, string.format("Updated %s: [%s] [Target Lvl: %d] [Role: %s]",
-        foundChar.name or targetName, foundChar.tier, foundChar.target_level, foundChar.supply_role or "None")
+    local dispTier = (foundChar.tier == "RESERVE") and "ALT" or foundChar.tier
+    local roleStr = (foundChar.supply_role and foundChar.supply_role ~= "") and string.format(" [Role: %s]", foundChar.supply_role) or ""
+    return true, string.format("Updated %s: [%s] [Target Lvl: %d]%s",
+        foundChar.name or targetName, dispTier, foundChar.target_level, roleStr)
+end
+
+function CLIAlts:SetCharacterCohort(targetName, cohort, targetLevel)
+    return self:SetCharacterRole(targetName, cohort, nil, targetLevel)
 end
 
 function CLIAlts:CycleCharacterTier(char)
@@ -2054,14 +2106,23 @@ function CLIAlts:PrintRosterRoles()
                 local tgt = c.target_level or defaultTgt
                 local lvl = c.level or 1
                 local reachedTag = (lvl >= tgt) and " |cff00ff66[Target Level Reached]|r" or ""
-                local roleStr = (c.supply_role and c.supply_role ~= "") and string.format(" - Role: |cffffffff%s|r", c.supply_role) or ""
+                local roleStr = ""
+                if c.supply_role and c.supply_role ~= "" then
+                    roleStr = string.format(" - Role: |cffffffff%s|r", c.supply_role)
+                elseif c.professions and c.professions.primary and #c.professions.primary > 0 then
+                    local pList = {}
+                    for _, p in ipairs(c.professions.primary) do
+                        table.insert(pList, string.format("%s (%d)", p.name, p.rank or 0))
+                    end
+                    roleStr = string.format(" - Profs: |cffffffff%s|r", table.concat(pList, ", "))
+                end
                 DEFAULT_CHAT_FRAME:AddMessage(string.format("    * %s (Lvl %d/%d)%s%s", coloredName, lvl, tgt, roleStr, reachedTag))
             end
         end
     end
 
     PrintGroup("CORE FOUR (Target Level 35)", groups.CORE, 35)
-    PrintGroup("RESERVE FIVE (Target Level 25)", groups.RESERVE, 25)
+    PrintGroup("RESERVE ALTS (Target Level 25)", groups.RESERVE, 25)
     PrintGroup("BANK & LOGISTICS (Target Level 1)", groups.BANK, 1)
     PrintGroup("UNASSIGNED ALTS", groups.UNASSIGNED, 60)
 end
@@ -3120,6 +3181,26 @@ function CLIAlts:RunSelfTest()
     Assert(#coreFiltered == 1 and coreFiltered[1].name == "Main", "Cohort: filter 'core' returns only Core alts")
     local resFiltered = self:GetCharactersList("name", true, "reserve")
     Assert(#resFiltered == 2, "Cohort: filter 'reserve' returns both Reserve alts")
+
+    -- 18h. Automatic Forever client detection via secondaryName
+    local charWithSurname = { name = "Arthas", secondaryName = "Menethil", level = 10 }
+    testCohortDB.characters["Arthas-Forever"] = charWithSurname
+    Assert(self:IsForeverClient() == true, "Cohort: IsForeverClient detects presence of character with secondaryName")
+    Assert(self:GetClientFlavor() == "WoW Forever", "Cohort: GetClientFlavor returns 'WoW Forever' when client has secondaryName")
+
+    -- 18i. Cohort aliases (alt -> RESERVE, bank -> BANK, unassign -> UNASSIGNED)
+    local okAltAlias, _ = self:SetCharacterCohort("Arthas", "alt")
+    Assert(okAltAlias == true and charWithSurname.tier == "RESERVE" and charWithSurname.target_level == 25,
+        "Cohort: SetCharacterCohort 'alt' alias maps to RESERVE with default target level 25")
+
+    local okBankAlias, _ = self:SetCharacterCohort("Arthas", "bank")
+    Assert(okBankAlias == true and charWithSurname.tier == "BANK" and charWithSurname.target_level == 1,
+        "Cohort: SetCharacterCohort 'bank' alias maps to BANK with default target level 1")
+
+    local okUnassignAlias, _ = self:SetCharacterCohort("Arthas", "unassign")
+    Assert(okUnassignAlias == true and charWithSurname.tier == "UNASSIGNED" and charWithSurname.target_level == 60,
+        "Cohort: SetCharacterCohort 'unassign' alias maps to UNASSIGNED with default target level 60")
+    testCohortDB.characters["Arthas-Forever"] = nil
 
     CLIAltsDB = oldCohortDB
 
