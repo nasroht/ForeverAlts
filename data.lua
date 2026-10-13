@@ -1990,7 +1990,7 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
             normalizedTier = "RESERVE"
         elseif tLower == "bank" or tLower == "b" or tLower == "mule" or tLower == "storage" or tLower == "3" then
             normalizedTier = "BANK"
-        elseif tLower == "none" or tLower == "clear" or tLower == "unassigned" or tLower == "unset" or tLower == "0" then
+        elseif tLower == "none" or tLower == "clear" or tLower == "unassigned" or tLower == "unassign" or tLower == "unset" or tLower == "0" then
             normalizedTier = "UNASSIGNED"
         end
     end
