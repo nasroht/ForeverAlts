@@ -817,6 +817,10 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         self:InvalidateRestedCache()
     end
 
+    if isLogout and self.FinalizeSessionXP then
+        self:FinalizeSessionXP()
+    end
+
     return charData
 end
 
@@ -2124,8 +2128,98 @@ function CLIAlts:RunSelfTest()
 
     CLIAltsDB.settings.compactMode = oldCompact
 
+    -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
+    local backupDB = CLIAltsDB
+    local liveTestOk, liveTestErr = pcall(function()
+        local testTime = 1700000000
+        CLIAltsDB = {
+            settings = {
+                restedBurnRatio = 0.5,
+                wellRestedRank = 0,
+                maxLevel = 60,
+                sortBy = "name",
+                sortAsc = true,
+            },
+            characters = {
+                ["Thor-Pyrewood"] = {
+                    name = "Thor",
+                    realm = "Pyrewood",
+                    faction = "Alliance",
+                    race = "Dwarf",
+                    class = "Paladin",
+                    classFile = "PALADIN",
+                    level = 30,
+                    xp = 10000,
+                    maxXP = 20000,
+                    restedXP = 15000,
+                    lastUpdate = testTime - 86400,
+                    isResting = true,
+                    cleanLogout = true,
+                    xpHour = 20000,
+                    money = 50000,
+                },
+                ["Ase-Pyrewood"] = {
+                    name = "Ase",
+                    realm = "Pyrewood",
+                    faction = "Alliance",
+                    race = "Human",
+                    class = "Mage",
+                    classFile = "MAGE",
+                    level = 45,
+                    xp = 5000,
+                    maxXP = 50000,
+                    restedXP = 25000,
+                    lastUpdate = testTime - 43200,
+                    isResting = false,
+                    cleanLogout = true,
+                    xpHour = 0,
+                    money = 120000,
+                },
+                ["Max-Pyrewood"] = {
+                    name = "Max",
+                    realm = "Pyrewood",
+                    faction = "Alliance",
+                    race = "Gnome",
+                    class = "Warlock",
+                    classFile = "WARLOCK",
+                    level = 60,
+                    xp = 0,
+                    maxXP = 100000,
+                    restedXP = 0,
+                    lastUpdate = testTime,
+                    money = 999999,
+                }
+            }
+        }
+
+        local list = self:GetCharactersList()
+        Assert(#list == 3, "LivePath: GetCharactersList retrieves all 3 characters from fake CLIAltsDB")
+
+        local thorChar = list[3]
+        local restedThor = self:GetRestedData(thorChar, false, testTime)
+        Assert(type(restedThor) == "table", "LivePath: GetRestedData returns table for character")
+        Assert(type(restedThor.currentRested) == "number", "LivePath: GetRestedData currentRested is numeric")
+
+        -- Generate leveling plan through live path (mockChars = nil)
+        local planSchedule, planSummary, allocated = self:GenerateLevelingPlan(2, nil, testTime)
+        Assert(type(planSchedule) == "table", "LivePath: GenerateLevelingPlan live path succeeds without error")
+        Assert(#planSchedule >= 1, "LivePath: GenerateLevelingPlan generates schedule for eligible alts")
+        Assert(type(allocated) == "number" and allocated > 0, "LivePath: Session minutes allocated successfully")
+        Assert(type(planSummary) == "string", "LivePath: Plan summary text returned")
+
+        local aseFound = nil
+        for _, it in ipairs(planSchedule) do
+            if it.name == "Ase" then aseFound = it end
+        end
+        Assert(aseFound ~= nil and aseFound.isFallbackRate == true, "LivePath: Unobserved alt marked as fallback rate (~)")
+    end)
+    CLIAltsDB = backupDB
+    if not liveTestOk then
+        Assert(false, "LivePath: Exception during live path integration test: " .. tostring(liveTestErr))
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -3078,11 +3172,21 @@ function CLIAlts:UpdateSessionXP()
         self:CheckBurnRatioDrift()
     end
 
-    -- Update observed XP/hour for current character after at least 60 seconds
+end
+
+function CLIAlts:FinalizeSessionXP()
+    if not self.sessionXP or self.sessionXP.finalized then return end
+    local now = time()
     local elapsed = now - (self.sessionXP.startTime or now)
-    if elapsed >= 60 and (self.sessionXP.xpGained or 0) > 0 then
-        local currentRate = (self.sessionXP.xpGained / elapsed) * 3600
+    local xpGained = self.sessionXP.xpGained or 0
+    -- Require at least 10 minutes (600s) and at least 1,000 XP gained to blend into char.xpHour
+    if elapsed >= 600 and xpGained >= 1000 then
+        local currentRate = (xpGained / elapsed) * 3600
         local curKey = self.curPlayerKey
+        if not curKey then
+            local _, _, full = self:GetPlayerNames()
+            curKey = full and self:GetCharacterKey(full)
+        end
         if curKey and CLIAltsDB and CLIAltsDB.characters and CLIAltsDB.characters[curKey] then
             local char = CLIAltsDB.characters[curKey]
             if char.xpHour and char.xpHour > 0 then
@@ -3091,15 +3195,16 @@ function CLIAlts:UpdateSessionXP()
                 char.xpHour = math.floor(currentRate + 0.5)
             end
         end
+        self.sessionXP.finalized = true
     end
 end
 
 function CLIAlts:GetEstimatedXpHour(char)
     if char and char.xpHour and char.xpHour > 0 then
-        return char.xpHour
+        return char.xpHour, false
     end
     local lvl = (char and char.level) or 1
-    return math.max(5000, math.floor(lvl * 650 + 4000))
+    return math.max(5000, math.floor(lvl * 650 + 4000)), true
 end
 
 function CLIAlts:EvaluateBurnRatio(restedBurned, restedXPGained, currentRatio, pendingRatio)
@@ -3169,11 +3274,13 @@ function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
                 restedXP = c.restedXP or 0
                 restedState = (restedXP >= (c.maxXP or 1) * 1.5) and "FULL" or "RESTING"
             else
-                restedXP, restedState = self:GetRestedData(c, false, now)
+                local rested = self:GetRestedData(c, false, now)
+                restedXP = rested and rested.currentRested or 0
+                restedState = (rested and rested.isFull) and "FULL" or "RESTING"
             end
 
             if restedXP and restedXP > 0 then
-                local xpHour = self:GetEstimatedXpHour(c)
+                local xpHour, isFallbackRate = self:GetEstimatedXpHour(c)
                 local burnRatePerHour = xpHour * burnRatio
                 local burnHours = restedXP / math.max(1, burnRatePerHour)
                 local burnMinutes = math.max(1, math.floor(burnHours * 60 + 0.5))
@@ -3195,6 +3302,7 @@ function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
                     restedXP = restedXP,
                     restedState = restedState,
                     xpHour = xpHour,
+                    isFallbackRate = isFallbackRate,
                     burnMinutes = burnMinutes,
                     isCapped = isCapped,
                     wastedXP = wastedXP or 0,
@@ -3245,6 +3353,7 @@ function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
                 burnMinutes = cand.burnMinutes,
                 restedXP = cand.restedXP,
                 xpHour = cand.xpHour,
+                isFallbackRate = cand.isFallbackRate,
                 isCapped = cand.isCapped,
                 wastedXP = cand.wastedXP,
             })
@@ -3277,7 +3386,8 @@ function CLIAlts:PrintPlan(targetHours)
     DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r|cffffffffSchedule:|r %s", summaryText))
     for i, it in ipairs(schedule) do
         local coloredName = self:ColorizePlayerName(it.name, it.classFile)
-        local rateStr = string.format("%s XP/h", self:FormatNumber(it.xpHour))
+        local ratePrefix = it.isFallbackRate and "~" or ""
+        local rateStr = string.format("%s%s XP/h", ratePrefix, self:FormatNumber(it.xpHour))
         local poolStr = string.format("%s rested", self:FormatNumber(it.restedXP))
         local note = it.isCapped and " |cffff6666(CAPPED)|r" or ""
         DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r  |cff00ff66%d.|r %s (Lvl %d) -> |cffffd700%dm|r of %dm pool (%s, %s)%s",

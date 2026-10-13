@@ -713,7 +713,7 @@ function CLIAlts:ApplyLayoutSize()
         mainFrame.titleText:SetText(isComp and "[#] CLIALTS" or ("[#] CLIALTS :: RETRO TERMINAL ALT MONITOR v" .. (self.VERSION or "1.1.0")))
     end
     if mainFrame.btnCompact then
-        mainFrame.btnCompact.label:SetText(isComp and "[ C: COMPACT* ]" or "[ C: COMPACT ]")
+        mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
     end
 end
 
@@ -788,7 +788,7 @@ function CLIAlts:CreateMainFrame()
     btnScale:SetPoint("RIGHT", btnHelp, "LEFT", -6, 0)
     frame.btnScale = btnScale
 
-    local btnCompact = CreateRetroButton(frame, "[ C: COMPACT ]", 95, 18, function()
+    local btnCompact = CreateRetroButton(frame, "[ COMPACT ]", 95, 18, function()
         CLIAlts:ToggleCompact()
     end)
     btnCompact:SetPoint("RIGHT", btnScale, "LEFT", -6, 0)
@@ -796,11 +796,11 @@ function CLIAlts:CreateMainFrame()
         local t = CLIAlts:GetTheme()
         self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.8)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine("Compact Mode (Key: C)", 1, 1, 1)
+        GameTooltip:AddLine("Compact Mode", 1, 1, 1)
         GameTooltip:AddLine("Hides XP bar columns for narrow windows or high scales.", 0.8, 0.8, 0.8)
         local isComp = CLIAlts:IsCompact()
         GameTooltip:AddLine(string.format("Status: %s", isComp and "|cff00ff66ENABLED|r" or "|cff888888DISABLED|r"), 0.7, 0.7, 0.7)
-        GameTooltip:AddLine("Shortcut: Press |cffffd700C|r anytime in the terminal.", 0.4, 0.8, 0.5)
+        GameTooltip:AddLine("Command: Type |cffffd700compact|r or |cffffd700c|r in prompt.", 0.4, 0.8, 0.5)
         GameTooltip:Show()
     end)
     btnCompact:SetScript("OnLeave", function(self)
@@ -1167,26 +1167,32 @@ function CLIAlts:CreateMainFrame()
         end)
     end
 
-    -- Hidden Buttons for Enter, /, and C (compact) keyboard overrides
+    -- Hidden Buttons for Enter and / keyboard overrides
+    -- Passes through to standard WoW chat when the mouse is NOT hovering over CLIAlts
     local btnFocusEnter = CreateFrame("Button", "CLIAltsFocusEnterBtn", frame)
     btnFocusEnter:SetScript("OnClick", function()
-        if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
-            frame.promptBox:SetFocus()
+        if MouseIsOver and MouseIsOver(frame) then
+            if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
+                frame.promptBox:SetFocus()
+            end
+        else
+            if ChatFrame_OpenChat then
+                ChatFrame_OpenChat("")
+            end
         end
     end)
 
     local btnFocusSlash = CreateFrame("Button", "CLIAltsFocusSlashBtn", frame)
     btnFocusSlash:SetScript("OnClick", function()
-        if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
-            frame.promptBox:SetFocus()
-            frame.promptBox:SetText("")
-        end
-    end)
-
-    local btnCompactHidden = CreateFrame("Button", "CLIAltsCompactBtn", frame)
-    btnCompactHidden:SetScript("OnClick", function()
-        if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
-            CLIAlts:ToggleCompact()
+        if MouseIsOver and MouseIsOver(frame) then
+            if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
+                frame.promptBox:SetFocus()
+                frame.promptBox:SetText("")
+            end
+        else
+            if ChatFrame_OpenChat then
+                ChatFrame_OpenChat("/")
+            end
         end
     end)
 
@@ -1202,35 +1208,15 @@ function CLIAlts:CreateMainFrame()
             if frame:IsShown() and SetOverrideBindingClick then
                 SetOverrideBindingClick(frame, false, "ENTER", "CLIAltsFocusEnterBtn")
                 SetOverrideBindingClick(frame, false, "/", "CLIAltsFocusSlashBtn")
-                SetOverrideBindingClick(frame, false, "C", "CLIAltsCompactBtn")
-                SetOverrideBindingClick(frame, false, "c", "CLIAltsCompactBtn")
             end
         end)
     end)
-
-    -- Propagate keyboard input support (WoW Classic Era / modern client)
-    if frame.SetPropagateKeyboardInput then
-        frame:SetPropagateKeyboardInput(true)
-        frame:EnableKeyboard(true)
-        frame:SetScript("OnKeyDown", function(self, key)
-            if frame.promptBox and not frame.promptBox:HasFocus() then
-                if key == "ENTER" or key == "SLASH" or key == "/" then
-                    frame.promptBox:SetFocus()
-                    if key == "SLASH" or key == "/" then
-                        frame.promptBox:SetText("")
-                    end
-                elseif key == "C" or key == "c" then
-                    CLIAlts:ToggleCompact()
-                end
-            end
-        end)
-    end
 
     -- Prompt Hint & Feedback Line
     local promptStatusTip = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(promptStatusTip, fontSize - 2)
     promptStatusTip:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 14)
-    promptStatusTip:SetText("|cff888888[Press Enter or / to type: 1-5, C: compact, sort <col>, filter <query>, next, export, help]|r")
+    promptStatusTip:SetText("|cff888888[Press Enter or / to type: 1-5, sort <col>, filter <query>, next, export, help]|r")
     frame.promptStatusTip = promptStatusTip
 
     local botAscii = frame:CreateFontString(nil, "OVERLAY")
@@ -1254,8 +1240,6 @@ function CLIAlts:CreateMainFrame()
             if SetOverrideBindingClick then
                 SetOverrideBindingClick(self, false, "ENTER", "CLIAltsFocusEnterBtn")
                 SetOverrideBindingClick(self, false, "/", "CLIAltsFocusSlashBtn")
-                SetOverrideBindingClick(self, false, "C", "CLIAltsCompactBtn")
-                SetOverrideBindingClick(self, false, "c", "CLIAltsCompactBtn")
             end
         end)
         CLIAlts:ApplyLayoutSize()
@@ -1349,7 +1333,7 @@ function CLIAlts:Render()
     if mainFrame.promptSepAscii then mainFrame.promptSepAscii:SetText(borderLine) end
     if mainFrame.botAscii then mainFrame.botAscii:SetText(borderLine) end
     if mainFrame.btnCompact then
-        mainFrame.btnCompact.label:SetText(isComp and "[ C: COMPACT* ]" or "[ C: COMPACT ]")
+        mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
     end
 
     -- Update Status Bar
@@ -1478,7 +1462,7 @@ function CLIAlts:ApplyTheme()
 
     if mainFrame.btnCompact then
         local isComp = self:IsCompact()
-        mainFrame.btnCompact.label:SetText(isComp and "[ C: COMPACT* ]" or "[ C: COMPACT ]")
+        mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
         mainFrame.btnCompact.label:SetTextColor(isComp and t.highlight[1] or t.primary[1], isComp and t.highlight[2] or t.primary[2], isComp and t.highlight[3] or t.primary[3])
     end
 

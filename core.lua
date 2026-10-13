@@ -228,6 +228,9 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
 
     elseif event == "LOGOUT_CANCEL" then
         -- Logout cancelled
+        if CLIAlts.sessionXP then
+            CLIAlts.sessionXP.finalized = nil
+        end
         CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
         CLIAlts:CollectCurrentCharacter(false, true)
 
