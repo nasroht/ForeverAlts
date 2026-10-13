@@ -96,20 +96,21 @@ function CLIAlts:CreateMinimapButton()
         self:SetScript("OnUpdate", nil)
 
         -- Delay resetting isDragging slightly so OnClick does not trigger upon mouse release
-        local timerFrame = CreateFrame("Frame")
-        local elapsed = 0
-        timerFrame:SetScript("OnUpdate", function(f, e)
-            elapsed = elapsed + e
-            if elapsed > 0.1 then
+        if C_Timer and C_Timer.After then
+            C_Timer.After(0.05, function()
                 self.isDragging = false
-                timerFrame:SetScript("OnUpdate", nil)
-            end
-        end)
+            end)
+        else
+            self.isDragging = false
+        end
     end)
 
     -- Click handlers
     minimapBtn:SetScript("OnClick", function(self, button)
-        if self.isDragging then return end
+        if self.isDragging then
+            self.isDragging = false
+            return
+        end
 
         if button == "LeftButton" then
             CLIAlts:CollectCurrentCharacter()

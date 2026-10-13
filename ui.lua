@@ -141,14 +141,16 @@ end
 -- Typography & Monospace Helpers
 -- ----------------------------------------------------------------------------
 function CLIAlts:SetWidgetFont(fontString, size, flags)
-    if not fontString then return end
+    if not fontString or not fontString.SetFont then return end
     size = size or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     flags = flags or ""
     local success = pcall(function()
         fontString:SetFont(FONT_PATH, size, flags)
     end)
     if not success or not fontString:GetFont() then
-        fontString:SetFont("Fonts\\ARIALN.TTF", size, flags)
+        pcall(function()
+            fontString:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, flags)
+        end)
     end
 end
 
@@ -1918,11 +1920,12 @@ function CLIAlts:ShowDossierPopup(char)
     if not char then return end
 
     if not dossierPopup then
-        local dp = CreateFrame("Frame", "CLIAltsDossierPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local dp = CreateFrame("Frame", "CLIAltsDossierPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         dp:SetSize(660, 480)
-        dp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
+        dp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dp:SetFrameStrata("DIALOG")
         dp:EnableMouse(true)
+        tinsert(UISpecialFrames, "CLIAltsDossierPopup")
 
         dp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -2044,11 +2047,12 @@ function CLIAlts:ShowConfirmDelete(char)
     if not char then return end
 
     if not confirmPopup then
-        local cp = CreateFrame("Frame", "CLIAltsConfirmPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local cp = CreateFrame("Frame", "CLIAltsConfirmPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         cp:SetSize(360, 160)
-        cp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
+        cp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         cp:SetFrameStrata("DIALOG")
         cp:EnableMouse(true)
+        tinsert(UISpecialFrames, "CLIAltsConfirmPopup")
 
         cp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -2106,9 +2110,8 @@ function CLIAlts:ShowConfirmDelete(char)
 end
 
 function CLIAlts:ShowConfirmPrunePopup(days, count, names)
-    if not mainFrame then return end
     if not confirmPopup then
-        self:ShowConfirmDeletePopup({ name = "dummy" })
+        self:ShowConfirmDelete({ name = "dummy" })
         confirmPopup:Hide()
     end
 
@@ -2146,11 +2149,12 @@ end
 -- ----------------------------------------------------------------------------
 function CLIAlts:ShowHelpPopup()
     if not helpPopup then
-        local hp = CreateFrame("Frame", "CLIAltsHelpPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local hp = CreateFrame("Frame", "CLIAltsHelpPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         hp:SetSize(560, 560)
-        hp:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
+        hp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         hp:SetFrameStrata("DIALOG")
         hp:EnableMouse(true)
+        tinsert(UISpecialFrames, "CLIAltsHelpPopup")
 
         hp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -2259,11 +2263,12 @@ end
 local exportPopup = nil
 function CLIAlts:ShowExportPopup()
     if not exportPopup then
-        local ep = CreateFrame("Frame", "CLIAltsExportPopup", mainFrame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local ep = CreateFrame("Frame", "CLIAltsExportPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         ep:SetSize(640, 440)
-        ep:SetPoint("CENTER", mainFrame, "CENTER", 0, 0)
+        ep:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         ep:SetFrameStrata("DIALOG")
         ep:EnableMouse(true)
+        tinsert(UISpecialFrames, "CLIAltsExportPopup")
 
         ep:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -2332,8 +2337,9 @@ end
 -- ----------------------------------------------------------------------------
 function CLIAlts:Toggle(show)
     if not mainFrame then
-        self:CreateMainFrame()
+        mainFrame = self:CreateMainFrame()
     end
+    if not mainFrame then return end
 
     if show == nil then
         if mainFrame:IsShown() then

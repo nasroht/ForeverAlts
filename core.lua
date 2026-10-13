@@ -293,10 +293,12 @@ local function SafeStrSplit(delim, text)
 end
 
 local function SlashHandler(msg)
-    msg = SafeStrTrim(msg):lower()
-    local cmd, arg = SafeStrSplit(" ", msg)
+    msg = SafeStrTrim(msg or "")
+    local cmd, arg = msg:match("^(%S+)%s*(.*)$")
+    cmd = (cmd or ""):lower()
+    arg = SafeStrTrim(arg or "")
 
-    if cmd == "" then
+    if cmd == "" or cmd == "toggle" then
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:Toggle()
 
@@ -520,8 +522,9 @@ local function SlashHandler(msg)
         local ok, msg = CLIAlts:RestoreDB()
         CLIAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
 
-    elseif cmd == "help" then
+    elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()
+        CLIAlts:Print("Showing Quick Guide. Type |cff00ff66/clialts|r to toggle alt monitor.")
 
     else
         CLIAlts:Print("Unknown command. Type |cff00ff66/clialts help|r for available options.")

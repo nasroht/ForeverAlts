@@ -2341,10 +2341,42 @@ function CLIAlts:RunSelfTest()
     Assert(CLIAltsDB.characters["NewAlt"] == nil, "RestoreDB: removed unbacked alt upon restore")
     Assert(CLIAltsDB.backup ~= nil, "RestoreDB: preserves one-slot backup after restore")
 
+    -- 14. UI & Slash Command Integration Tests (/clialts, /clialts help, minimap click)
+    if SlashCmdList and SlashCmdList["CLIALTS"] then
+        -- 14a. Slash command with no args toggles main window
+        local slashOk, _ = pcall(function()
+            SlashCmdList["CLIALTS"]("")
+        end)
+        Assert(slashOk == true, "SlashCommand: /clialts with empty arg toggles main window without error")
+
+        -- 14b. Slash command with 'help' opens guide popup
+        local helpOk, _ = pcall(function()
+            SlashCmdList["CLIALTS"]("help")
+        end)
+        Assert(helpOk == true, "SlashCommand: /clialts help opens help popup without error")
+    end
+
+    -- 14c. Minimap button click handlers
+    local btn = self.CreateMinimapButton and self:CreateMinimapButton()
+    if btn and btn.GetScript then
+        local clickFn = btn:GetScript("OnClick")
+        Assert(type(clickFn) == "function", "Minimap: OnClick handler registered on minimap button")
+        if clickFn then
+            local clickOk, _ = pcall(clickFn, btn, "LeftButton")
+            Assert(clickOk == true, "Minimap: LeftButton click executes cleanly")
+        end
+
+        local dragStopFn = btn:GetScript("OnDragStop")
+        if dragStopFn then
+            local dragOk, _ = pcall(dragStopFn, btn)
+            Assert(dragOk == true, "Minimap: OnDragStop executes cleanly")
+        end
+    end
+
     CLIAltsDB = oldLiveDB
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
