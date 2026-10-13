@@ -23,6 +23,77 @@ end
 local hasRequestedRaidInfo = false
 
 -- ----------------------------------------------------------------------------
+-- Performance Profiling Metrics (/clialts perf)
+-- ----------------------------------------------------------------------------
+CLIAlts.perfData = {
+    collectMs = 0,
+    renderMs = 0,
+    collectCount = 0,
+    renderCount = 0,
+}
+
+local function RecordPerfMetric(name, elapsedMs)
+    local p = CLIAlts.perfData
+    if not p then return end
+    local countKey = name .. "Count"
+    local msKey = name .. "Ms"
+    p[countKey] = (p[countKey] or 0) + 1
+    if p[countKey] == 1 or p[msKey] == 0 then
+        p[msKey] = elapsedMs
+    else
+        local alpha = 0.2
+        p[msKey] = (p[msKey] * (1 - alpha)) + (elapsedMs * alpha)
+    end
+end
+
+local origCollect = CLIAlts.CollectCurrentCharacter
+if origCollect then
+    CLIAlts.CollectCurrentCharacter = function(self, ...)
+        local t0 = (debugprofilestop and debugprofilestop()) or 0
+        local r1, r2, r3 = origCollect(self, ...)
+        if debugprofilestop then
+            local dt = debugprofilestop() - t0
+            RecordPerfMetric("collect", dt)
+        end
+        return r1, r2, r3
+    end
+end
+
+local origRender = CLIAlts.Render
+if origRender then
+    CLIAlts.Render = function(self, ...)
+        local t0 = (debugprofilestop and debugprofilestop()) or 0
+        local r1, r2, r3 = origRender(self, ...)
+        if debugprofilestop then
+            local dt = debugprofilestop() - t0
+            if (self.mainFrame and self.mainFrame:IsShown()) or dt > 0.05 then
+                RecordPerfMetric("render", dt)
+            end
+        end
+        return r1, r2, r3
+    end
+end
+
+function CLIAlts:PrintPerf()
+    if UpdateAddOnMemoryUsage then
+        pcall(UpdateAddOnMemoryUsage)
+    end
+    local memKB = (GetAddOnMemoryUsage and GetAddOnMemoryUsage(addonName or "clialts")) or 0
+    local p = self.perfData or {}
+    local collectStr = (p.collectCount and p.collectCount > 0)
+        and string.format("%.2f ms (%d samples)", p.collectMs or 0, p.collectCount)
+        or "N/A (no samples)"
+    local renderStr = (p.renderCount and p.renderCount > 0)
+        and string.format("%.2f ms (%d samples)", p.renderMs or 0, p.renderCount)
+        or "N/A (no samples)"
+
+    self:Print("--- Performance Metrics (Exponential Moving Avg) ---")
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Collect: %s", collectStr))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Render:  %s", renderStr))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Memory:  %.1f KB (%.2f MB)", memKB, memKB / 1024))
+end
+
+-- ----------------------------------------------------------------------------
 -- Event Handler Frame
 -- ----------------------------------------------------------------------------
 local eventFrame = CreateFrame("Frame")
@@ -357,6 +428,12 @@ local function SlashHandler(msg)
                 DEFAULT_CHAT_FRAME:AddMessage(string.format("  * %s (Lvl %d): [ MAX LEVEL ]", coloredName, char.level or 1))
             end
         end
+
+    elseif cmd == "perf" then
+        CLIAlts:PrintPerf()
+
+    elseif cmd == "selftest" or cmd == "test" then
+        CLIAlts:RunSelfTest()
 
     elseif cmd == "help" then
         CLIAlts:ShowHelpPopup()

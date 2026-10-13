@@ -656,6 +656,7 @@ function CLIAlts:CreateMainFrame()
     })
 
     mainFrame = frame
+    self.mainFrame = frame
     _G["CLIAltsMainFrame"] = frame
 
     local fontSize = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
@@ -1544,6 +1545,14 @@ function CLIAlts:ExecutePromptCommand(input)
         self:Refresh()
         self:SetPromptFeedback("Database refreshed.")
 
+    elseif cmd == "perf" then
+        self:PrintPerf()
+        self:SetPromptFeedback("Performance metrics printed to chat.")
+
+    elseif cmd == "selftest" or cmd == "test" then
+        local ok, passed, failed = self:RunSelfTest()
+        self:SetPromptFeedback(string.format("Self-test: %d passed, %d failed", passed or 0, failed or 0), not ok)
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -1566,7 +1575,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "sort", "filter", "find", "clear",
         "goto", "page", "next", "export",
         "watch", "unwatch", "watchlist",
-        "theme", "scale", "perk",
+        "theme", "scale", "perk", "perf", "selftest",
         "refresh", "help", "exit", "close"
     }
 
@@ -1845,6 +1854,8 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts rested     - Print quick rested XP report to chat       |",
         "|   /clialts perk <0-5> - Set Well Rested legacy perk rank (0-5)     |",
         "|   /clialts gold       - Print total account gold summary           |",
+        "|   /clialts perf       - Print smoothed Collect/Render ms & memory  |",
+        "|   /clialts selftest   - Run unit assertions with fake timestamps   |",
         "|   /clialts reset      - Reset window position to center            |",
         "+--------------------------------------------------------------------+",
         "| Interactive Terminal Command Prompt (>):                           |",
@@ -1857,6 +1868,8 @@ function CLIAlts:ShowHelpPopup()
         "|   > watch <item>      - Add item to bag/bank inventory tracker     |",
         "|   > export            - Open CSV export modal dialog               |",
         "|   > theme [name]      - Cycle or set color theme                   |",
+        "|   > perf              - Output profiling exponential moving average|",
+        "|   > selftest          - Execute automated test suite in chat       |",
         "|   > Up / Down arrows  - Browse terminal command history            |",
         "|   > Tab key           - Auto-complete commands and column names    |",
         "+--------------------------------------------------------------------+",
@@ -1968,15 +1981,15 @@ function CLIAlts:Toggle(show)
         else
             self:CollectCurrentCharacter()
             self:ApplyTheme()
-            self:Render()
             mainFrame:Show()
+            self:Render()
             PlayRetroSound()
         end
     elseif show then
         self:CollectCurrentCharacter()
         self:ApplyTheme()
-        self:Render()
         mainFrame:Show()
+        self:Render()
         PlayRetroSound()
     else
         mainFrame:Hide()

@@ -901,13 +901,13 @@ function CLIAlts:InvalidateRestedCache()
     end
 end
 
-function CLIAlts:GetRestedData(char, force)
+function CLIAlts:GetRestedData(char, force, nowOverride)
     if not char then return nil end
 
     local charKey = char.key or char.fullName or char.name or tostring(char)
-    local nowTime = (GetTime and GetTime()) or time()
+    local nowTime = nowOverride or (GetTime and GetTime()) or time()
 
-    if not force and restedDataCache[charKey] then
+    if not force and not nowOverride and restedDataCache[charKey] then
         local entry = restedDataCache[charKey]
         if entry.time and (nowTime - entry.time < RESTED_CACHE_TTL) then
             return entry.data
@@ -962,7 +962,7 @@ function CLIAlts:GetRestedData(char, force)
     -- Robust resting determination (evaluated BEFORE rate calculation)
     local isResting = self:IsCharacterResting(char)
 
-    local now = time()
+    local now = nowOverride or time()
     local elapsed = math.max(0, now - lastUpdate)
 
     -- Rested XP rates:
@@ -1061,7 +1061,9 @@ function CLIAlts:GetRestedData(char, force)
         isEstimate = isEstimate,
     }
 
-    restedDataCache[charKey] = { time = nowTime, data = result }
+    if not nowOverride then
+        restedDataCache[charKey] = { time = nowTime, data = result }
+    end
     return result
 end
 
@@ -1418,6 +1420,72 @@ function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride, forceLogoutS
     return math.min(maxRested, projected)
 end
 
+-- ----------------------------------------------------------------------------
+-- Self-Calibrating Rested Model (Feature 1)
+-- ----------------------------------------------------------------------------
+function CLIAlts:EvaluateCalibration(old, actualRested, curLevel, nowTimestamp, curRank, pendingRank)
+    if not old or not old.cleanLogout or not old.lastUpdate then
+        return nil, 0, "NO_DATA"
+    end
+    curLevel = curLevel or old.level or 1
+    if old.level and curLevel ~= old.level then
+        return nil, 0, "LEVEL_CHANGED"
+    end
+
+    local maxXP = old.maxXP or 0
+    if maxXP <= 0 then
+        return nil, 0, "INVALID_MAX_XP"
+    end
+
+    curRank = curRank or 0
+    local speedMult = 1 + (curRank * 0.04)
+    local maxRested = maxXP * 1.5 * speedMult
+
+    actualRested = actualRested or 0
+    -- Skip sample if old or actual rested XP is at or near cap (truncated offline delta)
+    if (old.restedXP or 0) >= maxRested * 0.98 or actualRested >= maxRested * 0.98 then
+        return nil, 0, "NEAR_CAP"
+    end
+
+    nowTimestamp = nowTimestamp or time()
+    local elapsed = nowTimestamp - old.lastUpdate
+    -- Require at least 10 minutes (600s) of offline time for a meaningful calibration sample
+    if elapsed < 600 then
+        return nil, 0, "SHORT_DURATION"
+    end
+
+    local predicted = self:ProjectRested(old, nowTimestamp, curRank, true)
+    local drift = (actualRested - predicted) / maxXP
+
+    -- Only calibrate if drift exceeds 2% of level max XP
+    if math.abs(drift) <= 0.02 then
+        return curRank, drift, "MATCH"
+    end
+
+    local observedDelta = actualRested - (old.restedXP or 0)
+    if observedDelta <= 0 or elapsed <= 0 then
+        return nil, drift, "INVALID_DELTA"
+    end
+
+    local observedRate = observedDelta / elapsed
+    local baseInnRate = maxXP / 576000
+    local baseWildRate = maxXP / 2304000
+    local isInn = (old.loggedOutInRestZone == true)
+    local baseRate = isInn and baseInnRate or baseWildRate
+
+    local inferredSpeedMult = observedRate / baseRate
+    local inferredRank = math.floor(((inferredSpeedMult - 1.0) / 0.04) + 0.5)
+    if inferredRank < 0 then inferredRank = 0 end
+    if inferredRank > 5 then inferredRank = 5 end
+
+    if inferredRank == curRank then
+        return curRank, drift, "MATCH"
+    end
+
+    local confirmed = (pendingRank == inferredRank)
+    return inferredRank, drift, confirmed and "CONFIRMED" or "PENDING"
+end
+
 function CLIAlts:CalibrateRestedModel()
     if not GetXPExhaustion or not UnitXPMax then return end
     local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
@@ -1425,72 +1493,134 @@ function CLIAlts:CalibrateRestedModel()
 
     local charKey = self:GetCharacterKey(curFull)
     local old = CLIAltsDB.characters[charKey]
-    if not old or not old.cleanLogout or not old.lastUpdate then return end
+    if not old then return end
 
     local curLevel = (UnitLevel and UnitLevel("player")) or 1
-    if old.level and curLevel ~= old.level then return end
-
-    local maxXP = old.maxXP or (UnitXPMax and UnitXPMax("player")) or 0
-    if maxXP <= 0 then return end
-
-    local curRank = (CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-    local speedMult = 1 + (curRank * 0.04)
-    local maxRested = maxXP * 1.5 * speedMult
-
     local actualRested = GetXPExhaustion() or 0
-    -- Skip sample if old or actual rested XP is at or near cap (truncated offline delta)
-    if (old.restedXP or 0) >= maxRested * 0.98 or actualRested >= maxRested * 0.98 then return end
+    local curRank = (CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    local pendingRank = CLIAltsDB.settings and CLIAltsDB.settings.pendingCalibratedRank
 
-    local now = time()
-    local elapsed = now - old.lastUpdate
-    -- Require at least 10 minutes (600s) of offline time for a meaningful calibration sample
-    if elapsed < 600 then return end
+    local inferredRank, drift, status = self:EvaluateCalibration(old, actualRested, curLevel, time(), curRank, pendingRank)
+    if status == "MATCH" then
+        if CLIAltsDB.settings then
+            CLIAltsDB.settings.pendingCalibratedRank = nil
+        end
+    elseif status == "PENDING" then
+        if CLIAltsDB.settings then
+            CLIAltsDB.settings.pendingCalibratedRank = inferredRank
+        end
+    elseif status == "CONFIRMED" then
+        if CLIAltsDB.settings then
+            CLIAltsDB.settings.wellRestedRank = inferredRank
+            CLIAltsDB.settings.calibrated = true
+            CLIAltsDB.settings.pendingCalibratedRank = nil
+        end
+        self:InvalidateRestedCache()
+        self:Print(string.format("Rested model self-calibrated (confirmed): Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
+            inferredRank, inferredRank * 4, drift * 100))
+    end
+end
 
-    local predicted = self:ProjectRested(old, now, curRank, true)
-    local drift = (actualRested - predicted) / maxXP
+-- ----------------------------------------------------------------------------
+-- Self-Test Verification Suite (/clialts selftest)
+-- ----------------------------------------------------------------------------
+function CLIAlts:RunSelfTest()
+    local passed = 0
+    local failed = 0
+    local errors = {}
 
-    -- Only calibrate if drift exceeds 2% of level max XP
-    if math.abs(drift) > 0.02 then
-        local observedDelta = actualRested - (old.restedXP or 0)
-        if observedDelta > 0 and elapsed > 0 then
-            local observedRate = observedDelta / elapsed
-            local baseInnRate = maxXP / 576000
-            local baseWildRate = maxXP / 2304000
-
-            -- Use stored logout rest state
-            local isInn = (old.loggedOutInRestZone == true)
-            local baseRate = isInn and baseInnRate or baseWildRate
-
-            local inferredSpeedMult = observedRate / baseRate
-            local inferredRank = math.floor(((inferredSpeedMult - 1.0) / 0.04) + 0.5)
-            if inferredRank < 0 then inferredRank = 0 end
-            if inferredRank > 5 then inferredRank = 5 end
-
-            if inferredRank == curRank then
-                -- Sample matches current setting: clear any pending change
-                CLIAltsDB.settings.pendingCalibratedRank = nil
-            else
-                if CLIAltsDB.settings.pendingCalibratedRank == inferredRank then
-                    -- Confirmed second consistent sample: commit change
-                    CLIAltsDB.settings.wellRestedRank = inferredRank
-                    CLIAltsDB.settings.calibrated = true
-                    CLIAltsDB.settings.pendingCalibratedRank = nil
-                    self:InvalidateRestedCache()
-                    self:Print(string.format("Rested model self-calibrated (confirmed): Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
-                        inferredRank, inferredRank * 4, drift * 100))
-                else
-                    -- First sample: hold pending confirmation on next login
-                    CLIAltsDB.settings.pendingCalibratedRank = inferredRank
-                end
-            end
+    local function Assert(cond, name)
+        if cond then
+            passed = passed + 1
+        else
+            failed = failed + 1
+            table.insert(errors, name)
         end
     end
+
+    local T0 = 1000000
+
+    -- 1. ProjectRested tests
+    -- 1a. Rest zone accrual at rank 0 (5% of maxXP per 8 hours = 1000 XP on 20k maxXP)
+    local charInn = { maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true }
+    local p1 = self:ProjectRested(charInn, T0 + 28800, 0)
+    Assert(math.abs(p1 - 1000) < 0.01, "ProjectRested: 8h inn accrual at rank 0 equals 1000 XP")
+
+    -- 1b. Wilderness accrual at rank 0 (1.25% of maxXP per 8 hours = 250 XP on 20k maxXP)
+    local charWild = { maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = false }
+    local p2 = self:ProjectRested(charWild, T0 + 28800, 0)
+    Assert(math.abs(p2 - 250) < 0.01, "ProjectRested: 8h wild accrual at rank 0 equals 250 XP")
+
+    -- 1c. Cap enforcement at rank 0 (150% cap = 30000 XP on 20k maxXP)
+    local p3 = self:ProjectRested(charInn, T0 + 10000000, 0)
+    Assert(p3 == 30000, "ProjectRested: 150% cap enforced at rank 0")
+
+    -- 1d. Perk rank 5 bonus (+20% speed -> 1200 XP per 8h, 180% cap -> 36000 XP)
+    local p4 = self:ProjectRested(charInn, T0 + 28800, 5)
+    Assert(math.abs(p4 - 1200) < 0.01, "ProjectRested: 8h inn accrual at rank 5 equals 1200 XP")
+    local p5 = self:ProjectRested(charInn, T0 + 10000000, 5)
+    Assert(p5 == 36000, "ProjectRested: 180% cap enforced at rank 5")
+
+    -- 2. GetRestedWaste tests
+    -- 2a. Uncapped character yields 0 waste and 'Accruing'
+    local wSec1, wXP1, desc1 = self:GetRestedWaste(charInn, T0 + 28800)
+    Assert(wSec1 == 0 and wXP1 == 0 and desc1 == "Accruing", "GetRestedWaste: uncapped char yields 0 waste and 'Accruing'")
+
+    -- 2b. Max level character yields 0 waste and 'MAX LEVEL'
+    local charMax = { level = self:GetMaxLevel(), maxXP = 0, restedXP = 0, lastUpdate = T0 }
+    local wSec2, wXP2, desc2 = self:GetRestedWaste(charMax, T0 + 100000)
+    Assert(wSec2 == 0 and wXP2 == 0 and desc2 == "MAX LEVEL", "GetRestedWaste: max level char yields 0 waste and 'MAX LEVEL'")
+
+    -- 2c. Capped character after 24h offline past cap (86400s * (20000 / 576000) = 3000 wasted XP)
+    local charCapped = { level = 20, maxXP = 20000, restedXP = 30000, lastUpdate = T0, loggedOutInRestZone = true }
+    local wSec3, wXP3, _, timeStr3 = self:GetRestedWaste(charCapped, T0 + 86400)
+    Assert(wSec3 == 86400 and wXP3 == 3000 and timeStr3 == "1d 0h", "GetRestedWaste: capped char 24h post-cap wastes 3000 XP with '1d 0h'")
+
+    -- 3. Calibration Input tests
+    local oldSnap = { cleanLogout = true, level = 20, maxXP = 20000, restedXP = 1000, lastUpdate = T0, loggedOutInRestZone = true }
+
+    -- 3a. Level changed guard
+    local _, _, st1 = self:EvaluateCalibration(oldSnap, 5000, 21, T0 + 3600, 0, nil)
+    Assert(st1 == "LEVEL_CHANGED", "EvaluateCalibration: guards against level changes")
+
+    -- 3b. Near-cap guard
+    local oldNearCap = { cleanLogout = true, level = 20, maxXP = 20000, restedXP = 29600, lastUpdate = T0, loggedOutInRestZone = true }
+    local _, _, st2 = self:EvaluateCalibration(oldNearCap, 30000, 20, T0 + 3600, 0, nil)
+    Assert(st2 == "NEAR_CAP", "EvaluateCalibration: guards against near-cap snapshots")
+
+    -- 3c. Short duration guard (< 600s)
+    local _, _, st3 = self:EvaluateCalibration(oldSnap, 1050, 20, T0 + 300, 0, nil)
+    Assert(st3 == "SHORT_DURATION", "EvaluateCalibration: guards against short offline durations (<600s)")
+
+    -- 3d. No-drift match (within 2% threshold)
+    local _, _, st4 = self:EvaluateCalibration(oldSnap, 2010, 20, T0 + 28800, 0, nil)
+    Assert(st4 == "MATCH", "EvaluateCalibration: accepts consistent rate within 2% drift")
+
+    -- 3e. Significant drift (observed rate matches rank 3 over 40h) -> PENDING on first sample
+    -- At rank 3 (+12%), 40h accrues 5600 XP (predicted rank 0 was 5000 XP). Total = 6600 XP.
+    local infRank1, _, st5 = self:EvaluateCalibration(oldSnap, 6600, 20, T0 + 144000, 0, nil)
+    Assert(infRank1 == 3 and st5 == "PENDING", "EvaluateCalibration: infers rank 3 and holds PENDING on 1st sample")
+
+    -- 3f. Second consistent sample confirms rank change
+    local infRank2, _, st6 = self:EvaluateCalibration(oldSnap, 6600, 20, T0 + 144000, 0, 3)
+    Assert(infRank2 == 3 and st6 == "CONFIRMED", "EvaluateCalibration: confirms rank 3 on 2nd consistent sample")
+
+    if failed == 0 then
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration)", passed))
+    else
+        self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
+        for _, err in ipairs(errors) do
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cffff3333* FAILED:|r %s", err))
+        end
+    end
+
+    return failed == 0, passed, failed
 end
 
 -- ----------------------------------------------------------------------------
 -- Rested Waste Tracker & Next Alt Priority (Feature 2)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetRestedWaste(char)
+function CLIAlts:GetRestedWaste(char, nowOverride)
     if not char then return 0, 0, "No waste", "0m" end
     local maxLevel = self:GetMaxLevel()
     local level = char.level or 1
@@ -1498,7 +1628,7 @@ function CLIAlts:GetRestedWaste(char)
         return 0, 0, "MAX LEVEL", "MAX"
     end
 
-    local rested = self:GetRestedData(char)
+    local rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
     if not rested or not rested.isFull then
         return 0, 0, "Accruing", "0m"
     end
@@ -1507,7 +1637,7 @@ function CLIAlts:GetRestedWaste(char)
     local ratePerSec = rested.ratePerSec or (maxXP / 576000)
     if ratePerSec <= 0 then ratePerSec = 1 end
 
-    local now = time()
+    local now = nowOverride or time()
     local lastUpdate = char.lastUpdate or now
     local elapsed = math.max(0, now - lastUpdate)
 

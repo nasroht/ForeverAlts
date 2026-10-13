@@ -66,6 +66,8 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | `/clialts rested` | Print an ASCII summary of all alts' rested XP to chat |
 | `/clialts perk <0-5>` | Set or cycle your Well Rested legacy perk rank (0-5) |
 | `/clialts gold` | Print total account wealth summary across all alts |
+| `/clialts perf` | Print smoothed ms for Collect & Render plus memory usage |
+| `/clialts selftest` | Run self-test unit assertions on Rested XP, Waste & Calibration |
 | `/clialts reset` | Reset window position to the center of your screen |
 | `/clialts help` | Open the in-game retro quick guide popup |
 
