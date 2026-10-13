@@ -43,6 +43,39 @@ local FALLBACK_CLASS_COLORS = {
 }
 
 -- ----------------------------------------------------------------------------
+-- Client Flavor & Retail Detection Helper
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetClientFlavor()
+    if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+        return "Retail"
+    end
+    if GetBuildInfo then
+        local _, _, _, tocversion = GetBuildInfo()
+        if tocversion and type(tocversion) == "number" and tocversion >= 100000 then
+            return "Retail"
+        end
+    end
+    if UnitSecondaryName or UnitSurname or GetUnitSecondaryName or GetUnitSurname then
+        return "WoW Forever"
+    end
+    local r = GetRealmName and GetRealmName()
+    if r and (r:find("Forever") or r == "Forever") then
+        return "WoW Forever"
+    end
+    if WOW_PROJECT_ID and WOW_PROJECT_CLASSIC and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+        return "Classic Era"
+    end
+    return "Classic"
+end
+
+function CLIAlts:IsRetail()
+    if self.isRetailOverride ~= nil then
+        return self.isRetailOverride
+    end
+    return self:GetClientFlavor() == "Retail"
+end
+
+-- ----------------------------------------------------------------------------
 -- Level Cap Helper (WoW Forever / Classic / Expansion Dynamic Cap)
 -- ----------------------------------------------------------------------------
 function CLIAlts:GetMaxLevel()
@@ -1012,6 +1045,10 @@ end
 -- Each rank gives +4% accumulation speed and +4% max rested cap (up to +20%).
 -- ----------------------------------------------------------------------------
 function CLIAlts:SetWellRestedRank(rank)
+    if self:IsRetail() then
+        self:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
+        return
+    end
     rank = tonumber(rank) or 0
     if rank < 0 then rank = 0 end
     if rank > 5 then rank = 5 end
@@ -1038,6 +1075,10 @@ function CLIAlts:SetWellRestedRank(rank)
 end
 
 function CLIAlts:CycleWellRestedPerk()
+    if self:IsRetail() then
+        self:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
+        return
+    end
     local currentRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
     local nextRank = (currentRank + 1) % 6
     self:SetWellRestedRank(nextRank)
@@ -1141,10 +1182,13 @@ function CLIAlts:GetRestedData(char, force, nowOverride)
     local baseRested = char.restedXP or 0
     local lastUpdate = char.lastUpdate or time()
 
-    -- Well Rested Perk (0 to 5 ranks)
-    local perkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-    if perkRank < 0 then perkRank = 0 end
-    if perkRank > 5 then perkRank = 5 end
+    -- Well Rested Perk (0 to 5 ranks; hard-locked to 0 on Retail)
+    local perkRank = 0
+    if not self:IsRetail() then
+        perkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        if perkRank < 0 then perkRank = 0 end
+        if perkRank > 5 then perkRank = 5 end
+    end
 
     local speedMult = 1 + (perkRank * 0.04)   -- +4% speed per rank (1.00 to 1.20)
     local capMult = 1.5 * speedMult           -- +4% cap per rank (1.50 to 1.80)
@@ -2488,6 +2532,34 @@ function CLIAlts:RunSelfTest()
     Assert(self:IsCharacterResting(altWildLocation) == false, "IsCharacterResting: preserves wilderness when location is wild")
     local altExplicitInn = { name = "ExplicitInnAlt", loggedOutInRestZone = true }
     Assert(self:IsCharacterResting(altExplicitInn) == true, "IsCharacterResting: respects loggedOutInRestZone = true")
+
+    -- 16. Retail Flavor Detection & Rested Math Guard Tests
+    -- 16a. Classic / Default Flavor
+    Assert(self:IsRetail() == false, "IsRetail: defaults to false in test environment")
+
+    -- 16b. Retail Override and Perk Hard-Lock
+    self.isRetailOverride = true
+    Assert(self:IsRetail() == true, "IsRetail: returns true when isRetailOverride is true")
+    Assert(self:GetClientFlavor() == "Retail", "GetClientFlavor: returns 'Retail' when overridden")
+
+    local oldR = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.wellRestedRank = 5
+    end
+    local restedRetail = self:GetRestedState(charInn, T0 + 28800)
+    Assert(restedRetail.perkRank == 0, "IsRetail: enforces perkRank = 0 on Retail even if wellRestedRank is 5")
+    Assert(restedRetail.maxPercent == 150, "IsRetail: enforces 150% rested cap on Retail")
+    Assert(restedRetail.speedMult == 1.0, "IsRetail: enforces 1.0x baseline speed multiplier on Retail")
+
+    -- 16c. Guard against perk rank modification in Retail
+    self:SetWellRestedRank(3)
+    Assert(CLIAltsDB.settings.wellRestedRank == 5, "SetWellRestedRank: guards against modifying perk rank on Retail")
+
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.wellRestedRank = oldR
+    end
+    self.isRetailOverride = nil
+    Assert(self:IsRetail() == false, "IsRetail: resets cleanly when isRetailOverride is cleared")
 
     CLIAltsDB = oldLiveDB
 

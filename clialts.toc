@@ -1,4 +1,4 @@
-## Interface: 11509,16001,20506,38002,50504,120100
+## Interface: 11509,16001,20506,38002,50504,110007,110100,120100
 ## Title: |cff00ff66CLIAlts|r [Retro Alt Tracker]
 ## Notes: Retro ASCII TUI-styled character and alt tracker. Tracks Faction, Race, Level, Rested XP with ETA, Professions, and Gold.
 ## Author: CLIAlts

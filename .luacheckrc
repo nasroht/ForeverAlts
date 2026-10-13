@@ -83,8 +83,14 @@ globals = {
     "GetUnitSecondaryName",
     "GetUnitSurname",
     "UnitSecondaryName",
-    "UnitSurname",
     "GetBindLocation",
+
+    -- WoW Client & Flavor Globals
+    "WOW_PROJECT_ID",
+    "WOW_PROJECT_MAINLINE",
+    "WOW_PROJECT_CLASSIC",
+    "GetBuildInfo",
+    "C_AddOns",
 
     -- WoW Skills, Craft & Trade APIs
     "GetProfessions",

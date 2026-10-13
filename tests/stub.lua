@@ -115,6 +115,14 @@ ClearOverrideBindings = ClearOverrideBindings or function() end
 
 -- 3. WoW System & Timer APIs
 GetTime = GetTime or function() return os.time() end
+WOW_PROJECT_ID = WOW_PROJECT_ID or nil
+WOW_PROJECT_MAINLINE = WOW_PROJECT_MAINLINE or 1
+WOW_PROJECT_CLASSIC = WOW_PROJECT_CLASSIC or 2
+GetBuildInfo = GetBuildInfo or function() return "1.15.5", "58238", "Jan 1 2026", 11505 end
+C_AddOns = C_AddOns or {
+    GetAddOnMemoryUsage = function(name) return 150.5 end,
+    UpdateAddOnMemoryUsage = function() end,
+}
 C_Timer = C_Timer or {
     After = function(sec, cb) if cb then cb() end end,
     NewTicker = function(sec, cb) return { Cancel = function() end } end,

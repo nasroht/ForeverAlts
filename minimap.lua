@@ -144,9 +144,10 @@ function CLIAlts:CreateMinimapButton()
         GameTooltip:AddDoubleLine("| Total Tracked Alts:", string.format("%d alts |", summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)
         GameTooltip:AddDoubleLine("| Total Account Wealth:", string.format("%s |", moneyStr), 0.7, 0.7, 0.7, 1, 1, 1)
 
+        local maxCap = (CLIAlts.IsRetail and not CLIAlts:IsRetail()) and (150 + ((CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank) or 0) * 6)) or 150
         local fullyStr = summary.fullyRested > 0 and string.format("%d of %d [*] |", summary.fullyRested, summary.totalAlts) or string.format("%d of %d |", summary.fullyRested, summary.totalAlts)
         local frR, frG, frB = summary.fullyRested > 0 and 1.0 or 0.7, summary.fullyRested > 0 and 0.85 or 0.7, summary.fullyRested > 0 and 0.2 or 0.7
-        GameTooltip:AddDoubleLine("| Fully Rested (150%):", fullyStr, 0.7, 0.7, 0.7, frR, frG, frB)
+        GameTooltip:AddDoubleLine(string.format("| Fully Rested (%d%%):", maxCap), fullyStr, 0.7, 0.7, 0.7, frR, frG, frB)
 
         if summary.nextFullAlt then
             local coloredName = CLIAlts:ColorizePlayerName(summary.nextFullAlt.name, summary.nextFullAlt.classFile)

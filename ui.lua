@@ -824,6 +824,9 @@ function CLIAlts:CreateMainFrame()
         self:SetBackdropColor(0, 0, 0, 0.6)
         GameTooltip:Hide()
     end)
+    if CLIAlts:IsRetail() then
+        btnPerk:Hide()
+    end
     frame.btnPerk = btnPerk
 
     local midAscii2 = frame:CreateFontString(nil, "OVERLAY")
@@ -1001,6 +1004,9 @@ function CLIAlts:CreateMainFrame()
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local coloredName = CLIAlts:ColorizePlayerName(self.charData.fullName or self.charData.name, self.charData.classFile)
                 GameTooltip:AddLine(string.format("%s - %s", coloredName, self.charData.location or "Unknown"), 1, 1, 1)
+                if self.charData.realm and self.charData.realm ~= "" and self.charData.realm ~= "Forever" then
+                    GameTooltip:AddLine(string.format("Realm: |cffffffff%s|r", self.charData.realm), 0.8, 0.8, 0.8)
+                end
                 if self.charData.bindLocation and self.charData.bindLocation ~= "" then
                     GameTooltip:AddLine(string.format("Hearth: |cffffffff%s|r", self.charData.bindLocation), 0.8, 0.8, 0.8)
                 end
@@ -1023,9 +1029,10 @@ function CLIAlts:CreateMainFrame()
                 local rested = CLIAlts:GetRestedData(self.charData)
                 if rested and not rested.isMaxLevel then
                     local est = rested.isEstimate and "~" or ""
+                    local capTarget = rested.maxPercent or 150
                     GameTooltip:AddLine(string.format("Rested Pool: |cffffffff%s%s XP|r (%s%d%% of level, %s)",
                         est, CLIAlts:FormatNumber(rested.currentRested), est, rested.percent, rested.statusStr), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Time to Capped: |cffffffff%s|r (%s)", rested.timeLeftStr, rested.fullDate), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Time to Capped (%d%%): |cffffffff%s|r (%s)", capTarget, rested.timeLeftStr, rested.fullDate), 0.8, 0.8, 0.8)
                     if rested.isEstimate then
                         GameTooltip:AddLine("|cffffaa00* Rested values are estimated (~disconnect / crash)|r", 1, 0.8, 0)
                     end
@@ -1328,9 +1335,16 @@ function CLIAlts:Render()
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
     end
-    if mainFrame.btnPerk and mainFrame.btnPerk.label then
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-        mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
+    if mainFrame.btnPerk then
+        if self:IsRetail() then
+            mainFrame.btnPerk:Hide()
+        else
+            mainFrame.btnPerk:Show()
+            if mainFrame.btnPerk.label then
+                local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+                mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
+            end
+        end
     end
 
     -- Update Status Bar
@@ -1353,8 +1367,9 @@ function CLIAlts:Render()
             spark, d1Sign, d1, d7Sign, d7, d30Sign, d30, self:FormatNumber(goldOnly)))
     else
         local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
-        mainFrame.statusBarText:SetText(string.format("SYSTEM: WOW FOREVER | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
-            curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+        local sysLabel = self:IsRetail() and "SYSTEM: RETAIL" or "SYSTEM: WOW FOREVER"
+        mainFrame.statusBarText:SetText(string.format("%s | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
+            sysLabel, curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
     end
 
     -- Render Table Header Cells & Clickable Header Buttons
@@ -1530,9 +1545,14 @@ function CLIAlts:ApplyTheme()
     end
 
     if mainFrame.btnPerk then
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-        mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
-        mainFrame.btnPerk.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+        if self:IsRetail() then
+            mainFrame.btnPerk:Hide()
+        else
+            mainFrame.btnPerk:Show()
+            local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+            mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
+            mainFrame.btnPerk.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+        end
     end
 
     if mainFrame.btnScale then
@@ -1817,6 +1837,10 @@ function CLIAlts:ExecutePromptCommand(input)
         end
 
     elseif cmd == "perk" then
+        if self:IsRetail() then
+            self:SetPromptFeedback("Perks are not applicable on Retail WoW", true)
+            return
+        end
         if args and args ~= "" then
             local r = tonumber(args)
             if r and r >= 0 and r <= 5 then
@@ -2054,7 +2078,10 @@ function CLIAlts:ShowDossierPopup(char)
     else
         table.insert(lines, string.format("| Character Name: %s", self:ColorizePlayerName(char.name, char.classFile)))
     end
-    table.insert(lines, "| System:         |cffffffffWoW Forever|r")
+    table.insert(lines, string.format("| System:         |cffffffff%s|r", self:GetClientFlavor()))
+    if char.realm and char.realm ~= "" and char.realm ~= "Forever" then
+        table.insert(lines, string.format("| Realm:          |cffffffff%s|r", char.realm))
+    end
     table.insert(lines, string.format("| Faction / Race: %s |cffffffff%s (%s)|r", self:GetFactionTag(char.faction), self:FormatRace(char), self:GetRaceCode(char)))
     table.insert(lines, string.format("| Class / Level:  %s (Level |cffffffff%d|r)", self:ColorizePlayerName(char.class or "Unknown", char.classFile), char.level or 1))
     table.insert(lines, string.format("| Current Gold:   %s", self:FormatMoney(char.money, true)))
@@ -2080,15 +2107,20 @@ function CLIAlts:ShowDossierPopup(char)
     end
 
     table.insert(lines, "+------------------------------------------------------------------------------+")
-    table.insert(lines, "| RESTED EXPERIENCE (WoW Forever):")
+    table.insert(lines, string.format("| RESTED EXPERIENCE (%s):", self:GetClientFlavor()))
 
     local rested = self:GetRestedData(char)
     if rested and not rested.isMaxLevel then
         local est = rested.isEstimate and "~" or ""
         local restModeStr = rested.isResting and "+5.0% every 8h (Resting)" or "+1.25% every 8h (Wilderness)"
         table.insert(lines, string.format("| Rested Points:  |cffffffff%s%s / %s XP|r (%s%d%% of Level)", est, self:FormatNumber(rested.currentRested), self:FormatNumber(rested.maxRested), est, rested.percent))
-        table.insert(lines, string.format("| Rest Status:    %s (%s | Perk: R%d/5)", rested.statusStr, restModeStr, rested.perkRank))
-        table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r (+%d%% speed bonus)", est, self:FormatNumber(math.floor((rested.ratePerSec or 0) * 3600)), rested.perkRank * 4))
+        if not self:IsRetail() and rested.perkRank and rested.perkRank > 0 then
+            table.insert(lines, string.format("| Rest Status:    %s (%s | Perk: R%d/5)", rested.statusStr, restModeStr, rested.perkRank))
+            table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r (+%d%% speed bonus)", est, self:FormatNumber(math.floor((rested.ratePerSec or 0) * 3600)), rested.perkRank * 4))
+        else
+            table.insert(lines, string.format("| Rest Status:    %s (%s)", rested.statusStr, restModeStr))
+            table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r", est, self:FormatNumber(math.floor((rested.ratePerSec or 0) * 3600))))
+        end
         table.insert(lines, string.format("| Progress Bar:   %s%s|r %s%d%%", t.barFill, rested.barStr, est, rested.percent))
         table.insert(lines, string.format("| Time to %d%%:   |cffffffff%s|r", rested.maxPercent or 150, rested.timeLeftStr))
         table.insert(lines, string.format("| Projected Date: |cffffffff%s|r", rested.fullDate))
@@ -2325,12 +2357,19 @@ function CLIAlts:ShowHelpPopup()
         "|   - Mouse wheel over table to scroll pages                         |",
         "|   - Drag Minimap icon to move outside of minimap                   |",
         "+--------------------------------------------------------------------+",
-        "| Rested XP Mechanics (WoW Forever):                                 |",
-        "|   - Resting in Inn/City/Camp: +5% of level every 8h (10 days base) |",
-        "|   - Logged in Wilderness:     +1.25% every 8h (40 days base)       |",
-        "|   - Well Rested Legacy Perk:  +4% speed & +4% cap per rank (max 5) |",
-        "+====================================================================+",
     }
+    if self:IsRetail() then
+        table.insert(helpText, "| Rested XP Mechanics (Retail):                                       |")
+        table.insert(helpText, "|   - Resting in Inn/City/Camp: +5% of level every 8h (10 days base) |")
+        table.insert(helpText, "|   - Logged in Wilderness:     +1.25% every 8h (40 days base)       |")
+        table.insert(helpText, "|   - Maximum Rested Cap:       150% of level (1.5 bars)             |")
+    else
+        table.insert(helpText, "| Rested XP Mechanics (WoW Forever):                                 |")
+        table.insert(helpText, "|   - Resting in Inn/City/Camp: +5% of level every 8h (10 days base) |")
+        table.insert(helpText, "|   - Logged in Wilderness:     +1.25% every 8h (40 days base)       |")
+        table.insert(helpText, "|   - Well Rested Legacy Perk:  +4% speed & +4% cap per rank (max 5) |")
+    end
+    table.insert(helpText, "+====================================================================+")
 
     helpPopup.body:SetText(table.concat(helpText, "\n"))
     helpPopup:Show()

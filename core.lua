@@ -81,8 +81,12 @@ end
 function CLIAlts:PrintPerf()
     if UpdateAddOnMemoryUsage then
         pcall(UpdateAddOnMemoryUsage)
+    elseif C_AddOns and C_AddOns.UpdateAddOnMemoryUsage then
+        pcall(C_AddOns.UpdateAddOnMemoryUsage)
     end
-    local memKB = (GetAddOnMemoryUsage and GetAddOnMemoryUsage(addonName or "clialts")) or 0
+    local memKB = (GetAddOnMemoryUsage and GetAddOnMemoryUsage(addonName or "clialts"))
+        or (C_AddOns and C_AddOns.GetAddOnMemoryUsage and C_AddOns.GetAddOnMemoryUsage(addonName or "clialts"))
+        or 0
     local p = self.perfData or {}
     local collectStr = (p.collectCount and p.collectCount > 0)
         and string.format("%.2f ms (%d samples)", p.collectMs or 0, p.collectCount)
@@ -440,20 +444,28 @@ local function SlashHandler(msg)
         CLIAlts:Print(string.format("Total Account Wealth: %s across %d alts.", moneyStr, summary.totalAlts))
 
     elseif cmd == "perk" or cmd == "wellrested" then
+        if CLIAlts:IsRetail() then
+            CLIAlts:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
+            return
+        end
         if arg and arg ~= "" then
             local rank = tonumber(arg)
             if rank and rank >= 0 and rank <= 5 then
                 CLIAlts:SetWellRestedRank(rank)
             else
-                CLIAlts:Print("Usage: |cff00ff66/CLIAlts perk <0-5>|r (Sets your Well Rested perk rank)")
+                CLIAlts:Print("Usage: |cff00ff66/clialts perk <0-5>|r (Sets your Well Rested perk rank)")
             end
         else
             CLIAlts:CycleWellRestedPerk()
         end
 
     elseif cmd == "rested" then
-        local r = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0
-        CLIAlts:Print(string.format("--- Rested XP Summary (Well Rested Perk: Rank %d/5 +%d%%) ---", r, r * 4))
+        if CLIAlts:IsRetail() then
+            CLIAlts:Print("--- Rested XP Summary (Retail: Standard 150% Cap) ---")
+        else
+            local r = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0
+            CLIAlts:Print(string.format("--- Rested XP Summary (Well Rested Perk: Rank %d/5 +%d%%) ---", r, r * 4))
+        end
         local chars = CLIAlts:GetCharactersList("rested", false)
         for _, char in ipairs(chars) do
             local rested = CLIAlts:GetRestedData(char)
