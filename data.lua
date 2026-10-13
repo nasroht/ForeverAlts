@@ -46,6 +46,9 @@ local FALLBACK_CLASS_COLORS = {
 -- Client Flavor & Retail Detection Helper
 -- ----------------------------------------------------------------------------
 function CLIAlts:GetClientFlavor()
+    if self.isRetailOverride then
+        return "Retail"
+    end
     if WOW_PROJECT_ID and WOW_PROJECT_MAINLINE and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
         return "Retail"
     end
