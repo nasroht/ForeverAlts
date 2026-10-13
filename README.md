@@ -68,6 +68,8 @@ Track your characters' **Faction**, **Race**, **Level**, **Professions**, **Gold
 | `/clialts gold` | Print total account wealth summary across all alts |
 | `/clialts perf` | Print smoothed ms for Collect & Render plus memory usage |
 | `/clialts selftest` | Run self-test unit assertions on Rested XP, Waste & Calibration |
+| `/clialts alerts [cat]` | Toggle login alert categories (`cd`, `rested`, `mail`, `locks`, `on`, `off`) |
+| `/clialts digest` | Display boxed login summary digest on demand |
 | `/clialts reset` | Reset window position to the center of your screen |
 | `/clialts help` | Open the in-game retro quick guide popup |
 

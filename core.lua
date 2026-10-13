@@ -170,11 +170,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             CLIAlts:Print(string.format("Tracking %s (Level %d %s). Total tracked: %d. Type |cff00ff66/clialts|r to view.",
                 coloredName, char.level or 1, CLIAlts:FormatRaceClass(char), summary.totalAlts or 1))
 
-            -- Alert if any alts are rested capped (Rested Waste Tracker)
-            CLIAlts:CheckCappedAltsAlert()
-
-            -- Alert if mail expires in <= 3 days on any alt
-            CLIAlts:CheckMailExpiryAlert()
+            -- Unified boxed login digest (at most 5 lines)
+            CLIAlts:PrintLoginDigest()
         end
 
         -- Request raid/instance lockouts ONCE per session 2s after entering the world
@@ -434,6 +431,12 @@ local function SlashHandler(msg)
 
     elseif cmd == "selftest" or cmd == "test" then
         CLIAlts:RunSelfTest()
+
+    elseif cmd == "alerts" or cmd == "alert" then
+        CLIAlts:HandleAlertsCommand(arg)
+
+    elseif cmd == "digest" then
+        CLIAlts:PrintLoginDigest(true)
 
     elseif cmd == "help" then
         CLIAlts:ShowHelpPopup()

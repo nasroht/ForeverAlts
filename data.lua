@@ -211,6 +211,11 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.sortAsc = (CLIAltsDB.settings.sortAsc == true)
     CLIAltsDB.settings.activeTab = CLIAltsDB.settings.activeTab or 1
     CLIAltsDB.settings.wellRestedRank = tonumber(CLIAltsDB.settings.wellRestedRank) or 0
+    CLIAltsDB.settings.alerts = CLIAltsDB.settings.alerts or {}
+    if CLIAltsDB.settings.alerts.cooldowns == nil then CLIAltsDB.settings.alerts.cooldowns = true end
+    if CLIAltsDB.settings.alerts.rested == nil then CLIAltsDB.settings.alerts.rested = true end
+    if CLIAltsDB.settings.alerts.mail == nil then CLIAltsDB.settings.alerts.mail = true end
+    if CLIAltsDB.settings.alerts.lockouts == nil then CLIAltsDB.settings.alerts.lockouts = true end
     CLIAltsDB.characters = CLIAltsDB.characters or {}
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
     CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
@@ -543,8 +548,8 @@ function CLIAlts:CollectTradeCooldowns(existing)
                     local cd = GetTradeSkillCooldown(i)
                     if cd and cd > 0 then
                         cds[name] = time() + cd
-                    elseif cd == 0 and cds[name] then
-                        cds[name] = nil
+                    elseif cd == 0 and (cds[name] or (name and (name:find("^Transmute:") or name == "Mooncloth" or name == "Salt Shaker" or name == "Snowmaster 9000"))) then
+                        cds[name] = 0
                     end
                 end
             end
@@ -1605,8 +1610,45 @@ function CLIAlts:RunSelfTest()
     local infRank2, _, st6 = self:EvaluateCalibration(oldSnap, 6600, 20, T0 + 144000, 0, 3)
     Assert(infRank2 == 3 and st6 == "CONFIRMED", "EvaluateCalibration: confirms rank 3 on 2nd consistent sample")
 
+    -- 4. Login Digest & Alert Category Tests
+    -- 4a. IsAlertEnabled defaults to true
+    Assert(self:IsAlertEnabled("cooldowns") == true, "Alerts: cooldowns category enabled by default")
+    Assert(self:IsAlertEnabled("rested") == true, "Alerts: rested category enabled by default")
+
+    -- 4b. ToggleAlert disables and reenables
+    self:ToggleAlert("cooldowns", false)
+    Assert(self:IsAlertEnabled("cooldowns") == false, "Alerts: toggle cooldowns category to false")
+    self:ToggleAlert("cooldowns", true)
+    Assert(self:IsAlertEnabled("cooldowns") == true, "Alerts: toggle cooldowns category back to true")
+
+    -- 4c. Ready cooldown detection with fake timestamp
+    local testCharCD = {
+        name = "TestCrafter",
+        classFile = "MAGE",
+        tradeCooldowns = { ["Mooncloth"] = T0 - 100 }
+    }
+    local oldChars = CLIAltsDB and CLIAltsDB.characters
+    CLIAltsDB.characters = { ["TestCrafter"] = testCharCD }
+    local digestItems = self:GetLoginDigestItems(T0)
+    local foundCD = false
+    for _, it in ipairs(digestItems) do
+        if it.cat == "cooldowns" then foundCD = true end
+    end
+    Assert(foundCD == true, "LoginDigest: ready cooldown detected when now >= readyAt")
+
+    -- 4d. Toggling cooldowns off omits it from digest
+    self:ToggleAlert("cooldowns", false)
+    local digestItemsOff = self:GetLoginDigestItems(T0)
+    local foundCDOff = false
+    for _, it in ipairs(digestItemsOff) do
+        if it.cat == "cooldowns" then foundCDOff = true end
+    end
+    Assert(foundCDOff == false, "LoginDigest: disabled category omitted from digest")
+    self:ToggleAlert("cooldowns", true)
+    CLIAltsDB.characters = oldChars
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -1921,36 +1963,302 @@ function CLIAlts:GenerateAsciiSparkline(numChars)
 end
 
 -- ----------------------------------------------------------------------------
--- Mail Expiry Alert (Feature 7)
+-- Login Digest & Alert Category System (Feature 7)
 -- ----------------------------------------------------------------------------
-function CLIAlts:CheckMailExpiryAlert()
-    if not CLIAltsDB or not CLIAltsDB.characters then return end
-    local now = time()
-    local expiring = {}
+function CLIAlts:IsAlertEnabled(category)
+    if not CLIAltsDB or not CLIAltsDB.settings then return true end
+    CLIAltsDB.settings.alerts = CLIAltsDB.settings.alerts or {}
+    local a = CLIAltsDB.settings.alerts
+    if a[category] == nil then return true end
+    return a[category] == true
+end
 
-    for _, c in ipairs(self:GetCharactersList()) do
-        if c.minMailDays and c.mailCheckedTime and (c.mailCount or 0) > 0 then
-            local elapsedDays = (now - c.mailCheckedTime) / 86400
-            local daysRemaining = c.minMailDays - elapsedDays
-            if daysRemaining <= 3.0 then
-                table.insert(expiring, {
-                    name = c.name,
-                    classFile = c.classFile,
-                    days = math.max(0, daysRemaining),
-                    count = c.mailCount,
-                })
+function CLIAlts:ToggleAlert(category, explicitState)
+    if not CLIAltsDB or not CLIAltsDB.settings then return false end
+    CLIAltsDB.settings.alerts = CLIAltsDB.settings.alerts or {
+        cooldowns = true,
+        rested = true,
+        mail = true,
+        lockouts = true,
+    }
+    local a = CLIAltsDB.settings.alerts
+    if explicitState ~= nil then
+        a[category] = (explicitState == true)
+    else
+        a[category] = not (a[category] ~= false)
+    end
+    local stateStr = a[category] and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
+    self:Print(string.format("Alert category '|cffffffff%s|r' is now %s.", category, stateStr))
+    return a[category]
+end
+
+function CLIAlts:PrintAlertStatus()
+    self:Print("--- Login Alert Settings (/ca alerts <category>) ---")
+    local cd = self:IsAlertEnabled("cooldowns") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
+    local rest = self:IsAlertEnabled("rested") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
+    local mail = self:IsAlertEnabled("mail") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
+    local lock = self:IsAlertEnabled("lockouts") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Ready Cooldowns: %s |cff888888(/ca alerts cd)|r", cd))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Rested Capped:   %s |cff888888(/ca alerts rested)|r", rest))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Mail Expiry:     %s |cff888888(/ca alerts mail)|r", mail))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Lockouts Reset:  %s |cff888888(/ca alerts locks)|r", lock))
+    DEFAULT_CHAT_FRAME:AddMessage("  |cff888888Commands: /ca alerts [on|off|show|cd|rested|mail|locks]|r")
+end
+
+function CLIAlts:HandleAlertsCommand(arg)
+    arg = arg and arg:match("^%s*(.-)%s*$") or ""
+    if arg == "" then
+        self:PrintAlertStatus()
+        return "Alert status printed to chat."
+    end
+
+    local lower = arg:lower()
+    if lower == "on" or lower == "enable" or lower == "all" then
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.alerts = { cooldowns = true, rested = true, mail = true, lockouts = true }
+        end
+        self:Print("All login alert categories |cff00ff66ENABLED|r.")
+        return "All login alerts enabled."
+    elseif lower == "off" or lower == "disable" or lower == "none" then
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.alerts = { cooldowns = false, rested = false, mail = false, lockouts = false }
+        end
+        self:Print("All login alert categories |cffff4444DISABLED|r.")
+        return "All login alerts disabled."
+    elseif lower == "show" or lower == "digest" or lower == "test" then
+        self:PrintLoginDigest(true)
+        return "Login digest displayed."
+    end
+
+    local catArg, stateArg = lower:match("^(%S+)%s*(.*)$")
+    catArg = catArg or lower
+    stateArg = stateArg and stateArg:match("^%s*(.-)%s*$") or ""
+
+    local explicitState
+    if stateArg == "on" or stateArg == "enable" or stateArg == "1" then
+        explicitState = true
+    elseif stateArg == "off" or stateArg == "disable" or stateArg == "0" then
+        explicitState = false
+    end
+
+    local matchedCat
+    if catArg == "cd" or catArg == "cds" or catArg == "cooldown" or catArg == "cooldowns" then
+        matchedCat = "cooldowns"
+    elseif catArg == "rest" or catArg == "rested" or catArg == "capped" or catArg == "xp" then
+        matchedCat = "rested"
+    elseif catArg == "mail" or catArg == "inbox" then
+        matchedCat = "mail"
+    elseif catArg == "lock" or catArg == "locks" or catArg == "lockout" or catArg == "lockouts" or catArg == "raid" then
+        matchedCat = "lockouts"
+    end
+
+    if matchedCat then
+        local newState = self:ToggleAlert(matchedCat, explicitState)
+        return string.format("Alert '%s': %s", matchedCat, newState and "ENABLED" or "DISABLED")
+    else
+        self:Print("Unknown category. Valid: cd, rested, mail, locks, on, off, show")
+        return "Invalid alert category."
+    end
+end
+
+function CLIAlts:GetLoginDigestItems(nowOverride)
+    local now = nowOverride or time()
+    local items = {}
+
+    -- 1. Ready Cooldowns Category
+    if self:IsAlertEnabled("cooldowns") then
+        local readyAlts = {}
+        for _, c in ipairs(self:GetCharactersList()) do
+            if c.tradeCooldowns and next(c.tradeCooldowns) then
+                local skills = {}
+                for name, readyAt in pairs(c.tradeCooldowns) do
+                    if readyAt and now >= readyAt then
+                        local short = name:gsub("^Transmute: ", "Xm:"):gsub("^Refined ", "")
+                        short = short:sub(1, 10)
+                        table.insert(skills, short)
+                    end
+                end
+                if #skills > 0 then
+                    table.sort(skills)
+                    table.insert(readyAlts, { char = c, skills = skills })
+                end
             end
         end
-    end
-
-    if #expiring > 0 then
-        for _, entry in ipairs(expiring) do
-            local coloredName = self:ColorizePlayerName(entry.name, entry.classFile)
-            local daysText = (entry.days < 1.0) and string.format("%.0fh", entry.days * 24) or string.format("%.1fd", entry.days)
-            self:Print(string.format("|cffff4444[MAIL WARNING]|r %s has %d mail(s) expiring in |cffffffff%s|r! Log in to retrieve.",
-                coloredName, entry.count, daysText))
+        if #readyAlts > 0 then
+            table.sort(readyAlts, function(a, b) return (a.char.name or "") < (b.char.name or "") end)
+            local parts = {}
+            for i = 1, math.min(2, #readyAlts) do
+                local c = readyAlts[i].char
+                local cName = self:ColorizePlayerName(c.name, c.classFile)
+                table.insert(parts, string.format("%s (%s)", cName, table.concat(readyAlts[i].skills, ",")))
+            end
+            if #readyAlts > 2 then
+                table.insert(parts, string.format("+%d more", #readyAlts - 2))
+            end
+            table.insert(items, {
+                cat = "cooldowns",
+                label = "CDS",
+                text = string.format("|cffffcc00[CDS]|r   %s READY", table.concat(parts, ", ")),
+                compact = string.format("|cffffcc00[CDS]|r %s RDY", table.concat(parts, ", ")),
+            })
         end
     end
+
+    -- 2. Rested Capped Category
+    if self:IsAlertEnabled("rested") then
+        local capped = {}
+        for _, it in ipairs(self:GetNextAltsPriority()) do
+            if it.isCapped and it.char then
+                table.insert(capped, it)
+            end
+        end
+        if #capped > 0 then
+            local parts = {}
+            for i = 1, math.min(2, #capped) do
+                local c = capped[i].char
+                local cName = self:ColorizePlayerName(c.name, c.classFile)
+                if capped[i].wastedXP and capped[i].wastedXP > 1000 then
+                    table.insert(parts, string.format("%s (~%s XP lost)", cName, self:FormatNumber(capped[i].wastedXP)))
+                else
+                    table.insert(parts, string.format("%s (Capped)", cName))
+                end
+            end
+            if #capped > 2 then
+                table.insert(parts, string.format("+%d more", #capped - 2))
+            end
+            table.insert(items, {
+                cat = "rested",
+                label = "REST",
+                text = string.format("|cff66ccff[REST]|r  %s", table.concat(parts, ", ")),
+                compact = string.format("|cff66ccff[REST]|r %s", table.concat(parts, ", ")),
+            })
+        end
+    end
+
+    -- 3. Mail Expiring Category
+    if self:IsAlertEnabled("mail") then
+        local expiring = {}
+        for _, c in ipairs(self:GetCharactersList()) do
+            if c.minMailDays and c.mailCheckedTime and (c.mailCount or 0) > 0 then
+                local elapsedDays = (now - c.mailCheckedTime) / 86400
+                local daysRemaining = c.minMailDays - elapsedDays
+                if daysRemaining <= 3.0 and daysRemaining > 0 then
+                    table.insert(expiring, {
+                        char = c,
+                        days = daysRemaining,
+                        count = c.mailCount,
+                    })
+                end
+            end
+        end
+        if #expiring > 0 then
+            table.sort(expiring, function(a, b) return a.days < b.days end)
+            local parts = {}
+            for i = 1, math.min(2, #expiring) do
+                local c = expiring[i].char
+                local cName = self:ColorizePlayerName(c.name, c.classFile)
+                local dStr = (expiring[i].days < 1.0) and string.format("%.0fh", expiring[i].days * 24) or string.format("%.1fd", expiring[i].days)
+                table.insert(parts, string.format("%s (%d in %s)", cName, expiring[i].count or 1, dStr))
+            end
+            if #expiring > 2 then
+                table.insert(parts, string.format("+%d more", #expiring - 2))
+            end
+            table.insert(items, {
+                cat = "mail",
+                label = "MAIL",
+                text = string.format("|cffff6666[MAIL]|r  %s", table.concat(parts, ", ")),
+                compact = string.format("|cffff6666[MAIL]|r %s", table.concat(parts, ", ")),
+            })
+        end
+    end
+
+    -- 4. Lockouts Resetting Category (within 24h)
+    if self:IsAlertEnabled("lockouts") then
+        local locks = {}
+        for _, c in ipairs(self:GetCharactersList()) do
+            if c.lockouts and next(c.lockouts) then
+                for instName, lockInfo in pairs(c.lockouts) do
+                    local resetTime = (type(lockInfo) == "table" and lockInfo.resetTime) or lockInfo
+                    if type(resetTime) == "number" then
+                        local remSec = resetTime - now
+                        if remSec > 0 and remSec <= 86400 then
+                            local h = math.floor(remSec / 3600)
+                            local m = math.floor((remSec % 3600) / 60)
+                            local timeStr = (h > 0) and string.format("%dh", h) or string.format("%dm", m)
+                            table.insert(locks, {
+                                char = c,
+                                instance = instName:sub(1, 10),
+                                timeStr = timeStr,
+                                remSec = remSec,
+                            })
+                        end
+                    end
+                end
+            end
+        end
+        if #locks > 0 then
+            table.sort(locks, function(a, b) return a.remSec < b.remSec end)
+            local parts = {}
+            for i = 1, math.min(2, #locks) do
+                local c = locks[i].char
+                local cName = self:ColorizePlayerName(c.name, c.classFile)
+                table.insert(parts, string.format("%s (%s in %s)", cName, locks[i].instance, locks[i].timeStr))
+            end
+            if #locks > 2 then
+                table.insert(parts, string.format("+%d more", #locks - 2))
+            end
+            table.insert(items, {
+                cat = "lockouts",
+                label = "LOCK",
+                text = string.format("|cffff8844[LOCK]|r  %s", table.concat(parts, ", ")),
+                compact = string.format("|cffff8844[LOCK]|r %s", table.concat(parts, ", ")),
+            })
+        end
+    end
+
+    return items
+end
+
+function CLIAlts:PrintLoginDigest(force)
+    local items = self:GetLoginDigestItems()
+    local border = "+-----------------[ CLIAlts :: LOGIN DIGEST ]-----------------+"
+    local bottom = "+-------------------------------------------------------------+"
+
+    if #items == 0 then
+        if force then
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", border))
+            DEFAULT_CHAT_FRAME:AddMessage("|cff00ff66| |r|cff888888All alts clear: no ready CDs, capped alts, or expiring mail.|r")
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", bottom))
+        end
+        return
+    end
+
+    local lines = {}
+    if #items <= 3 then
+        for i = 1, #items do
+            table.insert(lines, items[i].text)
+        end
+    else
+        -- 4 items: pack into 3 content lines so total with borders is at most 5 lines!
+        table.insert(lines, items[1].text)
+        table.insert(lines, items[2].text)
+        table.insert(lines, items[3].compact .. "  |  " .. items[4].compact)
+    end
+
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", border))
+    for _, l in ipairs(lines) do
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66| |r%s", l))
+    end
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66%s|r", bottom))
+end
+
+-- Backward compatibility helpers
+function CLIAlts:CheckCappedAltsAlert()
+    self:PrintLoginDigest(false)
+end
+
+function CLIAlts:CheckMailExpiryAlert()
+    -- Subsumed by PrintLoginDigest
 end
 
 -- ----------------------------------------------------------------------------
