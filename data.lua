@@ -2830,16 +2830,17 @@ function CLIAlts:RunSelfTest()
     if self.AddInventoryInfoToTooltip then
         local mockTooltip = {
             lines = {},
-            shown = false,
             AddDoubleLine = function(self, left, right)
                 table.insert(self.lines, { left = left, right = right })
             end,
-            Show = function(self) self.shown = true end,
         }
         self:AddInventoryInfoToTooltip(mockTooltip, 14047)
         Assert(#mockTooltip.lines >= 4, "AddInventoryInfoToTooltip: appends header line plus 3 alt lines")
         Assert(mockTooltip.lines[1].left:find("%[CLIAlts%]"), "AddInventoryInfoToTooltip: header contains '[CLIAlts]'")
-        Assert(mockTooltip.shown == true, "AddInventoryInfoToTooltip: calls tooltip:Show()")
+
+        -- Verify idempotency / deduplication (no stacking if invoked again on same draw)
+        self:AddInventoryInfoToTooltip(mockTooltip, 14047)
+        Assert(#mockTooltip.lines == 4, "AddInventoryInfoToTooltip: prevents duplicate lines on re-entry")
 
         -- 17f. Settings toggle showInventoryTooltips = false disables tooltip lines
         CLIAltsDB.settings.showInventoryTooltips = false

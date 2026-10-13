@@ -2504,17 +2504,33 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
         return
     end
 
-    local now = (GetTime and GetTime()) or (time and time()) or 0
-    if tooltip._clialtsLastItem == itemID and tooltip._clialtsLastTime and (now - tooltip._clialtsLastTime) < 0.25 then
+    -- Guard against duplicate additions within the same tooltip rendering pass
+    if tooltip._clialtsProcessed == itemID then
         return
     end
-    tooltip._clialtsLastItem = itemID
-    tooltip._clialtsLastTime = now
+
+    -- Check if the tooltip already has CLIAlts lines to prevent stacking
+    local numLines = (tooltip.NumLines and tooltip:NumLines()) or 0
+    if numLines > 0 and tooltip.GetName then
+        local tipName = tooltip:GetName()
+        if tipName then
+            for i = 1, numLines do
+                local line = _G[tipName .. "TextLeft" .. i]
+                local text = line and line:GetText()
+                if text and text:find("%[CLIAlts%]") then
+                    tooltip._clialtsProcessed = itemID
+                    return
+                end
+            end
+        end
+    end
 
     local totalCount, breakdown = self:GetItemInventorySummary(itemID)
     if totalCount <= 0 or not breakdown or #breakdown == 0 then
         return
     end
+
+    tooltip._clialtsProcessed = itemID
 
     tooltip:AddDoubleLine("|cff00ff66[CLIAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
     for _, entry in ipairs(breakdown) do
@@ -2538,15 +2554,24 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
 
         tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
     end
-
-    if tooltip.Show then
-        tooltip:Show()
-    end
 end
 
 function CLIAlts:InitTooltipHooks()
     if self.tooltipHooksInitialized then return end
     self.tooltipHooksInitialized = true
+
+    local function ResetTooltipFlag(tooltip)
+        if tooltip then
+            tooltip._clialtsProcessed = nil
+        end
+    end
+
+    if GameTooltip and GameTooltip.HookScript then
+        pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipCleared", ResetTooltipFlag)
+    end
+    if ItemRefTooltip and ItemRefTooltip.HookScript then
+        pcall(ItemRefTooltip.HookScript, ItemRefTooltip, "OnTooltipCleared", ResetTooltipFlag)
+    end
 
     if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
         TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
