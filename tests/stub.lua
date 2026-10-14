@@ -160,6 +160,11 @@ C_QuestLog = C_QuestLog or {
     GetInfo = function(index) return nil end,
 }
 GetQuestsCompleted = GetQuestsCompleted or function(tbl) end
+GetItemInfo = GetItemInfo or function(id) return nil end
+GetItemInfoInstant = GetItemInfoInstant or function(id) return nil end
+C_Item = C_Item or {
+    GetItemInfoInstant = function(id) return nil end,
+}
 
 -- 3. WoW System & Timer APIs
 GetTime = GetTime or function() return os.time() end

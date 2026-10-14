@@ -3588,20 +3588,23 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     end
 
     if itemID then
-        local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(itemID)
-        if name then
-            itemName = name
-            quality = quality or q
-            classID = classID or cID
-            subclassID = subclassID or scID
-            equipLoc = equipLoc or eqLoc
-            bindType = bindType or bType
-        elseif C_Item and C_Item.GetItemInfoInstant then
+        if GetItemInfo then
+            local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(itemID)
+            if name then
+                itemName = name
+                quality = quality or q
+                classID = classID or cID
+                subclassID = subclassID or scID
+                equipLoc = equipLoc or eqLoc
+                bindType = bindType or bType
+            end
+        end
+        if not classID and C_Item and C_Item.GetItemInfoInstant then
             local _, _, _, eq, _, c, sc = C_Item.GetItemInfoInstant(itemID)
             classID = classID or c
             subclassID = subclassID or sc
             equipLoc = equipLoc or eq
-        elseif GetItemInfoInstant then
+        elseif not classID and GetItemInfoInstant then
             local _, _, _, eq, _, c, sc = GetItemInfoInstant(itemID)
             classID = classID or c
             subclassID = subclassID or sc
