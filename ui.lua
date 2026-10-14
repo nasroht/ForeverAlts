@@ -15,7 +15,6 @@ local FONT_PATH = "Interface\\AddOns\\" .. (addonName or "clialts") .. "\\media\
 local DEFAULT_FONT_SIZE = 15
 local LINE_WIDTH = 110
 local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
-local DOUBLE_BORDER = "+" .. string.rep("=", LINE_WIDTH - 2) .. "+"
 
 local ROWS_COUNT = 8
 local rowFrames = {}
@@ -576,6 +575,7 @@ local function FmtGold(char)
     local gold = math.floor((char.money or 0) / 10000)
     return "|cffffd700" .. CLIAlts:FormatNumber(gold) .. "g|r"
 end
+CLIAlts.FmtGold = FmtGold
 
 local function FmtRested(char, t)
     t = t or CLIAlts:GetTheme()
@@ -951,6 +951,7 @@ local function FmtProfessionsAuto(char, t)
     end
     return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
 end
+CLIAlts.FmtProfessionsAuto = FmtProfessionsAuto
 
 local function FmtForeverStatus(char, t)
     t = t or CLIAlts:GetTheme()
@@ -978,13 +979,14 @@ local function FmtForeverStatus(char, t)
     local est = rested.isEstimate and "~" or ""
     return string.format("|cff%s%d%%%s Rested|r", t.primaryHex, pct, est)
 end
+CLIAlts.FmtForeverStatus = FmtForeverStatus
 
 local COLS = {
     [1] = { -- 1: OVERVIEW
-        { key = "name",      title = "CHARACTER",         w = 26, pw = 250, cpw = 180, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "rested",    title = "RESTED XP",         w = 32, pw = 320, cpw = 200, align = "LEFT",   sort = "rested",   fmt = FmtRested },
-        { key = "eta",       title = "ETA",               w = 14, pw = 160, cpw = 100, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "name",      title = "CHARACTER",         w = 26, pw = 280, cpw = 260, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 65,  cpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "rested",    title = "RESTED XP",         w = 32, pw = 340, cpw = 320, align = "LEFT",   sort = "rested",   fmt = FmtRested },
+        { key = "eta",       title = "ETA",               w = 14, pw = 175, cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [2] = { -- 2: FOREVER ROUTE
         { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
