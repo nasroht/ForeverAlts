@@ -247,6 +247,8 @@ function CLIAlts:GetTheme()
     local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "AMBER"
     local t = self.THEMES[key] or self.THEMES["AMBER"]
     -- Ensure non-nil fallbacks for design tokens
+    t.text = t.text or { 0.957, 0.918, 0.824 }
+    t.muted = t.muted or t.dim or { 0.663, 0.627, 0.549 }
     t.textHex = t.textHex or "f4ead2"
     t.mutedHex = t.mutedHex or t.dimHex or "a9a08c"
     t.accentHex = t.accentHex or "57d6e8"
@@ -1880,7 +1882,8 @@ function CLIAlts:Render()
             tabBtn:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 1)
         else
             tabBtn.label:SetText(base)
-            tabBtn.label:SetTextColor(t.muted[1], t.muted[2], t.muted[3])
+            local m = t.muted or t.dim or { 0.663, 0.627, 0.549 }
+            tabBtn.label:SetTextColor(m[1], m[2], m[3])
             tabBtn:SetBackdropColor(t.panelBg[1], t.panelBg[2], t.panelBg[3], 0.5)
             tabBtn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.4)
         end
@@ -3444,7 +3447,8 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
                 if self.actKey == "delete" then
                     self.label:SetTextColor(0.9, 0.5, 0.5)
                 else
-                    self.label:SetTextColor(t.text[1], t.text[2], t.text[3])
+                    local txt = t.text or { 0.957, 0.918, 0.824 }
+                    self.label:SetTextColor(txt[1], txt[2], txt[3])
                 end
             end)
             btn:SetScript("OnClick", function(self)
@@ -3475,7 +3479,8 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
         if btn.actKey == "delete" then
             btn.label:SetTextColor(0.9, 0.5, 0.5)
         else
-            btn.label:SetTextColor(t.text[1], t.text[2], t.text[3])
+            local txt = t.text or { 0.957, 0.918, 0.824 }
+            btn.label:SetTextColor(txt[1], txt[2], txt[3])
         end
     end
 
