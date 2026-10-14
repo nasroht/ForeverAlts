@@ -17,7 +17,7 @@ local LINE_WIDTH = 110
 local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
 local DOUBLE_BORDER = "+" .. string.rep("=", LINE_WIDTH - 2) .. "+"
 
-local ROWS_COUNT = 12
+local ROWS_COUNT = 8
 local rowFrames = {}
 local headerButtons = {}
 local currentPage = 1
@@ -371,8 +371,12 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
     })
     local t = CLIAlts:GetTheme()
     local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-    btn:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.75)
-    btn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
+    if btn.SetBackdropColor then
+        btn:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.75)
+    end
+    if btn.SetBackdropBorderColor then
+        btn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
+    end
 
     local label = btn:CreateFontString(nil, "OVERLAY")
     CLIAlts:SetWidgetFont(label, fontSz or 12, "")
@@ -383,16 +387,24 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
 
     btn:SetScript("OnEnter", function(self)
         local curT = CLIAlts:GetTheme()
-        self:SetBackdropColor(curT.border[1], curT.border[2], curT.border[3], 0.25)
-        self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 1)
+        if self.SetBackdropColor then
+            self:SetBackdropColor(curT.border[1], curT.border[2], curT.border[3], 0.25)
+        end
+        if self.SetBackdropBorderColor then
+            self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 1)
+        end
         self.label:SetTextColor(curT.highlight[1], curT.highlight[2], curT.highlight[3])
     end)
 
     btn:SetScript("OnLeave", function(self)
         local curT = CLIAlts:GetTheme()
         local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75)
-        self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.8)
+        if self.SetBackdropColor then
+            self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75)
+        end
+        if self.SetBackdropBorderColor then
+            self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.8)
+        end
         self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
     end)
 
@@ -969,14 +981,10 @@ end
 
 local COLS = {
     [1] = { -- 1: OVERVIEW
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "tier",      title = "ROLE",              w = 8,  pw = 70,  cpw = 60,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
-        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 70,  cpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
-        { key = "rested",    title = "RESTED XP",         w = 10, pw = 105, cpw = 85,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
-        { key = "prof",      title = "PRIMARY PROFESSION",w = 18, pw = 180, cpw = 145, align = "LEFT",   sort = "prof",     fmt = FmtProfessionsAuto },
-        { key = "gold",      title = "GOLD",              w = 9,  pw = 95,  cpw = 85,  align = "RIGHT",  sort = "gold",     fmt = FmtGold },
-        { key = "eta",       title = "ETA",               w = 7,  pw = 85,  cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
-        { key = "status",    title = "STATUS",            w = 16, pw = 145, cpw = 85,  align = "LEFT",   sort = "rotation", fmt = FmtForeverStatus },
+        { key = "name",      title = "CHARACTER",         w = 26, pw = 250, cpw = 180, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "rested",    title = "RESTED XP",         w = 32, pw = 320, cpw = 200, align = "LEFT",   sort = "rested",   fmt = FmtRested },
+        { key = "eta",       title = "ETA",               w = 14, pw = 160, cpw = 100, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [2] = { -- 2: FOREVER ROUTE
         { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
@@ -1078,63 +1086,72 @@ end
 function CLIAlts:ApplyLayoutSize()
     if not mainFrame then return end
     local isComp = self:IsCompact()
-    local targetWidth = isComp and 680 or 920
+    local targetWidth = isComp and 720 or 920
     mainFrame:SetWidth(targetWidth)
-    mainFrame:SetHeight(565)
+    mainFrame:SetHeight(600)
 
     -- Top bar layout
     if mainFrame.titleText then
-        mainFrame.titleText:SetText(isComp and ("[#] CLIALTS v" .. (self.VERSION or "1.1.0")) or ("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.1.0")))
+        mainFrame.titleText:SetText("CLIAlts")
+    end
+    if mainFrame.subTitleText then
+        mainFrame.subTitleText:SetText("/ ALT MONITOR")
     end
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
     end
 
-    -- Tab buttons: in Standard Mode (920px), align on header line alongside title and controls
-    -- In Compact Mode (680px), tabs sit on a clean subheader row (Y = -38)
+    -- Tab buttons: Clean Nav Bar at Y = -54
+    local tabCount = #(mainFrame.tabButtons or {})
+    local tabW = math.floor((targetWidth - 36 - ((tabCount - 1) * 8)) / math.max(1, tabCount))
     local prevTab = nil
-    if not isComp then
-        local startX = 114
-        local spacing = 4
-        for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
-            local w = tabBtn.stdWidth or 68
-            tabBtn:SetWidth(w)
-            tabBtn:ClearAllPoints()
-            if not prevTab then
-                tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", startX, -15)
-            else
-                tabBtn:SetPoint("LEFT", prevTab, "RIGHT", spacing, 0)
-            end
-            prevTab = tabBtn
+    for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
+        local w = isComp and tabW or (tabBtn.stdWidth or 74)
+        tabBtn:SetWidth(w)
+        tabBtn:ClearAllPoints()
+        if not prevTab then
+            tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, -54)
+        else
+            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 8, 0)
         end
-    else
-        local tabW = math.floor((targetWidth - 28 - 20) / 6)
-        local spacing = 4
-        for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
-            tabBtn:SetWidth(tabW)
-            tabBtn:ClearAllPoints()
-            if not prevTab then
-                tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 14, -38)
-            else
-                tabBtn:SetPoint("LEFT", prevTab, "RIGHT", spacing, 0)
-            end
-            prevTab = tabBtn
-        end
+        prevTab = tabBtn
     end
 
-    -- Unified Mission Briefing Card geometry
-    local recY = isComp and -64 or -42
+    -- Hero Recommendation Card geometry (recPanel)
+    local recY = -84
     if mainFrame.recPanel then
         mainFrame.recPanel:ClearAllPoints()
         mainFrame.recPanel:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 14, recY)
-        mainFrame.recPanel:SetSize(targetWidth - 28, 54)
+        mainFrame.recPanel:SetSize(targetWidth - 28, 74)
     end
     if mainFrame.summaryBar then
         mainFrame.summaryBar:SetWidth(targetWidth - 28)
     end
 
+    -- 3 KPI Metric Cards
+    if mainFrame.kpiContainer then
+        mainFrame.kpiContainer:ClearAllPoints()
+        mainFrame.kpiContainer:SetPoint("TOPLEFT", mainFrame.recPanel, "BOTTOMLEFT", 0, -8)
+        mainFrame.kpiContainer:SetSize(targetWidth - 28, 52)
+        local cardW = math.floor((targetWidth - 28 - 16) / 3)
+        for _, card in pairs(mainFrame.kpiCards or {}) do
+            card:SetWidth(cardW)
+        end
+    end
+
+    -- Sub-header view bar
+    local subY = -226
+    if mainFrame.subViewTitle then
+        mainFrame.subViewTitle:ClearAllPoints()
+        mainFrame.subViewTitle:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, subY)
+    end
+    if mainFrame.subViewFilters then
+        mainFrame.subViewFilters:ClearAllPoints()
+        mainFrame.subViewFilters:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -18, subY)
+    end
+
     -- Table header & rows geometry
-    local headerY = isComp and -126 or -104
+    local headerY = -246
     if mainFrame.headerFrame then
         mainFrame.headerFrame:ClearAllPoints()
         mainFrame.headerFrame:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, headerY)
@@ -1144,18 +1161,30 @@ function CLIAlts:ApplyLayoutSize()
         mainFrame.tableSepAscii:ClearAllPoints()
         mainFrame.tableSepAscii:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, headerY - 18)
     end
-    local rowsY = headerY - 26
+    local rowsY = headerY - 22
     if mainFrame.rowsContainer then
         mainFrame.rowsContainer:ClearAllPoints()
         mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, rowsY)
         mainFrame.rowsContainer:SetWidth(targetWidth - 24)
+        mainFrame.rowsContainer:SetHeight(ROWS_COUNT * 36)
     end
     for _, row in ipairs(rowFrames) do
         row:SetWidth(targetWidth - 24)
+        row:SetHeight(34)
     end
     if mainFrame.tableBotAscii then
         mainFrame.tableBotAscii:ClearAllPoints()
-        mainFrame.tableBotAscii:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, rowsY - (ROWS_COUNT * 21) - 6)
+        mainFrame.tableBotAscii:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, rowsY - (ROWS_COUNT * 36) - 4)
+    end
+
+    -- Footer elements
+    if mainFrame.btnPrev then
+        mainFrame.btnPrev:ClearAllPoints()
+        mainFrame.btnPrev:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 18, 12)
+    end
+    if mainFrame.statusTip then
+        mainFrame.statusTip:ClearAllPoints()
+        mainFrame.statusTip:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -18, 14)
     end
 
     -- Bottom prompt box width adjustment
@@ -1181,7 +1210,7 @@ function CLIAlts:CreateMainFrame()
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:Hide()
-    frame:SetSize(920, 565)
+    frame:SetSize(920, 600)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -1203,8 +1232,8 @@ function CLIAlts:CreateMainFrame()
     frame:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 2,
-        insets = { left = 2, right = 2, top = 2, bottom = 2 }
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
     })
 
     mainFrame = frame
@@ -1213,21 +1242,33 @@ function CLIAlts:CreateMainFrame()
 
     local fontSize = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
 
-    -- Top border ASCII line
+    -- Top border ASCII line (kept empty for clean modern border)
     local topAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(topAscii, fontSize)
     topAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -8)
-    topAscii:SetText(DOUBLE_BORDER)
+    topAscii:SetText("")
     frame.topAscii = topAscii
 
-    -- Title Bar
+    -- 1. Modern Header Title & Subtitle Block
     local titleText = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(titleText, fontSize + 1, "OUTLINE")
-    titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -16)
-    titleText:SetText("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.1.0"))
+    self:SetWidgetFont(titleText, 17, "OUTLINE")
+    titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14)
+    titleText:SetText("CLIAlts")
     frame.titleText = titleText
 
-    -- Window Controls on Title Bar (Scale, Compact, Theme, Help, Close)
+    local subtitleText = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(subtitleText, 11, "OUTLINE")
+    subtitleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -34)
+    subtitleText:SetText("/ ALT MONITOR")
+    frame.subtitleText = subtitleText
+
+    local metaText = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(metaText, 10, "")
+    metaText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -48)
+    metaText:SetText("4 characters · Forever · Updated recently")
+    frame.metaText = metaText
+
+    -- Window Controls on Title Bar (Close, Help, Theme, Scale, Compact)
     local btnClose = CreateRetroButton(frame, "[ X ]", 28, 18, function()
         CLIAlts:Toggle(false)
     end)
@@ -1238,10 +1279,17 @@ function CLIAlts:CreateMainFrame()
     end)
     btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -5, 0)
 
+    local curTag = (self.GetTheme and self:GetTheme().tag) or "AMB"
+    local btnTheme = CreateRetroButton(frame, string.format("[ THEME: %s ]", curTag), 92, 18, function()
+        CLIAlts:CycleTheme()
+    end)
+    btnTheme:SetPoint("RIGHT", btnHelp, "LEFT", -5, 0)
+    frame.btnTheme = btnTheme
+
     local btnScale = CreateRetroButton(frame, string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)), 88, 18, function()
         CLIAlts:CycleScale()
     end)
-    btnScale:SetPoint("RIGHT", btnHelp, "LEFT", -5, 0)
+    btnScale:SetPoint("RIGHT", btnTheme, "LEFT", -5, 0)
     frame.btnScale = btnScale
 
     local btnCompact = CreateRetroButton(frame, "[ COMPACT ]", 85, 18, function()
@@ -1250,7 +1298,7 @@ function CLIAlts:CreateMainFrame()
     btnCompact:SetPoint("RIGHT", btnScale, "LEFT", -5, 0)
     btnCompact:SetScript("OnEnter", function(self)
         local t = CLIAlts:GetTheme()
-        self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.8)
+        if self.SetBackdropColor then self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.8) end
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:AddLine("Compact Mode", 1, 1, 1)
         GameTooltip:AddLine("Hides XP bar columns for narrow windows or high scales.", 0.8, 0.8, 0.8)
@@ -1260,39 +1308,55 @@ function CLIAlts:CreateMainFrame()
         GameTooltip:Show()
     end)
     btnCompact:SetScript("OnLeave", function(self)
-        self:SetBackdropColor(0, 0, 0, 0.6)
+        if self.SetBackdropColor then self:SetBackdropColor(0, 0, 0, 0.6) end
         GameTooltip:Hide()
     end)
     frame.btnCompact = btnCompact
 
-    local curTag = (self.GetTheme and self:GetTheme().tag) or "AMB"
-    local btnTheme = CreateRetroButton(frame, string.format("[ THEME: %s ]", curTag), 92, 18, function()
-        CLIAlts:CycleTheme()
-    end)
-    btnTheme:SetPoint("RIGHT", btnCompact, "LEFT", -5, 0)
-    frame.btnTheme = btnTheme
+    -- Status Pill Badge in Top Right
+    local badgeTracking = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    badgeTracking:SetSize(82, 18)
+    badgeTracking:SetPoint("RIGHT", btnCompact, "LEFT", -8, 0)
+    badgeTracking:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if badgeTracking.SetBackdropColor then
+        badgeTracking:SetBackdropColor(0.04, 0.14, 0.08, 0.90)
+    end
+    if badgeTracking.SetBackdropBorderColor then
+        badgeTracking:SetBackdropBorderColor(0.0, 0.8, 0.35, 0.8)
+    end
+    local badgeText = badgeTracking:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(badgeText, 10, "OUTLINE")
+    badgeText:SetPoint("CENTER", 0, 0)
+    badgeText:SetText("|cff00ff66TRACKING|r")
+    badgeTracking.text = badgeText
+    frame.badgeTracking = badgeTracking
 
-    -- Navigation Tabs (Integrated into Header Bar in Standard Mode)
+    -- 2. Modern Navigation Tab Strip (Clean text links with active amber box pill)
     local tabs = {
-        { id = 1, text = "[ OVERVIEW ]", compact = "[ 1: MAIN ]",  viewTitle = "OVERVIEW",                 stdWidth = 76 },
-        { id = 2, text = "[ ROUTE ]",    compact = "[ 2: ROUTE ]", viewTitle = "FOREVER ROUTE",          stdWidth = 64 },
-        { id = 3, text = "[ RESTED ]",   compact = "[ 3: REST ]",  viewTitle = "RESTED XP MONITOR",       stdWidth = 68 },
-        { id = 4, text = "[ PROFS ]",    compact = "[ 4: PROF ]",  viewTitle = "PROFESSIONS & MILESTONES", stdWidth = 64 },
-        { id = 5, text = "[ GOLD ]",     compact = "[ 5: ECON ]",  viewTitle = "ECONOMY & WEALTH",        stdWidth = 60 },
-        { id = 6, text = "[ CDS ]",      compact = "[ 6: CDS ]",   viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 56 },
+        { id = 1, text = "Overview",    compact = "Overview", viewTitle = "OVERVIEW",                 stdWidth = 74 },
+        { id = 2, text = "Route",       compact = "Route",    viewTitle = "FOREVER ROUTE",          stdWidth = 56 },
+        { id = 3, text = "Rested XP",   compact = "Rested",   viewTitle = "RESTED XP MONITOR",       stdWidth = 76 },
+        { id = 4, text = "Professions", compact = "Profs",    viewTitle = "PROFESSIONS & MILESTONES", stdWidth = 84 },
+        { id = 5, text = "Economy",     compact = "Econ",     viewTitle = "ECONOMY & WEALTH",        stdWidth = 68 },
+        { id = 6, text = "Cooldowns",   compact = "CDs",      viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 78 },
     }
     frame.tabButtons = {}
     local prevTab = nil
     for _, tabData in ipairs(tabs) do
-        local tabBtn = CreateRetroButton(frame, tabData.text, tabData.stdWidth, 18, function()
+        local tabBtn = CreateRetroButton(frame, tabData.text, tabData.stdWidth, 22, function()
             CLIAltsDB.settings.activeTab = tabData.id
             currentPage = 1
             CLIAlts:Render()
         end)
         if not prevTab then
-            tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 114, -15)
+            tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -66)
         else
-            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 4, 0)
+            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 6, 0)
         end
         tabBtn.tabId = tabData.id
         tabBtn.baseText = tabData.text
@@ -1304,14 +1368,21 @@ function CLIAlts:CreateMainFrame()
             if self.tabId ~= (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) then
                 local curT = CLIAlts:GetTheme()
                 self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
-                self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 0.8)
+                if self.SetBackdropBorderColor then
+                    self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.4)
+                end
             end
         end)
         tabBtn:SetScript("OnLeave", function(self)
             if self.tabId ~= (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) then
                 local curT = CLIAlts:GetTheme()
                 self.label:SetTextColor(curT.muted[1], curT.muted[2], curT.muted[3])
-                self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.5)
+                if self.SetBackdropBorderColor then
+                    self:SetBackdropBorderColor(0, 0, 0, 0)
+                end
+                if self.SetBackdropColor then
+                    self:SetBackdropColor(0, 0, 0, 0)
+                end
             end
         end)
 
@@ -1319,53 +1390,110 @@ function CLIAlts:CreateMainFrame()
         prevTab = tabBtn
     end
 
-    -- Subheader border ASCII line (kept empty for clean breathing room)
+    -- Subheader border ASCII line (empty for clean breathing room)
     local midAscii1 = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(midAscii1, fontSize)
-    midAscii1:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -36)
+    midAscii1:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -90)
     midAscii1:SetText("")
     frame.midAscii1 = midAscii1
 
     local t = self:GetTheme()
     local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
 
-    -- Level 1 & 2: Unified Mission Briefing Card
+    -- Level 1: Modern Hero Recommendation Card (RECOMMENDED NEXT)
     local recPanel = CreateFrame("Frame", "CLIAltsRecPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    recPanel:SetSize(892, 54)
-    recPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -42)
+    recPanel:SetSize(892, 74)
+    recPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -94)
     recPanel:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
         edgeSize = 1,
         insets = { left = 1, right = 1, top = 1, bottom = 1 }
     })
-    recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
-    recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.5)
+    if recPanel.SetBackdropColor then
+        recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
+        recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.55)
+    end
     frame.recPanel = recPanel
 
     local recBadge = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recBadge, fontSize, "OUTLINE")
-    recBadge:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 10, -7)
-    recBadge:SetText("NEXT UP:")
+    self:SetWidgetFont(recBadge, 10, "OUTLINE")
+    recBadge:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -8)
+    recBadge:SetText("RECOMMENDED NEXT")
     recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
     frame.recBadge = recBadge
 
-    local recBtnDossier = CreateRetroButton(recPanel, "[ DOSSIER ]", 88, 18, function()
+    -- Cohort Pill Badge on top right of Hero card (e.g. CORE, ALT, BANK)
+    local recCohortBadge = CreateFrame("Frame", nil, recPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    recCohortBadge:SetSize(54, 18)
+    recCohortBadge:SetPoint("TOPRIGHT", recPanel, "TOPRIGHT", -12, -7)
+    recCohortBadge:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if recCohortBadge.SetBackdropColor then
+        recCohortBadge:SetBackdropColor(0.22, 0.11, 0.05, 0.90)
+        recCohortBadge:SetBackdropBorderColor(0.85, 0.45, 0.20, 0.8)
+    end
+    local recCohortBadgeText = recCohortBadge:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recCohortBadgeText, 10, "OUTLINE")
+    recCohortBadgeText:SetPoint("CENTER", 0, 0)
+    recCohortBadgeText:SetText("|cffffb547CORE|r")
+    recCohortBadge.text = recCohortBadgeText
+    frame.recCohortBadge = recCohortBadge
+    frame.recCohortBadgeText = recCohortBadgeText
+
+    local recBtnDossier = CreateRetroButton(recPanel, "[ DOSSIER ]", 78, 18, function()
         if frame.recChar then
             CLIAlts:ShowDossierPopup(frame.recChar)
         end
     end)
-    recBtnDossier:SetPoint("TOPRIGHT", recPanel, "TOPRIGHT", -8, -6)
+    recBtnDossier:SetPoint("RIGHT", recCohortBadge, "LEFT", -8, 0)
     frame.recBtnDossier = recBtnDossier
 
-    local recBtnSetup = CreateRetroButton(recPanel, "[ GUIDE ]", 88, 18, function()
+    local recBtnSetup = CreateRetroButton(recPanel, "[ GUIDE ]", 74, 18, function()
         CLIAlts:ShowHelpPopup()
     end)
-    recBtnSetup:SetPoint("TOPRIGHT", recPanel, "TOPRIGHT", -8, -6)
+    recBtnSetup:SetPoint("RIGHT", recBtnDossier, "LEFT", -6, 0)
     recBtnSetup:Hide()
     frame.recBtnSetup = recBtnSetup
 
-    -- Transparent Summary Bar Docked Inside Briefing Card (Telemetry stats & chip display)
+    -- Hero Alt Name & Level (Line 1)
+    local recHeroTitle = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recHeroTitle, 15, "OUTLINE")
+    recHeroTitle:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -24)
+    recHeroTitle:SetText("No characters tracked")
+    recHeroTitle:SetTextColor(t.text[1], t.text[2], t.text[3])
+    frame.recHeroTitle = recHeroTitle
+
+    -- Hero Alt Professions / Roles (Line 2)
+    local recProfLine = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recProfLine, 11, "")
+    recProfLine:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -42)
+    recProfLine:SetText("")
+    recProfLine:SetTextColor(t.text[1], t.text[2], t.text[3])
+    frame.recProfLine = recProfLine
+
+    -- Hero Alt Rested Opportunity & Countdown (Line 3)
+    local recRestLine = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recRestLine, 11, "")
+    recRestLine:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -56)
+    recRestLine:SetText("")
+    recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    frame.recRestLine = recRestLine
+
+    -- Recommendation Rationale Note (Bottom Right)
+    local recReasonLine = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recReasonLine, 10, "")
+    recReasonLine:SetPoint("BOTTOMRIGHT", recPanel, "BOTTOMRIGHT", -12, 6)
+    recReasonLine:SetJustifyH("RIGHT")
+    recReasonLine:SetText("Suggested by your current route and rested XP rules")
+    recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    frame.recReasonLine = recReasonLine
+
+    -- Backward compatibility aliases
     local summaryBar = CreateFrame("Frame", "CLIAltsSummaryBar", recPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     summaryBar:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 0, 0)
     summaryBar:SetPoint("BOTTOMRIGHT", recPanel, "BOTTOMRIGHT", 0, 0)
@@ -1374,34 +1502,35 @@ function CLIAlts:CreateMainFrame()
     local summaryText = summaryBar:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(summaryText, fontSize, "")
     summaryText:SetPoint("TOPRIGHT", recBtnDossier, "LEFT", -10, -1)
-    summaryText:SetPoint("LEFT", recPanel, "LEFT", 380, 0)
-    summaryText:SetJustifyH("RIGHT")
-    summaryText:SetWordWrap(false)
     summaryText:SetText("")
+    summaryText:Hide()
     frame.summaryText = summaryText
-    frame.statusBarText = summaryText -- backward compatibility alias
+    frame.statusBarText = summaryText
 
     local recPrimary = recPanel:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(recPrimary, fontSize, "")
-    recPrimary:SetPoint("LEFT", recBadge, "RIGHT", 6, 0)
-    recPrimary:SetPoint("RIGHT", summaryText, "LEFT", -10, 0)
-    recPrimary:SetJustifyH("LEFT")
-    recPrimary:SetWordWrap(false)
     recPrimary:SetText("")
+    recPrimary:Hide()
     frame.recPrimary = recPrimary
 
-    -- Well Rested Perk quick toggle button (docked on recPanel bottom right)
+    local recDetail = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recDetail, fontSize - 1, "")
+    recDetail:SetText("")
+    recDetail:Hide()
+    frame.recDetail = recDetail
+
+    -- Well Rested Perk quick toggle button
     local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-    local btnPerk = CreateRetroButton(recPanel, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 135, 18, function(self)
+    local btnPerk = CreateRetroButton(recPanel, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 130, 18, function(self)
         CLIAlts:CycleWellRestedPerk()
         if MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
     end)
-    btnPerk:SetPoint("BOTTOMRIGHT", recPanel, "BOTTOMRIGHT", -8, 6)
+    btnPerk:SetPoint("RIGHT", recBtnSetup, "LEFT", -6, 0)
     btnPerk:SetScript("OnEnter", function(self)
         local curT = CLIAlts:GetTheme()
-        self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8)
+        if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine("WoW Forever: Well Rested Perk", 1, 1, 1)
         local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
@@ -1413,7 +1542,7 @@ function CLIAlts:CreateMainFrame()
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
-        self:SetBackdropColor(0, 0, 0, 0.6)
+        if self.SetBackdropColor then self:SetBackdropColor(0, 0, 0, 0.6) end
         GameTooltip:Hide()
     end)
     if CLIAlts:IsRetail() then
@@ -1421,32 +1550,95 @@ function CLIAlts:CreateMainFrame()
     end
     frame.btnPerk = btnPerk
 
-    local recDetail = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recDetail, fontSize - 1, "")
-    recDetail:SetPoint("BOTTOMLEFT", recPanel, "BOTTOMLEFT", 10, 8)
-    recDetail:SetPoint("RIGHT", btnPerk, "LEFT", -10, 0)
-    recDetail:SetJustifyH("LEFT")
-    recDetail:SetWordWrap(false)
-    recDetail:SetText("")
-    frame.recDetail = recDetail
+    -- 3. Modern KPI Metric Cards Grid (RESTED | PROFESSIONS | GOLD)
+    local kpiContainer = CreateFrame("Frame", "CLIAltsKPIContainer", frame)
+    kpiContainer:SetSize(892, 52)
+    kpiContainer:SetPoint("TOPLEFT", recPanel, "BOTTOMLEFT", 0, -8)
+    frame.kpiContainer = kpiContainer
+
+    local cardDefs = {
+        { key = "rested", title = "RESTED", sub = "Characters" },
+        { key = "profs",  title = "PROFESSIONS", sub = "Tracked roles" },
+        { key = "gold",   title = "GOLD", sub = "Combined wealth" },
+    }
+    frame.kpiCards = {}
+    local cardW = math.floor((892 - 16) / 3)
+    local prevCard = nil
+    for _, def in ipairs(cardDefs) do
+        local card = CreateFrame("Frame", nil, kpiContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        card:SetSize(cardW, 52)
+        if not prevCard then
+            card:SetPoint("TOPLEFT", kpiContainer, "TOPLEFT", 0, 0)
+        else
+            card:SetPoint("LEFT", prevCard, "RIGHT", 8, 0)
+        end
+        card:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if card.SetBackdropColor then
+            card:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
+            card:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+        end
+
+        local title = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(title, 10, "")
+        title:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -6)
+        title:SetText(def.title)
+        title:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        card.title = title
+
+        local val = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(val, 18, "OUTLINE")
+        val:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
+        val:SetText("0")
+        val:SetTextColor(t.text[1], t.text[2], t.text[3])
+        card.val = val
+
+        local sub = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(sub, 9, "")
+        sub:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 6)
+        sub:SetText(def.sub)
+        sub:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        card.sub = sub
+
+        frame.kpiCards[def.key] = card
+        prevCard = card
+    end
+
+    -- 4. Sub-Header & Sub-Navigation Strip (OVERVIEW | RESTED XP PROFESSIONS ECONOMY)
+    local subViewTitle = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(subViewTitle, 11, "OUTLINE")
+    subViewTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -236)
+    subViewTitle:SetText("OVERVIEW")
+    subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    frame.subViewTitle = subViewTitle
+
+    local subViewFilters = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(subViewFilters, 10, "")
+    subViewFilters:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -236)
+    subViewFilters:SetText("RESTED XP    PROFESSIONS    ECONOMY")
+    subViewFilters:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    frame.subViewFilters = subViewFilters
 
     local midAscii2 = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(midAscii2, fontSize)
-    midAscii2:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -98)
+    midAscii2:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -246)
     midAscii2:SetText("")
     frame.midAscii2 = midAscii2
 
-    -- Header top border ASCII line (hidden for decluttered modern look)
     local tableTopAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(tableTopAscii, fontSize)
-    tableTopAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -100)
+    tableTopAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -248)
     tableTopAscii:SetText("")
     frame.tableTopAscii = tableTopAscii
 
     -- Column Header Line (Individual Cells) & Clickable Hit Frame
     local headerFrame = CreateFrame("Frame", nil, frame)
     headerFrame:SetSize(896, 18)
-    headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -104)
+    headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -252)
     frame.headerFrame = headerFrame
 
     local headerBorderL = headerFrame:CreateFontString(nil, "OVERLAY")
@@ -1495,14 +1687,14 @@ function CLIAlts:CreateMainFrame()
     -- Header separator ASCII line
     local tableSepAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(tableSepAscii, fontSize)
-    tableSepAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -122)
+    tableSepAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -248)
     tableSepAscii:SetText(BORDER_LINE)
     frame.tableSepAscii = tableSepAscii
 
     -- Rows Container
     local rowsContainer = CreateFrame("Frame", nil, frame)
-    rowsContainer:SetSize(896, ROWS_COUNT * 21)
-    rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -132)
+    rowsContainer:SetSize(896, ROWS_COUNT * 36)
+    rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -268)
     frame.rowsContainer = rowsContainer
 
     -- Mousewheel pagination
@@ -1523,11 +1715,11 @@ function CLIAlts:CreateMainFrame()
         end
     end)
 
-    -- Create 12 Monospace Row Buttons (Each with explicit column cells)
+    -- Create 8 Modern 2-Line Row Buttons (with graphic status bars)
     for i = 1, ROWS_COUNT do
         local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        row:SetSize(896, 20)
-        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 21))
+        row:SetSize(896, 34)
+        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 36))
         row.rowIndex = i
 
         row:SetBackdrop({
@@ -1538,8 +1730,12 @@ function CLIAlts:CreateMainFrame()
         })
         local t = CLIAlts:GetTheme()
         local rowBg = (i % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
-        row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
-        row:SetBackdropBorderColor(0, 0, 0, 0)
+        if row.SetBackdropColor then
+            row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
+        end
+        if row.SetBackdropBorderColor then
+            row:SetBackdropBorderColor(0, 0, 0, 0)
+        end
 
         local borderL = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(borderL, fontSize)
@@ -1553,12 +1749,75 @@ function CLIAlts:CreateMainFrame()
         borderR:SetText("")
         row.borderR = borderR
 
+        -- Modern Tab 1 (Overview) Two-Line Elements:
+        local nameLine = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(nameLine, fontSize + 1, "OUTLINE")
+        nameLine:SetPoint("TOPLEFT", row, "TOPLEFT", 16, -4)
+        nameLine:SetJustifyH("LEFT")
+        nameLine:SetText("")
+        row.nameLine = nameLine
+
+        local subLine = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(subLine, fontSize - 2, "")
+        subLine:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 16, 4)
+        subLine:SetJustifyH("LEFT")
+        subLine:SetText("")
+        row.subLine = subLine
+
+        local levelText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(levelText, fontSize + 1, "OUTLINE")
+        levelText:SetPoint("CENTER", row, "LEFT", 328, 0)
+        levelText:SetJustifyH("CENTER")
+        levelText:SetText("")
+        row.levelText = levelText
+
+        local restPercentText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(restPercentText, fontSize, "OUTLINE")
+        restPercentText:SetPoint("LEFT", row, "LEFT", 365, 0)
+        restPercentText:SetJustifyH("RIGHT")
+        restPercentText:SetWidth(46)
+        restPercentText:SetText("")
+        row.restPercentText = restPercentText
+
+        local barBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        barBg:SetSize(170, 8)
+        barBg:SetPoint("LEFT", restPercentText, "RIGHT", 8, 0)
+        barBg:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if barBg.SetBackdropColor then
+            barBg:SetBackdropColor(0.04, 0.03, 0.02, 0.8)
+        end
+        if barBg.SetBackdropBorderColor then
+            barBg:SetBackdropBorderColor(0.3, 0.25, 0.15, 0.5)
+        end
+        row.barBg = barBg
+
+        local barFill = barBg:CreateTexture(nil, "ARTWORK")
+        barFill:SetTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        barFill:SetPoint("TOPLEFT", barBg, "TOPLEFT", 1, -1)
+        barFill:SetPoint("BOTTOMLEFT", barBg, "BOTTOMLEFT", 1, 1)
+        barFill:SetWidth(0)
+        row.barFill = barFill
+
+        local etaText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(etaText, fontSize - 1, "")
+        etaText:SetPoint("RIGHT", row, "RIGHT", -20, 0)
+        etaText:SetJustifyH("RIGHT")
+        etaText:SetText("")
+        row.etaText = etaText
+
+        -- Multi-column cells for Tabs 2 to 6
         row.cells = {}
         for j = 1, 8 do
             local cell = row:CreateFontString(nil, "OVERLAY")
             self:SetWidgetFont(cell, fontSize)
             cell:SetWordWrap(false)
             cell:SetHeight(18)
+            cell:SetText("")
             row.cells[j] = cell
         end
 
@@ -1581,8 +1840,12 @@ function CLIAlts:CreateMainFrame()
         row:SetScript("OnEnter", function(self)
             local t = CLIAlts:GetTheme()
             local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-            self:SetBackdropColor(hov[1], hov[2], hov[3], 0.45)
-            self:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 0.6)
+            if self.SetBackdropColor then
+                self:SetBackdropColor(hov[1], hov[2], hov[3], 0.45)
+            end
+            if self.SetBackdropBorderColor then
+                self:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 0.6)
+            end
             if self.borderL then
                 self.borderL:SetText(string.format("|cff%s>|r", t.primaryHex or "f2c94c"))
             end
@@ -1650,15 +1913,23 @@ function CLIAlts:CreateMainFrame()
             local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
             if isSelected then
                 local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-                self:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
-                self:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
+                if self.SetBackdropColor then
+                    self:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
+                end
+                if self.SetBackdropBorderColor then
+                    self:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
+                end
                 if self.borderL then
                     self.borderL:SetText(string.format("|cff%s>|r", t.highlightHex or "ffd34e"))
                 end
             else
                 local rowBg = (self.rowIndex and self.rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
-                self:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
-                self:SetBackdropBorderColor(0, 0, 0, 0)
+                if self.SetBackdropColor then
+                    self:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
+                end
+                if self.SetBackdropBorderColor then
+                    self:SetBackdropBorderColor(0, 0, 0, 0)
+                end
                 if self.borderL then
                     self.borderL:SetText("")
                 end
@@ -1672,7 +1943,7 @@ function CLIAlts:CreateMainFrame()
     -- Bottom border ASCII line
     local tableBotAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(tableBotAscii, fontSize)
-    tableBotAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -390)
+    tableBotAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -558)
     tableBotAscii:SetText(BORDER_LINE)
     frame.tableBotAscii = tableBotAscii
 
@@ -1683,7 +1954,7 @@ function CLIAlts:CreateMainFrame()
             CLIAlts:Render()
         end
     end)
-    btnPrev:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 30)
+    btnPrev:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 12)
     frame.btnPrev = btnPrev
 
     local btnNext = CreateRetroButton(frame, "[NEXT >>]", 75, 18, function()
@@ -1703,9 +1974,9 @@ function CLIAlts:CreateMainFrame()
 
     local statusTip = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(statusTip, fontSize - 1)
-    statusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 32)
+    statusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 14)
     statusTip:SetJustifyH("RIGHT")
-    statusTip:SetText("|cff888888[Left-Click: Dossier | Shift-Click: Cycle Role | Right-Click: Context Menu | Click Col: Sort]|r")
+    statusTip:SetText("|cff888888Select a character for details · Right-click for management|r")
     frame.statusTip = statusTip
 
     -- Command Prompt Separator Line (empty)
@@ -1718,8 +1989,9 @@ function CLIAlts:CreateMainFrame()
     -- Interactive Command Prompt (EditBox with > prompt)
     local promptLabel = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(promptLabel, fontSize, "")
-    promptLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 11)
+    promptLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 12)
     promptLabel:SetText("> ")
+    promptLabel:Hide()
     frame.promptLabel = promptLabel
 
     local promptBox = CreateFrame("EditBox", "CLIAltsPromptEditBox", frame)
@@ -1730,6 +2002,7 @@ function CLIAlts:CreateMainFrame()
     promptBox:SetAutoFocus(false)
     promptBox:EnableMouse(true)
     promptBox:SetTextInsets(2, 2, 2, 2)
+    promptBox:Hide()
     frame.promptBox = promptBox
 
     local historyIndex = 0
@@ -1774,6 +2047,15 @@ function CLIAlts:CreateMainFrame()
         end
     end)
 
+    -- Prompt Hint & Feedback Line
+    local promptStatusTip = frame:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(promptStatusTip, fontSize - 2)
+    promptStatusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 14)
+    promptStatusTip:SetJustifyH("RIGHT")
+    promptStatusTip:SetText("|cff888888[Type: sort <col>, filter <text>, role <tier>, next, export, help]|r")
+    promptStatusTip:Hide()
+    frame.promptStatusTip = promptStatusTip
+
     -- Hook ChatEdit_InsertLink so Shift-clicking items into prompt works
     if hooksecurefunc then
         pcall(hooksecurefunc, "ChatEdit_InsertLink", function(text)
@@ -1789,6 +2071,10 @@ function CLIAlts:CreateMainFrame()
     btnFocusEnter:SetScript("OnClick", function()
         if MouseIsOver and MouseIsOver(frame) then
             if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
+                frame.promptLabel:Show()
+                frame.promptBox:Show()
+                if frame.statusTip then frame.statusTip:Hide() end
+                if frame.promptStatusTip then frame.promptStatusTip:Show() end
                 frame.promptBox:SetFocus()
             end
         else
@@ -1802,6 +2088,10 @@ function CLIAlts:CreateMainFrame()
     btnFocusSlash:SetScript("OnClick", function()
         if MouseIsOver and MouseIsOver(frame) then
             if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
+                frame.promptLabel:Show()
+                frame.promptBox:Show()
+                if frame.statusTip then frame.statusTip:Hide() end
+                if frame.promptStatusTip then frame.promptStatusTip:Show() end
                 frame.promptBox:SetFocus()
                 frame.promptBox:SetText("")
             end
@@ -1819,22 +2109,18 @@ function CLIAlts:CreateMainFrame()
             end
         end)
     end)
-    promptBox:SetScript("OnEditFocusLost", function()
+    promptBox:SetScript("OnEditFocusLost", function(self)
         pcall(function()
             if frame:IsShown() and SetOverrideBindingClick then
                 SetOverrideBindingClick(frame, false, "ENTER", "CLIAltsFocusEnterBtn")
                 SetOverrideBindingClick(frame, false, "/", "CLIAltsFocusSlashBtn")
             end
         end)
+        self:Hide()
+        if frame.promptLabel then frame.promptLabel:Hide() end
+        if frame.promptStatusTip then frame.promptStatusTip:Hide() end
+        if frame.statusTip then frame.statusTip:Show() end
     end)
-
-    -- Prompt Hint & Feedback Line
-    local promptStatusTip = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(promptStatusTip, fontSize - 2)
-    promptStatusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 11)
-    promptStatusTip:SetJustifyH("RIGHT")
-    promptStatusTip:SetText("|cff888888[Type: sort <col>, filter <text>, role <tier>, next, export, help]|r")
-    frame.promptStatusTip = promptStatusTip
 
     local botAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(botAscii, fontSize)
@@ -1932,28 +2218,39 @@ function CLIAlts:Render()
     }
     local curTabTitle = tabTitles[activeTab] or "OVERVIEW"
     if mainFrame.titleText then
-        if isComp then
-            mainFrame.titleText:SetText(string.format("[#] CLIALTS :: %s", curTabTitle))
-        else
-            mainFrame.titleText:SetText(string.format("[#] CLIALTS :: %s v%s", curTabTitle, self.VERSION or "1.1.0"))
-        end
+        mainFrame.titleText:SetText("CLIAlts")
+    end
+    if mainFrame.subTitleText then
+        mainFrame.subTitleText:SetText(isComp and "/ ALT MONITOR" or "/ ALT MONITOR")
+    end
+    if mainFrame.subViewTitle then
+        mainFrame.subViewTitle:SetText(curTabTitle)
+        mainFrame.subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
     end
 
-    -- Highlight active tab button with clear amber accent & border
+    -- Highlight active tab button with clear amber pill outline
     for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
         local base = isComp and tabBtn.compactText or tabBtn.baseText
         if tabBtn.tabId == activeTab then
             tabBtn.label:SetText(base)
             tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
             local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-            tabBtn:SetBackdropColor(hov[1], hov[2], hov[3], 0.28)
-            tabBtn:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 1)
+            if tabBtn.SetBackdropColor then
+                tabBtn:SetBackdropColor(hov[1], hov[2], hov[3], 0.22)
+            end
+            if tabBtn.SetBackdropBorderColor then
+                tabBtn:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.9)
+            end
         else
             tabBtn.label:SetText(base)
             local m = t.muted or t.dim or { 0.663, 0.627, 0.549 }
             tabBtn.label:SetTextColor(m[1], m[2], m[3])
-            tabBtn:SetBackdropColor(t.panelBg[1], t.panelBg[2], t.panelBg[3], 0.5)
-            tabBtn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.4)
+            if tabBtn.SetBackdropColor then
+                tabBtn:SetBackdropColor(0, 0, 0, 0)
+            end
+            if tabBtn.SetBackdropBorderColor then
+                tabBtn:SetBackdropBorderColor(0, 0, 0, 0)
+            end
         end
     end
 
@@ -1975,7 +2272,7 @@ function CLIAlts:Render()
     end
 
     -- ------------------------------------------------------------------------
-    -- Level 1: Recommended Next Action Banner (Forever Route)
+    -- Level 1: Recommended Next Action Hero Card
     -- ------------------------------------------------------------------------
     local nextList = self:GetNextAltsPriority()
     self._cachedPriorityList = nextList
@@ -1985,45 +2282,44 @@ function CLIAlts:Render()
         mainFrame.recChar = tc
         local cName = self:ColorizePlayerName(tc.fullName or tc.name, tc.classFile)
         local isCur = (tc.fullName and tc.fullName == self.curPlayerFullName) or (tc.name and tc.name == self.curPlayerName)
-        local curPrefix = isCur and string.format("|cff%s*|r", t.accentHex or "57d6e8") or ""
-        local roleTag = (tc.tier == "CORE" and string.format("|cff%s[CORE]|r", t.highlightHex or "ffd34e"))
-            or (tc.tier == "RESERVE" and string.format("|cff%s[ALT]|r", t.accentHex or "57d6e8"))
-            or (tc.tier == "BANK" and string.format("|cff%s[BANK]|r", t.pendingHex or "ffb547"))
-            or string.format("|cff%s[---]|r", t.mutedHex or "a9a08c")
+        local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
         local tgtLvl = topNext.targetLevel or ((tc.tier == "CORE" and 35) or (tc.tier == "RESERVE" and 25) or 60)
-        local lvlStr = string.format("Lvl |cffffffff%d/%d|r", tc.level or 1, tgtLvl)
+        local lvlStr = string.format("Level %d/%d %s", tc.level or 1, tgtLvl, tc.class or "")
 
-        local profParts = {}
-        if tc.supply_role and tc.supply_role ~= "" then
-            table.insert(profParts, string.format("|cff%s%s|r", t.textHex or "f4ead2", tc.supply_role))
-        end
-        if tc.professions and tc.professions.primary and #tc.professions.primary > 0 then
-            for _, p in ipairs(tc.professions.primary) do
-                local m = self:GetProfessionMilestoneInfo(tc, p)
-                if m and m.canTrainNext and m.isCappedAtCurrentRank then
-                    table.insert(profParts, string.format("|cff%s%s %d/%d [TRAIN]|r", t.readyHex or "55e39a", m.abbr, m.rank, m.maxRank))
-                elseif m and (m.isDone or (m.isMilestoneHit and m.rank == m.maxRank)) then
-                    table.insert(profParts, string.format("|cff%s%s %d [DONE]|r", t.accentHex or "57d6e8", m.abbr, m.rank))
+        if mainFrame.recCohortBadge then
+            mainFrame.recCohortBadge:Show()
+            if mainFrame.recCohortBadgeText then
+                if tc.tier == "CORE" then
+                    mainFrame.recCohortBadgeText:SetText("|cffffb547CORE|r")
+                elseif tc.tier == "RESERVE" then
+                    mainFrame.recCohortBadgeText:SetText("|cff57d6e8ALT|r")
+                elseif tc.tier == "BANK" then
+                    mainFrame.recCohortBadgeText:SetText("|cffa9a08cBANK|r")
                 else
-                    table.insert(profParts, string.format("%s %d", p.name:sub(1, 6), p.rank or 0))
+                    mainFrame.recCohortBadgeText:SetText("|cffffffffALT|r")
                 end
             end
         end
-        local profSummary = (#profParts > 0) and (" | " .. table.concat(profParts, ", ")) or ""
+
+        local profParts = {}
+        if tc.supply_role and tc.supply_role ~= "" then
+            table.insert(profParts, tc.supply_role)
+        end
+        if tc.professions and tc.professions.primary and #tc.professions.primary > 0 then
+            for _, p in ipairs(tc.professions.primary) do
+                table.insert(profParts, string.format("%s %d", p.name or "", p.rank or 0))
+            end
+        end
+        local profSummary = (#profParts > 0) and table.concat(profParts, " · ") or "No primary professions tracked"
 
         local restStr
-        local etaStr
         if topNext.isCapped then
-            restStr = string.format("|cff%s%d%% Capped|r", t.highlightHex or "ffd34e", topNext.maxPercent or 150)
+            restStr = string.format("%d%% Capped", topNext.maxPercent or 150)
             if topNext.wastedXP and topNext.wastedXP > 0 then
-                restStr = restStr .. string.format(" (|cff%s+%s XP waste|r)", t.pendingHex or "ffb547", self:FormatNumber(topNext.wastedXP))
-                etaStr = string.format("|cff%s!%s Wasted|r", t.pendingHex or "ffb547", topNext.timeStr or "1h")
-            else
-                etaStr = string.format("|cff%sAt Cap|r", t.readyHex or "55e39a")
+                restStr = restStr .. string.format(" (+%s XP waste)", self:FormatNumber(topNext.wastedXP))
             end
         else
-            restStr = string.format("|cff%s%d%% Rested|r (~%s XP)", t.primaryHex or "f2c94c", topNext.percent or 0, self:FormatNumber(topNext.usableXP or 0))
-            etaStr = string.format("Caps in |cffffffff%s|r", topNext.timeStr or "---")
+            restStr = string.format("%d%% Rested (~%s XP)", topNext.percent or 0, self:FormatNumber(topNext.usableXP or 0))
         end
 
         local whyText
@@ -2037,21 +2333,20 @@ function CLIAlts:Render()
             whyText = string.format("Highest available rested XP pool (~%s XP) ready for progression.", self:FormatNumber(topNext.usableXP or 0))
         end
 
-        if mainFrame.recBadge then
-            mainFrame.recBadge:SetText(isComp and "NEXT:" or "NEXT UP:")
-            mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        if mainFrame.recHeroTitle then
+            mainFrame.recHeroTitle:SetText(string.format("%s%s · %s", curPrefix, cName, lvlStr))
         end
-        if mainFrame.recPrimary then
-            mainFrame.recPrimary:SetText(string.format("%s%s  %s  %s%s", curPrefix, cName, roleTag, lvlStr, profSummary))
+        if mainFrame.recProfLine then
+            mainFrame.recProfLine:SetText(profSummary)
+            mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
         end
-        if mainFrame.recDetail then
-            if isComp then
-                mainFrame.recDetail:SetText(string.format("%s | %s", restStr, etaStr))
-            else
-                mainFrame.recDetail:SetText(string.format("Rested: %s — %s", restStr, whyText))
-            end
-            mainFrame.recDetail:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            mainFrame.recDetail:Show()
+        if mainFrame.recRestLine then
+            mainFrame.recRestLine:SetText(string.format("%s · Rested XP opportunity", restStr))
+            mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        end
+        if mainFrame.recReasonLine then
+            mainFrame.recReasonLine:SetText(whyText)
+            mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
         end
         if mainFrame.recBtnDossier then
             mainFrame.recBtnDossier:Show()
@@ -2062,16 +2357,20 @@ function CLIAlts:Render()
         if mainFrame.recBtnSetup then mainFrame.recBtnSetup:Hide() end
     else
         mainFrame.recChar = nil
-        if mainFrame.recBadge then
-            mainFrame.recBadge:SetText(isComp and "ROUTE:" or "FOREVER ROUTE:")
-            mainFrame.recBadge:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
+        if mainFrame.recHeroTitle then
+            mainFrame.recHeroTitle:SetText("All characters up to date")
         end
-        if mainFrame.recPrimary then
-            mainFrame.recPrimary:SetText(string.format("|cff%sAll characters have reached phase target level or are designated Bank mules.|r", t.mutedHex or "a9a08c"))
+        if mainFrame.recProfLine then
+            mainFrame.recProfLine:SetText("Target level reached for all active cohorts.")
+            mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
         end
-        if mainFrame.recDetail then
-            mainFrame.recDetail:SetText(string.format("|cff%sSetup: Assign Core (L35) or Alt (L25) cohorts below to activate recommendations.|r", t.dimHex or "736953"))
-            mainFrame.recDetail:Show()
+        if mainFrame.recRestLine then
+            mainFrame.recRestLine:SetText("")
+        end
+        if mainFrame.recReasonLine then
+            mainFrame.recReasonLine:SetText("Setup: Assign Core (L35) or Alt (L25) cohorts below to activate recommendations.")
+            mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
         end
         if mainFrame.recBtnDossier then mainFrame.recBtnDossier:Hide() end
         if mainFrame.recBtnSetup then
@@ -2083,74 +2382,51 @@ function CLIAlts:Render()
     end
 
     -- ------------------------------------------------------------------------
-    -- Level 2: Roster Summary Telemetry Bar (Docked inside Briefing Card)
+    -- Level 2: 3 Modern KPI Metric Cards (RESTED | PROFESSIONS | GOLD)
     -- ------------------------------------------------------------------------
     local metrics = self:GetRosterSummaryMetrics()
-    local goldFormatted = self:FormatMoney(metrics.totalGold, true)
-    local cdStr
-    if metrics.readyCds > 0 then
-        cdStr = string.format("|cff%s%d CD RDY|r", t.readyHex or "55e39a", metrics.readyCds)
-    else
-        cdStr = string.format("|cff%s0 CD|r", t.mutedHex or "a9a08c")
+    local charList = self:GetCharactersList()
+
+    if mainFrame.metaText then
+        local realmName = (GetRealmName and GetRealmName()) or "Forever"
+        mainFrame.metaText:SetText(string.format("%d CHARACTERS · RESTED RECOVERY ACTIVE · REALM: %s", metrics.totalAlts or #charList, realmName:upper()))
+        mainFrame.metaText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
     end
 
-    local restChip
-    if metrics.capped > 0 then
-        local wasteTag = (metrics.wasting > 0) and string.format(" (|cff%s%d W|r)", t.pendingHex or "ffb547", metrics.wasting) or ""
-        restChip = string.format("|cff%s%d CAP%s|r", t.highlightHex or "ffd34e", metrics.capped, wasteTag)
-    else
-        restChip = string.format("%d Accruing", metrics.accruing)
-    end
-
-    local lpChip = ""
-    if self.CalculateAccountLP then
-        local lpData = self:CalculateAccountLP()
-        if lpData then
-            lpChip = string.format("|cff%sLP: %.1f/%d|r", t.highlightHex or "ffd34e", lpData.effectiveLP, lpData.nextTier)
-        end
-    end
-
-    local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
-    if mainFrame.summaryText then
-        if isComp then
-            mainFrame.summaryText:SetText(string.format("[%d ALTS] [%s] [%s] [%sg]%s",
-                metrics.totalAlts, lpChip ~= "" and lpChip or restChip, cdStr, self:FormatNumber(math.floor(metrics.totalGold / 10000)), filterTag))
-        elseif activeTab == 2 then
-            local nextCount = nextList and #nextList or 0
-            mainFrame.summaryText:SetText(string.format("[ %d IN ROUTE ]  [ %s ]  [ %s ]  [ %s ]%s",
-                nextCount, lpChip ~= "" and lpChip or restChip, cdStr, goldFormatted, filterTag))
-        elseif activeTab == 3 then
-            local perkState = (self.IsWellRestedActive and self:IsWellRestedActive()) and "|cff55e39aACTIVE|r" or "|cffa9a08cOFF|r"
-            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ PERK: %s ]  [ %s ]%s",
-                metrics.totalAlts, restChip, perkState, goldFormatted, filterTag))
-        elseif activeTab == 4 then
-            local trainCount = 0
-            local charList = self:GetCharactersList()
-            for _, c in ipairs(charList) do
-                local alerts = self:GetCharacterProfessionAlerts(c)
-                for _, a in ipairs(alerts) do
-                    if a.type == "TRAIN" then
-                        trainCount = trainCount + 1
-                        break
-                    end
-                end
+    if mainFrame.kpiCards then
+        -- 1. RESTED characters count
+        local restedCount = 0
+        for _, c in ipairs(charList) do
+            local r = self:GetRestedData(c)
+            if r and not r.isMaxLevel and (r.currentRested or 0) > 0 then
+                restedCount = restedCount + 1
             end
-            local trainStr = (trainCount > 0) and string.format("|cff%s%d TRAIN|r", t.readyHex or "55e39a", trainCount) or "|cffa9a08c0 TRAIN|r"
-            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %s ]  [ %s ]%s",
-                metrics.totalAlts, trainStr, cdStr, goldFormatted, filterTag))
-        elseif activeTab == 5 then
-            local d1 = self:GetGoldHistoryDeltas()
-            local d1Sign = d1 >= 0 and "+" or ""
-            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ 24H: %s%dg ]  [ %s ]%s",
-                metrics.totalAlts, d1Sign, d1, goldFormatted, filterTag))
-        elseif activeTab == 6 then
-            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %d LOCKS ]  [ %s ]%s",
-                metrics.totalAlts, cdStr, metrics.activeLocks, goldFormatted, filterTag))
-        else
-            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %s ]  [ %s ]%s",
-                metrics.totalAlts, lpChip ~= "" and lpChip or restChip, cdStr, goldFormatted, filterTag))
         end
-        mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+        if mainFrame.kpiCards.rested and mainFrame.kpiCards.rested.val then
+            mainFrame.kpiCards.rested.val:SetText(tostring(restedCount))
+            mainFrame.kpiCards.rested.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        end
+
+        -- 2. PROFESSIONS / Tracked roles
+        local profCount = 0
+        for _, c in ipairs(charList) do
+            if (c.professions and c.professions.primary and #c.professions.primary > 0) or (c.supply_role and c.supply_role ~= "") then
+                profCount = profCount + 1
+            end
+        end
+        if mainFrame.kpiCards.profs and mainFrame.kpiCards.profs.val then
+            mainFrame.kpiCards.profs.val:SetText(tostring(profCount))
+            mainFrame.kpiCards.profs.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        end
+
+        -- 3. GOLD / Combined wealth
+        if mainFrame.kpiCards.gold and mainFrame.kpiCards.gold.val then
+            local g = math.floor((metrics.totalGold or 0) / 10000)
+            local s = math.floor(((metrics.totalGold or 0) % 10000) / 100)
+            local goldStr = (g > 0) and string.format("%dg", g) or string.format("%ds", s)
+            mainFrame.kpiCards.gold.val:SetText(goldStr)
+            mainFrame.kpiCards.gold.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        end
     end
 
     -- Render Table Header Cells & Clickable Header Buttons
@@ -2266,19 +2542,15 @@ function CLIAlts:Render()
         mainFrame.btnPrev:Hide()
         mainFrame.btnNext:Hide()
         mainFrame.pageText:ClearAllPoints()
-        mainFrame.pageText:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 18, 30)
+        mainFrame.pageText:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 18, 12)
         mainFrame.pageText:SetText(string.format("TRACKED: %d ALTS%s", #chars, filterSuffix))
     end
 
     if mainFrame.statusTip then
-        if isComp then
-            mainFrame.statusTip:SetText("|cff888888[L-Click: Dossier | Shift-Click: Role | R-Click: Menu]|r")
-        else
-            mainFrame.statusTip:SetText("|cff888888[Left-Click: Dossier | Shift-Click: Cycle Role | Right-Click: Context Menu | Click Col: Sort]|r")
-        end
+        mainFrame.statusTip:SetText("|cff888888Select a character for details · Right-click for management|r")
     end
 
-    -- Render 12 Monospace Rows (Each with dedicated column cells)
+    -- Render 8 Modern 2-Line Rows (Overview) or Multi-Column Rows (Tabs 2-6)
     for rowIndex = 1, ROWS_COUNT do
         local row = rowFrames[rowIndex]
         local charIndex = (currentPage - 1) * ROWS_COUNT + rowIndex
@@ -2289,52 +2561,176 @@ function CLIAlts:Render()
             local isSelected = (CLIAlts.selectedCharKey and (char.fullName == CLIAlts.selectedCharKey or char.name == CLIAlts.selectedCharKey))
             if isSelected then
                 local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-                row:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
-                row:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
+                if row.SetBackdropColor then
+                    row:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
+                end
+                if row.SetBackdropBorderColor then
+                    row:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
+                end
                 if row.borderL then
                     row.borderL:SetText(string.format("|cff%s>|r", t.highlightHex or "ffd34e"))
                 end
             else
                 local rowBg = (rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
-                row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
-                row:SetBackdropBorderColor(0, 0, 0, 0)
+                if row.SetBackdropColor then
+                    row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
+                end
+                if row.SetBackdropBorderColor then
+                    row:SetBackdropBorderColor(0, 0, 0, 0)
+                end
                 if row.borderL then
                     row.borderL:SetText("")
                 end
             end
 
-            local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0")
-            local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
-            if relayoutRow then
-                row.lastLayoutKey = rowLayoutKey
-            end
+            if activeTab == 1 then
+                -- ------------------------------------------------------------
+                -- Tab 1: Executive 2-Line Cell with Graphical Progress Bar
+                -- ------------------------------------------------------------
+                local coloredName = self:ColorizePlayerName(char.fullName or char.name, char.classFile)
+                local isCur = (char.fullName and char.fullName == self.curPlayerFullName) or (char.name and char.name == self.curPlayerName)
+                local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
 
-            local rowXOffset = 16
-            for idx = 1, 8 do
-                local cell = row.cells and row.cells[idx]
-                local col = cols[idx]
-                if cell then
-                    if col then
-                        local colW = isComp and (col.cpw or col.pw) or col.pw
-                        if relayoutRow then
-                            cell:ClearAllPoints()
-                            cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
-                            cell:SetWidth(colW)
-                            cell:SetJustifyH(col.align or "LEFT")
-                        end
-                        cell:SetText(col.fmt(char, t) or "")
-                        cell:Show()
-                        rowXOffset = rowXOffset + colW
+                if row.nameLine then
+                    row.nameLine:SetText(curPrefix .. coloredName)
+                    row.nameLine:Show()
+                end
+
+                if row.subLine then
+                    local roleTag
+                    if char.tier == "CORE" then
+                        roleTag = string.format("|cff%sCORE|r", t.highlightHex or "ffd34e")
+                    elseif char.tier == "RESERVE" then
+                        roleTag = string.format("|cff%sALT|r", t.accentHex or "57d6e8")
+                    elseif char.tier == "BANK" then
+                        roleTag = string.format("|cff%sBANK|r", t.pendingHex or "ffb547")
                     else
+                        roleTag = string.format("|cff%sALT|r", t.mutedHex or "a9a08c")
+                    end
+
+                    local isTopNext = (topNext and topNext.char and ((topNext.char.fullName or topNext.char.name) == (char.fullName or char.name)))
+                    if isTopNext then
+                        roleTag = roleTag .. string.format(" · |cff%sNEXT|r", t.highlightHex or "ffd34e")
+                    end
+
+                    local statusDetail = ""
+                    if char.supply_role and char.supply_role ~= "" then
+                        statusDetail = " · " .. char.supply_role
+                    elseif char.level and char.level >= self:GetMaxLevel() then
+                        statusDetail = " · Target Level Reached"
+                    elseif char.tier == "BANK" then
+                        statusDetail = " · Storage Mule"
+                    end
+                    row.subLine:SetText(roleTag .. statusDetail)
+                    row.subLine:Show()
+                end
+
+                if row.levelText then
+                    row.levelText:SetText(string.format("|cffffffff%d|r", char.level or 1))
+                    row.levelText:Show()
+                end
+
+                local rested = self:GetRestedData(char)
+                if rested and not rested.isMaxLevel then
+                    local pct = rested.percent or 0
+                    local maxPct = rested.maxPercent or 150
+                    local est = rested.isEstimate and "~" or ""
+                    if row.restPercentText then
+                        row.restPercentText:SetText(string.format("|cff%s%s%d%%|r", t.highlightHex or "ffd34e", est, pct))
+                        row.restPercentText:Show()
+                    end
+
+                    local ratio = math.min(1.0, math.max(0, pct / maxPct))
+                    local barW = math.floor(170 * ratio)
+                    if row.barFill then
+                        row.barFill:SetWidth(math.max(1, barW))
+                        row.barFill:SetVertexColor(t.primary[1], t.primary[2], t.primary[3], 0.95)
+                    end
+                    if row.barBg then
+                        row.barBg:Show()
+                    end
+
+                    if row.etaText then
+                        if pct >= maxPct then
+                            row.etaText:SetText(string.format("|cff%sAt Cap|r", t.readyHex or "55e39a"))
+                        else
+                            row.etaText:SetText(string.format("|cff%s%s|r", t.dimHex or "a9a08c", rested.timeLeftStr or "---"))
+                        end
+                        row.etaText:Show()
+                    end
+                else
+                    if row.restPercentText then
+                        row.restPercentText:SetText(string.format("|cff%s---|r", t.dimHex or "a9a08c"))
+                        row.restPercentText:Show()
+                    end
+                    if row.barBg then
+                        row.barBg:Hide()
+                    end
+                    if row.etaText then
+                        row.etaText:SetText(string.format("|cff%sMax Level|r", t.readyHex or "55e39a"))
+                        row.etaText:Show()
+                    end
+                end
+
+                -- Hide column cells on tab 1
+                for idx = 1, 8 do
+                    local cell = row.cells and row.cells[idx]
+                    if cell then
                         cell:SetText("")
                         cell:Hide()
                     end
                 end
+            else
+                -- ------------------------------------------------------------
+                -- Tabs 2 to 6: Multi-Column Cells
+                -- ------------------------------------------------------------
+                if row.nameLine then row.nameLine:Hide() end
+                if row.subLine then row.subLine:Hide() end
+                if row.levelText then row.levelText:Hide() end
+                if row.restPercentText then row.restPercentText:Hide() end
+                if row.barBg then row.barBg:Hide() end
+                if row.etaText then row.etaText:Hide() end
+
+                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0")
+                local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
+                if relayoutRow then
+                    row.lastLayoutKey = rowLayoutKey
+                end
+
+                local rowXOffset = 16
+                for idx = 1, 8 do
+                    local cell = row.cells and row.cells[idx]
+                    local col = cols[idx]
+                    if cell then
+                        if col then
+                            local colW = isComp and (col.cpw or col.pw) or col.pw
+                            if relayoutRow then
+                                cell:ClearAllPoints()
+                                cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
+                                cell:SetWidth(colW)
+                                cell:SetJustifyH(col.align or "LEFT")
+                            end
+                            cell:SetText(col.fmt(char, t) or "")
+                            cell:Show()
+                            rowXOffset = rowXOffset + colW
+                        else
+                            cell:SetText("")
+                            cell:Hide()
+                        end
+                    end
+                end
             end
+
             row:Show()
         else
             row.charData = nil
             if row.borderL then row.borderL:SetText("") end
+            if row.nameLine then row.nameLine:Hide() end
+            if row.subLine then row.subLine:Hide() end
+            if row.levelText then row.levelText:Hide() end
+            if row.restPercentText then row.restPercentText:Hide() end
+            if row.barBg then row.barBg:Hide() end
+            if row.etaText then row.etaText:Hide() end
             for idx = 1, 8 do
                 local cell = row.cells and row.cells[idx]
                 if cell then
@@ -2371,10 +2767,51 @@ function CLIAlts:ApplyTheme()
             mainFrame.recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
         end
         if mainFrame.recPanel.SetBackdropBorderColor then
-            mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.5)
+            mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.55)
         end
     end
     if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+    if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(t.text[1], t.text[2], t.text[3]) end
+    if mainFrame.recProfLine then mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+    if mainFrame.recRestLine then mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+    if mainFrame.recReasonLine then mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+
+    if mainFrame.badgeTracking then
+        if mainFrame.badgeTracking.SetBackdropColor then
+            mainFrame.badgeTracking:SetBackdropColor(0.04, 0.15, 0.08, 0.85)
+            mainFrame.badgeTracking:SetBackdropBorderColor(t.ready[1], t.ready[2], t.ready[3], 0.7)
+        end
+        if mainFrame.badgeTracking.text then
+            mainFrame.badgeTracking.text:SetTextColor(t.ready[1], t.ready[2], t.ready[3])
+        end
+    end
+
+    if mainFrame.metaText then
+        mainFrame.metaText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    end
+
+    if mainFrame.subViewTitle then
+        mainFrame.subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    end
+    if mainFrame.subViewFilters then
+        mainFrame.subViewFilters:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    end
+
+    if mainFrame.kpiCards then
+        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+        for _, card in pairs(mainFrame.kpiCards) do
+            if card.SetBackdropColor then
+                card:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
+            end
+            if card.SetBackdropBorderColor then
+                card:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+            end
+            if card.title then card.title:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+            if card.val then card.val:SetTextColor(t.text[1], t.text[2], t.text[3]) end
+            if card.sub then card.sub:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+        end
+    end
+
     if mainFrame.summaryBar and mainFrame.summaryBar.SetBackdropColor then
         local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
         mainFrame.summaryBar:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
