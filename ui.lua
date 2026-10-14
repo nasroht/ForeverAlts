@@ -1353,7 +1353,8 @@ function CLIAlts:CreateMainFrame()
 
     -- Transparent Summary Bar Docked Inside Briefing Card (Telemetry stats & chip display)
     local summaryBar = CreateFrame("Frame", "CLIAltsSummaryBar", recPanel)
-    summaryBar:SetAllPoints(recPanel)
+    summaryBar:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 0, 0)
+    summaryBar:SetPoint("BOTTOMRIGHT", recPanel, "BOTTOMRIGHT", 0, 0)
     frame.summaryBar = summaryBar
 
     local summaryText = summaryBar:CreateFontString(nil, "OVERLAY")
@@ -2088,45 +2089,47 @@ function CLIAlts:Render()
     end
 
     local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
-    if isComp then
-        mainFrame.summaryText:SetText(string.format("[%d ALTS] [%s] [%s] [%sg]%s",
-            metrics.totalAlts, restChip, cdStr, self:FormatNumber(math.floor(metrics.totalGold / 10000)), filterTag))
-    elseif activeTab == 2 then
-        local nextCount = nextList and #nextList or 0
-        mainFrame.summaryText:SetText(string.format("[ %d IN ROUTE ]  [ %s ]  [ %s ]  [ %s ]%s",
-            nextCount, restChip, cdStr, goldFormatted, filterTag))
-    elseif activeTab == 3 then
-        local perkState = (self.IsWellRestedActive and self:IsWellRestedActive()) and "|cff55e39aACTIVE|r" or "|cffa9a08cOFF|r"
-        mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ PERK: %s ]  [ %s ]%s",
-            metrics.totalAlts, restChip, perkState, goldFormatted, filterTag))
-    elseif activeTab == 4 then
-        local trainCount = 0
-        local charList = self:GetCharactersList()
-        for _, c in ipairs(charList) do
-            local alerts = self:GetCharacterProfessionAlerts(c)
-            for _, a in ipairs(alerts) do
-                if a.type == "TRAIN" then
-                    trainCount = trainCount + 1
-                    break
+    if mainFrame.summaryText then
+        if isComp then
+            mainFrame.summaryText:SetText(string.format("[%d ALTS] [%s] [%s] [%sg]%s",
+                metrics.totalAlts, restChip, cdStr, self:FormatNumber(math.floor(metrics.totalGold / 10000)), filterTag))
+        elseif activeTab == 2 then
+            local nextCount = nextList and #nextList or 0
+            mainFrame.summaryText:SetText(string.format("[ %d IN ROUTE ]  [ %s ]  [ %s ]  [ %s ]%s",
+                nextCount, restChip, cdStr, goldFormatted, filterTag))
+        elseif activeTab == 3 then
+            local perkState = (self.IsWellRestedActive and self:IsWellRestedActive()) and "|cff55e39aACTIVE|r" or "|cffa9a08cOFF|r"
+            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ PERK: %s ]  [ %s ]%s",
+                metrics.totalAlts, restChip, perkState, goldFormatted, filterTag))
+        elseif activeTab == 4 then
+            local trainCount = 0
+            local charList = self:GetCharactersList()
+            for _, c in ipairs(charList) do
+                local alerts = self:GetCharacterProfessionAlerts(c)
+                for _, a in ipairs(alerts) do
+                    if a.type == "TRAIN" then
+                        trainCount = trainCount + 1
+                        break
+                    end
                 end
             end
+            local trainStr = (trainCount > 0) and string.format("|cff%s%d TRAIN|r", t.readyHex or "55e39a", trainCount) or "|cffa9a08c0 TRAIN|r"
+            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %s ]  [ %s ]%s",
+                metrics.totalAlts, trainStr, cdStr, goldFormatted, filterTag))
+        elseif activeTab == 5 then
+            local d1 = self:GetGoldHistoryDeltas()
+            local d1Sign = d1 >= 0 and "+" or ""
+            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ 24H: %s%dg ]  [ %s ]%s",
+                metrics.totalAlts, d1Sign, d1, goldFormatted, filterTag))
+        elseif activeTab == 6 then
+            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %d LOCKS ]  [ %s ]%s",
+                metrics.totalAlts, cdStr, metrics.activeLocks, goldFormatted, filterTag))
+        else
+            mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %s ]  [ %s ]%s",
+                metrics.totalAlts, restChip, cdStr, goldFormatted, filterTag))
         end
-        local trainStr = (trainCount > 0) and string.format("|cff%s%d TRAIN|r", t.readyHex or "55e39a", trainCount) or "|cffa9a08c0 TRAIN|r"
-        mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %s ]  [ %s ]%s",
-            metrics.totalAlts, trainStr, cdStr, goldFormatted, filterTag))
-    elseif activeTab == 5 then
-        local d1 = self:GetGoldHistoryDeltas()
-        local d1Sign = d1 >= 0 and "+" or ""
-        mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ 24H: %s%dg ]  [ %s ]%s",
-            metrics.totalAlts, d1Sign, d1, goldFormatted, filterTag))
-    elseif activeTab == 6 then
-        mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %d LOCKS ]  [ %s ]%s",
-            metrics.totalAlts, cdStr, metrics.activeLocks, goldFormatted, filterTag))
-    else
-        mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %s ]  [ %s ]%s",
-            metrics.totalAlts, restChip, cdStr, goldFormatted, filterTag))
+        mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     end
-    mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
 
     -- Render Table Header Cells & Clickable Header Buttons
     local cols = self:GetColumns(activeTab)

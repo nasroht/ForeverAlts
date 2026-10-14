@@ -54,6 +54,7 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:SetBackdropColor(...) end
     function frame:SetBackdropBorderColor(...) end
     function frame:ClearAllPoints(...) end
+    function frame:SetAllPoints(...) end
     function frame:GetPoint(...) return "CENTER", nil, "CENTER", 0, 0 end
     function frame:SetPropagateKeyboardInput(...) end
     function frame:EnableKeyboard(...) end
