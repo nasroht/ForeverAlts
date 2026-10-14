@@ -334,7 +334,7 @@ function CLIAlts:GetCharWidth(fontSize)
 end
 
 function CLIAlts:GetBarString(charPattern, targetPixelWidth, fontSize)
-    targetPixelWidth = targetPixelWidth or (mainFrame and (mainFrame:GetWidth() - 24)) or 896
+    targetPixelWidth = targetPixelWidth or (mainFrame and (mainFrame:GetWidth() - 24)) or 1126
     local sz = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     local charW = self:GetCharWidth(sz)
     if not charW or charW < 4 or charW > 25 then
@@ -811,6 +811,7 @@ local function FmtWealthShare(char, t)
     local pct = total > 0 and (money / total * 100) or 0
     return string.format("|cff%s%.1f%%|r", t.primaryHex, pct)
 end
+CLIAlts.FmtWealthShare = FmtWealthShare
 
 local function FmtLocation(char, t)
     t = t or CLIAlts:GetTheme()
@@ -983,54 +984,53 @@ CLIAlts.FmtForeverStatus = FmtForeverStatus
 
 local COLS = {
     [1] = { -- 1: OVERVIEW
-        { key = "name",      title = "CHARACTER",         w = 26, pw = 280, cpw = 260, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 65,  cpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "rested",    title = "RESTED XP",         w = 32, pw = 340, cpw = 320, align = "LEFT",   sort = "rested",   fmt = FmtRested },
-        { key = "eta",       title = "ETA",               w = 14, pw = 175, cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "name",      title = "CHARACTER",         w = 26, pw = 360, cpw = 300, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 70,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "rested",    title = "RESTED XP",         w = 32, pw = 450, cpw = 380, align = "LEFT",   sort = "rested",   fmt = FmtRested },
+        { key = "eta",       title = "ETA",               w = 14, pw = 200, cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [2] = { -- 2: FOREVER ROUTE
         { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
         { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
         { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
-        { key = "rested",    title = "RESTED XP",         w = 11, pw = 105, cpw = 85,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
-        { key = "score",     title = "PRIORITY",          w = 9,  pw = 85,  cpw = 70,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
+        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
+        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
         { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
-        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 307, cpw = 225, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
+        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
     },
     [3] = { -- 3: RESTED XP MONITOR
-        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 145, cpw = 0,   align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 135, cpw = 125, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 180, cpw = 150, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",              w = 8,  pw = 90,  cpw = 80,  align = "RIGHT",  fmt = FmtRate },
-        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 129, cpw = 105, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
+        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  align = "RIGHT",  fmt = FmtRate },
+        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 150, cpw = 120, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
-        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 245, cpw = 175, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
-        { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 230, cpw = 175, align = "LEFT",   fmt = FmtProf2 },
-        { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 199, cpw = 110, align = "LEFT",   fmt = FmtSecProf },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 300, cpw = 220, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
+        { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 295, cpw = 220, align = "LEFT",   fmt = FmtProf2 },
+        { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 250, cpw = 180, align = "LEFT",   fmt = FmtSecProf },
     },
     [5] = { -- 5: ECONOMY & WEALTH
-        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD & SILVER",     w = 12, pw = 125, cpw = 110, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
-        { key = "share",     title = "SHARE",             w = 6,  pw = 70,  cpw = 60,  align = "RIGHT",  fmt = FmtWealthShare },
-        { key = "location",  title = "LAST ZONE",         w = 19, pw = 240, cpw = 150, align = "LEFT",   sort = "location", fmt = FmtLocation },
-        { key = "hearth",    title = "HEARTHSTONE",       w = 19, pw = 239, cpw = 140, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "gold",      title = "GOLD & SILVER",     w = 12, pw = 160, cpw = 130, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "location",  title = "LAST ZONE",         w = 19, pw = 345, cpw = 250, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",       w = 19, pw = 340, cpw = 250, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [6] = { -- 6: COOLDOWNS & INSTANCE LOCKS
-        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 345, cpw = 235, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
-        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 329, cpw = 225, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
+        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
     },
 }
 
@@ -1053,7 +1053,7 @@ function CLIAlts:GetColumns(activeTab)
 end
 
 function CLIAlts:GetLineWidth()
-    local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 696 or 896)
+    local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 876 or 1126)
     local charW = self:GetCharWidth()
     if not charW or charW < 4 or charW > 25 then
         charW = DEFAULT_FONT_SIZE * 0.54
@@ -1063,7 +1063,7 @@ end
 
 function CLIAlts:GetBorderLine(isDouble)
     local char = isDouble and "=" or "-"
-    local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 696 or 896)
+    local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 876 or 1126)
     return self:GetBarString(char, targetW)
 end
 
@@ -1088,7 +1088,7 @@ end
 function CLIAlts:ApplyLayoutSize()
     if not mainFrame then return end
     local isComp = self:IsCompact()
-    local targetWidth = isComp and 720 or 920
+    local targetWidth = isComp and 900 or 1150
     mainFrame:SetWidth(targetWidth)
     mainFrame:SetHeight(600)
 
@@ -1099,20 +1099,23 @@ function CLIAlts:ApplyLayoutSize()
     if mainFrame.subTitleText then
         mainFrame.subTitleText:SetText("/ ALT MONITOR")
     end
+    if mainFrame.subtitleText then
+        mainFrame.subtitleText:SetText("/ ALT MONITOR")
+    end
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
     end
 
-    -- Tab buttons: Clean Nav Bar at Y = -54
+    -- Tab buttons: Clean Nav Bar at Y = -56
     local tabCount = #(mainFrame.tabButtons or {})
     local tabW = math.floor((targetWidth - 36 - ((tabCount - 1) * 8)) / math.max(1, tabCount))
     local prevTab = nil
     for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
-        local w = isComp and tabW or (tabBtn.stdWidth or 74)
+        local w = isComp and tabW or (tabBtn.stdWidth or 80)
         tabBtn:SetWidth(w)
         tabBtn:ClearAllPoints()
         if not prevTab then
-            tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, -54)
+            tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, -56)
         else
             tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 8, 0)
         end
@@ -1170,9 +1173,23 @@ function CLIAlts:ApplyLayoutSize()
         mainFrame.rowsContainer:SetWidth(targetWidth - 24)
         mainFrame.rowsContainer:SetHeight(ROWS_COUNT * 36)
     end
+    local lvlCenter = isComp and 340 or 416
+    local restLeft = isComp and 385 or 470
+    local barWidth = isComp and 190 or 280
     for _, row in ipairs(rowFrames) do
         row:SetWidth(targetWidth - 24)
         row:SetHeight(34)
+        if row.levelText then
+            row.levelText:ClearAllPoints()
+            row.levelText:SetPoint("CENTER", row, "LEFT", lvlCenter, 0)
+        end
+        if row.restPercentText then
+            row.restPercentText:ClearAllPoints()
+            row.restPercentText:SetPoint("LEFT", row, "LEFT", restLeft, 0)
+        end
+        if row.barBg then
+            row.barBg:SetWidth(barWidth)
+        end
     end
     if mainFrame.tableBotAscii then
         mainFrame.tableBotAscii:ClearAllPoints()
@@ -1193,7 +1210,7 @@ function CLIAlts:ApplyLayoutSize()
     if mainFrame.promptBox and mainFrame.promptLabel then
         mainFrame.promptBox:ClearAllPoints()
         mainFrame.promptBox:SetPoint("LEFT", mainFrame.promptLabel, "RIGHT", 4, 0)
-        mainFrame.promptBox:SetPoint("RIGHT", mainFrame, "RIGHT", isComp and -220 or -340, 0)
+        mainFrame.promptBox:SetPoint("RIGHT", mainFrame, "RIGHT", isComp and -280 or -420, 0)
     end
 
     self:UpdateBorders()
@@ -1212,7 +1229,7 @@ function CLIAlts:CreateMainFrame()
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:Hide()
-    frame:SetSize(920, 600)
+    frame:SetSize(1150, 600)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -1251,7 +1268,7 @@ function CLIAlts:CreateMainFrame()
     topAscii:SetText("")
     frame.topAscii = topAscii
 
-    -- 1. Modern Header Title & Subtitle Block
+    -- 1. Modern Header Title & Subtitle Block (Side-by-side title and subtitle)
     local titleText = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(titleText, 17, "OUTLINE")
     titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14)
@@ -1260,13 +1277,14 @@ function CLIAlts:CreateMainFrame()
 
     local subtitleText = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(subtitleText, 11, "OUTLINE")
-    subtitleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -34)
+    subtitleText:SetPoint("LEFT", titleText, "RIGHT", 8, -1)
     subtitleText:SetText("/ ALT MONITOR")
     frame.subtitleText = subtitleText
+    frame.subTitleText = subtitleText
 
     local metaText = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(metaText, 10, "")
-    metaText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -48)
+    metaText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -35)
     metaText:SetText("4 characters · Forever · Updated recently")
     frame.metaText = metaText
 
@@ -1340,25 +1358,25 @@ function CLIAlts:CreateMainFrame()
 
     -- 2. Modern Navigation Tab Strip (Clean text links with active amber box pill)
     local tabs = {
-        { id = 1, text = "Overview",    compact = "Overview", viewTitle = "OVERVIEW",                 stdWidth = 74 },
-        { id = 2, text = "Route",       compact = "Route",    viewTitle = "FOREVER ROUTE",          stdWidth = 56 },
-        { id = 3, text = "Rested XP",   compact = "Rested",   viewTitle = "RESTED XP MONITOR",       stdWidth = 76 },
-        { id = 4, text = "Professions", compact = "Profs",    viewTitle = "PROFESSIONS & MILESTONES", stdWidth = 84 },
-        { id = 5, text = "Economy",     compact = "Econ",     viewTitle = "ECONOMY & WEALTH",        stdWidth = 68 },
-        { id = 6, text = "Cooldowns",   compact = "CDs",      viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 78 },
+        { id = 1, text = "Overview",    compact = "Overview", viewTitle = "OVERVIEW",                 stdWidth = 82 },
+        { id = 2, text = "Route",       compact = "Route",    viewTitle = "FOREVER ROUTE",          stdWidth = 64 },
+        { id = 3, text = "Rested XP",   compact = "Rested",   viewTitle = "RESTED XP MONITOR",       stdWidth = 84 },
+        { id = 4, text = "Professions", compact = "Profs",    viewTitle = "PROFESSIONS & MILESTONES", stdWidth = 96 },
+        { id = 5, text = "Economy",     compact = "Econ",     viewTitle = "ECONOMY & WEALTH",        stdWidth = 76 },
+        { id = 6, text = "Cooldowns",   compact = "CDs",      viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 86 },
     }
     frame.tabButtons = {}
     local prevTab = nil
     for _, tabData in ipairs(tabs) do
-        local tabBtn = CreateRetroButton(frame, tabData.text, tabData.stdWidth, 22, function()
+        local tabBtn = CreateRetroButton(frame, tabData.text, tabData.stdWidth, 20, function()
             CLIAltsDB.settings.activeTab = tabData.id
             currentPage = 1
             CLIAlts:Render()
         end)
         if not prevTab then
-            tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -66)
+            tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -56)
         else
-            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 6, 0)
+            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 8, 0)
         end
         tabBtn.tabId = tabData.id
         tabBtn.baseText = tabData.text
@@ -1404,7 +1422,7 @@ function CLIAlts:CreateMainFrame()
 
     -- Level 1: Modern Hero Recommendation Card (RECOMMENDED NEXT)
     local recPanel = CreateFrame("Frame", "CLIAltsRecPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    recPanel:SetSize(892, 74)
+    recPanel:SetSize(1122, 74)
     recPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -94)
     recPanel:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -1554,7 +1572,7 @@ function CLIAlts:CreateMainFrame()
 
     -- 3. Modern KPI Metric Cards Grid (RESTED | PROFESSIONS | GOLD)
     local kpiContainer = CreateFrame("Frame", "CLIAltsKPIContainer", frame)
-    kpiContainer:SetSize(892, 52)
+    kpiContainer:SetSize(1122, 52)
     kpiContainer:SetPoint("TOPLEFT", recPanel, "BOTTOMLEFT", 0, -8)
     frame.kpiContainer = kpiContainer
 
@@ -1564,7 +1582,7 @@ function CLIAlts:CreateMainFrame()
         { key = "gold",   title = "GOLD", sub = "Combined wealth" },
     }
     frame.kpiCards = {}
-    local cardW = math.floor((892 - 16) / 3)
+    local cardW = math.floor((1122 - 16) / 3)
     local prevCard = nil
     for _, def in ipairs(cardDefs) do
         local card = CreateFrame("Frame", nil, kpiContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -1639,7 +1657,7 @@ function CLIAlts:CreateMainFrame()
 
     -- Column Header Line (Individual Cells) & Clickable Hit Frame
     local headerFrame = CreateFrame("Frame", nil, frame)
-    headerFrame:SetSize(896, 18)
+    headerFrame:SetSize(1126, 18)
     headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -252)
     frame.headerFrame = headerFrame
 
@@ -1695,7 +1713,7 @@ function CLIAlts:CreateMainFrame()
 
     -- Rows Container
     local rowsContainer = CreateFrame("Frame", nil, frame)
-    rowsContainer:SetSize(896, ROWS_COUNT * 36)
+    rowsContainer:SetSize(1126, ROWS_COUNT * 36)
     rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -268)
     frame.rowsContainer = rowsContainer
 
@@ -1720,7 +1738,7 @@ function CLIAlts:CreateMainFrame()
     -- Create 8 Modern 2-Line Row Buttons (with graphic status bars)
     for i = 1, ROWS_COUNT do
         local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        row:SetSize(896, 34)
+        row:SetSize(1126, 34)
         row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 36))
         row.rowIndex = i
 
@@ -1768,22 +1786,22 @@ function CLIAlts:CreateMainFrame()
 
         local levelText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(levelText, fontSize + 1, "OUTLINE")
-        levelText:SetPoint("CENTER", row, "LEFT", 328, 0)
+        levelText:SetPoint("CENTER", row, "LEFT", 416, 0)
         levelText:SetJustifyH("CENTER")
         levelText:SetText("")
         row.levelText = levelText
 
         local restPercentText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(restPercentText, fontSize, "OUTLINE")
-        restPercentText:SetPoint("LEFT", row, "LEFT", 365, 0)
+        restPercentText:SetPoint("LEFT", row, "LEFT", 470, 0)
         restPercentText:SetJustifyH("RIGHT")
         restPercentText:SetWidth(46)
         restPercentText:SetText("")
         row.restPercentText = restPercentText
 
         local barBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        barBg:SetSize(170, 8)
-        barBg:SetPoint("LEFT", restPercentText, "RIGHT", 8, 0)
+        barBg:SetSize(280, 8)
+        barBg:SetPoint("LEFT", restPercentText, "RIGHT", 10, 0)
         barBg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -1807,7 +1825,7 @@ function CLIAlts:CreateMainFrame()
 
         local etaText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(etaText, fontSize - 1, "")
-        etaText:SetPoint("RIGHT", row, "RIGHT", -20, 0)
+        etaText:SetPoint("RIGHT", row, "RIGHT", -24, 0)
         etaText:SetJustifyH("RIGHT")
         etaText:SetText("")
         row.etaText = etaText
@@ -2643,7 +2661,8 @@ function CLIAlts:Render()
                     end
 
                     local ratio = math.min(1.0, math.max(0, pct / maxPct))
-                    local barW = math.floor(170 * ratio)
+                    local maxBarW = isComp and 190 or 280
+                    local barW = math.floor(maxBarW * ratio)
                     if row.barFill then
                         row.barFill:SetWidth(math.max(1, barW))
                         row.barFill:SetVertexColor(t.primary[1], t.primary[2], t.primary[3], 0.95)
