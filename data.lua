@@ -2949,11 +2949,11 @@ function CLIAlts:RunSelfTest()
         local fullCols1 = self:GetColumns(1)
         CLIAltsDB.settings.compactMode = true
         local compCols1 = self:GetColumns(1)
-        local hasXPFull = false
-        for _, col in ipairs(fullCols1) do if col.key == "xp" then hasXPFull = true end end
-        local hasXPComp = false
-        for _, col in ipairs(compCols1) do if col.key == "xp" then hasXPComp = true end end
-        Assert(hasXPFull == true and hasXPComp == false, "CompactMode: hides XP bar column in Tab 1")
+        local hasEtaFull = false
+        for _, col in ipairs(fullCols1) do if col.key == "eta" then hasEtaFull = true end end
+        local hasEtaComp = false
+        for _, col in ipairs(compCols1) do if col.key == "eta" then hasEtaComp = true end end
+        Assert(hasEtaFull == true and hasEtaComp == false, "CompactMode: hides ETA column in Tab 1")
     end
 
     CLIAltsDB.settings.compactMode = oldCompact
