@@ -137,6 +137,7 @@ PlaySound = PlaySound or function() end
 hooksecurefunc = hooksecurefunc or function() end
 SetOverrideBindingClick = SetOverrideBindingClick or function() end
 ClearOverrideBindings = ClearOverrideBindings or function() end
+GetCursorPosition = GetCursorPosition or function() return 100, 100 end
 ItemRefTooltip = ItemRefTooltip or CreateDummyFrame("Frame", "ItemRefTooltip")
 TooltipDataProcessor = TooltipDataProcessor or {
     AddTooltipPostCall = function(dataType, callback) end,

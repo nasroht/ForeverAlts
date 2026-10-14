@@ -35,51 +35,90 @@ local renderDirty = false
 -- CRT Theme Definitions (With Syntax Coloring Hex Codes)
 -- ----------------------------------------------------------------------------
 CLIAlts.THEMES = {
+    ["AMBER"] = {
+        name = "VT220 Amber",
+        tag = "AMB",
+        bg = { 0.063, 0.055, 0.031, 0.96 }, -- near-black brown #100E08
+        panelBg = { 0.098, 0.082, 0.047, 0.90 }, -- panel background #19150C
+        border = { 0.949, 0.788, 0.298, 0.85 }, -- primary amber #F2C94C
+        primary = { 0.949, 0.788, 0.298 }, -- #F2C94C
+        dim = { 0.663, 0.627, 0.549 }, -- secondary text #A9A08C
+        highlight = { 1.0, 0.827, 0.306 }, -- bright amber #FFD34E
+        accent = { 0.341, 0.839, 0.910 }, -- cyan #57D6E8
+        ready = { 0.333, 0.890, 0.604 }, -- green #55E39A
+        pending = { 1.0, 0.710, 0.278 }, -- orange #FFB547
+        blocked = { 1.0, 0.420, 0.420 }, -- red #FF6B6B
+        rowOdd = { 0.098, 0.082, 0.047, 0.12 },
+        rowEven = { 0.098, 0.082, 0.047, 0.32 },
+        rowHover = { 0.949, 0.788, 0.298, 0.25 },
+        borderHex = "f2c94c",
+        primaryHex = "f2c94c",
+        dimHex = "a9a08c",
+        highlightHex = "ffd34e",
+        textHex = "f4ead2", -- primary text #F4EAD2
+        mutedHex = "a9a08c", -- secondary text #A9A08C
+        accentHex = "57d6e8", -- cyan #57D6E8
+        readyHex = "55e39a", -- green #55E39A
+        pendingHex = "ffb547", -- orange #FFB547
+        blockedHex = "ff6b6b", -- red #FF6B6B
+        barFill = "|cfff2c94c",
+        barEmpty = "|cff4d3d19",
+    },
     ["GREEN"] = {
         name = "Phosphor CRT",
         tag = "GRN",
-        bg = { 0.03, 0.06, 0.04, 0.96 },
+        bg = { 0.02, 0.05, 0.03, 0.96 },
+        panelBg = { 0.04, 0.08, 0.05, 0.90 },
         border = { 0.0, 1.0, 0.4, 0.85 },
         primary = { 0.0, 1.0, 0.4 },
         dim = { 0.25, 0.65, 0.35 },
         highlight = { 0.6, 1.0, 0.7 },
-        rowHover = { 0.0, 0.3, 0.15, 0.35 },
+        accent = { 0.341, 0.839, 0.910 },
+        ready = { 0.333, 0.890, 0.604 },
+        pending = { 1.0, 0.710, 0.278 },
+        blocked = { 1.0, 0.420, 0.420 },
+        rowOdd = { 0.04, 0.08, 0.05, 0.12 },
+        rowEven = { 0.04, 0.08, 0.05, 0.32 },
+        rowHover = { 0.0, 0.35, 0.15, 0.35 },
         borderHex = "00ff66",
         primaryHex = "00ff66",
         dimHex = "3fa859",
         highlightHex = "99ffb2",
+        textHex = "e8ffe8",
+        mutedHex = "5da671",
+        accentHex = "57d6e8",
+        readyHex = "55e39a",
+        pendingHex = "ffb547",
+        blockedHex = "ff6b6b",
         barFill = "|cff00ff66",
         barEmpty = "|cff1a6633",
-    },
-    ["AMBER"] = {
-        name = "VT220 Amber",
-        tag = "AMB",
-        bg = { 0.06, 0.04, 0.01, 0.96 },
-        border = { 1.0, 0.7, 0.0, 0.85 },
-        primary = { 1.0, 0.75, 0.1 },
-        dim = { 0.75, 0.5, 0.15 },
-        highlight = { 1.0, 0.9, 0.4 },
-        rowHover = { 0.3, 0.2, 0.05, 0.35 },
-        borderHex = "ffb000",
-        primaryHex = "ffb000",
-        dimHex = "bf8026",
-        highlightHex = "ffe666",
-        barFill = "|cffffb000",
-        barEmpty = "|cff664400",
     },
     ["CYAN"] = {
         name = "Cyberdeck Cyan",
         tag = "CYN",
         bg = { 0.02, 0.05, 0.07, 0.96 },
+        panelBg = { 0.03, 0.08, 0.11, 0.90 },
         border = { 0.0, 0.85, 1.0, 0.85 },
         primary = { 0.2, 0.9, 1.0 },
         dim = { 0.2, 0.55, 0.75 },
         highlight = { 0.7, 1.0, 1.0 },
-        rowHover = { 0.05, 0.2, 0.3, 0.35 },
+        accent = { 0.341, 0.839, 0.910 },
+        ready = { 0.333, 0.890, 0.604 },
+        pending = { 1.0, 0.710, 0.278 },
+        blocked = { 1.0, 0.420, 0.420 },
+        rowOdd = { 0.03, 0.08, 0.11, 0.12 },
+        rowEven = { 0.03, 0.08, 0.11, 0.32 },
+        rowHover = { 0.05, 0.25, 0.35, 0.35 },
         borderHex = "00d9ff",
         primaryHex = "33e6ff",
         dimHex = "338cbf",
         highlightHex = "b3ffff",
+        textHex = "e0f7fc",
+        mutedHex = "5695ab",
+        accentHex = "57d6e8",
+        readyHex = "55e39a",
+        pendingHex = "ffb547",
+        blockedHex = "ff6b6b",
         barFill = "|cff00e5ff",
         barEmpty = "|cff004f66",
     },
@@ -87,15 +126,28 @@ CLIAlts.THEMES = {
         name = "VT100 Monochrome",
         tag = "MON",
         bg = { 0.04, 0.04, 0.04, 0.96 },
+        panelBg = { 0.08, 0.08, 0.08, 0.90 },
         border = { 0.8, 0.8, 0.8, 0.85 },
         primary = { 0.9, 0.9, 0.9 },
         dim = { 0.5, 0.5, 0.5 },
         highlight = { 1.0, 1.0, 1.0 },
-        rowHover = { 0.2, 0.2, 0.2, 0.35 },
+        accent = { 0.85, 0.85, 0.85 },
+        ready = { 0.8, 0.95, 0.8 },
+        pending = { 0.95, 0.85, 0.7 },
+        blocked = { 0.95, 0.7, 0.7 },
+        rowOdd = { 0.08, 0.08, 0.08, 0.12 },
+        rowEven = { 0.08, 0.08, 0.08, 0.32 },
+        rowHover = { 0.25, 0.25, 0.25, 0.35 },
         borderHex = "cccccc",
         primaryHex = "e6e6e6",
         dimHex = "808080",
         highlightHex = "ffffff",
+        textHex = "f0f0f0",
+        mutedHex = "999999",
+        accentHex = "d9d9d9",
+        readyHex = "55e39a",
+        pendingHex = "ffb547",
+        blockedHex = "ff6b6b",
         barFill = "|cffd8d8d8",
         barEmpty = "|cff555555",
     },
@@ -103,31 +155,114 @@ CLIAlts.THEMES = {
         name = "Phosphor Safe",
         tag = "SAFE",
         bg = { 0.02, 0.04, 0.08, 0.96 },
+        panelBg = { 0.04, 0.07, 0.14, 0.90 },
         border = { 0.25, 0.65, 1.0, 0.85 },
         primary = { 0.35, 0.75, 1.0 },
         dim = { 0.40, 0.58, 0.78 },
         highlight = { 1.0, 0.85, 0.2 },
+        accent = { 1.0, 0.85, 0.2 },
+        ready = { 0.35, 0.75, 1.0 },
+        pending = { 1.0, 0.85, 0.2 },
+        blocked = { 0.95, 0.45, 0.2 },
+        rowOdd = { 0.04, 0.07, 0.14, 0.12 },
+        rowEven = { 0.04, 0.07, 0.14, 0.32 },
         rowHover = { 0.08, 0.20, 0.38, 0.35 },
         borderHex = "40a6ff",
         primaryHex = "59bfff",
         dimHex = "6694c7",
         highlightHex = "ffd933",
+        textHex = "e6f2ff",
+        mutedHex = "7aa3cc",
+        accentHex = "ffd933",
+        readyHex = "59bfff",
+        pendingHex = "ffd933",
+        blockedHex = "f27333",
         barFill = "|cff40a6ff",
         barEmpty = "|cff14334d",
     },
+    ["SYNTHWAVE"] = {
+        name = "Synthwave CRT",
+        tag = "SYN",
+        bg = { 0.06, 0.02, 0.08, 0.96 },
+        panelBg = { 0.10, 0.03, 0.13, 0.90 },
+        border = { 1.0, 0.20, 0.60, 0.85 },
+        primary = { 1.0, 0.35, 0.70 },
+        dim = { 0.65, 0.25, 0.65 },
+        highlight = { 0.20, 0.95, 1.0 },
+        accent = { 0.20, 0.95, 1.0 },
+        ready = { 0.20, 0.95, 1.0 },
+        pending = { 1.0, 0.75, 0.20 },
+        blocked = { 1.0, 0.25, 0.35 },
+        rowOdd = { 0.10, 0.03, 0.13, 0.12 },
+        rowEven = { 0.10, 0.03, 0.13, 0.32 },
+        rowHover = { 0.35, 0.12, 0.35, 0.35 },
+        borderHex = "ff3399",
+        primaryHex = "ff59b2",
+        dimHex = "a640a6",
+        highlightHex = "33f2ff",
+        textHex = "ffe6f2",
+        mutedHex = "b36b9e",
+        accentHex = "33f2ff",
+        readyHex = "33f2ff",
+        pendingHex = "ffc033",
+        blockedHex = "ff4059",
+        barFill = "|cffff3399",
+        barEmpty = "|cff4d1433",
+    },
+    ["DRACULA"] = {
+        name = "Dracula Terminal",
+        tag = "DRA",
+        bg = { 0.05, 0.05, 0.08, 0.96 },
+        panelBg = { 0.09, 0.09, 0.14, 0.90 },
+        border = { 0.74, 0.58, 0.98, 0.85 },
+        primary = { 0.95, 0.95, 0.96 },
+        dim = { 0.38, 0.44, 0.64 },
+        highlight = { 0.31, 0.98, 0.48 },
+        accent = { 0.55, 0.91, 0.99 },
+        ready = { 0.31, 0.98, 0.48 },
+        pending = { 1.0, 0.72, 0.42 },
+        blocked = { 1.0, 0.33, 0.33 },
+        rowOdd = { 0.09, 0.09, 0.14, 0.12 },
+        rowEven = { 0.09, 0.09, 0.14, 0.32 },
+        rowHover = { 0.28, 0.30, 0.42, 0.35 },
+        borderHex = "bd93f9",
+        primaryHex = "f8f8f2",
+        dimHex = "6272a4",
+        highlightHex = "50fa7b",
+        textHex = "f8f8f2",
+        mutedHex = "6272a4",
+        accentHex = "8be9fd",
+        readyHex = "50fa7b",
+        pendingHex = "ffb86c",
+        blockedHex = "ff5555",
+        barFill = "|cffbd93f9",
+        barEmpty = "|cff382b4a",
+    },
 }
 
-local THEME_ORDER = { "GREEN", "AMBER", "CYAN", "MONO", "COLORBLIND" }
+local THEME_ORDER = { "AMBER", "GREEN", "CYAN", "MONO", "COLORBLIND", "SYNTHWAVE", "DRACULA" }
 local SCALES = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
 
 function CLIAlts:GetTheme()
-    local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "GREEN"
-    return self.THEMES[key] or self.THEMES["GREEN"]
+    local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "AMBER"
+    local t = self.THEMES[key] or self.THEMES["AMBER"]
+    -- Ensure non-nil fallbacks for design tokens
+    t.textHex = t.textHex or "f4ead2"
+    t.mutedHex = t.mutedHex or t.dimHex or "a9a08c"
+    t.accentHex = t.accentHex or "57d6e8"
+    t.readyHex = t.readyHex or "55e39a"
+    t.pendingHex = t.pendingHex or "ffb547"
+    t.blockedHex = t.blockedHex or "ff6b6b"
+    t.panelBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+    t.rowOdd = t.rowOdd or { 0.098, 0.082, 0.047, 0.12 }
+    t.rowEven = t.rowEven or { 0.098, 0.082, 0.047, 0.32 }
+    t.rowHover = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+    return t
 end
 
 function CLIAlts:CycleTheme()
-    local current = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "GREEN"
-    local nextTheme = "GREEN"
+    local current = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "AMBER"
+    local nextTheme = "AMBER"
     for i, name in ipairs(THEME_ORDER) do
         if name == current then
             nextTheme = THEME_ORDER[(i % #THEME_ORDER) + 1]
@@ -230,27 +365,31 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
         edgeSize = 1,
         insets = { left = 1, right = 1, top = 1, bottom = 1 }
     })
-    btn:SetBackdropColor(0, 0, 0, 0.6)
-    btn:SetBackdropBorderColor(0.2, 0.6, 0.3, 0.8)
+    local t = CLIAlts:GetTheme()
+    local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+    btn:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.75)
+    btn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
 
     local label = btn:CreateFontString(nil, "OVERLAY")
     CLIAlts:SetWidgetFont(label, fontSz or 12, "")
     label:SetPoint("CENTER", 0, 0)
     label:SetText(text or "")
+    label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     btn.label = label
 
     btn:SetScript("OnEnter", function(self)
-        local t = CLIAlts:GetTheme()
-        self:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.25)
-        self:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 1)
-        self.label:SetTextColor(1, 1, 1)
+        local curT = CLIAlts:GetTheme()
+        self:SetBackdropColor(curT.border[1], curT.border[2], curT.border[3], 0.25)
+        self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 1)
+        self.label:SetTextColor(curT.highlight[1], curT.highlight[2], curT.highlight[3])
     end)
 
     btn:SetScript("OnLeave", function(self)
-        local t = CLIAlts:GetTheme()
-        self:SetBackdropColor(0, 0, 0, 0.6)
-        self:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
-        self.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+        local curT = CLIAlts:GetTheme()
+        local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+        self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75)
+        self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.8)
+        self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
     end)
 
     if onClick then
@@ -371,38 +510,50 @@ end
 -- ----------------------------------------------------------------------------
 -- Data-Driven Column Formatters (fmt)
 -- ----------------------------------------------------------------------------
-local function FmtFaction(char)
+local function FmtFaction(char, t)
+    t = t or CLIAlts:GetTheme()
     local fac = char.faction or "Neutral"
     if fac == "Alliance" then
-        return "|cff00aaff[A]|r"
+        return string.format("|cff%s[A]|r", t.accentHex or "57d6e8")
     elseif fac == "Horde" then
-        return "|cffff3333[H]|r"
+        return string.format("|cff%s[H]|r", t.blockedHex or "ff6b6b")
     else
-        return "|cffaaaaaa[-]|r"
+        return string.format("|cff%s[-]|r", t.mutedHex or "a9a08c")
     end
 end
 
-local function FmtName(char)
+local function FmtName(char, t)
+    t = t or CLIAlts:GetTheme()
     local name = char.fullName or char.name or "Unknown"
     local _, _, _, hex = CLIAlts:GetClassColor(char.classFile)
     local isStale = CLIAlts.IsCharStale and CLIAlts:IsCharStale(char)
+    local isCur = (char.fullName and char.fullName == CLIAlts.curPlayerFullName) or (char.name and char.name == CLIAlts.curPlayerName)
+    local curPrefix = isCur and string.format("|cff%s*|r", t.accentHex or "57d6e8") or ""
     if isStale then
-        return string.format("|cff%s%s|r |cffff5555[S]|r", hex, name)
+        return string.format("%s|cff%s%s|r |cff%s[S]|r", curPrefix, hex, name, t.blockedHex or "ff6b6b")
     end
-    return string.format("|cff%s%s|r", hex, name)
+    return string.format("%s|cff%s%s|r", curPrefix, hex, name)
 end
 
-local function FmtLevel(char)
-    return tostring(char.level or 1)
+local function FmtLevel(char, t)
+    t = t or CLIAlts:GetTheme()
+    local lvl = char.level or 1
+    local isMax = lvl >= CLIAlts:GetMaxLevel()
+    if isMax then
+        return string.format("|cff%s%d|r", t.highlightHex or "ffd34e", lvl)
+    end
+    return string.format("|cff%s%d|r", t.textHex or "f4ead2", lvl)
 end
 
-local function FmtRaceClass(char)
+local function FmtRaceClass(char, t)
+    t = t or CLIAlts:GetTheme()
     local code = CLIAlts:GetRaceCode(char)
     local class = char.class or "Unknown"
-    return string.format("|cffcccccc%s %s|r", code, class)
+    return string.format("|cff%s%s|r |cff%s%s|r", t.mutedHex or "a9a08c", code, t.textHex or "f4ead2", class)
 end
 
 local function FmtLevelProgress(char, t)
+    t = t or CLIAlts:GetTheme()
     local xpData = CLIAlts:GetLevelProgressData(char)
     if not xpData or xpData.isMaxLevel then
         return string.format("|cff%s[==========]|r |cff%sMAX|r", t.dimHex, t.highlightHex)
@@ -415,7 +566,7 @@ local function FmtLevelProgress(char, t)
     local pctStr = string.format("%d%%", xpData.percent)
 
     return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
-        t.borderHex, t.highlightHex, fillStr, t.dimHex, emptyStr, t.borderHex, t.primaryHex, pctStr)
+        t.dimHex, t.accentHex or t.highlightHex, fillStr, t.dimHex, emptyStr, t.dimHex, t.textHex or t.primaryHex, pctStr)
 end
 
 local function FmtGold(char)
@@ -424,25 +575,28 @@ local function FmtGold(char)
 end
 
 local function FmtRested(char, t)
+    t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
-    if not rested then return "|cff666666---|r" end
-    if rested.isMaxLevel then return "|cff888888MAX|r" end
+    if not rested then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
+    if rested.isMaxLevel then return string.format("|cff%sMAX|r", t.mutedHex or "a9a08c") end
 
     local est = rested.isEstimate and "~" or ""
-    local capMark = rested.isFull and "*" or ""
-    local pct = string.format("%d%%%s%s", rested.percent, capMark, est)
-    local color = rested.isFull and t.highlightHex or t.primaryHex
-    return string.format("|cff%s%s|r", color, pct)
+    if rested.isFull then
+        return string.format("|cff%s%d%%* [CAP]|r", t.highlightHex, rested.percent)
+    else
+        return string.format("|cff%s%d%%%s|r", t.primaryHex, rested.percent, est)
+    end
 end
 
 local function FmtETA(char, t)
+    t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
-    if not rested then return "|cff666666---|r" end
-    if rested.isMaxLevel then return "|cff888888MAX|r" end
+    if not rested then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
+    if rested.isMaxLevel then return string.format("|cff%sMAX|r", t.mutedHex or "a9a08c") end
     if rested.isFull then
         local wastedSec, _, _, timeStr = CLIAlts:GetRestedWaste(char)
         if wastedSec and wastedSec > 3600 then
-            return string.format("|cffffaa00!%s|r", timeStr or "1h")
+            return string.format("|cff%s!%s WST|r", t.pendingHex or "ffb547", timeStr or "1h")
         else
             return string.format("|cff%s[CAP]|r", t.highlightHex)
         end
@@ -450,16 +604,110 @@ local function FmtETA(char, t)
     return string.format("|cff%s%s|r", t.dimHex, rested.timeLeftStr or "---")
 end
 
--- Tab 2 Rested Monitor Formatters
+-- Tab 2 Forever Route & Rotation Formatters
+local function FmtRouteOrder(char, t)
+    t = t or CLIAlts:GetTheme()
+    local priorityList = CLIAlts:GetNextAltsPriority()
+    local charKey = char.fullName or char.name
+    for idx, item in ipairs(priorityList) do
+        local k = item.char and (item.char.fullName or item.char.name)
+        if k == charKey then
+            if idx == 1 then
+                return string.format("|cff%s[#1]|r", t.highlightHex or "ffd34e")
+            elseif idx <= 3 then
+                return string.format("|cff%s#%d|r", t.primaryHex or "f2c94c", idx)
+            else
+                return string.format("|cff%s#%d|r", t.textHex or "f4ead2", idx)
+            end
+        end
+    end
+    if char.tier == "BANK" then
+        return string.format("|cff%s[B]|r", t.dimHex or "736953")
+    end
+    local maxLvl = CLIAlts:GetMaxLevel()
+    local tgt = char.target_level or (char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or maxLvl
+    if (char.level or 1) >= tgt then
+        return string.format("|cff%s[OK]|r", t.readyHex or "55e39a")
+    end
+    return string.format("|cff%s[-]|r", t.mutedHex or "a9a08c")
+end
+
+local function FmtRotationScore(char, t)
+    t = t or CLIAlts:GetTheme()
+    if char.tier == "BANK" then
+        return string.format("|cff%sEXCLUDED|r", t.dimHex or "736953")
+    end
+    local score = CLIAlts:CalculateRotationScore(char)
+    if score < -400000 and score > -600000 then
+        return string.format("|cff%sTARGET HIT|r", t.readyHex or "55e39a")
+    elseif score < -900000 then
+        return string.format("|cff%sBANK MULE|r", t.dimHex or "736953")
+    elseif score >= 1000000 then
+        local kScore = math.floor(score / 1000)
+        return string.format("|cff%s+%sk|r", t.highlightHex or "ffd34e", CLIAlts:FormatNumber(kScore))
+    elseif score > 0 then
+        local kScore = math.floor(score / 1000)
+        return string.format("|cff%s+%sk|r", t.primaryHex or "f2c94c", CLIAlts:FormatNumber(kScore))
+    else
+        return string.format("|cff%s%d|r", t.mutedHex or "a9a08c", score)
+    end
+end
+
+local function FmtRouteReason(char, t)
+    t = t or CLIAlts:GetTheme()
+    if char.tier == "BANK" then
+        return string.format("|cff%sDesignated Bank Mule (Excluded from leveling)|r", t.dimHex or "736953")
+    end
+    local maxLvl = CLIAlts:GetMaxLevel()
+    local defaultTgt = (char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or maxLvl
+    local tgt = char.target_level or defaultTgt
+    if (char.level or 1) >= tgt then
+        return string.format("|cff%sTarget reached (Lvl %d >= %d) - rotation complete|r", t.readyHex or "55e39a", char.level or 1, tgt)
+    end
+
+    local rested = CLIAlts:GetRestedData(char)
+    local wastedSec, wastedXP = CLIAlts:GetRestedWaste(char)
+    if rested and rested.isFull then
+        if wastedXP and wastedXP > 0 then
+            return string.format("|cff%s! CAPPED: Overflowing (+%s XP waste) - Play now!|r", t.pendingHex or "ffb547", CLIAlts:FormatNumber(wastedXP))
+        else
+            return string.format("|cff%s* CAPPED: %d%% Rested pool ready for double XP|r", t.highlightHex or "ffd34e", rested.maxPercent or 150)
+        end
+    elseif char.tier == "CORE" then
+        local xpStr = rested and CLIAlts:FormatNumber(rested.currentRested) or "0"
+        return string.format("|cff%sCORE PRIORITY: ~%s Rested XP (Caps in %s)|r", t.primaryHex or "f2c94c", xpStr, rested and rested.timeLeftStr or "---")
+    else
+        local xpStr = rested and CLIAlts:FormatNumber(rested.currentRested) or "0"
+        return string.format("|cff%sRESERVE ALT: ~%s Rested XP (Accruing toward cap)|r", t.mutedHex or "a9a08c", xpStr)
+    end
+end
+
+-- Tab 3 Rested Monitor Formatters
+local function FmtCurXP(char, t)
+    t = t or CLIAlts:GetTheme()
+    local xpData = CLIAlts:GetLevelProgressData(char)
+    if not xpData or xpData.isMaxLevel then
+        return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
+    end
+    return string.format("|cff%s%s|r |cff%s/ %s (%d%%)|r",
+        t.textHex or "f4ead2", CLIAlts:FormatNumber(xpData.curXP),
+        t.dimHex or "736953", CLIAlts:FormatNumber(xpData.maxXP), xpData.percent)
+end
+
 local function FmtRestedPool(char, t)
+    t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return "|cff888888MAX LEVEL|r"
+        return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
     end
-    return string.format("|cff%s%s / %s|r", t.primaryHex, CLIAlts:FormatNumber(rested.currentRested), CLIAlts:FormatNumber(rested.maxRested))
+    local capStr = rested.isFull and (string.format("|cff%s%d%%*|r", t.highlightHex, rested.maxPercent or 150)) or (string.format("%d%%", rested.percent or 0))
+    return string.format("|cff%s%s|r |cff%s/ %s (%s)|r",
+        t.textHex or t.primaryHex, CLIAlts:FormatNumber(rested.currentRested),
+        t.dimHex, CLIAlts:FormatNumber(rested.maxRested), capStr)
 end
 
 local function FmtRestedBar(char, t)
+    t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s[==========]|r |cff%sMAX|r", t.dimHex, t.highlightHex)
@@ -467,80 +715,106 @@ local function FmtRestedBar(char, t)
 
     local isFull = rested.isFull
     local ratio = math.min(1.0, math.max(0, rested.ratio or 0))
-    local fill = math.min(10, math.max(0, math.floor(ratio * 10)))
-    local empty = 10 - fill
+    local fill = math.min(8, math.max(0, math.floor(ratio * 8)))
+    local empty = 8 - fill
     local fillChar = isFull and "#" or "="
     local fillStr = string.rep(fillChar, fill)
     local emptyStr = string.rep(".", empty)
     local est = rested.isEstimate and "~" or ""
     local capMark = isFull and "*" or ""
-    local pctStr = string.format("%d%%%s%s", rested.percent, capMark, est)
-    local color = isFull and t.highlightHex or t.primaryHex
+    local capPct = math.floor(ratio * 100)
+    local barColor = isFull and t.highlightHex or (t.accentHex or t.primaryHex)
+    local labelColor = isFull and t.highlightHex or (t.textHex or t.primaryHex)
 
-    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
-        t.borderHex, color, fillStr, t.dimHex, emptyStr, t.borderHex, color, pctStr)
+    local lvlPct = rested.percent or 0
+    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%d%%%s cap (%d%% lvl)|r",
+        t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, capPct, capMark, lvlPct)
 end
 
 local function FmtRate(char, t)
+    t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return "|cff666666---|r"
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
     end
     local s = rested.isResting and "+5.0%/8h" or "+1.25%/8h"
     return string.format("|cff%s%s|r", t.dimHex, s)
 end
 
-local function FmtState(char)
+local function FmtState(char, t)
+    t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return "|cff666666---|r"
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
     end
     if rested.isResting then
-        return "|cff00ff66[REST]|r"
+        return string.format("|cff%s[REST]|r", t.readyHex or "55e39a")
     else
-        return "|cffffaa00[WILD]|r"
+        return string.format("|cff%s[WILD]|r", t.pendingHex or "ffb547")
     end
 end
 
--- Tab 3 Profession Formatters
+-- Tab 4 Profession Formatters
 local function FmtProf1(char, t)
+    t = t or CLIAlts:GetTheme()
     local profs = char.professions and char.professions.primary
     local p = profs and profs[1]
-    if not p then return "|cff666666---|r" end
-    if CLIAlts:IsForeverMode() then
-        return CLIAlts:FormatProfessionMilestone(char, p, false)
+    if not p then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
+    local m = CLIAlts:GetProfessionMilestoneInfo(char, p)
+    if m and m.canTrainNext and m.isCappedAtCurrentRank then
+        return string.format("|cff%s%s: %d / %d [TRAIN]|r", t.readyHex or "55e39a", p.name or "Prof", p.rank or 0, p.maxRank or 0)
+    elseif m and m.levelBottleneck then
+        return string.format("|cff%s%s: %d / %d [Req Lvl %d]|r", t.pendingHex or "ffb547", p.name or "Prof", p.rank or 0, p.maxRank or 0, m.nextReqLevel or 20)
+    elseif m and (m.isDone or (m.isMilestoneHit and m.rank == m.maxRank)) then
+        return string.format("|cff%s%s: %d / %d [DONE]|r", t.accentHex or "57d6e8", p.name or "Prof", p.rank or 0, p.maxRank or 0)
+    else
+        return string.format("|cff%s%s: %d / %d|r", t.textHex or t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
     end
-    return string.format("|cff%s%s %d/%d|r", t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
 end
 
 local function FmtProf2(char, t)
+    t = t or CLIAlts:GetTheme()
     local profs = char.professions and char.professions.primary
     local p = profs and profs[2]
-    if not p then return "|cff666666---|r" end
-    if CLIAlts:IsForeverMode() then
-        return CLIAlts:FormatProfessionMilestone(char, p, false)
+    if not p then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
+    local m = CLIAlts:GetProfessionMilestoneInfo(char, p)
+    if m and m.canTrainNext and m.isCappedAtCurrentRank then
+        return string.format("|cff%s%s: %d / %d [TRAIN]|r", t.readyHex or "55e39a", p.name or "Prof", p.rank or 0, p.maxRank or 0)
+    elseif m and m.levelBottleneck then
+        return string.format("|cff%s%s: %d / %d [Req Lvl %d]|r", t.pendingHex or "ffb547", p.name or "Prof", p.rank or 0, p.maxRank or 0, m.nextReqLevel or 20)
+    elseif m and (m.isDone or (m.isMilestoneHit and m.rank == m.maxRank)) then
+        return string.format("|cff%s%s: %d / %d [DONE]|r", t.accentHex or "57d6e8", p.name or "Prof", p.rank or 0, p.maxRank or 0)
+    else
+        return string.format("|cff%s%s: %d / %d|r", t.textHex or t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
     end
-    return string.format("|cff%s%s %d/%d|r", t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
 end
 
 local function FmtSecProf(char, t)
+    t = t or CLIAlts:GetTheme()
     local secs = char.professions and char.professions.secondary
-    if not secs or #secs == 0 then return "|cff666666---|r" end
+    if not secs or #secs == 0 then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
     local parts = {}
     for _, s in ipairs(secs) do
         local shortName = s.name:sub(1, 4)
-        table.insert(parts, string.format("%s %d", shortName, s.rank or 0))
+        table.insert(parts, string.format("%s: %d / %d", shortName, s.rank or 0, s.maxRank or 75))
     end
     return string.format("|cff%s%s|r", t.dimHex, table.concat(parts, ", "))
 end
 
--- Tab 4 Economy & Location Formatters
-local function FmtGoldLong(char)
-    local gold = math.floor((char.money or 0) / 10000)
-    return "|cffffd700" .. CLIAlts:FormatNumber(gold) .. "g|r"
+-- Tab 5 Economy & Location Formatters
+local function FmtGoldLong(char, t)
+    t = t or CLIAlts:GetTheme()
+    local money = char.money or 0
+    local isStale = CLIAlts.IsCharStale and CLIAlts:IsCharStale(char)
+    local formatted = CLIAlts:FormatMoney(money, true)
+    if isStale then
+        return string.format("%s |cff%s[STALE]|r", formatted, t.blockedHex or "ff6b6b")
+    end
+    return formatted
 end
 
 local function FmtWealthShare(char, t)
+    t = t or CLIAlts:GetTheme()
     local summary = CLIAlts:GetAccountSummary()
     local total = summary.totalGold or 0
     local money = char.money or 0
@@ -549,44 +823,56 @@ local function FmtWealthShare(char, t)
 end
 
 local function FmtLocation(char, t)
+    t = t or CLIAlts:GetTheme()
     local loc = char.location or "Unknown"
     return string.format("|cff%s%s|r", t.dimHex, loc)
 end
 
 local function FmtHearth(char, t)
+    t = t or CLIAlts:GetTheme()
     local bind = char.bindLocation or "Unknown"
-    return string.format("|cff%s%s|r", t.highlightHex, bind)
+    return string.format("|cff%s%s|r", t.textHex or t.highlightHex, bind)
 end
 
--- Tab 5 Cooldowns & Lockouts Formatters
+-- Tab 6 Cooldowns & Lockouts Formatters
 local function FmtTradeCooldowns(char, t)
+    t = t or CLIAlts:GetTheme()
     local cds = char.tradeCooldowns
     if not cds or not next(cds) then
-        return "|cff666666NO COOLDOWNS|r"
+        return string.format("|cff%sNO TRADE CDS|r", t.mutedHex or "a9a08c")
     end
     local parts = {}
     local now = time()
     for name, readyAt in pairs(cds) do
         local short = name:gsub("^Transmute: ", "Xm:"):gsub("^Refined ", "")
-        short = short:sub(1, 9)
+        short = short:sub(1, 10)
         local rem = readyAt - now
         if rem <= 0 then
-            table.insert(parts, string.format("|cff00ff66%s:RDY|r", short))
+            table.insert(parts, string.format("|cff%s%s: READY|r", t.readyHex or "55e39a", short))
         else
-            local h = math.floor(rem / 3600)
+            local d = math.floor(rem / 86400)
+            local h = math.floor((rem % 86400) / 3600)
             local m = math.floor((rem % 3600) / 60)
-            local timStr = (h > 0) and string.format("%dh", h) or string.format("%dm", m)
-            table.insert(parts, string.format("%s:%s", short, timStr))
+            local timStr
+            if d > 0 then
+                timStr = string.format("%dd %dh", d, h)
+            elseif h > 0 then
+                timStr = string.format("%dh %dm", h, m)
+            else
+                timStr = string.format("%dm", m)
+            end
+            table.insert(parts, string.format("%s: in %s", short, timStr))
         end
     end
-    if #parts == 0 then return "|cff00ff66READY|r" end
-    return string.format("|cff%s%s|r", t.primaryHex, table.concat(parts, ", "))
+    if #parts == 0 then return string.format("|cff%sREADY|r", t.readyHex or "55e39a") end
+    return string.format("|cff%s%s|r", t.textHex or t.primaryHex, table.concat(parts, " | "))
 end
 
 local function FmtRaidLocks(char, t)
+    t = t or CLIAlts:GetTheme()
     local locks = char.lockouts
     if not locks or not next(locks) then
-        return "|cff666666NO SAVED LOCKS|r"
+        return string.format("|cff%sNO ACTIVE LOCKS|r", t.mutedHex or "a9a08c")
     end
     local parts = {}
     local now = time()
@@ -599,40 +885,43 @@ local function FmtRaidLocks(char, t)
             local d = math.floor(rem / 86400)
             local h = math.floor((rem % 86400) / 3600)
             local tStr = (d > 0) and string.format("%dd", d) or string.format("%dh", h)
-            table.insert(parts, string.format("%s:%s", short, tStr))
+            table.insert(parts, string.format("%s: in %s", short, tStr))
         end
     end
-    if #parts == 0 then return "|cff666666NO ACTIVE LOCKS|r" end
-    return string.format("|cff%s%s|r", t.dimHex, table.concat(parts, ", "))
+    if #parts == 0 then return string.format("|cff%sNO ACTIVE LOCKS|r", t.mutedHex or "a9a08c") end
+    return string.format("|cff%s%s|r", t.dimHex, table.concat(parts, " | "))
 end
 
 -- Tab 1 WoW Forever Route Formatters
-local function FmtTier(char)
+local function FmtTier(char, t)
+    t = t or CLIAlts:GetTheme()
     local tier = char.tier or "UNASSIGNED"
     if tier == "CORE" then
-        return "|cffffd700[CORE]|r"
+        return string.format("|cff%s[CORE]|r", t.highlightHex or "ffd34e")
     elseif tier == "RESERVE" then
-        return "|cff00ccff[ALT]|r"
+        return string.format("|cff%s[ALT]|r", t.accentHex or "57d6e8")
     elseif tier == "BANK" then
-        return "|cffff9900[BANK]|r"
+        return string.format("|cff%s[BANK]|r", t.pendingHex or "ffb547")
     else
-        return "|cff666666[---]|r"
+        return string.format("|cff%s[---]|r", t.mutedHex or "a9a08c")
     end
 end
 
 local function FmtLevelTarget(char, t)
+    t = t or CLIAlts:GetTheme()
     local lvl = char.level or 1
     local tgt = char.target_level or ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or (char.tier == "BANK" and 1) or 60)
     if lvl >= tgt then
-        return string.format("|cff00ff66%d/%d|r", lvl, tgt)
+        return string.format("|cff%s%d/%d*|r", t.readyHex or "55e39a", lvl, tgt)
     else
-        return string.format("|cff%s%d|r|cff%s/%d|r", t.primaryHex, lvl, t.dimHex, tgt)
+        return string.format("|cff%s%d|r|cff%s/%d|r", t.textHex or t.primaryHex, lvl, t.dimHex, tgt)
     end
 end
 
-local function FmtProfessionsAuto(char)
+local function FmtProfessionsAuto(char, t)
+    t = t or CLIAlts:GetTheme()
     if char.tier == "BANK" then
-        return "|cffff9900Bank Mule|r"
+        return string.format("|cff%sBank Mule|r", t.pendingHex or "ffb547")
     end
 
     local alertTag = ""
@@ -640,14 +929,14 @@ local function FmtProfessionsAuto(char)
     if #alerts > 0 then
         for _, a in ipairs(alerts) do
             if a.type == "TRAIN" then
-                alertTag = " |cff00ff66" .. a.tag .. "|r"
+                alertTag = string.format(" |cff%s%s|r", t.readyHex or "55e39a", a.tag)
                 break
             end
         end
     end
 
     if char.supply_role and char.supply_role ~= "" then
-        return string.format("|cffffffff%s|r%s", char.supply_role, alertTag)
+        return string.format("|cff%s%s|r%s", t.textHex or "f4ead2", char.supply_role, alertTag)
     end
 
     local profs = char.professions and char.professions.primary
@@ -657,9 +946,9 @@ local function FmtProfessionsAuto(char)
             local m = CLIAlts:GetProfessionMilestoneInfo(char, p)
             if m then
                 if m.canTrainNext and m.isCappedAtCurrentRank then
-                    table.insert(parts, string.format("|cff00ff66%s %d/%d [TRAIN]|r", m.abbr, m.rank, m.maxRank))
+                    table.insert(parts, string.format("|cff%s%s %d/%d [TRAIN]|r", t.readyHex or "55e39a", m.abbr, m.rank, m.maxRank))
                 elseif m.isDone or (m.isMilestoneHit and m.rank == m.maxRank) then
-                    table.insert(parts, string.format("|cff00e5ff%s %d [DONE]|r", m.abbr, m.rank))
+                    table.insert(parts, string.format("|cff%s%s %d [DONE]|r", t.accentHex or "57d6e8", m.abbr, m.rank))
                 else
                     table.insert(parts, string.format("%s %d/%d [%s]", m.abbr, m.rank, m.targetMilestone, m.targetPhase))
                 end
@@ -670,107 +959,107 @@ local function FmtProfessionsAuto(char)
         end
         return table.concat(parts, ", ") .. alertTag
     end
-    return "|cff666666---|r"
+    return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
 end
 
 local function FmtForeverStatus(char, t)
+    t = t or CLIAlts:GetTheme()
     if char.tier == "BANK" then
-        return "|cffff9900Bank Mule|r"
+        return string.format("|cff%sBank Mule|r", t.pendingHex or "ffb547")
     end
     local lvl = char.level or 1
     local tgt = char.target_level or ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or 60)
     if lvl >= tgt then
-        return "|cff00ff66Target Level Reached|r"
+        return string.format("|cff%sTarget Met (%d)|r", t.readyHex or "55e39a", tgt)
     end
     local rested = CLIAlts:GetRestedData(char)
-    if not rested then return "|cff666666Accruing|r" end
-    if rested.isMaxLevel then return "|cff888888MAX LEVEL|r" end
+    if not rested then return string.format("|cff%sAccruing|r", t.mutedHex or "a9a08c") end
+    if rested.isMaxLevel then return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c") end
     if rested.isFull then
         local capPct = rested.maxPercent or 150
-        return string.format("|cff%s%d%% Capped*|r", t.highlightHex, capPct)
+        local _, wastedXP = CLIAlts:GetRestedWaste(char)
+        if wastedXP and wastedXP > 0 then
+            return string.format("|cff%s%d%% Capped* (+%s)|r", t.pendingHex or "ffb547", capPct, CLIAlts:FormatWasteShort(wastedXP))
+        else
+            return string.format("|cff%s%d%% Capped*|r", t.highlightHex, capPct)
+        end
     end
     local pct = rested.percent or 0
     local est = rested.isEstimate and "~" or ""
     return string.format("|cff%s%d%%%s Rested|r", t.primaryHex, pct, est)
 end
 
-local FOREVER_COLS = {
-    { key = "tier",     title = "COHORT",      w = 8,  pw = 75,  cpw = 70,  align = "CENTER", sort = "cohort", fmt = FmtTier },
-    { key = "name",     title = "NAME",        w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
-    { key = "lvlTgt",   title = "LVL/TGT",     w = 8,  pw = 75,  cpw = 65,  align = "CENTER", sort = "level",  fmt = FmtLevelTarget },
-    { key = "prof",     title = "PROFESSIONS", w = 18, pw = 185, cpw = 140, align = "LEFT",                    fmt = FmtProfessionsAuto },
-    { key = "status",   title = "STATUS",      w = 18, pw = 175, cpw = 140, align = "LEFT",   sort = "rotation", fmt = FmtForeverStatus },
-    { key = "gold",     title = "GOLD",        w = 9,  pw = 110, cpw = 80,  align = "RIGHT",  sort = "gold",   fmt = FmtGold },
-    { key = "eta",      title = "ETA",         w = 7,  pw = 100, cpw = 0,   align = "RIGHT",                   fmt = FmtETA },
+local COLS = {
+    [1] = { -- 1: OVERVIEW
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "tier",      title = "ROLE",              w = 8,  pw = 70,  cpw = 60,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
+        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 70,  cpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
+        { key = "rested",    title = "RESTED XP",         w = 10, pw = 105, cpw = 85,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
+        { key = "prof",      title = "PRIMARY PROFESSION",w = 18, pw = 180, cpw = 145, align = "LEFT",   sort = "prof",     fmt = FmtProfessionsAuto },
+        { key = "gold",      title = "GOLD",              w = 9,  pw = 95,  cpw = 85,  align = "RIGHT",  sort = "gold",     fmt = FmtGold },
+        { key = "eta",       title = "ETA",               w = 7,  pw = 85,  cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "status",    title = "STATUS",            w = 16, pw = 145, cpw = 85,  align = "LEFT",   sort = "rotation", fmt = FmtForeverStatus },
+    },
+    [2] = { -- 2: FOREVER ROUTE
+        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
+        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
+        { key = "rested",    title = "RESTED XP",         w = 11, pw = 105, cpw = 85,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
+        { key = "score",     title = "PRIORITY",          w = 9,  pw = 85,  cpw = 70,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
+        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 307, cpw = 225, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
+    },
+    [3] = { -- 3: RESTED XP MONITOR
+        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 145, cpw = 0,   align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
+        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 135, cpw = 125, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 180, cpw = 150, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",              w = 8,  pw = 90,  cpw = 80,  align = "RIGHT",  fmt = FmtRate },
+        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 129, cpw = 105, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+    },
+    [4] = { -- 4: PROFESSIONS & MILESTONES
+        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 245, cpw = 175, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
+        { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 230, cpw = 175, align = "LEFT",   fmt = FmtProf2 },
+        { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 199, cpw = 110, align = "LEFT",   fmt = FmtSecProf },
+    },
+    [5] = { -- 5: ECONOMY & WEALTH
+        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "gold",      title = "GOLD & SILVER",     w = 12, pw = 125, cpw = 110, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "share",     title = "SHARE",             w = 6,  pw = 70,  cpw = 60,  align = "RIGHT",  fmt = FmtWealthShare },
+        { key = "location",  title = "LAST ZONE",         w = 19, pw = 240, cpw = 150, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",       w = 19, pw = 239, cpw = 140, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
+    },
+    [6] = { -- 6: COOLDOWNS & INSTANCE LOCKS
+        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 345, cpw = 235, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
+        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 329, cpw = 225, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
+    },
 }
 
--- ----------------------------------------------------------------------------
--- Data-Driven Columns Table (COLS) - Explicit Pixel Widths (Sum = 860px / 620px)
--- ----------------------------------------------------------------------------
-local COLS = {
-    [1] = { -- ALTS OVERVIEW
-        { key = "fac",       title = "FAC",            w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",           w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",    fmt = FmtName },
-        { key = "lvl",       title = "LVL",            w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",   fmt = FmtLevel },
-        { key = "raceClass", title = "RACE/CLASS",     w = 11, pw = 125, cpw = 110, align = "LEFT",   fmt = FmtRaceClass },
-        { key = "xp",        title = "LEVEL PROGRESS", w = 16, pw = 180, cpw = 0,   align = "LEFT",   sort = "xp",      fmt = FmtLevelProgress },
-        { key = "gold",      title = "GOLD",           w = 10, pw = 115, cpw = 100, align = "RIGHT",  sort = "gold",    fmt = FmtGold },
-        { key = "rested",    title = "RESTED",         w = 8,  pw = 110, cpw = 95,  align = "RIGHT",  sort = "rested",  fmt = FmtRested },
-        { key = "eta",       title = "ETA",            w = 7,  pw = 109, cpw = 90,  align = "RIGHT",  fmt = FmtETA },
-    },
-    [2] = { -- RESTED XP MONITOR
-        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",  fmt = FmtLevel },
-        { key = "pool",      title = "RESTED / CAP",    w = 17, pw = 165, cpw = 150, align = "RIGHT",  sort = "rested", fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS", w = 17, pw = 180, cpw = 0,   align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",            w = 8,  pw = 95,  cpw = 80,  align = "RIGHT",  fmt = FmtRate },
-        { key = "state",     title = "STATE",           w = 7,  pw = 85,  cpw = 75,  align = "CENTER", fmt = FmtState },
-        { key = "eta",       title = "ETA/WST",         w = 7,  pw = 114, cpw = 90,  align = "RIGHT",  sort = "waste",  fmt = FmtETA },
-    },
-    [3] = { -- PROFESSIONS
-        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",  fmt = FmtLevel },
-        { key = "prof1",     title = "PRIMARY PROF 1",  w = 23, pw = 250, cpw = 180, align = "LEFT",   fmt = FmtProf1 },
-        { key = "prof2",     title = "PRIMARY PROF 2",  w = 20, pw = 230, cpw = 165, align = "LEFT",   fmt = FmtProf2 },
-        { key = "sec",       title = "SECONDARY",       w = 14, pw = 159, cpw = 80,  align = "LEFT",   fmt = FmtSecProf },
-    },
-    [4] = { -- ECONOMY & LOCATIONS
-        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD",            w = 11, pw = 120, cpw = 100, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
-        { key = "share",     title = "SHARE",           w = 6,  pw = 65,  cpw = 55,  align = "RIGHT",  fmt = FmtWealthShare },
-        { key = "location",  title = "LAST ZONE",       w = 18, pw = 230, cpw = 140, align = "LEFT",   sort = "location", fmt = FmtLocation },
-        { key = "hearth",    title = "HEARTHSTONE",     w = 18, pw = 224, cpw = 130, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
-    },
-    [5] = { -- COOLDOWNS & SAVED LOCKS
-        { key = "fac",       title = "FAC",             w = 3,  pw = 36,  cpw = 34,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "NAME",            w = 16, pw = 145, cpw = 125, align = "LEFT",   sort = "name",   fmt = FmtName },
-        { key = "lvl",       title = "LVL",             w = 3,  pw = 40,  cpw = 36,  align = "CENTER", sort = "level",  fmt = FmtLevel },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS", w = 25, pw = 340, cpw = 230, align = "LEFT",   fmt = FmtTradeCooldowns },
-        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 30, pw = 299, cpw = 205, align = "LEFT", fmt = FmtRaidLocks },
-    },
-}
+local FOREVER_COLS = COLS[1]
 
 function CLIAlts:GetColumns(activeTab)
-    local tabCols
-    if (activeTab == 1 or activeTab == nil) and self:IsForeverMode() then
-        tabCols = FOREVER_COLS
-    else
-        tabCols = COLS[activeTab] or COLS[1]
-    end
+    activeTab = tonumber(activeTab) or 1
+    local tabCols = COLS[activeTab] or COLS[1]
     if not self:IsCompact() then
         return tabCols
     end
 
     local filtered = {}
     for _, col in ipairs(tabCols) do
-        -- In compact mode, hide columns with cpw == 0 or nil/disabled
         if col.cpw and col.cpw > 0 then
             table.insert(filtered, col)
-        elseif col.cpw == nil and col.key ~= "xp" and col.key ~= "restBar" and col.key ~= "eta" then
+        elseif col.cpw == nil and col.key ~= "xp" and col.key ~= "curXP" and col.key ~= "eta" then
             table.insert(filtered, col)
         end
     end
@@ -799,7 +1088,7 @@ function CLIAlts:UpdateBorders()
 
     if mainFrame.topAscii then mainFrame.topAscii:SetText(doubleBar) end
     if mainFrame.midAscii1 then mainFrame.midAscii1:SetText(singleBar) end
-    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText(singleBar) end
+    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText("") end
     if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetText(doubleBar) end
     if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetText(singleBar) end
     if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetText(doubleBar) end
@@ -813,8 +1102,15 @@ end
 function CLIAlts:ApplyLayoutSize()
     if not mainFrame then return end
     local isComp = self:IsCompact()
-    local targetWidth = isComp and 720 or 920
+    local targetWidth = isComp and 680 or 920
     mainFrame:SetWidth(targetWidth)
+    mainFrame:SetHeight(565)
+    if mainFrame.recPanel then
+        mainFrame.recPanel:SetWidth(targetWidth - 28)
+    end
+    if mainFrame.summaryBar then
+        mainFrame.summaryBar:SetWidth(targetWidth - 28)
+    end
     if mainFrame.headerFrame then
         mainFrame.headerFrame:SetWidth(targetWidth - 24)
     end
@@ -825,14 +1121,14 @@ function CLIAlts:ApplyLayoutSize()
         row:SetWidth(targetWidth - 24)
     end
 
-    local tabW = isComp and 125 or 168
-    local spacing = isComp and 6 or 8
+    local tabW = isComp and 105 or 142
+    local spacing = isComp and 4 or 6
     local prevTab = nil
     for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
         tabBtn:SetWidth(tabW)
         tabBtn:ClearAllPoints()
         if not prevTab then
-            tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, -80)
+            tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", isComp and 14 or 18, -120)
         else
             tabBtn:SetPoint("LEFT", prevTab, "RIGHT", spacing, 0)
         end
@@ -840,7 +1136,7 @@ function CLIAlts:ApplyLayoutSize()
     end
 
     if mainFrame.titleText then
-        mainFrame.titleText:SetText(isComp and ("[#] CLIALTS v" .. (self.VERSION or "1.0.0")) or ("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.0.0")))
+        mainFrame.titleText:SetText(isComp and ("[#] CLIALTS v" .. (self.VERSION or "1.1.0")) or ("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.1.0")))
     end
     if mainFrame.btnCompact then
         mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
@@ -857,7 +1153,7 @@ function CLIAlts:CreateMainFrame()
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:Hide()
-    frame:SetSize(920, 535)
+    frame:SetSize(920, 565)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -900,7 +1196,7 @@ function CLIAlts:CreateMainFrame()
     local titleText = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(titleText, fontSize + 1, "OUTLINE")
     titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -22)
-    titleText:SetText("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.0.0"))
+    titleText:SetText("[#] CLIALTS :: ALT MONITOR v" .. (self.VERSION or "1.1.0"))
     frame.titleText = titleText
 
     -- Window Controls on Title Bar (Scale, Compact, Theme, Help, Close)
@@ -941,7 +1237,8 @@ function CLIAlts:CreateMainFrame()
     end)
     frame.btnCompact = btnCompact
 
-    local btnTheme = CreateRetroButton(frame, "[ THEME: GRN ]", 95, 18, function()
+    local curTag = (self.GetTheme and self:GetTheme().tag) or "AMB"
+    local btnTheme = CreateRetroButton(frame, string.format("[ THEME: %s ]", curTag), 95, 18, function()
         CLIAlts:CycleTheme()
     end)
     btnTheme:SetPoint("RIGHT", btnCompact, "LEFT", -5, 0)
@@ -950,29 +1247,103 @@ function CLIAlts:CreateMainFrame()
     -- Subheader border ASCII line
     local midAscii1 = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(midAscii1, fontSize)
-    midAscii1:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -40)
+    midAscii1:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -36)
     midAscii1:SetText(BORDER_LINE)
     frame.midAscii1 = midAscii1
 
-    -- Status bar line (Realm, Alts count, Wealth)
-    local statusBarText = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(statusBarText, fontSize)
-    statusBarText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -53)
-    statusBarText:SetText("SYSTEM: WOW FOREVER | TRACKED CHARACTERS: 0 | TOTAL WEALTH: 0g")
-    frame.statusBarText = statusBarText
+    local t = self:GetTheme()
+    local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
 
-    -- Well Rested Perk quick toggle button
+    -- Level 1: Recommended Next Action Banner (Forever Route)
+    local recPanel = CreateFrame("Frame", "CLIAltsRecPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    recPanel:SetSize(892, 48)
+    recPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -38)
+    recPanel:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
+    recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.5)
+    frame.recPanel = recPanel
+
+    local recBadge = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recBadge, fontSize, "OUTLINE")
+    recBadge:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 10, -6)
+    recBadge:SetText("[ RECOMMENDED NEXT ACTION ]")
+    recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    frame.recBadge = recBadge
+
+    local recPrimary = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recPrimary, fontSize, "")
+    recPrimary:SetPoint("LEFT", recBadge, "RIGHT", 10, 0)
+    recPrimary:SetPoint("RIGHT", recPanel, "RIGHT", -105, 0)
+    recPrimary:SetJustifyH("LEFT")
+    recPrimary:SetWordWrap(false)
+    recPrimary:SetText("")
+    frame.recPrimary = recPrimary
+
+    local recBtnDossier = CreateRetroButton(recPanel, "[ DOSSIER ]", 88, 18, function()
+        if frame.recChar then
+            CLIAlts:ShowDossierPopup(frame.recChar)
+        end
+    end)
+    recBtnDossier:SetPoint("TOPRIGHT", recPanel, "TOPRIGHT", -8, -5)
+    frame.recBtnDossier = recBtnDossier
+
+    local recBtnSetup = CreateRetroButton(recPanel, "[ GUIDE ]", 88, 18, function()
+        CLIAlts:ShowHelpPopup()
+    end)
+    recBtnSetup:SetPoint("TOPRIGHT", recPanel, "TOPRIGHT", -8, -5)
+    recBtnSetup:Hide()
+    frame.recBtnSetup = recBtnSetup
+
+    local recDetail = recPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recDetail, fontSize - 1, "")
+    recDetail:SetPoint("BOTTOMLEFT", recPanel, "BOTTOMLEFT", 10, 6)
+    recDetail:SetPoint("RIGHT", recPanel, "RIGHT", -105, 0)
+    recDetail:SetJustifyH("LEFT")
+    recDetail:SetWordWrap(false)
+    recDetail:SetText("")
+    frame.recDetail = recDetail
+
+    -- Level 2: Roster Summary Telemetry Bar
+    local summaryBar = CreateFrame("Frame", "CLIAltsSummaryBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    summaryBar:SetSize(892, 26)
+    summaryBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -90)
+    summaryBar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    summaryBar:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
+    summaryBar:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+    frame.summaryBar = summaryBar
+
+    local summaryText = summaryBar:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(summaryText, fontSize, "")
+    summaryText:SetPoint("LEFT", summaryBar, "LEFT", 10, 0)
+    summaryText:SetPoint("RIGHT", summaryBar, "RIGHT", -155, 0)
+    summaryText:SetJustifyH("LEFT")
+    summaryText:SetWordWrap(false)
+    summaryText:SetText("")
+    frame.summaryText = summaryText
+    frame.statusBarText = summaryText -- backward compatibility alias
+
+    -- Well Rested Perk quick toggle button (docked on summaryBar)
     local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-    local btnPerk = CreateRetroButton(frame, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 145, 18, function(self)
+    local btnPerk = CreateRetroButton(summaryBar, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 145, 18, function(self)
         CLIAlts:CycleWellRestedPerk()
         if MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
     end)
-    btnPerk:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -51)
+    btnPerk:SetPoint("RIGHT", summaryBar, "RIGHT", -6, 0)
     btnPerk:SetScript("OnEnter", function(self)
-        local t = CLIAlts:GetTheme()
-        self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.8)
+        local curT = CLIAlts:GetTheme()
+        self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine("WoW Forever: Well Rested Perk", 1, 1, 1)
         local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
@@ -994,17 +1365,19 @@ function CLIAlts:CreateMainFrame()
 
     local midAscii2 = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(midAscii2, fontSize)
-    midAscii2:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -66)
-    midAscii2:SetText(BORDER_LINE)
+    midAscii2:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -116)
+    midAscii2:SetText("")
     frame.midAscii2 = midAscii2
 
     -- Retro Tabs
+    -- Navigation Tabs (6 Differentiated Views)
     local tabs = {
-        { id = 1, text = "[ ALTS OVERVIEW ]", compact = "[ 1: ALTS ]" },
-        { id = 2, text = "[ RESTED XP ]",     compact = "[ 2: REST ]" },
-        { id = 3, text = "[ PROFESSIONS ]",   compact = "[ 3: PROF ]" },
-        { id = 4, text = "[ ECONOMY ]",       compact = "[ 4: ECON ]" },
-        { id = 5, text = "[ COOLDOWNS ]",     compact = "[ 5: LOCK ]" },
+        { id = 1, text = "[ OVERVIEW ]",      compact = "[ 1: MAIN ]",  viewTitle = "OVERVIEW" },
+        { id = 2, text = "[ FOREVER ROUTE ]", compact = "[ 2: ROUTE ]", viewTitle = "FOREVER ROUTE" },
+        { id = 3, text = "[ RESTED XP ]",     compact = "[ 3: REST ]",  viewTitle = "RESTED XP MONITOR" },
+        { id = 4, text = "[ PROFESSIONS ]",   compact = "[ 4: PROF ]",  viewTitle = "PROFESSIONS & MILESTONES" },
+        { id = 5, text = "[ ECONOMY ]",       compact = "[ 5: ECON ]",  viewTitle = "ECONOMY & WEALTH" },
+        { id = 6, text = "[ COOLDOWNS ]",     compact = "[ 6: CDS ]",   viewTitle = "COOLDOWNS & INSTANCE LOCKS" },
     }
     frame.tabButtons = {}
     local prevTab = nil
@@ -1015,13 +1388,30 @@ function CLIAlts:CreateMainFrame()
             CLIAlts:Render()
         end)
         if not prevTab then
-            tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -80)
+            tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -120)
         else
-            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 7, 0)
+            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 6, 0)
         end
         tabBtn.tabId = tabData.id
         tabBtn.baseText = tabData.text
         tabBtn.compactText = tabData.compact
+        tabBtn.viewTitle = tabData.viewTitle
+
+        tabBtn:SetScript("OnEnter", function(self)
+            if self.tabId ~= (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) then
+                local curT = CLIAlts:GetTheme()
+                self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
+                self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 0.8)
+            end
+        end)
+        tabBtn:SetScript("OnLeave", function(self)
+            if self.tabId ~= (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) then
+                local curT = CLIAlts:GetTheme()
+                self.label:SetTextColor(curT.muted[1], curT.muted[2], curT.muted[3])
+                self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.5)
+            end
+        end)
+
         table.insert(frame.tabButtons, tabBtn)
         prevTab = tabBtn
     end
@@ -1029,26 +1419,26 @@ function CLIAlts:CreateMainFrame()
     -- Header top border ASCII line
     local tableTopAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(tableTopAscii, fontSize)
-    tableTopAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -106)
+    tableTopAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -146)
     tableTopAscii:SetText(DOUBLE_BORDER)
     frame.tableTopAscii = tableTopAscii
 
     -- Column Header Line (Individual Cells) & Clickable Hit Frame
     local headerFrame = CreateFrame("Frame", nil, frame)
     headerFrame:SetSize(896, 18)
-    headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -120)
+    headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -160)
     frame.headerFrame = headerFrame
 
     local headerBorderL = headerFrame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(headerBorderL, fontSize)
     headerBorderL:SetPoint("LEFT", headerFrame, "LEFT", 4, 0)
-    headerBorderL:SetText("|")
+    headerBorderL:SetText("")
     frame.headerBorderL = headerBorderL
 
     local headerBorderR = headerFrame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(headerBorderR, fontSize)
     headerBorderR:SetPoint("RIGHT", headerFrame, "RIGHT", -4, 0)
-    headerBorderR:SetText("|")
+    headerBorderR:SetText("")
     frame.headerBorderR = headerBorderR
 
     frame.headerCells = {}
@@ -1085,14 +1475,14 @@ function CLIAlts:CreateMainFrame()
     -- Header separator ASCII line
     local tableSepAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(tableSepAscii, fontSize)
-    tableSepAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -136)
+    tableSepAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -178)
     tableSepAscii:SetText(BORDER_LINE)
     frame.tableSepAscii = tableSepAscii
 
     -- Rows Container
     local rowsContainer = CreateFrame("Frame", nil, frame)
     rowsContainer:SetSize(896, ROWS_COUNT * 21)
-    rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -150)
+    rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -192)
     frame.rowsContainer = rowsContainer
 
     -- Mousewheel pagination
@@ -1118,26 +1508,29 @@ function CLIAlts:CreateMainFrame()
         local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
         row:SetSize(896, 20)
         row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 21))
+        row.rowIndex = i
 
         row:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
             edgeSize = 1,
-            insets = { left = 0, right = 0, top = 0, bottom = 0 }
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
         })
-        row:SetBackdropColor(0, 0, 0, 0.2)
+        local t = CLIAlts:GetTheme()
+        local rowBg = (i % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
+        row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
         row:SetBackdropBorderColor(0, 0, 0, 0)
 
         local borderL = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(borderL, fontSize)
         borderL:SetPoint("LEFT", row, "LEFT", 4, 0)
-        borderL:SetText("|")
+        borderL:SetText("")
         row.borderL = borderL
 
         local borderR = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(borderR, fontSize)
         borderR:SetPoint("RIGHT", row, "RIGHT", -4, 0)
-        borderR:SetText("|")
+        borderR:SetText("")
         row.borderR = borderR
 
         row.cells = {}
@@ -1152,8 +1545,10 @@ function CLIAlts:CreateMainFrame()
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         row:SetScript("OnClick", function(self, button)
             if self.charData then
+                CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
+                CLIAlts:Render()
                 if button == "RightButton" then
-                    CLIAlts:ShowConfirmDelete(self.charData)
+                    CLIAlts:ShowRowContextMenu(self, self.charData)
                 elseif IsShiftKeyDown and IsShiftKeyDown() and CLIAlts:IsForeverMode() then
                     CLIAlts:CycleCharacterTier(self.charData)
                     CLIAlts:RequestRender()
@@ -1165,7 +1560,9 @@ function CLIAlts:CreateMainFrame()
 
         row:SetScript("OnEnter", function(self)
             local t = CLIAlts:GetTheme()
-            self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.4)
+            local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+            self:SetBackdropColor(hov[1], hov[2], hov[3], 0.45)
+            self:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 0.6)
             if self.charData then
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local coloredName = CLIAlts:ColorizePlayerName(self.charData.fullName or self.charData.name, self.charData.classFile)
@@ -1178,18 +1575,18 @@ function CLIAlts:CreateMainFrame()
                 end
                 local isStale, daysInactive = CLIAlts:IsCharStale(self.charData)
                 if isStale then
-                    GameTooltip:AddLine(string.format("|cffff4444[STALE]|r Inactive for %d days", daysInactive), 1, 0.3, 0.3)
+                    GameTooltip:AddLine(string.format("|cff%s[STALE]|r Inactive for %d days", t.blockedHex or "ff6b6b", daysInactive), 1, 0.3, 0.3)
                 end
 
                 local xpData = CLIAlts:GetLevelProgressData(self.charData)
                 if xpData and not xpData.isMaxLevel then
                     GameTooltip:AddLine(string.format("Level %d Progress: |cffffffff%s / %s XP|r (%5.1f%%)",
                         self.charData.level or 1, CLIAlts:FormatNumber(xpData.curXP), CLIAlts:FormatNumber(xpData.maxXP), xpData.percentExact), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("XP to Level %d: |cff00ff66%s XP needed|r",
-                        (self.charData.level or 1) + 1, CLIAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("XP to Level %d: |cff%s%s XP needed|r",
+                        (self.charData.level or 1) + 1, t.readyHex or "55e39a", CLIAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
                 else
                     local maxLvl = (self.charData and self.charData.level) or CLIAlts:GetMaxLevel()
-                    GameTooltip:AddLine(string.format("Level: |cff00ff66%d (MAX LEVEL)|r", maxLvl), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Level: |cff%s%d (MAX LEVEL)|r", t.readyHex or "55e39a", maxLvl), 0.8, 0.8, 0.8)
                 end
 
                 local rested = CLIAlts:GetRestedData(self.charData)
@@ -1200,7 +1597,7 @@ function CLIAlts:CreateMainFrame()
                         est, CLIAlts:FormatNumber(rested.currentRested), est, rested.percent, rested.statusStr), 0.8, 0.8, 0.8)
                     GameTooltip:AddLine(string.format("Time to Capped (%d%%): |cffffffff%s|r (%s)", capTarget, rested.timeLeftStr, rested.fullDate), 0.8, 0.8, 0.8)
                     if rested.isEstimate then
-                        GameTooltip:AddLine("|cffffaa00* Rested values are estimated (~disconnect / crash)|r", 1, 0.8, 0)
+                        GameTooltip:AddLine(string.format("|cff%s* Rested values are estimated (~disconnect / crash)|r", t.pendingHex or "ffb547"), 1, 0.8, 0)
                     end
                 end
 
@@ -1212,21 +1609,31 @@ function CLIAlts:CreateMainFrame()
                     local pAlerts = CLIAlts:GetCharacterProfessionAlerts(self.charData)
                     for _, a in ipairs(pAlerts) do
                         if a.type == "TRAIN" then
-                            GameTooltip:AddLine(string.format("|cff00ff66* %s|r", a.text), 1, 1, 1)
+                            GameTooltip:AddLine(string.format("|cff%s* %s|r", t.readyHex or "55e39a", a.text), 1, 1, 1)
                         elseif a.type == "BOTTLENECK" then
-                            GameTooltip:AddLine(string.format("|cffffaa00* %s|r", a.text), 1, 0.8, 0)
+                            GameTooltip:AddLine(string.format("|cff%s* %s|r", t.pendingHex or "ffb547", a.text), 1, 0.8, 0)
                         end
                     end
-                    GameTooltip:AddLine("Left-Click: Dossier | Shift-Click: Cycle Cohort | Right-Click: Delete", 0.7, 0.7, 0.7)
+                    GameTooltip:AddLine("Left-Click: Dossier | Shift-Click: Cycle Role | Right-Click: Context Menu", 0.7, 0.7, 0.7)
                 else
-                    GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Delete Character", 0.7, 0.7, 0.7)
+                    GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Context Menu", 0.7, 0.7, 0.7)
                 end
                 GameTooltip:Show()
             end
         end)
 
         row:SetScript("OnLeave", function(self)
-            self:SetBackdropColor(0, 0, 0, (i % 2 == 0) and 0.25 or 0.1)
+            local t = CLIAlts:GetTheme()
+            local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
+            if isSelected then
+                local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+                self:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
+                self:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
+            else
+                local rowBg = (self.rowIndex and self.rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
+                self:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
+                self:SetBackdropBorderColor(0, 0, 0, 0)
+            end
             GameTooltip:Hide()
         end)
 
@@ -1236,7 +1643,7 @@ function CLIAlts:CreateMainFrame()
     -- Bottom border ASCII line
     local tableBotAscii = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(tableBotAscii, fontSize)
-    tableBotAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -406)
+    tableBotAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -448)
     tableBotAscii:SetText(DOUBLE_BORDER)
     frame.tableBotAscii = tableBotAscii
 
@@ -1268,7 +1675,7 @@ function CLIAlts:CreateMainFrame()
     local statusTip = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(statusTip, fontSize - 1)
     statusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 70)
-    statusTip:SetText("|cff888888[Left-Click: Dossier | Right-Click: Delete | Click Col: Sort]|r")
+    statusTip:SetText("|cff888888[Left-Click: Dossier | Shift-Click: Cycle Cohort | Right-Click: Delete | Click Col: Sort]|r")
     frame.statusTip = statusTip
 
     -- Command Prompt Separator Line
@@ -1484,21 +1891,37 @@ function CLIAlts:Render()
 
     -- Highlight active tab button
     local isComp = self:IsCompact()
-    for _, tabBtn in ipairs(mainFrame.tabButtons) do
-        local base = isComp and tabBtn.compactText or tabBtn.baseText
-        if tabBtn.tabId == 1 and self:IsForeverMode() then
-            base = isComp and "[ 1: ROUTE ]" or "[ FOREVER ROUTE ]"
+    local tabTitles = {
+        [1] = "OVERVIEW",
+        [2] = "FOREVER ROUTE",
+        [3] = "RESTED XP MONITOR",
+        [4] = "PROFESSIONS & MILESTONES",
+        [5] = "ECONOMY & WEALTH",
+        [6] = "COOLDOWNS & INSTANCE LOCKS",
+    }
+    local curTabTitle = tabTitles[activeTab] or "OVERVIEW"
+    if mainFrame.titleText then
+        if isComp then
+            mainFrame.titleText:SetText(string.format("[#] CLIALTS :: %s", curTabTitle))
+        else
+            mainFrame.titleText:SetText(string.format("[#] CLIALTS :: %s v%s", curTabTitle, self.VERSION or "1.1.0"))
         end
+    end
+
+    -- Highlight active tab button with clear amber accent & border
+    for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
+        local base = isComp and tabBtn.compactText or tabBtn.baseText
         if tabBtn.tabId == activeTab then
-            tabBtn.label:SetText(string.format(">> %s <<", base))
+            tabBtn.label:SetText(base)
             tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-            tabBtn:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.3)
+            local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+            tabBtn:SetBackdropColor(hov[1], hov[2], hov[3], 0.28)
             tabBtn:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 1)
         else
             tabBtn.label:SetText(base)
-            tabBtn.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            tabBtn:SetBackdropColor(0, 0, 0, 0.6)
-            tabBtn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.8)
+            tabBtn.label:SetTextColor(t.muted[1], t.muted[2], t.muted[3])
+            tabBtn:SetBackdropColor(t.panelBg[1], t.panelBg[2], t.panelBg[3], 0.5)
+            tabBtn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.4)
         end
     end
 
@@ -1519,76 +1942,190 @@ function CLIAlts:Render()
         end
     end
 
-    -- Update Status Bar
-    local summary = self:GetAccountSummary()
-    local totalGold = summary.totalGold or 0
-    local goldOnly = math.floor(totalGold / 10000)
-    local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
+    -- ------------------------------------------------------------------------
+    -- Level 1: Recommended Next Action Banner (Forever Route)
+    -- ------------------------------------------------------------------------
+    local nextList = self:GetNextAltsPriority()
+    local topNext = nextList and nextList[1]
+    if topNext then
+        local tc = topNext.char
+        frame.recChar = tc
+        local cName = self:ColorizePlayerName(tc.fullName or tc.name, tc.classFile)
+        local isCur = (tc.fullName and tc.fullName == self.curPlayerFullName) or (tc.name and tc.name == self.curPlayerName)
+        local curPrefix = isCur and string.format("|cff%s*|r", t.accentHex or "57d6e8") or ""
+        local roleTag = (tc.tier == "CORE" and string.format("|cff%s[CORE]|r", t.highlightHex or "ffd34e"))
+            or (tc.tier == "RESERVE" and string.format("|cff%s[ALT]|r", t.accentHex or "57d6e8"))
+            or (tc.tier == "BANK" and string.format("|cff%s[BANK]|r", t.pendingHex or "ffb547"))
+            or string.format("|cff%s[---]|r", t.mutedHex or "a9a08c")
+        local tgtLvl = topNext.targetLevel or ((tc.tier == "CORE" and 35) or (tc.tier == "RESERVE" and 25) or 60)
+        local lvlStr = string.format("Lvl |cffffffff%d/%d|r", tc.level or 1, tgtLvl)
 
-    if isComp then
-        local filterTag = self.activeFilter and string.format(" [%s]", self.activeFilter:upper()) or ""
-        if self:IsForeverMode() then
-            local nextList = self:GetNextAltsPriority()
-            local topNext = nextList and nextList[1]
-            local cohortSummary = self:FormatCohortSummary()
-            if topNext then
-                local tc = topNext.char
-                local capStr = topNext.isCapped and string.format("%d%%*", topNext.maxPercent) or string.format("%d%%", topNext.percent)
-                local tag = (tc.tier == "CORE" and " [C]") or (tc.tier == "RESERVE" and " [A]") or ""
-                mainFrame.statusBarText:SetText(string.format("NEXT: %s%s (L%d) %s | ROSTER: %s%s",
-                    tc.name or "Unknown", tag, tc.level or 1, capStr, cohortSummary, filterTag))
+        local profParts = {}
+        if tc.supply_role and tc.supply_role ~= "" then
+            table.insert(profParts, string.format("|cff%s%s|r", t.textHex or "f4ead2", tc.supply_role))
+        end
+        if tc.professions and tc.professions.primary and #tc.professions.primary > 0 then
+            for _, p in ipairs(tc.professions.primary) do
+                local m = self:GetProfessionMilestoneInfo(tc, p)
+                if m and m.canTrainNext and m.isCappedAtCurrentRank then
+                    table.insert(profParts, string.format("|cff%s%s %d/%d [TRAIN]|r", t.readyHex or "55e39a", m.abbr, m.rank, m.maxRank))
+                elseif m and (m.isDone or (m.isMilestoneHit and m.rank == m.maxRank)) then
+                    table.insert(profParts, string.format("|cff%s%s %d [DONE]|r", t.accentHex or "57d6e8", m.abbr, m.rank))
+                else
+                    table.insert(profParts, string.format("%s %d", p.name:sub(1, 6), p.rank or 0))
+                end
+            end
+        end
+        local profSummary = (#profParts > 0) and (" | " .. table.concat(profParts, ", ")) or ""
+
+        local restStr
+        local etaStr
+        if topNext.isCapped then
+            restStr = string.format("|cff%s%d%% Capped|r", t.highlightHex or "ffd34e", topNext.maxPercent or 150)
+            if topNext.wastedXP and topNext.wastedXP > 0 then
+                restStr = restStr .. string.format(" (|cff%s+%s XP waste|r)", t.pendingHex or "ffb547", self:FormatNumber(topNext.wastedXP))
+                etaStr = string.format("|cff%s!%s Wasted|r", t.pendingHex or "ffb547", topNext.timeStr or "1h")
             else
-                mainFrame.statusBarText:SetText(string.format("ROSTER: %s | ALL TARGETS REACHED%s",
-                    cohortSummary, filterTag))
+                etaStr = string.format("|cff%sAt Cap|r", t.readyHex or "55e39a")
             end
         else
-            mainFrame.statusBarText:SetText(string.format("ALTS: %d%s | WEALTH: %sg",
-                summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
+            restStr = string.format("|cff%s%d%% Rested|r (~%s XP)", t.primaryHex or "f2c94c", topNext.percent or 0, self:FormatNumber(topNext.usableXP or 0))
+            etaStr = string.format("Caps in |cffffffff%s|r", topNext.timeStr or "---")
         end
+
+        local whyText
+        if topNext.isCapped and topNext.wastedXP and topNext.wastedXP > 0 then
+            whyText = string.format("Rested cap reached with XP overflow (+%s wasted) - play now to prevent XP waste.", self:FormatNumber(topNext.wastedXP))
+        elseif topNext.isCapped then
+            whyText = string.format("At %d%% Rested cap with double XP active - optimal time to level.", topNext.maxPercent or 150)
+        elseif tc.tier == "CORE" then
+            whyText = string.format("Core cohort priority with largest available rested pool (~%s XP).", self:FormatNumber(topNext.usableXP or 0))
+        else
+            whyText = string.format("Highest available rested XP pool (~%s XP) ready for progression.", self:FormatNumber(topNext.usableXP or 0))
+        end
+
+        if mainFrame.recBadge then
+            mainFrame.recBadge:SetText(isComp and "[NEXT]" or "[RECOMMENDED NEXT ACTION]")
+            mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        end
+        if mainFrame.recPrimary then
+            mainFrame.recPrimary:SetText(string.format("%s%s  %s  %s%s", curPrefix, cName, roleTag, lvlStr, profSummary))
+        end
+        if mainFrame.recDetail then
+            if isComp then
+                mainFrame.recDetail:SetText(string.format("%s | %s", restStr, etaStr))
+            else
+                mainFrame.recDetail:SetText(string.format("Rested: %s  |  ETA: %s  |  Why: %s", restStr, etaStr, whyText))
+            end
+            mainFrame.recDetail:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            mainFrame.recDetail:Show()
+        end
+        if mainFrame.recBtnDossier then
+            mainFrame.recBtnDossier:Show()
+            mainFrame.recBtnDossier:SetScript("OnClick", function()
+                CLIAlts:ShowDossierPopup(tc)
+            end)
+        end
+        if mainFrame.recBtnSetup then mainFrame.recBtnSetup:Hide() end
+    else
+        frame.recChar = nil
+        if mainFrame.recBadge then
+            mainFrame.recBadge:SetText(isComp and "[ROUTE]" or "[FOREVER ROUTE]")
+            mainFrame.recBadge:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        end
+        if mainFrame.recPrimary then
+            mainFrame.recPrimary:SetText(string.format("|cff%sAll characters have reached phase target level or are designated Bank mules.|r", t.mutedHex or "a9a08c"))
+        end
+        if mainFrame.recDetail then
+            mainFrame.recDetail:SetText(string.format("|cff%sSetup: Assign Core (L35) or Alt (L25) cohorts below to activate recommendations.|r", t.dimHex or "736953"))
+            mainFrame.recDetail:Show()
+        end
+        if mainFrame.recBtnDossier then mainFrame.recBtnDossier:Hide() end
+        if mainFrame.recBtnSetup then
+            mainFrame.recBtnSetup:Show()
+            mainFrame.recBtnSetup:SetScript("OnClick", function()
+                CLIAlts:ShowHelpPopup()
+            end)
+        end
+    end
+
+    -- ------------------------------------------------------------------------
+    -- Level 2: Roster Summary Telemetry Bar
+    -- ------------------------------------------------------------------------
+    local metrics = self:GetRosterSummaryMetrics()
+    local goldFormatted = self:FormatMoney(metrics.totalGold, true)
+    local cdStr
+    if metrics.readyCds > 0 then
+        cdStr = string.format("|cff%s%d Ready|r", t.readyHex or "55e39a", metrics.readyCds)
+    else
+        cdStr = string.format("|cff%sNone Ready|r", t.mutedHex or "a9a08c")
+    end
+
+    local restStr
+    if metrics.capped > 0 then
+        local wasteTag = (metrics.wasting > 0) and string.format(" (|cff%s%d Wasting|r)", t.pendingHex or "ffb547", metrics.wasting) or ""
+        restStr = string.format("|cff%s%d Capped%s|r, %d Accruing", t.highlightHex or "ffd34e", metrics.capped, wasteTag, metrics.accruing)
+    else
+        restStr = string.format("%d Accruing", metrics.accruing)
+    end
+
+    local roleStr
+    if metrics.core > 0 or metrics.alt > 0 or metrics.bank > 0 then
+        roleStr = string.format("%d Core, %d Alt, %d Bank", metrics.core, metrics.alt, metrics.bank)
+        if metrics.unassigned > 0 then
+            roleStr = roleStr .. string.format(", %d Unset", metrics.unassigned)
+        end
+    else
+        roleStr = string.format("%d Tracked", metrics.totalAlts)
+    end
+
+    local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
+    if isComp then
+        mainFrame.summaryText:SetText(string.format("ROSTER: |cffffffff%d|r (%dC/%dA/%dB) | REST: %d Cap | CDS: %s | %sg%s",
+            metrics.totalAlts, metrics.core, metrics.alt, metrics.bank, metrics.capped, cdStr, self:FormatNumber(math.floor(metrics.totalGold / 10000)), filterTag))
+    elseif activeTab == 2 then
+        local nextCount = #(self:GetNextAltsPriority())
+        local topName = topNext and topNext.char and (topNext.char.name or topNext.char.fullName) or "None"
+        mainFrame.summaryText:SetText(string.format("FOREVER ROUTE | ACTIVE ROTATION: |cffffffff%d|r ALTS | NEXT UP: |cff%s%s|r | %s",
+            nextCount, t.highlightHex or "ffd34e", topName, filterTag ~= "" and filterTag or "PRIORITY ORDERED"))
+    elseif activeTab == 3 then
+        local perkState = (self.IsWellRestedActive and self:IsWellRestedActive()) and "|cff55e39aACTIVE (+4%/rk)|r" or "|cffa9a08cOFF|r"
+        mainFrame.summaryText:SetText(string.format("RESTED XP | CAPPED: |cffffffff%d|r (%d Wasting) | ACCRUING: |cffffffff%d|r | WELL RESTED: %s%s",
+            metrics.capped, metrics.wasting, metrics.accruing, perkState, filterTag))
     elseif activeTab == 4 then
+        local trainCount = 0
+        local charList = self:GetCharactersList()
+        for _, c in ipairs(charList) do
+            local alerts = self:GetCharacterProfessionAlerts(c)
+            for _, a in ipairs(alerts) do
+                if a.type == "TRAIN" then
+                    trainCount = trainCount + 1
+                    break
+                end
+            end
+        end
+        local trainStr = (trainCount > 0) and string.format("|cff%s%d Alts Ready|r", t.readyHex or "55e39a", trainCount) or string.format("|cff%sNone Ready|r", t.mutedHex or "a9a08c")
+        mainFrame.summaryText:SetText(string.format("PROFESSIONS | TRACKED: |cffffffff%d|r ALTS | TRAINER VISITS: %s%s",
+            metrics.totalAlts, trainStr, filterTag))
+    elseif activeTab == 5 then
         local spark = self:GenerateAsciiSparkline(14)
         local d1, d7, d30 = self:GetGoldHistoryDeltas()
         local d1Sign = d1 >= 0 and "+" or ""
         local d7Sign = d7 >= 0 and "+" or ""
         local d30Sign = d30 >= 0 and "+" or ""
-        mainFrame.statusBarText:SetText(string.format("WEALTH [%s] | 24H: %s%dg | 7D: %s%dg | 30D: %s%dg | TOTAL: %sg",
-            spark, d1Sign, d1, d7Sign, d7, d30Sign, d30, self:FormatNumber(goldOnly)))
+        mainFrame.summaryText:SetText(string.format("WEALTH [%s] | 24H: %s%dg | 7D: %s%dg | 30D: %s%dg | TOTAL: %s%s",
+            spark, d1Sign, d1, d7Sign, d7, d30Sign, d30, goldFormatted, filterTag))
+    elseif activeTab == 6 then
+        mainFrame.summaryText:SetText(string.format("COOLDOWNS | TRADE CDS: %s | INSTANCE LOCKS: |cffffffff%d|r Active%s",
+            cdStr, metrics.activeLocks, filterTag))
     else
-        local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
-        local sysLabel = self:IsRetail() and "SYSTEM: RETAIL" or "SYSTEM: WOW FOREVER"
-        if self:IsForeverMode() then
-            local nextList = self:GetNextAltsPriority()
-            local topNext = nextList and nextList[1]
-            local cohortSummary = self:FormatCohortSummary()
-            if topNext then
-                local tc = topNext.char
-                local tag = (tc.tier == "CORE" and " [CORE]") or (tc.tier == "RESERVE" and " [ALT]") or ""
-                local tgtStr = topNext.targetLevel and string.format(" (%d/%d)", tc.level or 1, topNext.targetLevel) or string.format(" (Lvl %d)", tc.level or 1)
-                local restDetail
-                if topNext.isCapped then
-                    if topNext.wastedXP and topNext.wastedXP > 0 then
-                        restDetail = string.format("[%d%% CAPPED* (+%s)]", topNext.maxPercent, self:FormatWasteShort(topNext.wastedXP))
-                    else
-                        restDetail = string.format("[%d%% CAPPED*]", topNext.maxPercent)
-                    end
-                else
-                    restDetail = string.format("[%d%% Rested (~%s)]", topNext.percent, self:FormatWasteShort(topNext.usableXP))
-                end
-                mainFrame.statusBarText:SetText(string.format("PLAY NEXT: >> %s%s%s %s << | ROSTER: %s | WEALTH: %sg%s",
-                    tc.name or "Unknown", tag, tgtStr, restDetail, cohortSummary, self:FormatNumber(goldOnly), filterTag))
-            else
-                mainFrame.statusBarText:SetText(string.format("ROSTER: %s | ALL TARGET LEVELS REACHED | TRACKED: %d ALTS%s | WEALTH: %sg",
-                    cohortSummary, summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
-            end
-        else
-            mainFrame.statusBarText:SetText(string.format("%s | ACTIVE: %s | TRACKED: %d ALTS%s | WEALTH: %sg",
-                sysLabel, curFull or "Unknown", summary.totalAlts or 0, filterTag, self:FormatNumber(goldOnly)))
-        end
+        mainFrame.summaryText:SetText(string.format("ROSTER: |cffffffff%d|r (%s)  |  RESTED: %s  |  CDS: %s  |  WEALTH: %s%s",
+            metrics.totalAlts, roleStr, restStr, cdStr, goldFormatted, filterTag))
     end
+    mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
 
     -- Render Table Header Cells & Clickable Header Buttons
     local cols = self:GetColumns(activeTab)
-    local isComp = self:IsCompact()
     local xOffset = 16
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
@@ -1608,9 +2145,9 @@ function CLIAlts:Render()
 
                 local title = col.title
                 if col.sort and col.sort == sortBy then
-                    local arrow = sortAsc and "^" or "v"
+                    local arrow = sortAsc and " ^" or " v"
                     if col.align == "RIGHT" then
-                        title = arrow .. title
+                        title = (sortAsc and "^ " or "v ") .. title
                     else
                         title = title .. arrow
                     end
@@ -1644,8 +2181,22 @@ function CLIAlts:Render()
         end
     end
 
-    -- Retrieve Sorted Characters
-    local chars = self:GetCharactersList(CLIAltsDB.settings.sortBy, CLIAltsDB.settings.sortAsc, self.activeFilter)
+    -- Retrieve Sorted Characters (with view-based defaults)
+    local activeSortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
+    local activeSortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
+    if not activeSortBy then
+        if activeTab == 2 then
+            activeSortBy = "rotation"
+            activeSortAsc = false
+        elseif activeTab == 5 then
+            activeSortBy = "gold"
+            activeSortAsc = false
+        elseif activeTab == 6 then
+            activeSortBy = "cooldown"
+            activeSortAsc = true
+        end
+    end
+    local chars = self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
     totalPages = math.max(1, math.ceil(#chars / ROWS_COUNT))
     if currentPage > totalPages then currentPage = totalPages end
     if currentPage < 1 then currentPage = 1 end
@@ -1681,6 +2232,14 @@ function CLIAlts:Render()
         mainFrame.pageText:SetText(string.format("TRACKED: %d ALTS%s", #chars, filterSuffix))
     end
 
+    if mainFrame.statusTip then
+        if isComp then
+            mainFrame.statusTip:SetText("|cff888888[L-Click: Dossier | Shift-Click: Role | R-Click: Menu]|r")
+        else
+            mainFrame.statusTip:SetText("|cff888888[Left-Click: Dossier | Shift-Click: Cycle Role | Right-Click: Context Menu | Click Col: Sort]|r")
+        end
+    end
+
     -- Render 12 Monospace Rows (Each with dedicated column cells)
     for rowIndex = 1, ROWS_COUNT do
         local row = rowFrames[rowIndex]
@@ -1689,7 +2248,16 @@ function CLIAlts:Render()
 
         if char then
             row.charData = char
-            row:SetBackdropColor(0, 0, 0, (rowIndex % 2 == 0) and 0.25 or 0.1)
+            local isSelected = (CLIAlts.selectedCharKey and (char.fullName == CLIAlts.selectedCharKey or char.name == CLIAlts.selectedCharKey))
+            if isSelected then
+                local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+                row:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
+                row:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
+            else
+                local rowBg = (rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
+                row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
+                row:SetBackdropBorderColor(0, 0, 0, 0)
+            end
 
             local rowXOffset = 16
             for idx = 1, 8 do
@@ -1739,17 +2307,31 @@ function CLIAlts:ApplyTheme()
     if mainFrame.topAscii then mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.titleText then mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
     if mainFrame.midAscii1 then mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-    if mainFrame.statusBarText then mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
-    if mainFrame.midAscii2 then mainFrame.midAscii2:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.recPanel then
+        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+        mainFrame.recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
+        mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.5)
+    end
+    if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+    if mainFrame.summaryBar then
+        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+        mainFrame.summaryBar:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
+        mainFrame.summaryBar:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+    end
+    if mainFrame.summaryText then mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
+    if mainFrame.statusBarText and mainFrame.statusBarText ~= mainFrame.summaryText then
+        mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+    end
+    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText("") end
     if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.botAscii then mainFrame.botAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-    if mainFrame.headerBorderL then mainFrame.headerBorderL:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-    if mainFrame.headerBorderR then mainFrame.headerBorderR:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    if mainFrame.headerBorderL then mainFrame.headerBorderL:SetText("") end
+    if mainFrame.headerBorderR then mainFrame.headerBorderR:SetText("") end
     for _, row in ipairs(rowFrames) do
-        if row.borderL then row.borderL:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-        if row.borderR then row.borderR:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+        if row.borderL then row.borderL:SetText("") end
+        if row.borderR then row.borderR:SetText("") end
     end
     if mainFrame.pageText then mainFrame.pageText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
 
@@ -1793,6 +2375,10 @@ function CLIAlts:ApplyTheme()
     if mainFrame.promptStatusTip and mainFrame.promptStatusTip.SetTextColor then
         mainFrame.promptStatusTip:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
     end
+
+    if self.UpdateMinimapTheme then
+        self:UpdateMinimapTheme()
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -1805,7 +2391,7 @@ function CLIAlts:ToggleSortKey(key)
             CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
         else
             CLIAltsDB.settings.sortBy = key
-            CLIAltsDB.settings.sortAsc = (key == "name" or key == "level")
+            CLIAltsDB.settings.sortAsc = (key == "name" or key == "level" or key == "prof" or key == "role")
         end
     end
     PlayRetroSound()
@@ -1815,7 +2401,7 @@ end
 
 function CLIAlts:SwitchTab(tabId)
     tabId = tonumber(tabId)
-    if not tabId or tabId < 1 or tabId > 5 then return end
+    if not tabId or tabId < 1 or tabId > 6 then return end
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.activeTab = tabId
     end
@@ -1858,7 +2444,7 @@ function CLIAlts:SetPromptFeedback(msg, isError)
     if safeAfter then
         safeAfter(4.0, function()
             if mainFrame and mainFrame.promptStatusTip then
-                mainFrame.promptStatusTip:SetText("|cff888888[Commands: 1-5, sort <col>, filter <query>, find <text>, watch <item>, next, export, help]|r")
+                mainFrame.promptStatusTip:SetText("|cff888888[Commands: 1-6, sort <col>, filter <query>, find <text>, watch <item>, next, export, help]|r")
             end
         end)
     end
@@ -1885,18 +2471,18 @@ function CLIAlts:ExecutePromptCommand(input)
     cmd = cmd:lower()
     args = args and args:match("^%s*(.-)%s*$") or ""
 
-    if cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" then
+    if cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" then
         local tNum = tonumber(cmd)
         self:SwitchTab(tNum)
         self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
 
     elseif cmd == "tab" then
         local tNum = tonumber(args)
-        if tNum and tNum >= 1 and tNum <= 5 then
+        if tNum and tNum >= 1 and tNum <= 6 then
             self:SwitchTab(tNum)
             self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
         else
-            self:SetPromptFeedback("Usage: tab <1-5>", true)
+            self:SetPromptFeedback("Usage: tab <1-6>", true)
         end
 
     elseif cmd == "sort" then
@@ -1919,6 +2505,10 @@ function CLIAlts:ExecutePromptCommand(input)
                 waste = "waste",
                 wst = "waste",
                 fac = "name",
+                cd = "cooldown",
+                cooldown = "cooldown",
+                lock = "cooldown",
+                locks = "cooldown",
                 loc = "location",
                 location = "location",
                 zone = "location",
@@ -2022,23 +2612,28 @@ function CLIAlts:ExecutePromptCommand(input)
         if args and args ~= "" then
             local map = {
                 green = "GREEN",
+                grn = "GREEN",
                 amber = "AMBER",
+                amb = "AMBER",
                 cyan = "CYAN",
+                cyn = "CYAN",
                 mono = "MONO",
                 safe = "COLORBLIND",
                 colorblind = "COLORBLIND",
                 cb = "COLORBLIND",
                 synthwave = "SYNTHWAVE",
+                syn = "SYNTHWAVE",
                 dracula = "DRACULA",
+                dra = "DRACULA",
             }
             local choice = map[args:lower()]
             if choice then
                 CLIAltsDB.settings.theme = choice
                 self:ApplyTheme()
                 self:Render()
-                self:SetPromptFeedback(string.format("Theme set to %s", choice))
+                self:SetPromptFeedback(string.format("Theme set to %s (%s)", choice, self.THEMES[choice] and self.THEMES[choice].tag or choice))
             else
-                self:SetPromptFeedback("Themes: green, amber, cyan, mono, safe (colorblind)", true)
+                self:SetPromptFeedback("Themes: amber, green, cyan, mono, safe, synthwave, dracula", true)
             end
         else
             self:CycleTheme()
@@ -2254,7 +2849,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
     local trimmed = text:match("^%s*(.-)%s*$") or ""
 
     local commands = {
-        "1", "2", "3", "4", "5",
+        "1", "2", "3", "4", "5", "6",
         "sort", "filter", "find", "clear",
         "goto", "page", "next", "export", "compact",
         "watch", "unwatch", "watchlist",
@@ -2270,7 +2865,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
     if cmd then
         cmd = cmd:lower()
         if cmd == "sort" then
-            local sortKeys = { "name", "level", "cohort", "gold", "rested", "waste", "xp", "rotation", "next", "location", "hearth", "seen", "note" }
+            local sortKeys = { "name", "level", "cohort", "role", "gold", "rested", "waste", "xp", "rotation", "next", "location", "hearth", "seen", "note", "prof", "cd", "cooldown" }
             for _, k in ipairs(sortKeys) do
                 if k:sub(1, #arg) == arg:lower() and k ~= arg:lower() then
                     editBox:SetText("sort " .. k)
@@ -2519,25 +3114,26 @@ function CLIAlts:ShowDossierPopup(char)
 
     -- Highlight active Cohort
     local activeTier = char.tier or "UNASSIGNED"
+    local activeHex = t.readyHex or "55e39a"
     if dossierPopup.btnSetCore then
-        dossierPopup.btnSetCore.label:SetText(activeTier == "CORE" and "|cff00ff66*CORE (35)*|r" or "[ SET CORE (35) ]")
-        dossierPopup.btnSetAlt.label:SetText(activeTier == "RESERVE" and "|cff00ff66*ALT (25)*|r" or "[ SET ALT (25) ]")
-        dossierPopup.btnSetBank.label:SetText(activeTier == "BANK" and "|cff00ff66*BANK (1)*|r" or "[ SET BANK (1) ]")
-        dossierPopup.btnUnset.label:SetText(activeTier == "UNASSIGNED" and "|cff00ff66*UNASSIGNED*|r" or "[ UNSET ]")
+        dossierPopup.btnSetCore.label:SetText(activeTier == "CORE" and string.format("|cff%s*CORE (35)*|r", activeHex) or "[ SET CORE (35) ]")
+        dossierPopup.btnSetAlt.label:SetText(activeTier == "RESERVE" and string.format("|cff%s*ALT (25)*|r", activeHex) or "[ SET ALT (25) ]")
+        dossierPopup.btnSetBank.label:SetText(activeTier == "BANK" and string.format("|cff%s*BANK (1)*|r", activeHex) or "[ SET BANK (1) ]")
+        dossierPopup.btnUnset.label:SetText(activeTier == "UNASSIGNED" and string.format("|cff%s*UNASSIGNED*|r", activeHex) or "[ UNSET ]")
     end
 
     -- Highlight active Supply Role
     local activeRole = char.supply_role or ""
     if dossierPopup.btnRoleTailor then
-        dossierPopup.btnRoleTailor.label:SetText(activeRole == "Tailor/Bags" and "|cff00ff66*Tailor/Bags*|r" or "[ Tailor/Bags ]")
-        dossierPopup.btnRoleAlch.label:SetText(activeRole == "Alch/DE" and "|cff00ff66*Alch/DE*|r" or "[ Alch/DE ]")
-        dossierPopup.btnRoleMiner.label:SetText(activeRole == "Miner/BS" and "|cff00ff66*Miner/BS*|r" or "[ Miner/BS ]")
-        dossierPopup.btnRoleLW.label:SetText(activeRole == "Skinner/LW" and "|cff00ff66*Skinner/LW*|r" or "[ Skinner/LW ]")
-        dossierPopup.btnRolePassive.label:SetText(activeRole == "Passive LP" and "|cff00ff66*Passive LP*|r" or "[ Passive LP ]")
-        dossierPopup.btnRoleAuto.label:SetText(activeRole == "" and "|cff00ff66*Auto*|r" or "[ Auto ]")
+        dossierPopup.btnRoleTailor.label:SetText(activeRole == "Tailor/Bags" and string.format("|cff%s*Tailor/Bags*|r", activeHex) or "[ Tailor/Bags ]")
+        dossierPopup.btnRoleAlch.label:SetText(activeRole == "Alch/DE" and string.format("|cff%s*Alch/DE*|r", activeHex) or "[ Alch/DE ]")
+        dossierPopup.btnRoleMiner.label:SetText(activeRole == "Miner/BS" and string.format("|cff%s*Miner/BS*|r", activeHex) or "[ Miner/BS ]")
+        dossierPopup.btnRoleLW.label:SetText(activeRole == "Skinner/LW" and string.format("|cff%s*Skinner/LW*|r", activeHex) or "[ Skinner/LW ]")
+        dossierPopup.btnRolePassive.label:SetText(activeRole == "Passive LP" and string.format("|cff%s*Passive LP*|r", activeHex) or "[ Passive LP ]")
+        dossierPopup.btnRoleAuto.label:SetText(activeRole == "" and string.format("|cff%s*Auto*|r", activeHex) or "[ Auto ]")
         if activeRole ~= "" and activeRole ~= "Tailor/Bags" and activeRole ~= "Alch/DE" and activeRole ~= "Miner/BS" and activeRole ~= "Skinner/LW" and activeRole ~= "Passive LP" then
             local trunc = (#activeRole > 9) and (activeRole:sub(1, 8) .. "..") or activeRole
-            dossierPopup.btnRoleCustom.label:SetText(string.format("|cff00ff66*%s*|r", trunc))
+            dossierPopup.btnRoleCustom.label:SetText(string.format("|cff%s*%s*|r", activeHex, trunc))
         else
             dossierPopup.btnRoleCustom.label:SetText("[ Custom... ]")
         end
@@ -2545,36 +3141,35 @@ function CLIAlts:ShowDossierPopup(char)
 
     local ok, renderErr = pcall(function()
         local lines = {}
-        table.insert(lines, "+==============================================================================+")
-        table.insert(lines, "|                    CLIALTS :: ALT DOSSIER & RECORD                           |")
-        table.insert(lines, "+==============================================================================+")
+        table.insert(lines, string.format("|cff%sCLIALTS :: ALT DOSSIER & RECORD|r", t.highlightHex or "ffd34e"))
+        table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("=", 68)))
 
         if char.secondaryName and char.secondaryName ~= "" then
-            table.insert(lines, string.format("| Full Name:      %s", self:ColorizePlayerName(char.fullName or char.name or "Unknown", char.classFile)))
-            table.insert(lines, string.format("|   * First Name: |cffffffff%s|r", char.primaryName or char.name or "Unknown"))
-            table.insert(lines, string.format("|   * Surname:    |cffffffff%s|r", tostring(char.secondaryName)))
+            table.insert(lines, string.format("Full Name:      %s", self:ColorizePlayerName(char.fullName or char.name or "Unknown", char.classFile)))
+            table.insert(lines, string.format("  * First Name: |cffffffff%s|r", char.primaryName or char.name or "Unknown"))
+            table.insert(lines, string.format("  * Surname:    |cffffffff%s|r", tostring(char.secondaryName)))
         else
-            table.insert(lines, string.format("| Character Name: %s", self:ColorizePlayerName(char.name or "Unknown", char.classFile)))
+            table.insert(lines, string.format("Character Name: %s", self:ColorizePlayerName(char.name or "Unknown", char.classFile)))
         end
-        table.insert(lines, string.format("| System:         |cffffffff%s|r", tostring(self:GetClientFlavor() or "Classic")))
+        table.insert(lines, string.format("System:         |cffffffff%s|r", tostring(self:GetClientFlavor() or "Classic")))
         if char.realm and char.realm ~= "" and char.realm ~= "Forever" then
-            table.insert(lines, string.format("| Realm:          |cffffffff%s|r", tostring(char.realm)))
+            table.insert(lines, string.format("Realm:          |cffffffff%s|r", tostring(char.realm)))
         end
-        table.insert(lines, string.format("| Faction / Race: %s |cffffffff%s (%s)|r", self:GetFactionTag(char.faction), tostring(self:FormatRace(char)), tostring(self:GetRaceCode(char))))
-        table.insert(lines, string.format("| Class / Level:  %s (Level |cffffffff%d|r)", self:ColorizePlayerName(char.class or "Unknown", char.classFile), tonumber(char.level) or 1))
-        table.insert(lines, string.format("| Current Gold:   %s", self:FormatMoney(char.money, true)))
+        table.insert(lines, string.format("Faction / Race: %s |cffffffff%s (%s)|r", self:GetFactionTag(char.faction), tostring(self:FormatRace(char)), tostring(self:GetRaceCode(char))))
+        table.insert(lines, string.format("Class / Level:  %s (Level |cffffffff%d|r)", self:ColorizePlayerName(char.class or "Unknown", char.classFile), tonumber(char.level) or 1))
+        table.insert(lines, string.format("Current Gold:   %s", self:FormatMoney(char.money, true)))
 
-        local logoutZoneTag = char.loggedOutInRestZone and "|cff00ff66[REST AREA AT LOGOUT]|r" or "|cffffaa00[WILD AT LOGOUT]|r"
-        table.insert(lines, string.format("| Location:       |cffffffff%s|r %s", tostring(char.location or "Unknown"), logoutZoneTag))
-        table.insert(lines, string.format("| Hearthstone:    |cffffffff%s|r", tostring(char.bindLocation or "Unknown")))
+        local logoutZoneTag = char.loggedOutInRestZone and string.format("|cff%s[REST AREA AT LOGOUT]|r", t.readyHex or "55e39a") or string.format("|cff%s[WILD AT LOGOUT]|r", t.pendingHex or "ffb547")
+        table.insert(lines, string.format("Location:       |cffffffff%s|r %s", tostring(char.location or "Unknown"), logoutZoneTag))
+        table.insert(lines, string.format("Hearthstone:    |cffffffff%s|r", tostring(char.bindLocation or "Unknown")))
         local isStale, daysInactive = self:IsCharStale(char)
-        local staleTag = (isStale and daysInactive) and string.format(" |cffff4444[STALE: %dd inactive]|r", tonumber(daysInactive) or 0) or ""
+        local staleTag = (isStale and daysInactive) and string.format(" |cff%s[STALE: %dd inactive]|r", t.blockedHex or "ff6b6b", tonumber(daysInactive) or 0) or ""
         local lastActiveDate = self:FormatDateSafe(char.lastUpdate)
-        table.insert(lines, string.format("| Last Active:    |cffffffff%s|r (%s)%s", self:GetTimeAgo(char.lastUpdate), lastActiveDate, staleTag))
-        local noteStr = (char.note and char.note ~= "") and string.format("|cffffd700%s|r", tostring(char.note)) or "|cff888888None (set with > note <name> <text>)|r"
-        table.insert(lines, string.format("| Player Note:    %s", noteStr))
-        table.insert(lines, "+------------------------------------------------------------------------------+")
-        table.insert(lines, "| LEVEL EXPERIENCE PROGRESS:")
+        table.insert(lines, string.format("Last Active:    |cffffffff%s|r (%s)%s", self:GetTimeAgo(char.lastUpdate), lastActiveDate, staleTag))
+        local noteStr = (char.note and char.note ~= "") and string.format("|cffffd700%s|r", tostring(char.note)) or string.format("|cff%sNone (set with > note <name> <text>)|r", t.mutedHex or "a9a08c")
+        table.insert(lines, string.format("Player Note:    %s", noteStr))
+        table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 68)))
+        table.insert(lines, string.format("|cff%sLEVEL EXPERIENCE PROGRESS|r", t.primaryHex or "f2c94c"))
 
         local xpData = self:GetLevelProgressData(char)
         if xpData and not xpData.isMaxLevel then
@@ -2583,15 +3178,15 @@ function CLIAlts:ShowDossierPopup(char)
             local pctEx = tonumber(xpData.percentExact) or 0
             local remXP = tonumber(xpData.remainingXP) or 0
             local cLvl = tonumber(char.level) or 1
-            table.insert(lines, string.format("| Current XP:     |cffffffff%s / %s XP|r (%5.1f%% of Level %d)", self:FormatNumber(curXP), self:FormatNumber(maxXP), pctEx, cLvl))
-            table.insert(lines, string.format("| Next Level:     |cffffffff%s XP needed|r to reach Level %d", self:FormatNumber(remXP), cLvl + 1))
-            table.insert(lines, string.format("| Progress Bar:   %s%s|r %d%%", t.barFill, tostring(xpData.barStr or "[............]"), tonumber(xpData.percent) or 0))
+            table.insert(lines, string.format("Current XP:     |cffffffff%s / %s XP|r (%5.1f%% of Level %d)", self:FormatNumber(curXP), self:FormatNumber(maxXP), pctEx, cLvl))
+            table.insert(lines, string.format("Next Level:     |cffffffff%s XP needed|r to reach Level %d", self:FormatNumber(remXP), cLvl + 1))
+            table.insert(lines, string.format("Progress Bar:   %s%s|r %d%%", t.barFill, tostring(xpData.barStr or "[............]"), tonumber(xpData.percent) or 0))
         else
-            table.insert(lines, string.format("| Status:         |cff888888MAX LEVEL (Level %d reached)|r", tonumber(char.level) or self:GetMaxLevel()))
+            table.insert(lines, string.format("Status:         |cff%sMAX LEVEL (Level %d reached)|r", t.mutedHex or "a9a08c", tonumber(char.level) or self:GetMaxLevel()))
         end
 
-        table.insert(lines, "+------------------------------------------------------------------------------+")
-        table.insert(lines, string.format("| RESTED EXPERIENCE (%s):", tostring(self:GetClientFlavor() or "Classic")))
+        table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 68)))
+        table.insert(lines, string.format("|cff%sRESTED EXPERIENCE (%s)|r", t.primaryHex or "f2c94c", tostring(self:GetClientFlavor() or "Classic")))
 
         local rested = self:GetRestedData(char)
         if rested and not rested.isMaxLevel then
@@ -2600,38 +3195,38 @@ function CLIAlts:ShowDossierPopup(char)
             local curRest = tonumber(rested.currentRested) or 0
             local maxRest = tonumber(rested.maxRested) or 0
             local rPct = tonumber(rested.percent) or 0
-            table.insert(lines, string.format("| Rested Points:  |cffffffff%s%s / %s XP|r (%s%d%% of Level)", est, self:FormatNumber(curRest), self:FormatNumber(maxRest), est, rPct))
+            table.insert(lines, string.format("Rested Points:  |cffffffff%s%s / %s XP|r (%s%d%% of Level)", est, self:FormatNumber(curRest), self:FormatNumber(maxRest), est, rPct))
             if not self:IsRetail() and rested.perkRank and rested.perkRank > 0 then
                 local pRank = tonumber(rested.perkRank) or 0
-                table.insert(lines, string.format("| Rest Status:    %s (%s | Perk: R%d/5)", tostring(rested.statusStr or "[ REST ]"), restModeStr, pRank))
-                table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r (+%d%% speed bonus)", est, self:FormatNumber(math.floor((tonumber(rested.ratePerSec) or 0) * 3600)), pRank * 4))
+                table.insert(lines, string.format("Rest Status:    %s (%s | Perk: R%d/5)", tostring(rested.statusStr or "[ REST ]"), restModeStr, pRank))
+                table.insert(lines, string.format("Accumulation:   |cffffffff%s%s XP/hr|r (+%d%% speed bonus)", est, self:FormatNumber(math.floor((tonumber(rested.ratePerSec) or 0) * 3600)), pRank * 4))
             else
-                table.insert(lines, string.format("| Rest Status:    %s (%s)", tostring(rested.statusStr or "[ REST ]"), restModeStr))
-                table.insert(lines, string.format("| Accumulation:   |cffffffff%s%s XP/hr|r", est, self:FormatNumber(math.floor((tonumber(rested.ratePerSec) or 0) * 3600))))
+                table.insert(lines, string.format("Rest Status:    %s (%s)", tostring(rested.statusStr or "[ REST ]"), restModeStr))
+                table.insert(lines, string.format("Accumulation:   |cffffffff%s%s XP/hr|r", est, self:FormatNumber(math.floor((tonumber(rested.ratePerSec) or 0) * 3600))))
             end
-            table.insert(lines, string.format("| Progress Bar:   %s%s|r %s%d%%", t.barFill, tostring(rested.barStr or "[............]"), est, rPct))
-            table.insert(lines, string.format("| Time to %d%%:   |cffffffff%s|r", tonumber(rested.maxPercent) or 150, tostring(rested.timeLeftStr or "---")))
-            table.insert(lines, string.format("| Projected Date: |cffffffff%s|r", tostring(rested.fullDate or "---")))
+            table.insert(lines, string.format("Progress Bar:   %s%s|r %s%d%%", t.barFill, tostring(rested.barStr or "[............]"), est, rPct))
+            table.insert(lines, string.format("Time to %d%%:   |cffffffff%s|r", tonumber(rested.maxPercent) or 150, tostring(rested.timeLeftStr or "---")))
+            table.insert(lines, string.format("Projected Date: |cffffffff%s|r", tostring(rested.fullDate or "---")))
             if rested.isEstimate then
-                table.insert(lines, "| Note:           |cffffaa00Estimated projection (~disconnect / crash)|r")
+                table.insert(lines, string.format("Note:           |cff%sEstimated projection (~disconnect / crash)|r", t.pendingHex or "ffb547"))
             end
         else
-            table.insert(lines, "| Rest Status:    |cff888888N/A (Max Level characters do not accumulate Rested XP)|r")
+            table.insert(lines, string.format("Rest Status:    |cff%sN/A (Max Level characters do not accumulate Rested XP)|r", t.mutedHex or "a9a08c"))
         end
 
         if self:IsForeverMode() or (char.tier and char.tier ~= "UNASSIGNED") then
-            table.insert(lines, "+------------------------------------------------------------------------------+")
+            table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 68)))
             local tierStr = tostring(char.tier or "UNASSIGNED")
             local tgtLvl = tonumber(char.target_level) or ((tierStr == "CORE" and 35) or (tierStr == "RESERVE" and 25) or (tierStr == "BANK" and 1) or 60)
             local curLvl = tonumber(char.level) or 1
-            local statusTag = (curLvl >= tgtLvl) and " |cff00ff66[Target Level Reached]|r" or ""
-            table.insert(lines, string.format("| ROSTER COHORT:    |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
-            local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", tostring(char.supply_role)) or "|cff888888Auto (detecting learned professions)|r"
-            table.insert(lines, string.format("| Supply Role:      %s", roleStr))
+            local statusTag = (curLvl >= tgtLvl) and string.format(" |cff%s[Target Level Reached]|r", t.readyHex or "55e39a") or ""
+            table.insert(lines, string.format("ROSTER COHORT:  |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
+            local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", tostring(char.supply_role)) or string.format("|cff%sAuto (detecting learned professions)|r", t.mutedHex or "a9a08c")
+            table.insert(lines, string.format("Supply Role:    %s", roleStr))
         end
 
-        table.insert(lines, "+------------------------------------------------------------------------------+")
-        table.insert(lines, "| PROFESSIONS & CRAFTING (WOW FOREVER MILESTONES):")
+        table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 68)))
+        table.insert(lines, string.format("|cff%sPROFESSIONS & CRAFTING (WOW FOREVER MILESTONES)|r", t.primaryHex or "f2c94c"))
         if char.professions and char.professions.primary and #char.professions.primary > 0 then
             for _, p in ipairs(char.professions.primary) do
                 local pName = tostring(p.name or "Unknown")
@@ -2641,33 +3236,33 @@ function CLIAlts:ShowDossierPopup(char)
                 if m then
                     local statusText
                     if m.isDone then
-                        statusText = "|cff00e5ff[P4 DONE - MAX]|r"
+                        statusText = string.format("|cff%s[P4 DONE - MAX]|r", t.accentHex or "57d6e8")
                     elseif m.canTrainNext and m.isCappedAtCurrentRank then
-                        statusText = string.format("|cff00ff66[TRAIN %s AVAILABLE]|r (Req Lvl %d met)", m.nextRankTitle:upper(), m.nextReqLevel)
+                        statusText = string.format("|cff%s[TRAIN %s AVAILABLE]|r (Req Lvl %d met)", t.readyHex or "55e39a", m.nextRankTitle:upper(), m.nextReqLevel)
                     elseif m.levelBottleneck and m.isCappedAtCurrentRank then
-                        statusText = string.format("|cffffaa00[LEVEL BOTTLENECK: Req Lvl %d to train %s]|r", m.nextReqLevel, m.nextRankTitle)
+                        statusText = string.format("|cff%s[LEVEL BOTTLENECK: Req Lvl %d to train %s]|r", t.pendingHex or "ffb547", m.nextReqLevel, m.nextRankTitle)
                     elseif m.isMilestoneHit then
-                        statusText = string.format("|cff00e5ff[%s DONE]|r", m.targetPhase)
+                        statusText = string.format("|cff%s[%s DONE]|r", t.accentHex or "57d6e8", m.targetPhase)
                     else
                         statusText = string.format("[%s Target: %d/%d] (%d skillups needed)", m.targetPhase, m.rank, m.targetMilestone, m.needed)
                     end
-                    table.insert(lines, string.format("|  * Primary:   |cffffffff%-15s|r %3d / %-3d  %s", pName, pRank, pMax, statusText))
+                    table.insert(lines, string.format(" * Primary:     |cffffffff%-15s|r %3d / %-3d  %s", pName, pRank, pMax, statusText))
                 else
-                    table.insert(lines, string.format("|  * Primary:   |cffffffff%-15s|r %3d / %-3d", pName, pRank, pMax))
+                    table.insert(lines, string.format(" * Primary:     |cffffffff%-15s|r %3d / %-3d", pName, pRank, pMax))
                 end
             end
         else
-            table.insert(lines, "|  * Primary:   |cff888888None learned|r")
+            table.insert(lines, string.format(" * Primary:     |cff%sNone learned|r", t.mutedHex or "a9a08c"))
         end
         if char.professions and char.professions.secondary and #char.professions.secondary > 0 then
             for _, s in ipairs(char.professions.secondary) do
                 local sName = tostring(s.name or "Unknown")
                 local sRank = tonumber(s.rank) or 0
                 local sMax = tonumber(s.maxRank) or 0
-                table.insert(lines, string.format("|  * Secondary: |cffffffff%-15s|r %3d / %-3d", sName, sRank, sMax))
+                table.insert(lines, string.format(" * Secondary:   |cffffffff%-15s|r %3d / %-3d", sName, sRank, sMax))
             end
         end
-        table.insert(lines, "+==============================================================================+")
+        table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("=", 68)))
 
         dossierPopup.body:SetText(table.concat(lines, "\n"))
     end)
@@ -2768,6 +3363,178 @@ function CLIAlts:ShowCustomRolePrompt(char)
 end
 
 -- ----------------------------------------------------------------------------
+-- Row Context Menu (Transient Modal for Alt Interactions)
+-- ----------------------------------------------------------------------------
+local contextMenu = nil
+
+function CLIAlts:GetContextMenu()
+    return contextMenu
+end
+
+function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
+    if not charData then return end
+
+    if not contextMenu then
+        local cm = CreateFrame("Frame", "CLIAltsContextMenu", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        cm:Hide()
+        cm:SetSize(210, 206)
+        cm:SetFrameStrata("DIALOG")
+        cm:EnableMouse(true)
+        tinsert(UISpecialFrames, "CLIAltsContextMenu")
+
+        cm:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+
+        local title = cm:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(title, 11)
+        title:SetPoint("TOPLEFT", cm, "TOPLEFT", 10, -8)
+        title:SetPoint("TOPRIGHT", cm, "TOPRIGHT", -10, -8)
+        title:SetJustifyH("LEFT")
+        cm.title = title
+
+        local sep = cm:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(sep, 10)
+        sep:SetPoint("TOPLEFT", cm, "TOPLEFT", 6, -22)
+        sep:SetPoint("TOPRIGHT", cm, "TOPRIGHT", -6, -22)
+        sep:SetText("----------------------------------------")
+        cm.sep = sep
+
+        cm.buttons = {}
+        local actions = {
+            { key = "dossier", label = "1. Open Dossier", fn = function(c)
+                cm:Hide()
+                CLIAlts:ShowDossierPopup(c)
+            end },
+            { key = "core", label = "2. Set Role: Core (L35)", fn = function(c)
+                cm:Hide()
+                local name = c.fullName or c.name
+                CLIAlts:SetCharacterCohort(name, "CORE")
+                CLIAlts:Render()
+            end },
+            { key = "alt", label = "3. Set Role: Alt (L25)", fn = function(c)
+                cm:Hide()
+                local name = c.fullName or c.name
+                CLIAlts:SetCharacterCohort(name, "RESERVE")
+                CLIAlts:Render()
+            end },
+            { key = "bank", label = "4. Set Role: Bank Mule", fn = function(c)
+                cm:Hide()
+                local name = c.fullName or c.name
+                CLIAlts:SetCharacterCohort(name, "BANK")
+                CLIAlts:Render()
+            end },
+            { key = "watch", label = "5. Toggle Watchlist", fn = function(c)
+                cm:Hide()
+                local name = c.fullName or c.name
+                if CLIAlts.ToggleWatchlist then
+                    CLIAlts:ToggleWatchlist(name)
+                end
+                CLIAlts:Render()
+            end },
+            { key = "delete", label = "6. Remove Alt...", fn = function(c)
+                cm:Hide()
+                CLIAlts:ShowConfirmDelete(c)
+            end },
+            { key = "cancel", label = "7. Cancel", fn = function()
+                cm:Hide()
+            end },
+        }
+
+        local y = -34
+        for _, act in ipairs(actions) do
+            local btn = CreateFrame("Button", nil, cm, BackdropTemplateMixin and "BackdropTemplate" or nil)
+            btn:SetSize(194, 20)
+            btn:SetPoint("TOPLEFT", cm, "TOPLEFT", 8, y)
+            btn:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8X8",
+                edgeFile = "Interface\\Buttons\\WHITE8X8",
+                edgeSize = 1,
+                insets = { left = 1, right = 1, top = 1, bottom = 1 }
+            })
+            btn:SetBackdropColor(0, 0, 0, 0)
+            btn:SetBackdropBorderColor(0, 0, 0, 0)
+
+            local lbl = btn:CreateFontString(nil, "OVERLAY")
+            self:SetWidgetFont(lbl, 11)
+            lbl:SetPoint("LEFT", btn, "LEFT", 6, 0)
+            lbl:SetText(act.label)
+            btn.label = lbl
+            btn.actFn = act.fn
+            btn.actKey = act.key
+
+            btn:SetScript("OnEnter", function(self)
+                local t = CLIAlts:GetTheme()
+                self:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.35)
+                self:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
+                if self.actKey == "delete" then
+                    self.label:SetTextColor(1, 0.4, 0.4)
+                else
+                    self.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+                end
+            end)
+            btn:SetScript("OnLeave", function(self)
+                self:SetBackdropColor(0, 0, 0, 0)
+                self:SetBackdropBorderColor(0, 0, 0, 0)
+                local t = CLIAlts:GetTheme()
+                if self.actKey == "delete" then
+                    self.label:SetTextColor(0.9, 0.5, 0.5)
+                else
+                    self.label:SetTextColor(t.text[1], t.text[2], t.text[3])
+                end
+            end)
+            btn:SetScript("OnClick", function(self)
+                if self.actFn and cm.targetChar then
+                    self.actFn(cm.targetChar)
+                end
+            end)
+
+            table.insert(cm.buttons, btn)
+            y = y - 23
+        end
+
+        contextMenu = cm
+    end
+
+    local t = self:GetTheme()
+    contextMenu:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+    contextMenu:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 1)
+    contextMenu.targetChar = charData
+
+    local charName = charData.fullName or charData.name or "Character"
+    contextMenu.title:SetText(string.format("|cff%s[#] %s|r", t.highlightHex or "ffd34e", charName:upper()))
+    contextMenu.sep:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+
+    for _, btn in ipairs(contextMenu.buttons) do
+        btn:SetBackdropColor(0, 0, 0, 0)
+        btn:SetBackdropBorderColor(0, 0, 0, 0)
+        if btn.actKey == "delete" then
+            btn.label:SetTextColor(0.9, 0.5, 0.5)
+        else
+            btn.label:SetTextColor(t.text[1], t.text[2], t.text[3])
+        end
+    end
+
+    contextMenu:ClearAllPoints()
+    local uiScale = (UIParent and UIParent.GetEffectiveScale and UIParent:GetEffectiveScale()) or 1
+    local x, y = 0, 0
+    if GetCursorPosition then
+        x, y = GetCursorPosition()
+        x = x / uiScale
+        y = y / uiScale
+    end
+    if anchorFrame and (x == 0 and y == 0) then
+        contextMenu:SetPoint("TOPLEFT", anchorFrame, "BOTTOMLEFT", 20, 0)
+    else
+        contextMenu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x + 8, y + 8)
+    end
+    contextMenu:Show()
+end
+
+-- ----------------------------------------------------------------------------
 -- Confirmation Modal (Delete Character)
 -- ----------------------------------------------------------------------------
 function CLIAlts:ShowConfirmDelete(char)
@@ -2827,12 +3594,11 @@ function CLIAlts:ShowConfirmDelete(char)
     confirmPopup:SetBackdropBorderColor(1, 0.2, 0.2, 1)
 
     local msg = {
-        "+=======================================+",
-        "|       PURGE CHARACTER RECORD?         |",
-        "+=======================================+",
+        string.format("|cff%sPURGE CHARACTER RECORD|r", t.blockedHex or "ff6b6b"),
+        string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 34)),
         "",
-        string.format("Are you sure you want to delete"),
-        string.format("|cffff4444%s|r", cleanKey),
+        "Are you sure you want to delete",
+        string.format("|cff%s%s|r", t.blockedHex or "ff6b6b", cleanKey),
         "from the local CLIAlts database?",
         "",
     }
@@ -2863,12 +3629,11 @@ function CLIAlts:ShowConfirmPrunePopup(days, count, names)
     end
 
     local msg = {
-        "+=======================================+",
-        "|         BULK PRUNE STALE ALTS?        |",
-        "+=======================================+",
+        string.format("|cff%sBULK PRUNE STALE ALTS|r", t.blockedHex or "ff6b6b"),
+        string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 34)),
         "",
-        string.format("Delete |cffff4444%d characters|r inactive for %d+ days?", count, days),
-        string.format("|cffffaa00%s|r", sampleStr),
+        string.format("Delete |cff%s%d characters|r inactive for %d+ days?", t.blockedHex or "ff6b6b", count, days),
+        string.format("|cff%s%s|r", t.pendingHex or "ffb547", sampleStr),
         "from the local CLIAlts database?",
     }
     confirmPopup.body:SetText(table.concat(msg, "\n"))
@@ -2882,7 +3647,7 @@ function CLIAlts:ShowHelpPopup()
     if not helpPopup then
         local hp = CreateFrame("Frame", "CLIAltsHelpPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         hp:Hide()
-        hp:SetSize(560, 560)
+        hp:SetSize(620, 660)
         hp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         hp:SetFrameStrata("DIALOG")
         hp:EnableMouse(true)
@@ -2899,7 +3664,7 @@ function CLIAlts:ShowHelpPopup()
         hp:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
         local body = hp:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(body, 13)
+        self:SetWidgetFont(body, 11)
         body:SetPoint("TOPLEFT", hp, "TOPLEFT", 16, -16)
         body:SetPoint("BOTTOMRIGHT", hp, "BOTTOMRIGHT", -16, 45)
         body:SetJustifyH("LEFT")
@@ -2918,94 +3683,94 @@ function CLIAlts:ShowHelpPopup()
     helpPopup:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
     helpPopup:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
 
+    local sep = string.rep("-", 68)
     local helpText = {
-        "+====================================================================+",
-        "|                 CLIALTS :: QUICK GUIDE & COMMANDS                  |",
-        "+====================================================================+",
-        "| Slash Commands:                                                    |",
-        "|   /clialts            - Toggle the main TUI monitor                |",
-        "|   /clialts [1-5]      - Open directly to specific tab (1-5)        |",
-        "|   /clialts compact    - Toggle compact view (hide XP bar, slim)    |",
-        "|   /clialts next       - Recommend top 3 alts with rested XP waste  |",
-        "|   /clialts watch <it> - Track item count in bags & bank (e.g. ore) |",
-        "|   /clialts watchlist  - Print tracked items summary                |",
-        "|   /clialts export     - Open CSV export dialog for spreadsheets    |",
-        "|   /clialts scale <val>- Set UI scale (0.7 to 1.8, e.g. 1.2 / 120%) |",
-        "|   /clialts font <sz>  - Set terminal font size (12 to 22)          |",
-        "|   /clialts track      - Force save current character to tracker    |",
-        "|   /clialts rested     - Print quick rested XP report to chat       |",
-        "|   /clialts perk <0-5> - Set Well Rested legacy perk rank (0-5)     |",
-        "|   /clialts gold       - Print total account gold summary           |",
-        "|   /clialts perf       - Print smoothed Collect/Render ms & memory  |",
-        "|   /clialts selftest   - Run unit assertions with fake timestamps   |",
-        "|   /clialts alerts     - Toggle login alert categories (cd/rest/mail|",
-        "|   /clialts digest     - Display boxed login summary digest now     |",
-        "|   /clialts plan [hrs] - Print leveling plan schedule (default: 2h) |",
-        "|   /clialts note <who> <txt> - Set/view alt note (clear to remove)   |",
-        "|   /clialts unlocked <inst> - List alts with no active lock (gap finder)|",
-        "|   /clialts prune <days> [confirm] - Bulk purge alts inactive for N days|",
-        "|   /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)|",
-        "|   /clialts forever    - Toggle WoW Forever Cohort mode (auto-active)|",
-        "|   /clialts core <who> - Set Core cohort (Target Level 35)          |",
-        "|   /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)   |",
-        "|   /clialts bank <who> - Set Bank mule (Target Level 1)             |",
-        "|   /clialts prof       - Print profession milestones & train alerts |",
-        "|   /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup |",
-        "|   /clialts restore    - Restore database from CLIAltsDB.backup     |",
-        "|   /clialts reset      - Reset window position to center            |",
-        "+--------------------------------------------------------------------+",
-        "| Interactive Terminal Command Prompt (>):                           |",
-        "|   > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)|",
-        "|   > compact           - Toggle compact view (hide XP bar, slim)    |",
-        "|   > sort <column>     - Sort table (name, lvl, cohort, gold, rest) |",
-        "|   > filter <query>    - Filter alts (alliance, horde, stale, <60)  |",
-        "|   > find <text>       - Search character names, classes, or zones  |",
-        "|   > clear             - Clear active filter query                  |",
-        "|   > next              - Print alts with highest rested waste       |",
-        "|   > watch <item>      - Add item to bag/bank inventory tracker     |",
-        "|   > tooltips / inv    - Toggle item hover tooltips (bags/bank alts)|",
-        "|   > core <who> [tgt]  - Set Core cohort (Target 35)                |",
-        "|   > alt <who> [tgt]   - Set Alt/Reserve cohort (Target 25)         |",
-        "|   > bank <who>        - Set Bank mule (Target 1)                   |",
-        "|   > unassign <who>    - Unassign cohort / restore Target 60        |",
-        "|   > export            - Open CSV export modal dialog               |",
-        "|   > theme [name]      - Cycle or set color theme (incl. safe/cb)   |",
-        "|   > perf              - Output profiling exponential moving average|",
-        "|   > selftest          - Execute automated test suite in chat       |",
-        "|   > alerts [cat]      - Configure login alert category toggles     |",
-        "|   > digest            - Render boxed login alert digest in chat    |",
-        "|   > plan [hours]      - Compute ordered leveling session schedule  |",
-        "|   > note <who> <text>  - Set/view alt note (e.g. farm mooncloth)   |",
-        "|   > unlocked <inst>   - List alts with no active lock (gap finder)     |",
-        "|   > prune <days>      - Bulk purge alts inactive for N days        |",
-        "|   > backup / restore  - Create database snapshot or roll back      |",
-        "|   > Up / Down arrows  - Browse terminal command history            |",
-        "|   > Tab key           - Auto-complete commands and column names    |",
-        "+--------------------------------------------------------------------+",
-        "| Interactions:                                                      |",
-        "|   - Click [COMPACT] on title bar or type > compact in prompt       |",
-        "|   - Click [SCALE] on title bar to cycle 100%, 115%, 130%, 145%, 90%|",
-        "|   - Click [THEME] on title bar to cycle CRT retro color palettes   |",
-        "|   - Click column title in header line to sort ascending/descending |",
-        "|   - Left-Click any character row to inspect full Dossier           |",
-        "|   - Shift-Click any character row to cycle Cohort (Core/Alt/Bank)  |",
-        "|   - Right-Click any character row to delete character record       |",
-        "|   - Mouse wheel over table to scroll pages                         |",
-        "|   - Drag Minimap icon to move outside of minimap                   |",
-        "+--------------------------------------------------------------------+",
+        string.format("|cff%s%s|r", t.highlightHex or "ffd34e", "CLIALTS :: QUICK GUIDE & COMMANDS"),
+        string.format("|cff%s%s|r", t.borderHex or "f2c94c", sep),
+        string.format("|cff%sSlash Commands:|r", t.primaryHex or "f2c94c"),
+        "  /clialts            - Toggle the main TUI monitor",
+        "  /clialts [1-5]      - Open directly to specific tab (1-5)",
+        "  /clialts compact    - Toggle compact view (hide XP bar, slim)",
+        "  /clialts next       - Recommend top 3 alts with rested XP waste",
+        "  /clialts watch <it> - Track item count in bags & bank (e.g. ore)",
+        "  /clialts watchlist  - Print tracked items summary",
+        "  /clialts export     - Open CSV export dialog for spreadsheets",
+        "  /clialts scale <val>- Set UI scale (0.7 to 1.8, e.g. 1.2 / 120%)",
+        "  /clialts font <sz>  - Set terminal font size (12 to 22)",
+        "  /clialts track      - Force save current character to tracker",
+        "  /clialts rested     - Print quick rested XP report to chat",
+        "  /clialts perk <0-5> - Set Well Rested legacy perk rank (0-5)",
+        "  /clialts gold       - Print total account gold summary",
+        "  /clialts perf       - Print smoothed Collect/Render ms & memory",
+        "  /clialts selftest   - Run unit assertions with fake timestamps",
+        "  /clialts alerts     - Toggle login alert categories (cd/rest/mail)",
+        "  /clialts digest     - Display boxed login summary digest now",
+        "  /clialts plan [hrs] - Print leveling plan schedule (default: 2h)",
+        "  /clialts note <who> <txt> - Set/view alt note (clear to remove)",
+        "  /clialts unlocked <inst> - List alts with no active lock (gap finder)",
+        "  /clialts prune <days> [confirm] - Bulk purge alts inactive for N days",
+        "  /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)",
+        "  /clialts forever    - Toggle WoW Forever Cohort mode (auto-active)",
+        "  /clialts core <who> - Set Core cohort (Target Level 35)",
+        "  /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)",
+        "  /clialts bank <who> - Set Bank mule (Target Level 1)",
+        "  /clialts prof       - Print profession milestones & train alerts",
+        "  /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup",
+        "  /clialts restore    - Restore database from CLIAltsDB.backup",
+        "  /clialts reset      - Reset window position to center",
+        string.format("|cff%s%s|r", t.mutedHex or "a9a08c", sep),
+        string.format("|cff%sInteractive Terminal Command Prompt (>):|r", t.primaryHex or "f2c94c"),
+        "  > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)",
+        "  > compact           - Toggle compact view (hide XP bar, slim)",
+        "  > sort <column>     - Sort table (name, lvl, cohort, gold, rest)",
+        "  > filter <query>    - Filter alts (alliance, horde, stale, <60)",
+        "  > find <text>       - Search character names, classes, or zones",
+        "  > clear             - Clear active filter query",
+        "  > next              - Print alts with highest rested waste",
+        "  > watch <item>      - Add item to bag/bank inventory tracker",
+        "  > tooltips / inv    - Toggle item hover tooltips (bags/bank alts)",
+        "  > core <who> [tgt]  - Set Core cohort (Target 35)",
+        "  > alt <who> [tgt]   - Set Alt/Reserve cohort (Target 25)",
+        "  > bank <who>        - Set Bank mule (Target 1)",
+        "  > unassign <who>    - Unassign cohort / restore Target 60",
+        "  > export            - Open CSV export modal dialog",
+        "  > theme [name]      - Cycle or set color theme (incl. safe/cb)",
+        "  > perf              - Output profiling exponential moving average",
+        "  > selftest          - Execute automated test suite in chat",
+        "  > alerts [cat]      - Configure login alert category toggles",
+        "  > digest            - Render boxed login alert digest in chat",
+        "  > plan [hours]      - Compute ordered leveling session schedule",
+        "  > note <who> <text> - Set/view alt note (e.g. farm mooncloth)",
+        "  > unlocked <inst>   - List alts with no active lock (gap finder)",
+        "  > prune <days>      - Bulk purge alts inactive for N days",
+        "  > backup / restore  - Create database snapshot or roll back",
+        "  > Up / Down arrows  - Browse terminal command history",
+        "  > Tab key           - Auto-complete commands and column names",
+        string.format("|cff%s%s|r", t.mutedHex or "a9a08c", sep),
+        string.format("|cff%sInteractions:|r", t.primaryHex or "f2c94c"),
+        "  - Click [COMPACT] on title bar or type > compact in prompt",
+        "  - Click [SCALE] on title bar to cycle 100%, 115%, 130%, 145%, 90%",
+        "  - Click [THEME] on title bar to cycle CRT retro color palettes",
+        "  - Click column title in header line to sort ascending/descending",
+        "  - Left-Click any character row to inspect full Dossier",
+        "  - Shift-Click any character row to cycle Cohort (Core/Alt/Bank)",
+        "  - Right-Click any character row to delete character record",
+        "  - Mouse wheel over table to scroll pages",
+        "  - Drag Minimap icon to move outside of minimap",
+        string.format("|cff%s%s|r", t.mutedHex or "a9a08c", sep),
     }
     if self:IsRetail() then
-        table.insert(helpText, "| Rested XP Mechanics (Retail):                                       |")
-        table.insert(helpText, "|   - Resting in Inn/City/Camp: +5% of level every 8h (10 days base) |")
-        table.insert(helpText, "|   - Logged in Wilderness:     +1.25% every 8h (40 days base)       |")
-        table.insert(helpText, "|   - Maximum Rested Cap:       150% of level (1.5 bars)             |")
+        table.insert(helpText, string.format("|cff%sRested XP Mechanics (Retail):|r", t.primaryHex or "f2c94c"))
+        table.insert(helpText, "  - Resting in Inn/City/Camp: +5% of level every 8h (10 days base)")
+        table.insert(helpText, "  - Logged in Wilderness:     +1.25% every 8h (40 days base)")
+        table.insert(helpText, "  - Maximum Rested Cap:       150% of level (1.5 bars)")
     else
-        table.insert(helpText, "| Rested XP Mechanics (WoW Forever):                                 |")
-        table.insert(helpText, "|   - Resting in Inn/City/Camp: +5% of level every 8h (10 days base) |")
-        table.insert(helpText, "|   - Logged in Wilderness:     +1.25% every 8h (40 days base)       |")
-        table.insert(helpText, "|   - Well Rested Legacy Perk:  +4% speed & +4% cap per rank (max 5) |")
+        table.insert(helpText, string.format("|cff%sRested XP Mechanics (WoW Forever):|r", t.primaryHex or "f2c94c"))
+        table.insert(helpText, "  - Resting in Inn/City/Camp: +5% of level every 8h (10 days base)")
+        table.insert(helpText, "  - Logged in Wilderness:     +1.25% every 8h (40 days base)")
+        table.insert(helpText, "  - Well Rested Legacy Perk:  +4% speed & +4% cap per rank (max 5)")
     end
-    table.insert(helpText, "+====================================================================+")
+    table.insert(helpText, string.format("|cff%s%s|r", t.borderHex or "f2c94c", sep))
 
     helpPopup.body:SetText(table.concat(helpText, "\n"))
     helpPopup:Show()

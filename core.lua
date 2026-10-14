@@ -7,16 +7,7 @@
 local addonName, addonTable = ...
 local CLIAlts = addonTable or _G["CLIAlts"] or {}
 
--- ----------------------------------------------------------------------------
--- Chat Output Helper
--- ----------------------------------------------------------------------------
-function CLIAlts:Print(msg)
-    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r %s", msg or ""))
-    else
-        print(string.format("[CLIAlts] %s", msg or ""))
-    end
-end
+-- CLIAlts:Print is canonical in data.lua
 
 local SafeAfter = CLIAlts.SafeAfter or function(delay, callback)
     if C_Timer and C_Timer.After then
@@ -161,6 +152,12 @@ function CLIAlts:ScheduleInventoryScan(scanBank)
         pendingBankScan = false
         if CLIAlts.ScanCurrentInventory then
             CLIAlts:ScanCurrentInventory(doBank)
+        end
+        if CLIAlts.UpdateWatchCounts then
+            CLIAlts:UpdateWatchCounts()
+        end
+        if CLIAlts.RequestRender then
+            CLIAlts:RequestRender()
         end
     end)
 end
@@ -315,13 +312,9 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
 
     elseif event == "PLAYERBANKSLOTS_CHANGED" then
         CLIAlts:ScheduleInventoryScan(true)
-        CLIAlts:UpdateWatchCounts()
-        CLIAlts:RequestRender()
 
     elseif event == "BAG_UPDATE_DELAYED" or event == "BAG_UPDATE" then
         CLIAlts:ScheduleInventoryScan(CLIAlts.isBankOpen == true)
-        CLIAlts:UpdateWatchCounts()
-        CLIAlts:RequestRender()
 
     elseif event == "MAIL_INBOX_UPDATE" or event == "MAIL_SHOW" then
         CLIAlts:ScanMailInbox()
@@ -348,12 +341,12 @@ local function SlashHandler(msg)
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:Toggle()
 
-    elseif cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "tab" then
+    elseif cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" or cmd == "tab" then
         local tabId = tonumber(cmd)
         if cmd == "tab" and arg and arg ~= "" then
             tabId = tonumber(arg)
         end
-        if tabId and tabId >= 1 and tabId <= 5 then
+        if tabId and tabId >= 1 and tabId <= 6 then
             if CLIAltsDB and CLIAltsDB.settings then
                 CLIAltsDB.settings.activeTab = tabId
             end
@@ -362,7 +355,7 @@ local function SlashHandler(msg)
             if CLIAlts.SetPage then CLIAlts:SetPage(1) end
             CLIAlts:Render()
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts [1-5]|r (Switches to specified tab)")
+            CLIAlts:Print("Usage: |cff00ff66/clialts [1-6]|r (Switches to specified tab)")
         end
 
     elseif cmd == "next" then
@@ -503,6 +496,43 @@ local function SlashHandler(msg)
             end
         else
             CLIAlts:CycleScale()
+        end
+
+    elseif cmd == "theme" then
+        if arg and arg ~= "" then
+            local map = {
+                green = "GREEN",
+                grn = "GREEN",
+                amber = "AMBER",
+                amb = "AMBER",
+                cyan = "CYAN",
+                cyn = "CYAN",
+                mono = "MONO",
+                safe = "COLORBLIND",
+                colorblind = "COLORBLIND",
+                cb = "COLORBLIND",
+                synthwave = "SYNTHWAVE",
+                syn = "SYNTHWAVE",
+                dracula = "DRACULA",
+                dra = "DRACULA",
+            }
+            local choice = map[arg:lower()]
+            if choice and CLIAlts.THEMES and CLIAlts.THEMES[choice] then
+                if CLIAltsDB and CLIAltsDB.settings then
+                    CLIAltsDB.settings.theme = choice
+                end
+                if CLIAlts.ApplyTheme then CLIAlts:ApplyTheme() end
+                if CLIAlts.Render then CLIAlts:Render() end
+                CLIAlts:Print(string.format("Theme set to %s (%s).", choice, CLIAlts.THEMES[choice].tag or choice))
+            else
+                CLIAlts:Print("Usage: |cff00ff66/clialts theme <amber|green|cyan|mono|safe|synthwave|dracula>|r")
+            end
+        else
+            if CLIAlts.CycleTheme then
+                CLIAlts:CycleTheme()
+                local curTheme = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "AMBER"
+                CLIAlts:Print(string.format("Theme cycled: %s", curTheme))
+            end
         end
 
     elseif cmd == "font" or cmd == "fontsize" then

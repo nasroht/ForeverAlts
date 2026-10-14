@@ -212,6 +212,18 @@ function CLIAlts:UpdateMinimapPosition()
     minimapBtn:SetPoint("CENTER", Minimap, "CENTER", x, y)
 end
 
+function CLIAlts:UpdateMinimapTheme()
+    if not minimapBtn then return end
+    local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
+    if not t then return end
+    if minimapBtn.bg and t.bg then
+        minimapBtn.bg:SetVertexColor(t.bg[1], t.bg[2], t.bg[3], 1)
+    end
+    if minimapBtn.iconText and t.barFill then
+        minimapBtn.iconText:SetText(string.format("%s[A]|r", t.barFill))
+    end
+end
+
 function CLIAlts:ToggleMinimap(show)
     if not minimapBtn then
         self:CreateMinimapButton()

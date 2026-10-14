@@ -10,8 +10,15 @@ _G["CLIAlts"] = CLIAlts
 _G["clialts"] = CLIAlts
 
 function CLIAlts:Print(msg)
+    local tag = "|cffffb000[CLIAlts]|r"
+    if self.GetTheme then
+        local t = self:GetTheme()
+        if t and t.primaryHex then
+            tag = string.format("|cff%s[CLIAlts]|r", t.primaryHex)
+        end
+    end
     if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r %s", msg or ""))
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("%s %s", tag, msg or ""))
     else
         print(string.format("[CLIAlts] %s", msg or ""))
     end
@@ -20,7 +27,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Constants & Reference Tables
 -- ----------------------------------------------------------------------------
-CLIAlts.VERSION = "1.0.0"
+CLIAlts.VERSION = "1.1.0"
 CLIAlts.DB_VERSION = 3
 local CURRENT_DB_VERSION = 3
 local cachedCurrentChar = nil
@@ -361,7 +368,7 @@ function CLIAlts:InitDB()
         CLIAltsDB = {}
     end
     CLIAltsDB.settings = CLIAltsDB.settings or {}
-    CLIAltsDB.settings.theme = CLIAltsDB.settings.theme or "GREEN"
+    CLIAltsDB.settings.theme = CLIAltsDB.settings.theme or "AMBER"
     CLIAltsDB.settings.minimapPos = CLIAltsDB.settings.minimapPos or 45
     CLIAltsDB.settings.minimapShow = (CLIAltsDB.settings.minimapShow ~= false)
     CLIAltsDB.settings.sortBy = CLIAltsDB.settings.sortBy or "name"
@@ -673,13 +680,6 @@ function CLIAlts:CollectProfessions()
                     elseif isPrimary and #primary < 2 then
                         seen[skillName] = true
                         table.insert(primary, {
-                            name = skillName,
-                            rank = skillRank,
-                            maxRank = skillMaxRank or 300,
-                        })
-                    elseif isSecondary then
-                        seen[skillName] = true
-                        table.insert(secondary, {
                             name = skillName,
                             rank = skillRank,
                             maxRank = skillMaxRank or 300,
@@ -1740,12 +1740,13 @@ function CLIAlts:ColorizePlayerName(name, classFile)
 end
 
 function CLIAlts:GetFactionTag(faction)
+    local t = self.GetTheme and self:GetTheme()
     if faction == "Alliance" then
-        return "|cff0070dd[A]|r"
+        return string.format("|cff%s[A]|r", (t and t.accentHex) or "57d6e8")
     elseif faction == "Horde" then
-        return "|cffc41e3a[H]|r"
+        return string.format("|cff%s[H]|r", (t and t.blockedHex) or "ff6b6b")
     else
-        return "|cffffff00[N]|r"
+        return string.format("|cff%s[N]|r", (t and t.mutedHex) or "a9a08c")
     end
 end
 
@@ -2226,7 +2227,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     end
 
     table.sort(list, function(a, b)
-        if sortBy == "cohort" or sortBy == "tier" then
+        if sortBy == "cohort" or sortBy == "tier" or sortBy == "role" then
             local rankA = (a.tier == "CORE" and 1) or (a.tier == "RESERVE" and 2) or (a.tier == "BANK" and 3) or 4
             local rankB = (b.tier == "CORE" and 1) or (b.tier == "RESERVE" and 2) or (b.tier == "BANK" and 3) or 4
             if rankA ~= rankB then
@@ -2238,8 +2239,49 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
             return (a.name or "") < (b.name or "")
         elseif sortBy == "name" then
             if sortAsc then return (a.name or "") < (b.name or "") else return (a.name or "") > (b.name or "") end
+        elseif sortBy == "prof" then
+            local pA = (a.professions and a.professions.primary and a.professions.primary[1] and a.professions.primary[1].name) or ""
+            local pB = (b.professions and b.professions.primary and b.professions.primary[1] and b.professions.primary[1].name) or ""
+            if pA ~= "" and pB == "" then
+                return true
+            elseif pA == "" and pB ~= "" then
+                return false
+            elseif pA ~= pB then
+                if sortAsc then return pA < pB else return pA > pB end
+            end
+            return (a.name or "") < (b.name or "")
         elseif sortBy == "gold" then
             if sortAsc then return (a.money or 0) < (b.money or 0) else return (a.money or 0) > (b.money or 0) end
+        elseif sortBy == "cd" or sortBy == "cooldown" then
+            local now = time()
+            local function GetEarliestCd(char)
+                local earliest = 9999999999
+                local hasCd = false
+                if char.tradeCooldowns then
+                    for _, readyAt in pairs(char.tradeCooldowns) do
+                        hasCd = true
+                        if readyAt <= now then return -1 end
+                        if readyAt < earliest then earliest = readyAt end
+                    end
+                end
+                if char.lockouts then
+                    for _, data in pairs(char.lockouts) do
+                        local resetTime = (type(data) == "table" and data.resetTime) or data
+                        if resetTime and resetTime > now then
+                            hasCd = true
+                            if resetTime < earliest then earliest = resetTime end
+                        end
+                    end
+                end
+                if not hasCd then return 9999999999 end
+                return earliest
+            end
+            local cdA = GetEarliestCd(a)
+            local cdB = GetEarliestCd(b)
+            if cdA ~= cdB then
+                if sortAsc then return cdA < cdB else return cdA > cdB end
+            end
+            return (a.name or "") < (b.name or "")
         elseif sortBy == "note" then
             local nA = (a.note or ""):lower()
             local nB = (b.note or ""):lower()
@@ -2322,6 +2364,76 @@ function CLIAlts:GetAccountSummary()
         totalAlts = totalAlts,
         fullyRested = fullyRested,
         nextFullAlt = nextFullAlt,
+    }
+end
+
+function CLIAlts:GetRosterSummaryMetrics()
+    local chars = self:GetCharactersList()
+    local totalAlts = #chars
+    local totalGold = 0
+    local core, res, bank, unassigned = 0, 0, 0, 0
+    local capped, wasting, accruing = 0, 0, 0
+    local readyCds = 0
+    local activeLocks = 0
+    local now = time()
+
+    for _, char in ipairs(chars) do
+        totalGold = totalGold + (char.money or 0)
+
+        local tier = char.tier or "UNASSIGNED"
+        if tier == "CORE" then
+            core = core + 1
+        elseif tier == "RESERVE" then
+            res = res + 1
+        elseif tier == "BANK" then
+            bank = bank + 1
+        else
+            unassigned = unassigned + 1
+        end
+
+        local rested = self:GetRestedData(char)
+        if rested and not rested.isMaxLevel then
+            if rested.isFull then
+                capped = capped + 1
+                local wastedSec = self:GetRestedWaste(char)
+                if wastedSec and wastedSec > 3600 then
+                    wasting = wasting + 1
+                end
+            else
+                accruing = accruing + 1
+            end
+        end
+
+        if char.tradeCooldowns then
+            for _, readyAt in pairs(char.tradeCooldowns) do
+                if readyAt and now >= readyAt then
+                    readyCds = readyCds + 1
+                end
+            end
+        end
+
+        if char.lockouts then
+            for _, data in pairs(char.lockouts) do
+                local resetTime = (type(data) == "table" and data.resetTime) or data
+                if resetTime and resetTime > now then
+                    activeLocks = activeLocks + 1
+                end
+            end
+        end
+    end
+
+    return {
+        totalAlts = totalAlts,
+        totalGold = totalGold,
+        core = core,
+        alt = res,
+        bank = bank,
+        unassigned = unassigned,
+        capped = capped,
+        wasting = wasting,
+        accruing = accruing,
+        readyCds = readyCds,
+        activeLocks = activeLocks,
     }
 end
 
@@ -2804,13 +2916,25 @@ function CLIAlts:RunSelfTest()
         Assert(ldbObj == nil, "InitLDB: returns nil cleanly when LibDataBroker-1.1 is absent")
     end
 
-    -- 11. Colorblind Palette & Compact Mode Tests
-    -- 11a. Colorblind Theme
+    -- 11. Theme Verification & Compact Mode Tests
+    -- 11a. Colorblind, Amber, Synthwave, Dracula Themes
     if self.THEMES then
         local cbTheme = self.THEMES["COLORBLIND"]
         Assert(cbTheme ~= nil, "Colorblind: COLORBLIND theme exists in THEMES")
         Assert(cbTheme and cbTheme.tag == "SAFE", "Colorblind: theme tag is 'SAFE'")
         Assert(cbTheme and cbTheme.highlightHex == "ffd933", "Colorblind: high-contrast amber highlightHex is ffd933")
+
+        local ambTheme = self.THEMES["AMBER"]
+        Assert(ambTheme ~= nil, "Theme: AMBER theme exists in THEMES")
+        Assert(ambTheme and ambTheme.tag == "AMB", "Theme: AMBER tag is 'AMB'")
+
+        local synTheme = self.THEMES["SYNTHWAVE"]
+        Assert(synTheme ~= nil, "Theme: SYNTHWAVE theme exists in THEMES")
+        Assert(synTheme and synTheme.tag == "SYN", "Theme: SYNTHWAVE tag is 'SYN'")
+
+        local draTheme = self.THEMES["DRACULA"]
+        Assert(draTheme ~= nil, "Theme: DRACULA theme exists in THEMES")
+        Assert(draTheme and draTheme.tag == "DRA", "Theme: DRACULA tag is 'DRA'")
     end
 
     -- 11b. Compact Mode Toggle & Column Filtering
@@ -3361,8 +3485,104 @@ function CLIAlts:RunSelfTest()
     Assert(profAlerts[1].tag == "[TRAIN EXPERT]", "Professions: Alert tag is [TRAIN EXPERT]")
     end
 
+    do
+    -- 21. Main Dashboard Redesign: Roster Summary Metrics and Profession Sorting
+    local oldDashDB = CLIAltsDB
+    local testDashDB = {
+        characters = {
+            ["AlphaCore"] = {
+                name = "AlphaCore",
+                level = 20,
+                tier = "CORE",
+                money = 125000,
+                maxXP = 15000,
+                restedXP = 27000,
+                lastUpdate = time() - 7200,
+                isResting = true,
+                professions = { primary = { { name = "Tailoring", rank = 150, maxRank = 150 } } },
+                tradeCooldowns = { ["Mooncloth"] = time() - 100 },
+                lockouts = { ["RFC"] = time() + 3600 },
+            },
+            ["BetaAlt"] = {
+                name = "BetaAlt",
+                level = 15,
+                tier = "RESERVE",
+                money = 45000,
+                maxXP = 10000,
+                restedXP = 4000,
+                lastUpdate = time(),
+                isResting = true,
+                professions = { primary = { { name = "Alchemy", rank = 75, maxRank = 150 } } },
+            },
+            ["GammaBank"] = {
+                name = "GammaBank",
+                level = 1,
+                tier = "BANK",
+                money = 500000,
+                maxXP = 400,
+                restedXP = 600,
+                lastUpdate = time(),
+                isResting = true,
+            },
+        },
+    }
+    CLIAltsDB = testDashDB
+
+    -- 21a. GetRosterSummaryMetrics calculation accuracy
+    local metrics = self:GetRosterSummaryMetrics()
+    Assert(metrics ~= nil, "Dashboard: GetRosterSummaryMetrics returns non-nil table")
+    Assert(metrics.totalAlts == 3, "Dashboard: totalAlts count is 3 (" .. tostring(metrics.totalAlts) .. ")")
+    Assert(metrics.core == 1, "Dashboard: core count is 1")
+    Assert(metrics.alt == 1, "Dashboard: reserve/alt count is 1")
+    Assert(metrics.bank == 1, "Dashboard: bank count is 1")
+    Assert(metrics.unassigned == 0, "Dashboard: unassigned count is 0")
+    Assert(metrics.totalGold == (125000 + 45000 + 500000), "Dashboard: totalGold matches sum without double-counting (" .. tostring(metrics.totalGold) .. ")")
+    Assert(metrics.readyCds == 1, "Dashboard: ready trade cooldowns counted accurately")
+    Assert(metrics.activeLocks == 1, "Dashboard: active dungeon lockouts counted accurately")
+
+    -- 21b. Profession column sorting in GetCharactersList
+    local sortedByProf = self:GetCharactersList("prof", true)
+    Assert(#sortedByProf == 3, "Dashboard: GetCharactersList with prof sort returns all alts")
+    Assert(sortedByProf[1].name == "BetaAlt", "Dashboard: BetaAlt (Alchemy) sorted first alphabetically")
+    Assert(sortedByProf[2].name == "AlphaCore", "Dashboard: AlphaCore (Tailoring) sorted second alphabetically")
+    Assert(sortedByProf[3].name == "GammaBank", "Dashboard: GammaBank (No profs) sorted last")
+
+    -- 21c. Cooldown sorting in GetCharactersList
+    local sortedByCd = self:GetCharactersList("cooldown", true)
+    Assert(#sortedByCd == 3, "Dashboard: GetCharactersList with cooldown sort returns all alts")
+    Assert(sortedByCd[1].name == "AlphaCore", "Dashboard: AlphaCore (Ready cooldown) sorted first")
+
+    -- 21d. Role sorting in GetCharactersList
+    local sortedByRole = self:GetCharactersList("role", true)
+    Assert(#sortedByRole == 3, "Dashboard: GetCharactersList with role sort returns all alts")
+    Assert(sortedByRole[1].tier == "CORE", "Dashboard: CORE role sorted first")
+    Assert(sortedByRole[2].tier == "RESERVE", "Dashboard: RESERVE/ALT role sorted second")
+    Assert(sortedByRole[3].tier == "BANK", "Dashboard: BANK role sorted third")
+
+    -- 21e. Context Menu & 6-Tab View Architectures
+    if self.GetColumns then
+        for tabId = 1, 6 do
+            local cols = self:GetColumns(tabId)
+            Assert(cols ~= nil and #cols > 0, "Navigation: Tab " .. tabId .. " returns valid column definitions")
+        end
+    end
+    if self.ShowRowContextMenu then
+        self:ShowRowContextMenu(nil, testDashDB.characters["AlphaCore"])
+        local cm = self.GetContextMenu and self:GetContextMenu()
+        Assert(cm ~= nil, "Interactions: Context menu frame created successfully")
+        if cm then
+            Assert(cm:IsShown() == true, "Interactions: Context menu is shown on invocation")
+            Assert(cm.buttons ~= nil and #cm.buttons == 7, "Interactions: Context menu has 7 actionable buttons")
+            cm:Hide()
+            Assert(cm:IsShown() == false, "Interactions: Context menu dismissed safely")
+        end
+    end
+
+    CLIAltsDB = oldDashDB
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -3607,7 +3827,7 @@ function CLIAlts:PrintNextAlts()
     end
 end
 
-function CLIAlts:CheckCappedAltsAlert()
+function CLIAlts:CheckCappedAltsNotice()
     local list = self:GetNextAltsPriority()
     local capped = {}
     for _, item in ipairs(list) do
@@ -3754,24 +3974,30 @@ end
 
 function CLIAlts:FormatProfessionMilestone(char, prof, compact)
     local m = self:GetProfessionMilestoneInfo(char, prof)
-    if not m then return "|cff666666---|r" end
+    local t = self.GetTheme and self:GetTheme()
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local accentHex = (t and t.accentHex) or "57d6e8"
+    local readyHex = (t and t.readyHex) or "55e39a"
+    local pendingHex = (t and t.pendingHex) or "ffb547"
+
+    if not m then return string.format("|cff%s---|r", mutedHex) end
 
     local nameStr = compact and m.abbr or m.name
 
     if m.isDone then
-        return string.format("|cff00e5ff%s: %d/%d [DONE]|r", nameStr, m.rank, m.maxRank)
+        return string.format("|cff%s%s: %d/%d [DONE]|r", accentHex, nameStr, m.rank, m.maxRank)
     end
 
     if m.canTrainNext and m.isCappedAtCurrentRank then
-        return string.format("|cff00ff66%s: %d/%d [TRAIN %s]|r", nameStr, m.rank, m.maxRank, m.nextRankTitle:upper())
+        return string.format("|cff%s%s: %d/%d [TRAIN %s]|r", readyHex, nameStr, m.rank, m.maxRank, m.nextRankTitle:upper())
     end
 
     if m.levelBottleneck and m.isCappedAtCurrentRank then
-        return string.format("|cffffaa00%s: %d/%d [Req Lvl %d]|r", nameStr, m.rank, m.maxRank, m.nextReqLevel)
+        return string.format("|cff%s%s: %d/%d [Req Lvl %d]|r", pendingHex, nameStr, m.rank, m.maxRank, m.nextReqLevel)
     end
 
     if m.isMilestoneHit and m.rank == m.maxRank then
-        return string.format("|cff00e5ff%s: %d/%d [DONE]|r", nameStr, m.rank, m.maxRank)
+        return string.format("|cff%s%s: %d/%d [DONE]|r", accentHex, nameStr, m.rank, m.maxRank)
     end
 
     return string.format("%s: %d/%d [%s Target]", nameStr, m.rank, m.targetMilestone, m.targetPhase)
@@ -4491,8 +4717,12 @@ function CLIAlts:PrintLoginDigest(force)
 end
 
 -- Backward compatibility helpers
-function CLIAlts:CheckCappedAltsAlert()
-    self:PrintLoginDigest(false)
+function CLIAlts:CheckCappedAltsAlert(forceDetailed)
+    if forceDetailed then
+        self:CheckCappedAltsNotice()
+    else
+        self:PrintLoginDigest(false)
+    end
 end
 
 function CLIAlts:CheckMailExpiryAlert()
