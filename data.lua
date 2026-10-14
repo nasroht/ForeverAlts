@@ -3307,10 +3307,58 @@ function CLIAlts:RunSelfTest()
         end
     end
 
+    -- 20. WoW Forever Profession Milestone Thresholds & Training Alerts (Component 3)
+    -- 20a. Profession abbreviations
+    Assert(self:GetProfessionAbbr("Leatherworking") == "LW", "Professions: Leatherworking abbreviated to LW")
+    Assert(self:GetProfessionAbbr("Tailoring") == "Tailor", "Professions: Tailoring abbreviated to Tailor")
+    Assert(self:GetProfessionAbbr("Blacksmithing") == "BS", "Professions: Blacksmithing abbreviated to BS")
+    Assert(self:GetProfessionAbbr("Alchemy") == "Alch", "Professions: Alchemy abbreviated to Alch")
+
+    -- 20b. P2 Progress target (e.g. LW: 112/150 [P2 Target])
+    local testCharLW = { name = "SkinnerAlt", level = 22, tier = "RESERVE" }
+    local testProfLW = { name = "Leatherworking", rank = 112, maxRank = 150 }
+    local mLW = self:GetProfessionMilestoneInfo(testCharLW, testProfLW)
+    Assert(mLW ~= nil and mLW.targetMilestone == 150, "Professions: LW 112 target milestone is 150")
+    Assert(mLW.targetPhase == "P2", "Professions: LW 112 target phase is P2")
+    Assert(mLW.needed == 38, "Professions: LW 112 needs 38 skillups")
+    Assert(mLW.canTrainNext == false, "Professions: LW 112 not ready to train next rank yet")
+    local fmtLW = self:FormatProfessionMilestone(testCharLW, testProfLW, true)
+    Assert(fmtLW == "LW: 112/150 [P2 Target]", "Professions: FormatProfessionMilestone compact matches user format 'LW: 112/150 [P2 Target]'")
+
+    -- 20c. Capped alt eligible to train next rank (e.g. Tailor: 150/150 [TRAIN EXPERT])
+    local testCharTailor = { name = "TailorAlt", level = 20, tier = "CORE" }
+    local testProfTailor = { name = "Tailoring", rank = 150, maxRank = 150 }
+    local mTailor = self:GetProfessionMilestoneInfo(testCharTailor, testProfTailor)
+    Assert(mTailor.isCappedAtCurrentRank == true, "Professions: Tailor 150/150 is capped at Journeyman")
+    Assert(mTailor.canTrainNext == true, "Professions: Tailor 150/150 at level 20 is eligible to train Expert")
+    Assert(mTailor.nextRankTitle == "Expert", "Professions: Next rank title is Expert")
+    local fmtTailor = self:FormatProfessionMilestone(testCharTailor, testProfTailor, true)
+    Assert(fmtTailor:find("%[TRAIN EXPERT%]") ~= nil, "Professions: Tailor 150/150 formats with [TRAIN EXPERT] alert")
+
+    -- 20d. Capped alt with character level bottleneck (e.g. Tailor: 150/150 [Req Lvl 20])
+    local testCharLowLvl = { name = "LowLvlTailor", level = 16, tier = "RESERVE" }
+    local mLowLvl = self:GetProfessionMilestoneInfo(testCharLowLvl, testProfTailor)
+    Assert(mLowLvl.levelBottleneck == true, "Professions: Level 16 alt with 150/150 has level bottleneck")
+    Assert(mLowLvl.nextReqLevel == 20, "Professions: Next required level is 20")
+    local fmtLow = self:FormatProfessionMilestone(testCharLowLvl, testProfTailor, true)
+    Assert(fmtLow:find("%[Req Lvl 20%]") ~= nil, "Professions: Level bottleneck formats with [Req Lvl 20]")
+
+    -- 20e. Max rank profession (300/300 [DONE])
+    local testCharMax = { name = "MaxCrafter", level = 60, tier = "CORE" }
+    local testProfMax = { name = "Tailoring", rank = 300, maxRank = 300 }
+    local fmtMax = self:FormatProfessionMilestone(testCharMax, testProfMax, true)
+    Assert(fmtMax:find("%[DONE%]") ~= nil, "Professions: 300/300 formats with [DONE]")
+
+    -- 20f. GetCharacterProfessionAlerts returns train alerts
+    local alertsChar = { name = "AlertAlt", level = 20, professions = { primary = { testProfTailor } } }
+    local profAlerts = self:GetCharacterProfessionAlerts(alertsChar)
+    Assert(#profAlerts == 1 and profAlerts[1].type == "TRAIN", "Professions: GetCharacterProfessionAlerts returns TRAIN alert")
+    Assert(profAlerts[1].tag == "[TRAIN EXPERT]", "Professions: Alert tag is [TRAIN EXPERT]")
+
     CLIAltsDB = oldRotDB
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
@@ -3545,8 +3593,13 @@ function CLIAlts:PrintNextAlts()
         local coloredName = self:ColorizePlayerName(c.name, c.classFile)
         local cohortStr = (item.tierTag and item.tierTag ~= "") and (" " .. item.tierTag) or ""
         local tgtStr = item.targetLevel and string.format(" (Lvl %d/%d)", c.level or 1, item.targetLevel) or string.format(" (Lvl %d)", c.level or 1)
-        DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cff00ff66%d.|r %s%s%s %s :: |cffffd700%s|r",
-            i, coloredName, cohortStr, tgtStr, self:FormatRaceClass(c), item.reason))
+        local profAlert = ""
+        local alerts = self:GetCharacterProfessionAlerts(c)
+        if #alerts > 0 then
+            profAlert = " |cff00ff66" .. alerts[1].tag .. "|r"
+        end
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cff00ff66%d.|r %s%s%s %s%s :: |cffffd700%s|r",
+            i, coloredName, cohortStr, tgtStr, self:FormatRaceClass(c), profAlert, item.reason))
     end
 end
 
@@ -3567,6 +3620,233 @@ function CLIAlts:CheckCappedAltsAlert()
         end
         self:Print(string.format("|cffffaa00Notice:|r %d alts capped (%s). Type |cff00ff66/ca next|r for priority.",
             #capped, table.concat(parts, ", ")))
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- WoW Forever: Profession Milestone Thresholds (Component 3)
+-- ----------------------------------------------------------------------------
+CLIAlts.PROFESSION_MILESTONES = {
+    { phase = "P1", milestone = 75,  rankTitle = "Apprentice", nextRank = "Journeyman", reqLevel = 5,  nextReqLevel = 10, minSkillToTrainNext = 50 },
+    { phase = "P2", milestone = 150, rankTitle = "Journeyman", nextRank = "Expert",     reqLevel = 10, nextReqLevel = 20, minSkillToTrainNext = 125 },
+    { phase = "P3", milestone = 225, rankTitle = "Expert",     nextRank = "Artisan",    reqLevel = 20, nextReqLevel = 35, minSkillToTrainNext = 200 },
+    { phase = "P4", milestone = 300, rankTitle = "Artisan",    nextRank = "Master",     reqLevel = 35, nextReqLevel = 50, minSkillToTrainNext = 275 },
+}
+
+local PROF_ABBREVIATIONS = {
+    ["Leatherworking"] = "LW",
+    ["Tailoring"]      = "Tailor",
+    ["Alchemy"]        = "Alch",
+    ["Blacksmithing"]  = "BS",
+    ["Enchanting"]     = "Ench",
+    ["Engineering"]    = "Engi",
+    ["Mining"]         = "Mining",
+    ["Herbalism"]      = "Herb",
+    ["Skinning"]       = "Skin",
+    ["Cooking"]        = "Cook",
+    ["First Aid"]      = "FirstAid",
+    ["Fishing"]        = "Fish",
+}
+
+function CLIAlts:GetProfessionAbbr(profName)
+    if not profName or profName == "" then return "Prof" end
+    if PROF_ABBREVIATIONS[profName] then return PROF_ABBREVIATIONS[profName] end
+    local lowerName = profName:lower()
+    for name, abbr in pairs(PROF_ABBREVIATIONS) do
+        if name:lower() == lowerName then
+            return abbr
+        end
+    end
+    return profName:sub(1, 6)
+end
+
+function CLIAlts:GetProfessionMilestoneInfo(char, prof)
+    if not prof then return nil end
+    local rank = tonumber(prof.rank) or 0
+    local maxRank = tonumber(prof.maxRank) or 75
+    local charLevel = (char and tonumber(char.level)) or 1
+    local profName = prof.name or "Profession"
+    local abbr = self:GetProfessionAbbr(profName)
+
+    local targetMilestone = 75
+    local targetPhase = "P1"
+
+    if rank < 75 then
+        targetMilestone = 75
+        targetPhase = "P1"
+    elseif rank < 150 then
+        targetMilestone = 150
+        targetPhase = "P2"
+    elseif rank < 225 then
+        targetMilestone = 225
+        targetPhase = "P3"
+    else
+        targetMilestone = 300
+        targetPhase = "P4"
+    end
+
+    local isDone = (rank >= 300)
+    local isCappedAtCurrentRank = (rank >= maxRank and rank < 300)
+    local canTrainNext = false
+    local levelBottleneck = false
+    local nextReqLevel = 10
+    local nextRankTitle = "Journeyman"
+
+    if maxRank <= 75 then
+        nextRankTitle = "Journeyman"
+        nextReqLevel = 10
+        if rank >= 50 then
+            if charLevel >= 10 then
+                canTrainNext = true
+            else
+                levelBottleneck = true
+            end
+        end
+    elseif maxRank <= 150 then
+        nextRankTitle = "Expert"
+        nextReqLevel = 20
+        if rank >= 125 then
+            if charLevel >= 20 then
+                canTrainNext = true
+            else
+                levelBottleneck = true
+            end
+        end
+    elseif maxRank <= 225 then
+        nextRankTitle = "Artisan"
+        nextReqLevel = 35
+        if rank >= 200 then
+            if charLevel >= 35 then
+                canTrainNext = true
+            else
+                levelBottleneck = true
+            end
+        end
+    end
+
+    local tier = char and char.tier
+    local targetLvl = (char and tonumber(char.target_level)) or ((tier == "CORE" and 35) or (tier == "RESERVE" and 25) or 60)
+    local isTargetReached = (charLevel >= targetLvl)
+    local isMilestoneHit = (rank >= targetMilestone)
+    local needed = math.max(0, targetMilestone - rank)
+
+    return {
+        name = profName,
+        abbr = abbr,
+        rank = rank,
+        maxRank = maxRank,
+        targetMilestone = targetMilestone,
+        targetPhase = targetPhase,
+        needed = needed,
+        isDone = isDone,
+        isMilestoneHit = isMilestoneHit,
+        isCappedAtCurrentRank = isCappedAtCurrentRank,
+        canTrainNext = canTrainNext,
+        levelBottleneck = levelBottleneck,
+        nextRankTitle = nextRankTitle,
+        nextReqLevel = nextReqLevel,
+        isTargetReached = isTargetReached,
+    }
+end
+
+function CLIAlts:FormatProfessionMilestone(char, prof, compact)
+    local m = self:GetProfessionMilestoneInfo(char, prof)
+    if not m then return "|cff666666---|r" end
+
+    local nameStr = compact and m.abbr or m.name
+
+    if m.isDone then
+        return string.format("|cff00e5ff%s: %d/%d [DONE]|r", nameStr, m.rank, m.maxRank)
+    end
+
+    if m.canTrainNext and m.isCappedAtCurrentRank then
+        return string.format("|cff00ff66%s: %d/%d [TRAIN %s]|r", nameStr, m.rank, m.maxRank, m.nextRankTitle:upper())
+    end
+
+    if m.levelBottleneck and m.isCappedAtCurrentRank then
+        return string.format("|cffffaa00%s: %d/%d [Req Lvl %d]|r", nameStr, m.rank, m.maxRank, m.nextReqLevel)
+    end
+
+    if m.isMilestoneHit and m.rank == m.maxRank then
+        return string.format("|cff00e5ff%s: %d/%d [DONE]|r", nameStr, m.rank, m.maxRank)
+    end
+
+    return string.format("%s: %d/%d [%s Target]", nameStr, m.rank, m.targetMilestone, m.targetPhase)
+end
+
+function CLIAlts:GetCharacterProfessionAlerts(char)
+    local alerts = {}
+    if not char or not char.professions or not char.professions.primary then
+        return alerts
+    end
+    for _, prof in ipairs(char.professions.primary) do
+        local m = self:GetProfessionMilestoneInfo(char, prof)
+        if m then
+            if m.canTrainNext and m.isCappedAtCurrentRank then
+                table.insert(alerts, {
+                    type = "TRAIN",
+                    prof = prof.name,
+                    abbr = m.abbr,
+                    rank = m.rank,
+                    maxRank = m.maxRank,
+                    nextRankTitle = m.nextRankTitle,
+                    nextReqLevel = m.nextReqLevel,
+                    tag = string.format("[TRAIN %s]", m.nextRankTitle:upper()),
+                    text = string.format("%s at cap (%d/%d): eligible to train %s (Req Lvl %d met)!",
+                        prof.name, m.rank, m.maxRank, m.nextRankTitle, m.nextReqLevel),
+                })
+            elseif m.levelBottleneck and m.isCappedAtCurrentRank then
+                table.insert(alerts, {
+                    type = "BOTTLENECK",
+                    prof = prof.name,
+                    abbr = m.abbr,
+                    rank = m.rank,
+                    maxRank = m.maxRank,
+                    nextRankTitle = m.nextRankTitle,
+                    nextReqLevel = m.nextReqLevel,
+                    tag = string.format("[Req Lvl %d]", m.nextReqLevel),
+                    text = string.format("%s at cap (%d/%d): level bottleneck (reach Level %d to train %s)",
+                        prof.name, m.rank, m.maxRank, m.nextReqLevel, m.nextRankTitle),
+                })
+            end
+        end
+    end
+    return alerts
+end
+
+function CLIAlts:PrintProfessionMilestones()
+    self:Print("--- WoW Forever: Profession Milestones & Training Report ---")
+    local chars = self:GetCharactersList("cohort", true)
+    local totalAlerts = 0
+
+    for _, c in ipairs(chars) do
+        if c.tier ~= "BANK" and c.professions and c.professions.primary and #c.professions.primary > 0 then
+            local coloredName = self:ColorizePlayerName(c.name, c.classFile)
+            local tierStr = c.tier and (" [" .. c.tier .. "]") or ""
+            local profLines = {}
+            for _, p in ipairs(c.professions.primary) do
+                local m = self:GetProfessionMilestoneInfo(c, p)
+                if m then
+                    local line = self:FormatProfessionMilestone(c, p, false)
+                    if m.canTrainNext and m.isCappedAtCurrentRank then
+                        totalAlerts = totalAlerts + 1
+                    end
+                    table.insert(profLines, line)
+                end
+            end
+            if #profLines > 0 then
+                if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+                    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * %s (Lvl %d%s): %s",
+                        coloredName, c.level or 1, tierStr, table.concat(profLines, " | ")))
+                end
+            end
+        end
+    end
+
+    if totalAlerts > 0 then
+        self:Print(string.format("|cff00ff66Notice:|r %d character(s) at skill cap eligible to train next profession rank now!", totalAlerts))
+    else
+        self:Print("All characters are currently within their skill limits (no wasted skillups).")
     end
 end
 

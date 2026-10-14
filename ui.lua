@@ -507,6 +507,9 @@ local function FmtProf1(char, t)
     local profs = char.professions and char.professions.primary
     local p = profs and profs[1]
     if not p then return "|cff666666---|r" end
+    if CLIAlts:IsForeverMode() then
+        return CLIAlts:FormatProfessionMilestone(char, p, false)
+    end
     return string.format("|cff%s%s %d/%d|r", t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
 end
 
@@ -514,6 +517,9 @@ local function FmtProf2(char, t)
     local profs = char.professions and char.professions.primary
     local p = profs and profs[2]
     if not p then return "|cff666666---|r" end
+    if CLIAlts:IsForeverMode() then
+        return CLIAlts:FormatProfessionMilestone(char, p, false)
+    end
     return string.format("|cff%s%s %d/%d|r", t.primaryHex, p.name or "Prof", p.rank or 0, p.maxRank or 0)
 end
 
@@ -625,20 +631,44 @@ local function FmtLevelTarget(char, t)
 end
 
 local function FmtProfessionsAuto(char)
-    if char.supply_role and char.supply_role ~= "" then
-        return string.format("|cffffffff%s|r", char.supply_role)
-    end
     if char.tier == "BANK" then
         return "|cffff9900Bank Mule|r"
     end
+
+    local alertTag = ""
+    local alerts = CLIAlts:GetCharacterProfessionAlerts(char)
+    if #alerts > 0 then
+        for _, a in ipairs(alerts) do
+            if a.type == "TRAIN" then
+                alertTag = " |cff00ff66" .. a.tag .. "|r"
+                break
+            end
+        end
+    end
+
+    if char.supply_role and char.supply_role ~= "" then
+        return string.format("|cffffffff%s|r%s", char.supply_role, alertTag)
+    end
+
     local profs = char.professions and char.professions.primary
     if profs and #profs > 0 then
         local parts = {}
         for _, p in ipairs(profs) do
-            local short = p.name:sub(1, 6)
-            table.insert(parts, string.format("%s %d", short, p.rank or 0))
+            local m = CLIAlts:GetProfessionMilestoneInfo(char, p)
+            if m then
+                if m.canTrainNext and m.isCappedAtCurrentRank then
+                    table.insert(parts, string.format("|cff00ff66%s %d/%d [TRAIN]|r", m.abbr, m.rank, m.maxRank))
+                elseif m.isDone or (m.isMilestoneHit and m.rank == m.maxRank) then
+                    table.insert(parts, string.format("|cff00e5ff%s %d [DONE]|r", m.abbr, m.rank))
+                else
+                    table.insert(parts, string.format("%s %d/%d [%s]", m.abbr, m.rank, m.targetMilestone, m.targetPhase))
+                end
+            else
+                local short = p.name:sub(1, 6)
+                table.insert(parts, string.format("%s %d", short, p.rank or 0))
+            end
         end
-        return string.format("|cffffffff%s|r", table.concat(parts, ", "))
+        return table.concat(parts, ", ") .. alertTag
     end
     return "|cff666666---|r"
 end
@@ -1179,6 +1209,14 @@ function CLIAlts:CreateMainFrame()
                 end
 
                 if CLIAlts:IsForeverMode() then
+                    local pAlerts = CLIAlts:GetCharacterProfessionAlerts(self.charData)
+                    for _, a in ipairs(pAlerts) do
+                        if a.type == "TRAIN" then
+                            GameTooltip:AddLine(string.format("|cff00ff66* %s|r", a.text), 1, 1, 1)
+                        elseif a.type == "BOTTLENECK" then
+                            GameTooltip:AddLine(string.format("|cffffaa00* %s|r", a.text), 1, 0.8, 0)
+                        end
+                    end
                     GameTooltip:AddLine("Left-Click: Dossier | Shift-Click: Cycle Cohort | Right-Click: Delete", 0.7, 0.7, 0.7)
                 else
                     GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Delete Character", 0.7, 0.7, 0.7)
@@ -2194,6 +2232,10 @@ function CLIAlts:ExecutePromptCommand(input)
             self:SetPromptFeedback(msg, not ok)
         end
 
+    elseif cmd == "prof" or cmd == "milestones" or cmd == "professions" then
+        self:PrintProfessionMilestones()
+        self:SetPromptFeedback("Profession milestones printed to chat.")
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -2219,7 +2261,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "theme", "scale", "perk", "perf", "selftest",
         "alerts", "digest", "plan", "note", "unlocked", "prune",
         "backup", "restore", "tooltips", "inv",
-        "core", "alt", "bank", "unassign",
+        "core", "alt", "bank", "unassign", "prof", "milestones",
         "forever", "role",
         "refresh", "help", "exit", "close"
     }
@@ -2589,13 +2631,30 @@ function CLIAlts:ShowDossierPopup(char)
         end
 
         table.insert(lines, "+------------------------------------------------------------------------------+")
-        table.insert(lines, "| PROFESSIONS & CRAFTING:")
+        table.insert(lines, "| PROFESSIONS & CRAFTING (WOW FOREVER MILESTONES):")
         if char.professions and char.professions.primary and #char.professions.primary > 0 then
             for _, p in ipairs(char.professions.primary) do
                 local pName = tostring(p.name or "Unknown")
                 local pRank = tonumber(p.rank) or 0
                 local pMax = tonumber(p.maxRank) or 0
-                table.insert(lines, string.format("|  * Primary:   |cffffffff%-16s|r %3d / %-3d", pName, pRank, pMax))
+                local m = self:GetProfessionMilestoneInfo(char, p)
+                if m then
+                    local statusText = ""
+                    if m.isDone then
+                        statusText = "|cff00e5ff[P4 DONE - MAX]|r"
+                    elseif m.canTrainNext and m.isCappedAtCurrentRank then
+                        statusText = string.format("|cff00ff66[TRAIN %s AVAILABLE]|r (Req Lvl %d met)", m.nextRankTitle:upper(), m.nextReqLevel)
+                    elseif m.levelBottleneck and m.isCappedAtCurrentRank then
+                        statusText = string.format("|cffffaa00[LEVEL BOTTLENECK: Req Lvl %d to train %s]|r", m.nextReqLevel, m.nextRankTitle)
+                    elseif m.isMilestoneHit then
+                        statusText = string.format("|cff00e5ff[%s DONE]|r", m.targetPhase)
+                    else
+                        statusText = string.format("[%s Target: %d/%d] (%d skillups needed)", m.targetPhase, m.rank, m.targetMilestone, m.needed)
+                    end
+                    table.insert(lines, string.format("|  * Primary:   |cffffffff%-15s|r %3d / %-3d  %s", pName, pRank, pMax, statusText))
+                else
+                    table.insert(lines, string.format("|  * Primary:   |cffffffff%-15s|r %3d / %-3d", pName, pRank, pMax))
+                end
             end
         else
             table.insert(lines, "|  * Primary:   |cff888888None learned|r")
@@ -2605,7 +2664,7 @@ function CLIAlts:ShowDossierPopup(char)
                 local sName = tostring(s.name or "Unknown")
                 local sRank = tonumber(s.rank) or 0
                 local sMax = tonumber(s.maxRank) or 0
-                table.insert(lines, string.format("|  * Secondary: |cffffffff%-16s|r %3d / %-3d", sName, sRank, sMax))
+                table.insert(lines, string.format("|  * Secondary: |cffffffff%-15s|r %3d / %-3d", sName, sRank, sMax))
             end
         end
         table.insert(lines, "+==============================================================================+")
@@ -2890,6 +2949,7 @@ function CLIAlts:ShowHelpPopup()
         "|   /clialts core <who> - Set Core cohort (Target Level 35)          |",
         "|   /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)   |",
         "|   /clialts bank <who> - Set Bank mule (Target Level 1)             |",
+        "|   /clialts prof       - Print profession milestones & train alerts |",
         "|   /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup |",
         "|   /clialts restore    - Restore database from CLIAltsDB.backup     |",
         "|   /clialts reset      - Reset window position to center            |",

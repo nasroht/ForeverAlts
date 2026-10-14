@@ -704,6 +704,9 @@ local function SlashHandler(msg)
             CLIAlts:RequestRender()
         end
 
+    elseif cmd == "prof" or cmd == "milestones" or cmd == "professions" then
+        CLIAlts:PrintProfessionMilestones()
+
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()
         CLIAlts:Print("Showing Quick Guide. Type |cff00ff66/clialts|r to toggle alt monitor.")
