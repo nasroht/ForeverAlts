@@ -545,30 +545,6 @@ local function FmtLevel(char, t)
     return string.format("|cff%s%d|r", t.textHex or "f4ead2", lvl)
 end
 
-local function FmtRaceClass(char, t)
-    t = t or CLIAlts:GetTheme()
-    local code = CLIAlts:GetRaceCode(char)
-    local class = char.class or "Unknown"
-    return string.format("|cff%s%s|r |cff%s%s|r", t.mutedHex or "a9a08c", code, t.textHex or "f4ead2", class)
-end
-
-local function FmtLevelProgress(char, t)
-    t = t or CLIAlts:GetTheme()
-    local xpData = CLIAlts:GetLevelProgressData(char)
-    if not xpData or xpData.isMaxLevel then
-        return string.format("|cff%s[==========]|r |cff%sMAX|r", t.dimHex, t.highlightHex)
-    end
-
-    local fill = math.min(10, math.max(0, math.floor((xpData.ratio or 0) * 10)))
-    local empty = 10 - fill
-    local fillStr = string.rep("=", fill)
-    local emptyStr = string.rep(".", empty)
-    local pctStr = string.format("%d%%", xpData.percent)
-
-    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s|r",
-        t.dimHex, t.accentHex or t.highlightHex, fillStr, t.dimHex, emptyStr, t.dimHex, t.textHex or t.primaryHex, pctStr)
-end
-
 local function FmtGold(char)
     local gold = math.floor((char.money or 0) / 10000)
     return "|cffffd700" .. CLIAlts:FormatNumber(gold) .. "g|r"
@@ -666,7 +642,7 @@ local function FmtRouteReason(char, t)
     end
 
     local rested = CLIAlts:GetRestedData(char)
-    local wastedSec, wastedXP = CLIAlts:GetRestedWaste(char)
+    local _, wastedXP = CLIAlts:GetRestedWaste(char)
     if rested and rested.isFull then
         if wastedXP and wastedXP > 0 then
             return string.format("|cff%s! CAPPED: Overflowing (+%s XP waste) - Play now!|r", t.pendingHex or "ffb547", CLIAlts:FormatNumber(wastedXP))
@@ -727,8 +703,8 @@ local function FmtRestedBar(char, t)
     local labelColor = isFull and t.highlightHex or (t.textHex or t.primaryHex)
 
     local lvlPct = rested.percent or 0
-    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%d%%%s cap (%d%% lvl)|r",
-        t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, capPct, capMark, lvlPct)
+    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%%%s cap (%d%% lvl)|r",
+        t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, est, capPct, capMark, lvlPct)
 end
 
 local function FmtRate(char, t)
@@ -739,19 +715,6 @@ local function FmtRate(char, t)
     end
     local s = rested.isResting and "+5.0%/8h" or "+1.25%/8h"
     return string.format("|cff%s%s|r", t.dimHex, s)
-end
-
-local function FmtState(char, t)
-    t = t or CLIAlts:GetTheme()
-    local rested = CLIAlts:GetRestedData(char)
-    if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
-    end
-    if rested.isResting then
-        return string.format("|cff%s[REST]|r", t.readyHex or "55e39a")
-    else
-        return string.format("|cff%s[WILD]|r", t.pendingHex or "ffb547")
-    end
 end
 
 -- Tab 4 Profession Formatters
@@ -1045,8 +1008,6 @@ local COLS = {
         { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 329, cpw = 225, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
     },
 }
-
-local FOREVER_COLS = COLS[1]
 
 function CLIAlts:GetColumns(activeTab)
     activeTab = tonumber(activeTab) or 1
@@ -1949,7 +1910,7 @@ function CLIAlts:Render()
     local topNext = nextList and nextList[1]
     if topNext then
         local tc = topNext.char
-        frame.recChar = tc
+        mainFrame.recChar = tc
         local cName = self:ColorizePlayerName(tc.fullName or tc.name, tc.classFile)
         local isCur = (tc.fullName and tc.fullName == self.curPlayerFullName) or (tc.name and tc.name == self.curPlayerName)
         local curPrefix = isCur and string.format("|cff%s*|r", t.accentHex or "57d6e8") or ""
@@ -2028,7 +1989,7 @@ function CLIAlts:Render()
         end
         if mainFrame.recBtnSetup then mainFrame.recBtnSetup:Hide() end
     else
-        frame.recChar = nil
+        mainFrame.recChar = nil
         if mainFrame.recBadge then
             mainFrame.recBadge:SetText(isComp and "[ROUTE]" or "[FOREVER ROUTE]")
             mainFrame.recBadge:SetTextColor(t.dim[1], t.dim[2], t.dim[3])

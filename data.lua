@@ -2201,7 +2201,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     if sortBy == nil and self:IsForeverMode() then
         sortBy = "cohort"
     else
-        sortBy = sortBy or CLIAltsDB.settings.sortBy or "level"
+        sortBy = sortBy or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "level"
     end
 
     local sortValues = {}
@@ -3489,6 +3489,11 @@ function CLIAlts:RunSelfTest()
     -- 21. Main Dashboard Redesign: Roster Summary Metrics and Profession Sorting
     local oldDashDB = CLIAltsDB
     local testDashDB = {
+        settings = {
+            sortBy = "level",
+            sortAsc = false,
+            theme = "amber",
+        },
         characters = {
             ["AlphaCore"] = {
                 name = "AlphaCore",
