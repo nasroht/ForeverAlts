@@ -3143,7 +3143,7 @@ function CLIAlts:RunSelfTest()
 
     CLIAltsDB = oldInvTestDB
 
-    -- 18. WoW Forever Cohort & Role Categorization Tests (Component 1)
+    do -- 18. WoW Forever Cohort & Role Categorization Tests (Component 1)
     local testCohortDB = {
         settings = {
             foreverMode = true,
@@ -3226,8 +3226,9 @@ function CLIAlts:RunSelfTest()
     testCohortDB.characters["Arthas-Forever"] = nil
 
     CLIAltsDB = oldCohortDB
+    end
 
-    -- 19. WoW Forever Smart Rotation Recommendation & Usable Rested Ranking Tests (Component 2)
+    do -- 19. WoW Forever Smart Rotation Recommendation & Usable Rested Ranking Tests (Component 2)
     local testRotDB = {
         settings = {
             foreverMode = true,
@@ -3307,6 +3308,10 @@ function CLIAlts:RunSelfTest()
         end
     end
 
+    CLIAltsDB = oldRotDB
+    end
+
+    do
     -- 20. WoW Forever Profession Milestone Thresholds & Training Alerts (Component 3)
     -- 20a. Profession abbreviations
     Assert(self:GetProfessionAbbr("Leatherworking") == "LW", "Professions: Leatherworking abbreviated to LW")
@@ -3354,8 +3359,7 @@ function CLIAlts:RunSelfTest()
     local profAlerts = self:GetCharacterProfessionAlerts(alertsChar)
     Assert(#profAlerts == 1 and profAlerts[1].type == "TRAIN", "Professions: GetCharacterProfessionAlerts returns TRAIN alert")
     Assert(profAlerts[1].tag == "[TRAIN EXPERT]", "Professions: Alert tag is [TRAIN EXPERT]")
-
-    CLIAltsDB = oldRotDB
+    end
 
     if failed == 0 then
         self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones)", passed))
@@ -3668,8 +3672,7 @@ function CLIAlts:GetProfessionMilestoneInfo(char, prof)
     local profName = prof.name or "Profession"
     local abbr = self:GetProfessionAbbr(profName)
 
-    local targetMilestone = 75
-    local targetPhase = "P1"
+    local targetMilestone, targetPhase
 
     if rank < 75 then
         targetMilestone = 75

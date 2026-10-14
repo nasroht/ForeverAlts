@@ -2639,7 +2639,7 @@ function CLIAlts:ShowDossierPopup(char)
                 local pMax = tonumber(p.maxRank) or 0
                 local m = self:GetProfessionMilestoneInfo(char, p)
                 if m then
-                    local statusText = ""
+                    local statusText
                     if m.isDone then
                         statusText = "|cff00e5ff[P4 DONE - MAX]|r"
                     elseif m.canTrainNext and m.isCappedAtCurrentRank then
