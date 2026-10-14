@@ -121,6 +121,12 @@ globals = {
     "GetSavedInstanceInfo",
     "RequestRaidInfo",
 
+    -- WoW Quests & Log APIs
+    "C_QuestLog",
+    "GetQuestsCompleted",
+    "GetNumQuestLogEntries",
+    "GetQuestLogTitle",
+
     -- WoW Items, Bags & Mail
     "GetItemCount",
     "GetItemInfo",

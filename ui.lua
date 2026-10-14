@@ -2863,6 +2863,10 @@ function CLIAlts:ExecutePromptCommand(input)
         self:PrintProfessionMilestones()
         self:SetPromptFeedback("Profession milestones printed to chat.")
 
+    elseif cmd == "dungeon" or cmd == "dungeons" or cmd == "dng" then
+        local fb, ok = self:PrintDungeonReadiness(args)
+        self:SetPromptFeedback(fb or "Dungeon readiness check printed to chat.", not ok)
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -2982,7 +2986,7 @@ function CLIAlts:ShowDossierPopup(char)
         local t = self:GetTheme()
         local dp = CreateFrame("Frame", "CLIAltsDossierPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         dp:Hide()
-        dp:SetSize(680, 620)
+        dp:SetSize(680, 660)
         dp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dp:SetFrameStrata("DIALOG")
         dp:EnableMouse(true)
@@ -3294,6 +3298,32 @@ function CLIAlts:ShowDossierPopup(char)
                 table.insert(lines, string.format(" * Secondary:   |cffffffff%-15s|r %3d / %-3d", sName, sRank, sMax))
             end
         end
+
+        -- Dungeon Quest Readiness (WoW Forever Component 4)
+        local dngKeys = self.DUNGEON_KEYS or { "RFC", "WC", "DM", "SFK", "BFD" }
+        local dngLines = {}
+        for _, dKey in ipairs(dngKeys) do
+            local r = self:GetDungeonReadiness(char, dKey)
+            if r and r.factionMatch and (char.level or 1) >= (r.minLevel - 3) then
+                local st = self:FormatDungeonStatusShort(char, dKey)
+                table.insert(dngLines, string.format(" * %-4s (L%d-%d): %-18s %s", r.tag, r.minLevel, r.maxLevel, r.name, st))
+                if r.preChains then
+                    for _, pc in ipairs(r.preChains) do
+                        if not pc.completed then
+                            table.insert(dngLines, string.format("    |cff%s-> Missing Pre-chain: %s (%s)|r", t.pendingHex or "ffb547", pc.name, pc.nextStepName))
+                        end
+                    end
+                end
+            end
+        end
+        if #dngLines > 0 then
+            table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 68)))
+            table.insert(lines, string.format("|cff%sDUNGEON QUEST READINESS & CHAINS (WOW FOREVER)|r", t.primaryHex or "f2c94c"))
+            for _, dl in ipairs(dngLines) do
+                table.insert(lines, dl)
+            end
+        end
+
         table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("=", 68)))
 
         dossierPopup.body:SetText(table.concat(lines, "\n"))

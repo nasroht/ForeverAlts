@@ -1018,8 +1018,142 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = oldDashDB
     end
 
+    do -- 22. WoW Forever Automated Dungeon Quest Tracker Tests (Component 4)
+    local oldDngDB = CLIAltsDB
+    local testDngDB = {
+        settings = {
+            foreverMode = true,
+            activeTab = 1,
+        },
+        characters = {
+            ["Grom-Forever"] = {
+                name = "Grom-Forever",
+                faction = "Horde",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 10,
+                tier = "CORE",
+                dungeonQuests = {},
+                activeQuests = {},
+            },
+            ["Thrall-Forever"] = {
+                name = "Thrall-Forever",
+                faction = "Horde",
+                class = "Shaman",
+                classFile = "SHAMAN",
+                level = 15,
+                tier = "CORE",
+                dungeonQuests = {},
+                activeQuests = {},
+            },
+            ["Baine-Forever"] = {
+                name = "Baine-Forever",
+                faction = "Horde",
+                class = "Druid",
+                classFile = "DRUID",
+                level = 20,
+                tier = "RESERVE",
+                dungeonQuests = {
+                    [870] = true,
+                },
+                activeQuests = {
+                    [871] = true,
+                },
+            },
+            ["Anduin-Forever"] = {
+                name = "Anduin-Forever",
+                faction = "Alliance",
+                class = "Priest",
+                classFile = "PRIEST",
+                level = 20,
+                tier = "CORE",
+                dungeonQuests = {
+                    [155] = true,
+                    [166] = true,
+                    [167] = true,
+                },
+                activeQuests = {},
+            },
+            ["Rexxar-Forever"] = {
+                name = "Rexxar-Forever",
+                faction = "Horde",
+                class = "Hunter",
+                classFile = "HUNTER",
+                level = 16,
+                tier = "CORE",
+                dungeonQuests = {
+                    [5722] = true, [5723] = true, [5724] = true, [5725] = true, [5726] = true, [5727] = true, [5728] = true,
+                    [5721] = true, [5729] = true, [5730] = true, [5761] = true,
+                },
+                activeQuests = {},
+            },
+        },
+    }
+    CLIAltsDB = testDngDB
+
+    -- 22a. Dungeon static data structure
+    Assert(self.DUNGEON_DATA ~= nil, "Dungeons: DUNGEON_DATA table defined")
+    Assert(self.DUNGEON_DATA.RFC ~= nil and self.DUNGEON_DATA.RFC.minLevel == 13, "Dungeons: RFC defined with minLevel 13")
+    Assert(self.DUNGEON_DATA.WC ~= nil and self.DUNGEON_DATA.WC.minLevel == 17, "Dungeons: WC defined with minLevel 17")
+    Assert(self.DUNGEON_DATA.DM ~= nil and self.DUNGEON_DATA.DM.faction == "Alliance", "Dungeons: DM defined for Alliance")
+
+    -- 22b. RFC level gating
+    local rfcLow = self:GetDungeonReadiness(testDngDB.characters["Grom-Forever"], "RFC")
+    Assert(rfcLow ~= nil and rfcLow.isLevelMet == false, "Dungeons: Level 10 Grom is not level-eligible for RFC")
+    Assert(rfcLow.isReady == false, "Dungeons: Level 10 Grom is not ready for RFC")
+
+    -- 22c. RFC pre-chain requirement (Hidden Enemies)
+    local rfcMid = self:GetDungeonReadiness(testDngDB.characters["Thrall-Forever"], "RFC")
+    Assert(rfcMid ~= nil and rfcMid.isLevelMet == true, "Dungeons: Level 15 Thrall meets level requirement for RFC")
+    Assert(rfcMid.allPreChainsDone == false, "Dungeons: Thrall has not completed Hidden Enemies pre-chain")
+    Assert(rfcMid.isReady == false, "Dungeons: Thrall is not ready without pre-chain")
+    Assert(rfcMid.preChains[1].nextStepName == "Hidden Enemies (Part 1)", "Dungeons: Thrall next pre-chain step is Part 1")
+
+    -- 22d. WC pre-chain progression (Forgotten Pools -> Stagnant Oasis)
+    local wcBaine = self:GetDungeonReadiness(testDngDB.characters["Baine-Forever"], "WC")
+    Assert(wcBaine ~= nil and wcBaine.isLevelMet == true, "Dungeons: Level 20 Baine meets level requirement for WC")
+    Assert(wcBaine.allPreChainsDone == false, "Dungeons: Baine has not completed Leaders of the Fang pre-chain")
+    Assert(wcBaine.preChains[1].currentStep == 1, "Dungeons: Baine completed step 1 (Forgotten Pools)")
+    Assert(wcBaine.preChains[1].nextStepName == "The Stagnant Oasis", "Dungeons: Baine next step is The Stagnant Oasis")
+
+    -- 22e. Faction exclusion & Deadmines chain
+    local rfcAnduin = self:GetDungeonReadiness(testDngDB.characters["Anduin-Forever"], "RFC")
+    Assert(rfcAnduin ~= nil and rfcAnduin.factionMatch == false, "Dungeons: Alliance Priest does not match RFC Horde faction")
+
+    local dmAnduin = self:GetDungeonReadiness(testDngDB.characters["Anduin-Forever"], "DM")
+    Assert(dmAnduin ~= nil and dmAnduin.factionMatch == true, "Dungeons: Alliance Priest matches DM faction")
+    Assert(dmAnduin.preChains[1].currentStep == 3, "Dungeons: Anduin completed 3 steps of Defias chain")
+    Assert(dmAnduin.allPreChainsDone == false, "Dungeons: Anduin not ready until full Defias chain complete")
+
+    -- 22f. Fully ready & fully cleared states
+    local rfcRexxar = self:GetDungeonReadiness(testDngDB.characters["Rexxar-Forever"], "RFC")
+    Assert(rfcRexxar ~= nil and rfcRexxar.allPreChainsDone == true, "Dungeons: Rexxar completed all pre-chains for RFC")
+    Assert(rfcRexxar.completedQuests == 5, "Dungeons: Rexxar completed all 5 RFC quests")
+    Assert(rfcRexxar.isDone == true, "Dungeons: Rexxar isDone is true for RFC")
+    Assert(rfcRexxar.isReady == false, "Dungeons: Rexxar isReady is false because already completed all quests")
+
+    -- 22g. FormatDungeonStatusShort output
+    local stLow = self:FormatDungeonStatusShort(testDngDB.characters["Grom-Forever"], "RFC")
+    Assert(stLow:find("Req Lvl 13") ~= nil, "Dungeons: FormatDungeonStatusShort mentions Req Lvl 13 for Grom")
+
+    local stPre = self:FormatDungeonStatusShort(testDngDB.characters["Baine-Forever"], "WC")
+    Assert(stPre:find("The Stagnant Oasis") ~= nil, "Dungeons: FormatDungeonStatusShort mentions next pre-req step for Baine")
+
+    local stDone = self:FormatDungeonStatusShort(testDngDB.characters["Rexxar-Forever"], "RFC")
+    Assert(stDone:find("ALL DONE") ~= nil, "Dungeons: FormatDungeonStatusShort displays ALL DONE for Rexxar")
+
+    -- 22h. PrintDungeonReadiness execution
+    local fbSpec, okSpec = self:PrintDungeonReadiness("RFC")
+    Assert(okSpec == true and fbSpec:find("RFC:") ~= nil, "Dungeons: PrintDungeonReadiness('RFC') returns success and summary")
+
+    local fbAll, okAll = self:PrintDungeonReadiness("")
+    Assert(okAll == true and fbAll == "Dungeon overview printed.", "Dungeons: PrintDungeonReadiness('') prints general overview")
+
+    CLIAltsDB = oldDngDB
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

@@ -127,6 +127,9 @@ local safeEvents = {
     "MAIL_INBOX_UPDATE",
     "MAIL_SHOW",
     "HEARTHSTONE_BOUND",
+    "QUEST_TURNED_IN",
+    "QUEST_LOG_UPDATE",
+    "QUEST_FINISHED",
 }
 for _, ev in ipairs(safeEvents) do
     pcall(function() eventFrame:RegisterEvent(ev) end)
@@ -291,6 +294,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:RequestRender()
 
     elseif event == "UPDATE_INSTANCE_INFO" then
+        CLIAlts:CollectCurrentCharacter()
+        CLIAlts:RequestRender()
+
+    elseif event == "QUEST_TURNED_IN" or event == "QUEST_LOG_UPDATE" or event == "QUEST_FINISHED" then
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:RequestRender()
 
@@ -732,6 +739,9 @@ local function SlashHandler(msg)
 
     elseif cmd == "prof" or cmd == "milestones" or cmd == "professions" then
         CLIAlts:PrintProfessionMilestones()
+
+    elseif cmd == "dungeon" or cmd == "dungeons" or cmd == "dng" then
+        CLIAlts:PrintDungeonReadiness(arg)
 
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()

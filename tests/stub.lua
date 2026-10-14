@@ -154,6 +154,12 @@ C_Container = C_Container or {
     GetContainerNumSlots = function(bagID) return 0 end,
     GetContainerItemInfo = function(bagID, slot) return nil end,
 }
+C_QuestLog = C_QuestLog or {
+    IsQuestFlaggedCompleted = function(questID) return false end,
+    GetNumQuestLogEntries = function() return 0 end,
+    GetInfo = function(index) return nil end,
+}
+GetQuestsCompleted = GetQuestsCompleted or function(tbl) end
 
 -- 3. WoW System & Timer APIs
 GetTime = GetTime or function() return os.time() end
