@@ -93,6 +93,18 @@ CLIAlts provides predictable, non-destructive mouse and keyboard interactions:
   - Automatically identifies Phase 2 caps (e.g. `Tailor: 150/150 [TRAIN EXPERT]`).
   - Flags character level bottlenecks (e.g. `[Req Lvl 20]`) and completed caps (`[DONE]`).
 - **1-Click Supply Role Configuration**: Assign supply roles (`Tailor/Bags`, `Alch/DE`, `Miner/Smelt`, `LW/Armor`, `Passive Bank`, `Auto`) directly from the Alt Dossier.
+- **Dungeon Quest Tracker & Attunement Engine**:
+  - Tracks quest readiness across Ragefire Chasm (RFC), Wailing Caverns (WC), Deadmines (DM), Shadowfang Keep (SFK), and Blackfathom Deeps (BFD).
+  - Evaluates multi-step prerequisite quest chains (*Hidden Enemies*, *Leaders of the Fang*, *The Defias Brotherhood*) to identify bottlenecks before stepping into instances.
+  - Full in-depth checklist rendered in the Alt Dossier modal.
+- **Inter-Alt Mail & Supply Chain Router**:
+  - Automatically classifies bag items and routes materials to the best crafter (Cloth $\to$ Tailor, Herbs $\to$ Alchemist, Ore $\to$ Blacksmith/Engineer, Leather $\to$ Leatherworker, Meat $\to$ Cook, BoE Greens $\to$ Disenchanter).
+  - Automatically falls back to designated `BANK` mules for unassigned trade goods and storage items.
+  - Embeds `[Mail Router] Send to: AltName (Reason)` tags on item tooltips and prompts in chat at the mailbox.
+- **Legacy Point (LP) Progress Tracker**:
+  - Computes account and per-alt LP towards unlock tiers: Tier 1 (10 LP), Tier 2 (16 LP - Core Target), and Tier 3 (18 LP).
+  - Rewards level milestones (L20 $\to$ 1.0, L35 $\to$ 3.0, L60 $\to$ 5.0) and profession skill caps (75 $\to$ 0.5, 150 $\to$ 1.0, 300 $\to$ 2.0).
+  - Displays a live `[ LP: %.1f/%d ]` telemetry progress chip in Region 2 and breaks down individual contributions in the Alt Dossier.
 
 ---
 
@@ -141,6 +153,9 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `bank <name>` | Designate alt as Bank Mule (excluded from leveling) |
 | `unassign <name>` | Remove cohort assignment |
 | `prof` | Print profession milestone status across all alts |
+| `dungeon [inst]` | Dungeon quest readiness & pre-chain checklist (RFC, WC, DM, SFK, BFD) |
+| `mail` | Scan bags and display inter-alt material routing summary |
+| `lp [pts\|auto]` | View account Legacy Point progress, or set/reset manual override |
 | `watch <item>` | Add item to bag & bank watchlist tracker (supports Shift-clicking item links) |
 | `unwatch <item>` | Remove item from watchlist |
 | `watchlist` | Display inventory totals for watched items |
@@ -182,6 +197,9 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `/clialts unassign <name>` | Unassign alt cohort |
 | `/clialts supply <name> [role]` | Assign profession supply role (e.g. `Tailor/Bags`, `Alch/DE`, `auto`) |
 | `/clialts prof` | Print profession milestones & caps across all alts |
+| `/clialts dungeon [inst]` | Dungeon quest readiness & pre-chain tracker (RFC, WC, DM, SFK, BFD) |
+| `/clialts mail` | Inter-alt mail & material supply chain router |
+| `/clialts lp [pts\|auto]` | WoW Forever Legacy Point (LP) progress tracker & tier goals |
 | `/clialts watch <item>` | Add an item to the bag & bank watchlist tracker |
 | `/clialts unwatch <item>` | Remove an item from the watchlist tracker |
 | `/clialts watchlist` | Print watchlist item totals across all characters |
@@ -200,7 +218,7 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `/clialts minimap` | Toggle the minimap icon on or off |
 | `/clialts reset` | Reset main window position to screen center |
 | `/clialts perf` | Print execution latency (Collect & Render) and memory usage |
-| `/clialts selftest` | Run complete unit test assertions suite (21 feature areas) |
+| `/clialts selftest` | Run complete unit test assertions suite (24 feature areas) |
 | `/clialts help`, `/clialts ?` | Open the in-game Quick Guide manual |
 
 ---
@@ -210,16 +228,16 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 CLIAlts is engineered as a high-performance, lightweight addon adhering to modern Lua 5.1 best practices:
 
 - **Modular Architecture**:
-  - `data.lua`: High-throughput character state storage, mathematical projection engine, offline rested accrual calculator, gold sparklines, and SavedVariables schema migration.
-  - `ui.lua`: Modern 3-region TUI layout engine, virtual list row recycling, lazy modal creation (`Alt Dossier`, `Context Menu`, `Confirmation Dialogs`), and customizable CRT phosphor theme palette.
-  - `core.lua`: Event router (`PLAYER_ENTERING_WORLD`, `PLAYER_LOGOUT`, `BAG_UPDATE`, `TRADE_SKILL_SHOW`), slash command dispatcher, keyboard traps, and terminal prompt parser.
+  - `data.lua`: High-throughput character state storage, mathematical projection engine, offline rested accrual calculator, gold sparklines, dungeon quest database, inter-alt supply chain router, Legacy Point calculator, and SavedVariables schema migration.
+  - `ui.lua`: Modern 3-region TUI layout engine, virtual list row recycling, lazy modal creation (`Alt Dossier`, `Context Menu`, `Confirmation Dialogs`), LP telemetry chip, and customizable CRT phosphor theme palette.
+  - `core.lua`: Event router (`PLAYER_ENTERING_WORLD`, `PLAYER_LOGOUT`, `BAG_UPDATE`, `MAIL_SHOW`, `QUEST_LOG_UPDATE`), slash command dispatcher, keyboard traps, and terminal prompt parser.
   - `minimap.lua`: High-performance LDB & LibDBIcon minimap integration with live rested/cooldown status tooltips.
 - **Lazy Initialization & Memory Optimization**:
   - Sub-panels and modals instantiate lazily on first access, ensuring cold login memory footprint remains under 1.2 MB.
   - Frame recycling in the main character table avoids runtime garbage creation during tab navigation, scrolling, and prompt filtering.
-- **Headless Unit Verification (229 Assertions across 21 Suites)**:
+- **Headless Unit Verification (285 Assertions across 24 Suites)**:
   - Validated by an in-game self-test suite (`/clialts selftest`) and headless testing under vanilla Lua 5.1 (`tests/stub.lua` + `tests/selftest.lua`).
-  - Covers offline rest accrual formulas, perk bonus scaling, cap clamping, priority scoring, prompt grammar, item watchlists, and SavedVariables migration integrity.
+  - Covers offline rest accrual formulas, perk bonus scaling, cap clamping, priority scoring, prompt grammar, item watchlists, dungeon pre-chain attunements, supply chain routing, Legacy Point tiers, and SavedVariables migration integrity.
 - **Continuous Integration Pipeline**:
   - Every commit is automatically verified against [GitHub Actions CI](https://github.com/nasroht/clialts/actions), enforcing strict **Luacheck** static analysis (0 errors, 0 warnings) and plain **Lua 5.1** headless execution.
 
