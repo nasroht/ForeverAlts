@@ -1311,6 +1311,9 @@ function CLIAlts:RunSelfTest()
     end
 
     -- 23m. In-bag items scanning with multi-value return & Tab 7 rendering
+    testMailDB.characters["Mule-Forever"].supply_role = nil
+    testMailDB.characters["Morvath-Forever"].supply_role = nil
+
     local oldGetItemInfo = GetItemInfo
     local oldNumSlots = C_Container and C_Container.GetContainerNumSlots
     local oldItemInfo = C_Container and C_Container.GetContainerItemInfo
