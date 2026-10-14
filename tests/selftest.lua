@@ -1310,6 +1310,59 @@ function CLIAlts:RunSelfTest()
         end
     end
 
+    -- 23m. In-bag items scanning with multi-value return & Tab 7 rendering
+    local oldGetItemInfo = GetItemInfo
+    local oldNumSlots = C_Container and C_Container.GetContainerNumSlots
+    local oldItemInfo = C_Container and C_Container.GetContainerItemInfo
+
+    GetItemInfo = function(id)
+        if id == 2589 then
+            return "Linen Cloth", "item:2589", 1, 0, 0, "Trade Goods", "Cloth", 20, "", "", 10, 7, 5, 0
+        elseif id == 2447 then
+            return "Peacebloom", "item:2447", 1, 0, 0, "Trade Goods", "Herb", 20, "", "", 10, 7, 9, 0
+        end
+        return nil
+    end
+
+    if C_Container then
+        C_Container.GetContainerNumSlots = function(bagID)
+            return bagID == 0 and 2 or 0
+        end
+
+        C_Container.GetContainerItemInfo = function(bagID, slot)
+            if bagID == 0 then
+                if slot == 1 then
+                    return { itemID = 2589, stackCount = 20, hyperlink = "|cffffffff|Hitem:2589:0:0:0:0:0:0:0:80:0:0:0:0|h[Linen Cloth]|h|r" }
+                elseif slot == 2 then
+                    return { itemID = 2447, stackCount = 15, hyperlink = "|cffffffff|Hitem:2447:0:0:0:0:0:0:0:80:0:0:0:0|h[Peacebloom]|h|r" }
+                end
+            end
+            return nil
+        end
+    end
+
+    local bagSummary = self:GetMailReadySummary()
+    Assert(bagSummary.totalPackages == 2, "Mail: In-bag item scanner finds 2 destination packages")
+    Assert(bagSummary.totalItems == 35, "Mail: In-bag item scanner sums 35 total items")
+    Assert(bagSummary.byRecipient["Morvath-Forever"] ~= nil, "Mail: Morvath receives Linen Cloth")
+    Assert(bagSummary.byRecipient["Thorne-Forever"] ~= nil, "Mail: Thorne receives Peacebloom")
+
+    local pCount, pDetail = self:GetCharacterPendingMail(testMailDB.characters["Morvath-Forever"])
+    Assert(pCount == 20, "Mail: Morvath has 20 pending items")
+    Assert(pDetail:find("Linen Cloth") ~= nil, "Mail: Morvath pending detail mentions Linen Cloth")
+
+    if self.SwitchTab and self.Render then
+        self:SwitchTab(7)
+        local renderOk, renderErr = pcall(function() self:Render() end)
+        Assert(renderOk == true, "MailUI: Tab 7 Render completes without error when bags have items: " .. tostring(renderErr))
+    end
+
+    GetItemInfo = oldGetItemInfo
+    if C_Container then
+        C_Container.GetContainerNumSlots = oldNumSlots
+        C_Container.GetContainerItemInfo = oldItemInfo
+    end
+
     CLIAltsDB = oldMailDB
     end
 

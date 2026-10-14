@@ -1427,10 +1427,9 @@ function CLIAlts:CreateMainFrame()
     frame.tabButtons = {}
     local prevTab = nil
     for _, tabData in ipairs(tabs) do
+        local thisTabId = tabData.id
         local tabBtn = CreateRetroButton(frame, tabData.text, tabData.stdWidth, 20, function()
-            CLIAltsDB.settings.activeTab = tabData.id
-            currentPage = 1
-            CLIAlts:Render()
+            CLIAlts:SwitchTab(thisTabId)
         end)
         if not prevTab then
             tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -56)
@@ -2302,8 +2301,14 @@ function CLIAlts:Render()
     end
     if not mainFrame or not mainFrame:IsShown() then return end
 
-    local t = self:GetTheme()
-    local activeTab = CLIAltsDB.settings.activeTab or 1
+    local ok, err = pcall(function()
+        local activeTab = CLIAltsDB.settings.activeTab or 1
+        if activeTab == 7 then
+            self._cachedMailReadySummary = self:GetMailReadySummary()
+        else
+            self._cachedMailReadySummary = nil
+        end
+        local t = self:GetTheme()
 
     -- Highlight active tab button
     local isComp = self:IsCompact()
@@ -2391,7 +2396,7 @@ function CLIAlts:Render()
         if mainFrame.recBadge then
             mainFrame.recBadge:SetText("MAIL DISPATCH & SUPPLY CHAIN")
         end
-        local mailSummary = self:GetMailReadySummary()
+        local mailSummary = self._cachedMailReadySummary or self:GetMailReadySummary()
         if mailSummary.totalPackages > 0 then
             if mainFrame.recHeroTitle then
                 mainFrame.recHeroTitle:SetText(string.format("%d Pending In-Bag Packages Ready (%d items)", mailSummary.totalPackages, mailSummary.totalItems))
@@ -2561,7 +2566,7 @@ function CLIAlts:Render()
 
     if mainFrame.kpiCards then
         if activeTab == 7 then
-            local mailSummary = self:GetMailReadySummary()
+            local mailSummary = self._cachedMailReadySummary or self:GetMailReadySummary()
             local autoCount = 0
             local overrideCount = 0
             for _, c in ipairs(charList) do
@@ -2962,7 +2967,16 @@ function CLIAlts:Render()
             row:Hide()
         end
     end
+        self._cachedPriorityList = nil
+        self._cachedMailReadySummary = nil
+    end)
     self._cachedPriorityList = nil
+    self._cachedMailReadySummary = nil
+    if not ok then
+        if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r UI Render error: %s", tostring(err)))
+        end
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -3193,18 +3207,18 @@ function CLIAlts:ExecutePromptCommand(input)
     cmd = cmd:lower()
     args = args and args:match("^%s*(.-)%s*$") or ""
 
-    if cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" then
+    if cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" or cmd == "7" then
         local tNum = tonumber(cmd)
         self:SwitchTab(tNum)
         self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
 
     elseif cmd == "tab" then
         local tNum = tonumber(args)
-        if tNum and tNum >= 1 and tNum <= 6 then
+        if tNum and tNum >= 1 and tNum <= 7 then
             self:SwitchTab(tNum)
             self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
         else
-            self:SetPromptFeedback("Usage: tab <1-6>", true)
+            self:SetPromptFeedback("Usage: tab <1-7>", true)
         end
 
     elseif cmd == "sort" then
@@ -3583,7 +3597,8 @@ function CLIAlts:AutoCompletePrompt(editBox)
     local trimmed = text:match("^%s*(.-)%s*$") or ""
 
     local commands = {
-        "1", "2", "3", "4", "5", "6",
+        "1", "2", "3", "4", "5", "6", "7",
+        "tab", "mail",
         "sort", "filter", "find", "clear",
         "goto", "page", "next", "export", "compact",
         "watch", "unwatch", "watchlist",

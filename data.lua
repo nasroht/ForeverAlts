@@ -3639,7 +3639,7 @@ end
 
 function CLIAlts:GetCharacterPendingMail(char)
     if not char then return 0, "No items" end
-    local summary = self:GetMailReadySummary()
+    local summary = self._cachedMailReadySummary or self:GetMailReadySummary()
     local name = char.name
     local grp = summary.byRecipient and summary.byRecipient[name]
     if not grp and char.fullName and summary.byRecipient then
@@ -3897,9 +3897,9 @@ function CLIAlts:GetMailReadySummary()
     for bagID = 0, numBags do
         local numSlots = self:GetNumContainerSlots(bagID)
         for slot = 1, numSlots do
-            local itemData = self:GetContainerItemData(bagID, slot)
-            if itemData and itemData.itemID and itemData.itemID > 0 and (itemData.count or 0) > 0 then
-                local dest = self:GetMaterialDestination(itemData.itemID)
+            local itemID, count, itemLink = self:GetContainerItemData(bagID, slot)
+            if itemID and itemID > 0 and (count or 0) > 0 then
+                local dest = self:GetMaterialDestination(itemID)
                 if dest and not dest.isCurrentPlayer then
                     local rName = dest.destName
                     if not summary.byRecipient[rName] then
@@ -3912,15 +3912,17 @@ function CLIAlts:GetMailReadySummary()
                         }
                         summary.totalPackages = summary.totalPackages + 1
                     end
+                    local itemName = nil
+                    if GetItemInfo then itemName = GetItemInfo(itemID) end
                     table.insert(summary.byRecipient[rName].items, {
-                        itemID = itemData.itemID,
-                        name = itemData.itemName or string.format("Item #%d", itemData.itemID),
-                        link = itemData.itemLink,
-                        count = itemData.count,
+                        itemID = itemID,
+                        name = itemName or (itemLink and itemLink:match("%[(.-)%]")) or string.format("Item #%d", itemID),
+                        link = itemLink,
+                        count = count,
                         reason = dest.reason,
                         category = dest.category,
                     })
-                    summary.totalItems = summary.totalItems + itemData.count
+                    summary.totalItems = summary.totalItems + count
                 end
             end
         end
