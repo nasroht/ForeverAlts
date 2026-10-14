@@ -350,11 +350,13 @@ end
 -- Audio & Button Helpers
 -- ----------------------------------------------------------------------------
 local function PlayRetroSound()
-    if SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON then
-        PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
-    else
-        pcall(PlaySound, 856)
-    end
+    pcall(function()
+        if SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON then
+            PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+        elseif PlaySound then
+            pcall(PlaySound, 856)
+        end
+    end)
 end
 
 local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
@@ -430,9 +432,16 @@ function CLIAlts:RestoreWindowPosition(frame)
 
     frame:ClearAllPoints()
     local pos = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.windowPos
-    if pos and pos.point and type(pos.x) == "number" and type(pos.y) == "number" then
-        frame:SetPoint(pos.point, UIParent, pos.relPoint or pos.point, pos.x, pos.y)
-    else
+    local valid = false
+    if pos and type(pos) == "table" and pos.point and type(pos.x) == "number" and type(pos.y) == "number" then
+        if pos.x == pos.x and pos.y == pos.y and math.abs(pos.x) < 5000 and math.abs(pos.y) < 5000 then
+            local ok = pcall(function()
+                frame:SetPoint(pos.point, UIParent, pos.relPoint or pos.point, pos.x, pos.y)
+            end)
+            if ok then valid = true end
+        end
+    end
+    if not valid then
         frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end
 end
@@ -1164,6 +1173,11 @@ end
 -- ----------------------------------------------------------------------------
 function CLIAlts:CreateMainFrame()
     if mainFrame then return mainFrame end
+    if _G["CLIAltsMainFrame"] then
+        mainFrame = _G["CLIAltsMainFrame"]
+        self.mainFrame = mainFrame
+        return mainFrame
+    end
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame:Hide()
@@ -3943,38 +3957,52 @@ end
 -- Window Toggle & Refresh
 -- ----------------------------------------------------------------------------
 function CLIAlts:Toggle(show)
-    if not mainFrame then
-        mainFrame = self:CreateMainFrame()
-    end
-    if not mainFrame then return end
+    local ok, err = pcall(function()
+        if not mainFrame then
+            mainFrame = self:CreateMainFrame()
+        end
+        if not mainFrame then return end
 
-    if show == nil then
-        if mainFrame:IsShown() then
-            mainFrame:Hide()
-        else
+        if show == nil then
+            if mainFrame:IsShown() then
+                mainFrame:Hide()
+            else
+                self:CollectCurrentCharacter()
+                self:ApplyTheme()
+                mainFrame:Show()
+                self:Render()
+                PlayRetroSound()
+            end
+        elseif show then
             self:CollectCurrentCharacter()
             self:ApplyTheme()
             mainFrame:Show()
             self:Render()
             PlayRetroSound()
+        else
+            mainFrame:Hide()
+            PlayRetroSound()
         end
-    elseif show then
-        self:CollectCurrentCharacter()
-        self:ApplyTheme()
-        mainFrame:Show()
-        self:Render()
-        PlayRetroSound()
-    else
-        mainFrame:Hide()
-        PlayRetroSound()
+    end)
+    if not ok then
+        if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r UI Toggle error: %s", tostring(err)))
+        end
     end
 end
 
 function CLIAlts:Refresh()
-    self:CollectCurrentCharacter()
-    self:ApplyTheme()
-    self:Render()
-    self:Print("Database refreshed.")
+    local ok, err = pcall(function()
+        self:CollectCurrentCharacter()
+        self:ApplyTheme()
+        self:Render()
+        self:Print("Database refreshed.")
+    end)
+    if not ok then
+        if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r Refresh error: %s", tostring(err)))
+        end
+    end
 end
 
 -- ----------------------------------------------------------------------------

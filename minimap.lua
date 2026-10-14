@@ -23,7 +23,7 @@ function CLIAlts:CreateMinimapButton()
     minimapBtn:EnableMouse(true)
     minimapBtn:SetMovable(true)
     minimapBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    minimapBtn:RegisterForDrag("LeftButton", "RightButton")
+    minimapBtn:RegisterForDrag("LeftButton")
     minimapBtn:SetClampedToScreen(true)
 
     local t = (CLIAlts.GetTheme and CLIAlts:GetTheme()) or {
@@ -56,69 +56,87 @@ function CLIAlts:CreateMinimapButton()
     -- Mouse highlight
     minimapBtn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-Button-Highlight")
 
-    -- Dragging handling (supports dragging around minimap and adjusting distance)
+    -- Dragging handling: uses cursor delta threshold to distinguish actual drags from clicks
     minimapBtn:SetScript("OnDragStart", function(self)
-        self.isDragging = true
-        self:LockHighlight()
-        self:SetScript("OnUpdate", function(self)
-            local mx, my = Minimap:GetCenter()
-            if not mx or not my then return end
-
+        if GetCursorPosition then
             local cx, cy = GetCursorPosition()
-            local scale = Minimap:GetEffectiveScale() or 1
-            cx, cy = cx / scale, cy / scale
-
-            local dx = cx - mx
-            local dy = cy - my
-            local angle = math.deg(math.atan2(dy, dx))
-            if angle < 0 then angle = angle + 360 end
-
-            local dist = math.sqrt(dx * dx + dy * dy)
-            local mWidth = Minimap:GetWidth() or 140
-            local mHeight = Minimap:GetHeight() or 140
-            local minRadius = (math.max(mWidth, mHeight) / 2) + 6
-            local maxRadius = minRadius + 70
-
-            -- Keep outside the minimap circle
-            if dist < minRadius then dist = minRadius end
-            if dist > maxRadius then dist = maxRadius end
-
-            if CLIAltsDB and CLIAltsDB.settings then
-                CLIAltsDB.settings.minimapPos = angle
-                CLIAltsDB.settings.minimapDist = dist
+            self.dragStartX = cx
+            self.dragStartY = cy
+        end
+        self.isMoving = false
+        self:LockHighlight()
+        self:SetScript("OnUpdate", function(f)
+            local curX, curY
+            if GetCursorPosition then
+                curX, curY = GetCursorPosition()
             end
-            CLIAlts:UpdateMinimapPosition()
+            if not f.isMoving and f.dragStartX and f.dragStartY and curX and curY then
+                local dx = curX - f.dragStartX
+                local dy = curY - f.dragStartY
+                if (dx * dx + dy * dy) > 25 then
+                    f.isMoving = true
+                end
+            end
+            if f.isMoving and curX and curY then
+                local mx, my = Minimap:GetCenter()
+                if not mx or not my then return end
+
+                local scale = Minimap:GetEffectiveScale() or 1
+                curX, curY = curX / scale, curY / scale
+
+                local dx = curX - mx
+                local dy = curY - my
+                local angle = math.deg(math.atan2(dy, dx))
+                if angle < 0 then angle = angle + 360 end
+
+                local dist = math.sqrt(dx * dx + dy * dy)
+                local mWidth = (Minimap and Minimap.GetWidth and Minimap:GetWidth()) or 140
+                local mHeight = (Minimap and Minimap.GetHeight and Minimap:GetHeight()) or 140
+                local minRadius = (math.max(mWidth, mHeight) / 2) + 6
+                local maxRadius = minRadius + 70
+
+                -- Keep outside the minimap circle
+                if dist < minRadius then dist = minRadius end
+                if dist > maxRadius then dist = maxRadius end
+
+                if CLIAltsDB and CLIAltsDB.settings then
+                    CLIAltsDB.settings.minimapPos = angle
+                    CLIAltsDB.settings.minimapDist = dist
+                end
+                CLIAlts:UpdateMinimapPosition()
+            end
         end)
     end)
 
     minimapBtn:SetScript("OnDragStop", function(self)
         self:UnlockHighlight()
         self:SetScript("OnUpdate", nil)
-
-        -- Delay resetting isDragging slightly so OnClick does not trigger upon mouse release
-        if C_Timer and C_Timer.After then
-            C_Timer.After(0.05, function()
-                self.isDragging = false
-            end)
-        else
-            self.isDragging = false
-        end
+        self.wasDragged = self.isMoving or false
+        self.isMoving = false
+        self.dragStartX = nil
+        self.dragStartY = nil
     end)
 
     -- Click handlers
     minimapBtn:SetScript("OnClick", function(self, button)
-        if self.isDragging then
-            self.isDragging = false
+        if self.wasDragged or self.isMoving then
+            self.wasDragged = false
+            self.isMoving = false
             return
         end
 
-        if button == "LeftButton" then
-            CLIAlts:CollectCurrentCharacter()
-            CLIAlts:Toggle()
-        elseif button == "RightButton" then
-            CLIAlts:Refresh()
-            local summary = CLIAlts:GetAccountSummary()
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r Data refreshed. Tracked alts: %d.", summary.totalAlts))
+        local ok, err = pcall(function()
+            if button == "RightButton" then
+                CLIAlts:Refresh()
+                local summary = CLIAlts:GetAccountSummary()
+                DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r Data refreshed. Tracked alts: %d.", summary.totalAlts))
+            else
+                CLIAlts:CollectCurrentCharacter()
+                CLIAlts:Toggle()
+            end
+        end)
+        if not ok then
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r Click error: %s", tostring(err)))
         end
     end)
 
