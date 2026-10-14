@@ -10,57 +10,44 @@ A polished, retro terminal-inspired alt-management dashboard and Text User Inter
 
 ## Architecture & Visual Hierarchy
 
-The main dashboard is constructed around **three distinct levels of information**:
+The main dashboard is organized into **three streamlined visual regions** designed to eliminate clutter and horizontal overflow while maintaining high information density:
 
 ```text
 +--------------------------------------------------------------------------------------------------------------------------+
-| [#] CLIALTS :: FOREVER ROUTE v1.1.0                                    [ PERK: R5 (+20%) ] [ COMPACT ] [ SCALE ] [ HELP ] [X] |
+| [#] CLIALTS :: ALT MONITOR    [OVERVIEW] [ROUTE] [RESTED] [PROFS] [GOLD] [CDS]                       [C] [T] [?] [X]     |
 +--------------------------------------------------------------------------------------------------------------------------+
-| LEVEL 1: RECOMMENDED NEXT ACTION                                                                                         |
-| [RECOMMENDED NEXT ACTION] > Morvath  [CORE]  Lvl 20 -> 25 | Tailor 150/150 [TRAIN], Alch 75                   [ DOSSIER ] |
-| Rested: 180% Capped (+3,400 XP waste) | ETA: !2h Wasted | Why: Rested cap reached with XP overflow - play now to prevent waste.|
+| NEXT UP: ▶ Morvath [CORE] Lvl 20/25 | Tailor 150/150 [TRAIN]          [ 12 ALTS ] [ 2 CAPPED ] [ 1 CD RDY ] [ 4,520g ]   |
+| Rested: 180% Capped (+3,400 XP waste) — Play now to prevent waste!    [ OPEN DOSSIER ]                     [ PERK: R5 ]  |
 +--------------------------------------------------------------------------------------------------------------------------+
-| LEVEL 2: CONTEXTUAL TELEMETRY BAR                                                                                        |
-| FOREVER ROUTE | ACTIVE ROTATION: 3 ALTS | NEXT UP: Morvath | PRIORITY ORDERED                                            |
-+--------------------------------------------------------------------------------------------------------------------------+
-| [ OVERVIEW ]  [ FOREVER ROUTE ]  [ RESTED XP ]  [ PROFESSIONS ]  [ ECONOMY ]  [ COOLDOWNS ]                              |
-| (Active amber)  (Muted gray)       (Muted gray)   (Muted gray)     (Muted gray) (Muted gray)                              |
-+--------------------------------------------------------------------------------------------------------------------------+
-| LEVEL 3: CHARACTER ROSTER TABLE                                                                                          |
-| ORDER  CHARACTER      ROLE    LEVEL    RESTED XP    PRIORITY   ETA      RECOMMENDATION REASON                            |
+| CHARACTER      ROLE    LVL     RESTED XP          PRIMARY PROF 1        GOLD        ETA       STATUS                         |
 | ------------------------------------------------------------------------------------------------------------------------ |
-| [#1]   Morvath        [CORE]  20/25*   180% [FULL]   +1,250k   !2h WST  ! CAPPED: Overflowing (+3,400 XP waste) - Play!  |
-| #2     Vane           [CORE]  22/25    112% (12.4k)  +480k     Caps 8h  CORE PRIORITY: ~12,400 Rested XP (Caps in 8h)    |
-| #3     Thorne         [ALT]   18/25     85% ( 6.8k)  +210k     Caps 1d  RESERVE ALT: ~6,800 Rested XP (Accruing to cap)  |
-| [OK]   Maxcraft       [CORE]  35/35*   180% [FULL]   TARGET    ---      Phase target reached (Lvl 35 >= 35) - Complete   |
-| [B]    Goldmule       [BANK]   1/1     ---           EXCLUDED  ---      Designated Bank Mule (Excluded from leveling)    |
+| > Morvath      [CORE]  20/25*  180% [FULL]        Tailor 150/150        142g 50s    !2h WST   ! CAPPED (Overflowing)         |
+|   Vane         [CORE]  22/25   112% (12.4k)       Leatherwork 140        85g 20s    Caps 8h   CORE PRIORITY (Accruing)       |
+|   Thorne       [ALT]   18/25    85% ( 6.8k)       Herbalism 125          45g 10s    Caps 1d   RESERVE ALT (Accruing)         |
+|   Maxcraft     [CORE]  35/35*  180% [FULL]        Blacksmith 150        120g 00s    ---       TARGET REACHED                 |
+|   Goldmule     [BANK]   1/1    ---                ---                    58g 40s    ---       BANK MULE (Excluded)           |
 +--------------------------------------------------------------------------------------------------------------------------+
-| [PAGE 1/1] (5 ALTS)               [Left-Click: Dossier | Shift-Click: Cycle Role | Right-Click: Context Menu | Click Col: Sort]
-| [COMMAND PROMPT > ]                                                                                                      |
+| < Prev  Page 1/1  Next >                     [Enter: Dossier | Shift-Click: Role | Right-Click: Context Menu | Sort Col] |
+| > filter tailor |                                                                                                        |
 +--------------------------------------------------------------------------------------------------------------------------+
 ```
 
-### 1. Level 1: Recommended Next Action (`recPanel`)
-- Evaluates your roster using the live multi-variable **Forever Route** prioritization engine (cohort weight, rested pool, cap proximity, waste penalty).
-- Displays character name, cohort role (`[CORE]`, `[ALT]`, `[BANK]`), level vs phase target (`Lvl 20 -> 25`), active profession milestone training alerts, rested XP percentage, and time-sensitive ETA.
-- Explains the exact justification for the recommendation (e.g. *Rested cap reached with XP overflow (+3,400 XP wasted) — play now to prevent XP waste*).
-- Includes a dedicated `[ DOSSIER ]` action button to inspect the character, or a neutral empty state with setup actions when all alts have hit their targets.
+### 1. Unified Header & Navigation Bar
+- **Header Line**: Integrates the window title (`[#] CLIALTS :: ALT MONITOR` or `:: FOREVER ROUTE`) directly alongside the 6 view tabs (`[OVERVIEW]`, `[ROUTE]`, `[RESTED]`, `[PROFS]`, `[GOLD]`, `[CDS]`).
+- **Control Affordances**: Compact action pills docked on the right: `[C]` (Compact mode), `[T]` (CRT Phosphor Theme), `[?]` (Help manual), and `[X]` (Close).
+- **Decluttered Layout**: Eliminates redundant ASCII divider bars to maximize vertical scanability and breathing room.
 
-### 2. Level 2: Contextual Telemetry Bar (`summaryBar`)
-- Displays real-time summary metrics tailored to the active tab:
-  - **Overview**: Non-duplicate alt counts by cohort, rested opportunities (`Capped`, `Wasting`, `Accruing`), ready trade cooldowns, active lockouts, and total account wealth.
-  - **Forever Route**: Active alts in rotation, top recommendation, and rotation status.
-  - **Rested XP**: Capped alts, wasting alts, accruing alts, and Well Rested perk status.
-  - **Professions**: Tracked alts, trainer visits ready count (`[TRAIN]`), and milestone completion.
-  - **Economy**: 14-character ASCII wealth sparkline, 24h, 7d, and 30d gold deltas, and total account copper.
-  - **Cooldowns**: Count of ready trade cooldowns and active dungeon/raid instance lockouts.
-- Integrates the docked **Well Rested Perk** toggle (`[ PERK: ON/OFF ]`) with live recalculated resting rates.
+### 2. Unified Mission Briefing Card
+- **Recommended Next Action**: Evaluates the live multi-variable **Forever Route** prioritization engine (cohort weight, rested pool, cap proximity, waste penalty) to recommend the optimal character to play next.
+- **Actionable Subline**: Displays character level vs target, active profession milestone alerts (`[TRAIN]`), rested percentage, and explicit rationale (e.g. *Rested cap reached with XP overflow (+3,400 XP wasted) — play now to prevent XP waste*).
+- **Docked Telemetry Chips**: Real-time account metric badges on the right: `[ %d ALTS ]`, `[ %d CAPPED ]`, `[ %d CD RDY ]`, and `[ %sg ]`.
+- **Integrated Controls**: 1-click `[ OPEN DOSSIER ]` button to inspect character details, plus the docked `[ PERK: R%d ]` Well Rested rank indicator.
 
-### 3. Level 3: Character Roster Table
-- 8 standardized columns formatted with pure monospace alignment and right-aligned numeric data.
-- **Persistent Selection Highlight**: Clicking any row locks the 1px amber border highlight across hover events.
-- **Active Sort Indicators**: Clicking column headers updates sort order with visible `^` (ascending) and `v` (descending) indicators.
-- **Zero Horizontal Overflow**: Sized with exact pixel budgets (895px row width in 920px standard mode; 655px row width in 680px compact mode).
+### 3. Clean Monospace Roster Table & Statusline
+- **Blizzard Class Colors**: Character names are highlighted in authentic World of Warcraft class colors, paired with 4-letter muted class tags (`[WARL]`, `[MAGE]`, `[ROGU]`, etc.).
+- **Active Row Cursor**: Visible selection cursor (`>`) on the active row with subtle alternating zebra row shading.
+- **8 Standardized Columns**: Monospace alignment with right-aligned numeric data and click-to-sort indicators (`^` ascending, `v` descending).
+- **Streamlined 2-Line Statusline**: Top line combines pagination (`< Prev`, `Next >`, `Page 1/1`) and mouse/keyboard shortcuts; bottom line docks the interactive terminal command prompt (`> `).
 
 ---
 
@@ -69,11 +56,11 @@ The main dashboard is constructed around **three distinct levels of information*
 | Tab | View Name | Description | Key Columns |
 | :---: | :--- | :--- | :--- |
 | **`1`** | **`[ OVERVIEW ]`** | Main dashboard with high-level monitoring across all characters. | `CHARACTER`, `ROLE`, `LEVEL`, `RESTED XP`, `PRIMARY PROFESSION`, `GOLD`, `ETA`, `STATUS` |
-| **`2`** | **`[ FOREVER ROUTE ]`** | Detailed leveling rotation order and explicit priority rationales. | `ORDER`, `CHARACTER`, `ROLE`, `LEVEL`, `RESTED XP`, `PRIORITY`, `ETA`, `RECOMMENDATION REASON` |
-| **`3`** | **`[ RESTED XP ]`** | Exhaustion monitor with capacity and level percentage distinction. | `FAC`, `CHARACTER`, `LVL`, `CURRENT XP`, `RESTED / CAP`, `RESTED PROGRESS`, `RATE`, `ETA TO CAP` |
-| **`4`** | **`[ PROFESSIONS ]`** | Primary and secondary crafting tracking with phase milestones. | `FAC`, `CHARACTER`, `LVL`, `PRIMARY PROF 1`, `PRIMARY PROF 2`, `SECONDARY SKILLS` |
-| **`5`** | **`[ ECONOMY ]`** | Wealth distribution, share percentages, and zone locations. | `FAC`, `CHARACTER`, `LVL`, `GOLD & SILVER`, `SHARE`, `LAST ZONE`, `HEARTHSTONE` |
-| **`6`** | **`[ COOLDOWNS ]`** | Trade skill timers and dungeon/raid lockouts sorted by readiness. | `FAC`, `CHARACTER`, `LVL`, `TRADE COOLDOWNS`, `SAVED INSTANCES / LOCKS` |
+| **`2`** | **`[ ROUTE ]`** | Detailed leveling rotation order and explicit priority rationales. | `ORDER`, `CHARACTER`, `ROLE`, `LEVEL`, `RESTED XP`, `PRIORITY`, `ETA`, `RECOMMENDATION REASON` |
+| **`3`** | **`[ RESTED ]`** | Exhaustion monitor with capacity and level percentage distinction. | `FAC`, `CHARACTER`, `LVL`, `CURRENT XP`, `RESTED / CAP`, `RESTED PROGRESS`, `RATE`, `ETA TO CAP` |
+| **`4`** | **`[ PROFS ]`** | Primary and secondary crafting tracking with phase milestones. | `FAC`, `CHARACTER`, `LVL`, `PRIMARY PROF 1`, `PRIMARY PROF 2`, `SECONDARY SKILLS` |
+| **`5`** | **`[ GOLD ]`** | Wealth distribution, share percentages, and zone locations. | `FAC`, `CHARACTER`, `LVL`, `GOLD & SILVER`, `SHARE`, `LAST ZONE`, `HEARTHSTONE` |
+| **`6`** | **`[ CDS ]`** | Trade skill timers and dungeon/raid lockouts sorted by readiness. | `FAC`, `CHARACTER`, `LVL`, `TRADE COOLDOWNS`, `SAVED INSTANCES / LOCKS` |
 
 ---
 
@@ -215,6 +202,26 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `/clialts perf` | Print execution latency (Collect & Render) and memory usage |
 | `/clialts selftest` | Run complete unit test assertions suite (21 feature areas) |
 | `/clialts help`, `/clialts ?` | Open the in-game Quick Guide manual |
+
+---
+
+## Engineering, Architecture & Testing
+
+CLIAlts is engineered as a high-performance, lightweight addon adhering to modern Lua 5.1 best practices:
+
+- **Modular Architecture**:
+  - `data.lua`: High-throughput character state storage, mathematical projection engine, offline rested accrual calculator, gold sparklines, and SavedVariables schema migration.
+  - `ui.lua`: Modern 3-region TUI layout engine, virtual list row recycling, lazy modal creation (`Alt Dossier`, `Context Menu`, `Confirmation Dialogs`), and customizable CRT phosphor theme palette.
+  - `core.lua`: Event router (`PLAYER_ENTERING_WORLD`, `PLAYER_LOGOUT`, `BAG_UPDATE`, `TRADE_SKILL_SHOW`), slash command dispatcher, keyboard traps, and terminal prompt parser.
+  - `minimap.lua`: High-performance LDB & LibDBIcon minimap integration with live rested/cooldown status tooltips.
+- **Lazy Initialization & Memory Optimization**:
+  - Sub-panels and modals instantiate lazily on first access, ensuring cold login memory footprint remains under 1.2 MB.
+  - Frame recycling in the main character table avoids runtime garbage creation during tab navigation, scrolling, and prompt filtering.
+- **Headless Unit Verification (229 Assertions across 21 Suites)**:
+  - Validated by an in-game self-test suite (`/clialts selftest`) and headless testing under vanilla Lua 5.1 (`tests/stub.lua` + `tests/selftest.lua`).
+  - Covers offline rest accrual formulas, perk bonus scaling, cap clamping, priority scoring, prompt grammar, item watchlists, and SavedVariables migration integrity.
+- **Continuous Integration Pipeline**:
+  - Every commit is automatically verified against [GitHub Actions CI](https://github.com/nasroht/clialts/actions), enforcing strict **Luacheck** static analysis (0 errors, 0 warnings) and plain **Lua 5.1** headless execution.
 
 ---
 
