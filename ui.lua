@@ -1366,7 +1366,7 @@ function CLIAlts:CreateMainFrame()
     frame.recBtnSetup = recBtnSetup
 
     -- Transparent Summary Bar Docked Inside Briefing Card (Telemetry stats & chip display)
-    local summaryBar = CreateFrame("Frame", "CLIAltsSummaryBar", recPanel)
+    local summaryBar = CreateFrame("Frame", "CLIAltsSummaryBar", recPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     summaryBar:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 0, 0)
     summaryBar:SetPoint("BOTTOMRIGHT", recPanel, "BOTTOMRIGHT", 0, 0)
     frame.summaryBar = summaryBar
@@ -2355,22 +2355,32 @@ function CLIAlts:ApplyTheme()
     if not mainFrame then return end
     local t = self:GetTheme()
 
-    mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
-    mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
+    if mainFrame.SetBackdropColor then
+        mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
+    end
+    if mainFrame.SetBackdropBorderColor then
+        mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
+    end
 
     if mainFrame.topAscii then mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.titleText then mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
     if mainFrame.midAscii1 then mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.recPanel then
         local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        mainFrame.recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
-        mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.5)
+        if mainFrame.recPanel.SetBackdropColor then
+            mainFrame.recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
+        end
+        if mainFrame.recPanel.SetBackdropBorderColor then
+            mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.5)
+        end
     end
     if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-    if mainFrame.summaryBar then
+    if mainFrame.summaryBar and mainFrame.summaryBar.SetBackdropColor then
         local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
         mainFrame.summaryBar:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
-        mainFrame.summaryBar:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+        if mainFrame.summaryBar.SetBackdropBorderColor then
+            mainFrame.summaryBar:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+        end
     end
     if mainFrame.summaryText then mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
     if mainFrame.statusBarText and mainFrame.statusBarText ~= mainFrame.summaryText then
