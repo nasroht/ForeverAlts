@@ -1045,7 +1045,7 @@ local COLS = {
         { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
         { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
         { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
-        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
         { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
     },
     [3] = { -- 3: RESTED XP MONITOR
@@ -1053,7 +1053,7 @@ local COLS = {
         { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
         { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, padRight = 14, cpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
         { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, align = "LEFT",   fmt = FmtRestedBar },
         { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  align = "RIGHT",  fmt = FmtRate },
         { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 150, cpw = 120, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
@@ -1070,9 +1070,9 @@ local COLS = {
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
         { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD & SILVER",     w = 12, pw = 160, cpw = 130, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
-        { key = "location",  title = "LAST ZONE",         w = 19, pw = 345, cpw = 250, align = "LEFT",   sort = "location", fmt = FmtLocation },
-        { key = "hearth",    title = "HEARTHSTONE",       w = 19, pw = 340, cpw = 250, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
+        { key = "gold",      title = "GOLD & SILVER",     w = 14, pw = 200, cpw = 160, padRight = 32, cpadRight = 20, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "location",  title = "LAST ZONE",         w = 18, pw = 310, cpw = 220, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",       w = 18, pw = 330, cpw = 230, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [6] = { -- 6: COOLDOWNS & INSTANCE LOCKS
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
@@ -2656,7 +2656,7 @@ function CLIAlts:Render()
     local xOffset = 16
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
-    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0")
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":v4"
     local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
     if relayoutHeaders and mainFrame.headerFrame then
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
@@ -2669,11 +2669,13 @@ function CLIAlts:Render()
 
         if col then
             local colW = isComp and (col.cpw or col.pw) or col.pw
+            local padR = isComp and (col.cpadRight or col.padRight or 0) or (col.padRight or 0)
+            local cellW = math.max(1, colW - padR)
             if hCell then
                 if relayoutHeaders then
                     hCell:ClearAllPoints()
                     hCell:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", xOffset, 0)
-                    hCell:SetWidth(colW)
+                    hCell:SetWidth(cellW)
                     hCell:SetJustifyH(col.align or "LEFT")
                 end
 
@@ -2917,7 +2919,7 @@ function CLIAlts:Render()
                 if row.barBg then row.barBg:Hide() end
                 if row.etaText then row.etaText:Hide() end
 
-                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0")
+                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":v4"
                 local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                 if relayoutRow then
                     row.lastLayoutKey = rowLayoutKey
@@ -2930,10 +2932,12 @@ function CLIAlts:Render()
                     if cell then
                         if col then
                             local colW = isComp and (col.cpw or col.pw) or col.pw
+                            local padR = isComp and (col.cpadRight or col.padRight or 0) or (col.padRight or 0)
+                            local cellW = math.max(1, colW - padR)
                             if relayoutRow then
                                 cell:ClearAllPoints()
                                 cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
-                                cell:SetWidth(colW)
+                                cell:SetWidth(cellW)
                                 cell:SetJustifyH(col.align or "LEFT")
                             end
                             cell:SetText(col.fmt(char, t) or "")

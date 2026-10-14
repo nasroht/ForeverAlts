@@ -1002,6 +1002,12 @@ function CLIAlts:RunSelfTest()
             local cols = self:GetColumns(tabId)
             Assert(cols ~= nil and #cols > 0, "Navigation: Tab " .. tabId .. " returns valid column definitions")
         end
+        local econCols = self:GetColumns(5)
+        local goldCol = nil
+        for _, c in ipairs(econCols) do
+            if c.key == "gold" then goldCol = c break end
+        end
+        Assert(goldCol ~= nil and (goldCol.padRight or 0) >= 20, "EconomyTab: Gold column has at least 20px right padding before Last Zone")
     end
     if self.ShowRowContextMenu then
         self:ShowRowContextMenu(nil, testDashDB.characters["AlphaCore"])
