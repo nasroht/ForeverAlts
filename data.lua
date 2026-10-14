@@ -3521,6 +3521,434 @@ function CLIAlts:PrintDungeonReadiness(dungeonQuery)
 end
 
 -- ----------------------------------------------------------------------------
+-- WoW Forever: Inter-Alt Mail & Supply Chain Router (Component 5)
+-- ----------------------------------------------------------------------------
+function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
+    local chars = self:GetCharactersList("level", false)
+    local bestChar = nil
+    local bestScore = -1
+
+    for _, c in ipairs(chars) do
+        local matches = false
+        local profRank = 0
+
+        -- Check supply role override first
+        if preferredRole and c.supply_role and c.supply_role:lower():find(preferredRole:lower(), 1, true) then
+            matches = true
+            profRank = 150
+        end
+
+        -- Check primary professions
+        if not matches and c.professions and c.professions.primary then
+            for _, p in ipairs(c.professions.primary) do
+                local pName = (p.name or ""):lower()
+                if pName:find(targetProfession:lower(), 1, true) then
+                    matches = true
+                    profRank = tonumber(p.rank) or 0
+                    break
+                end
+            end
+        end
+
+        if matches then
+            local tierScore = (c.tier == "CORE" and 1000) or (c.tier == "RESERVE" and 500) or 100
+            local skillNeedScore = math.max(0, 300 - profRank)
+            local score = tierScore + skillNeedScore
+            if score > bestScore then
+                bestScore = score
+                bestChar = c
+            end
+        end
+    end
+    return bestChar
+end
+
+function CLIAlts:FindBankMule()
+    local chars = self:GetCharactersList("level", false)
+    for _, c in ipairs(chars) do
+        if c.tier == "BANK" then
+            return c
+        end
+    end
+    return nil
+end
+
+function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassID, itemSubClassID, itemQuality)
+    local itemID = tonumber(itemIdentifier)
+    local itemName = nil
+    local quality = itemQuality
+    local classID = itemClassID
+    local subclassID = itemSubClassID
+    local equipLoc = itemEquipLoc
+    local bindType = nil
+
+    if not itemID and type(itemIdentifier) == "string" then
+        local idMatch = itemIdentifier:match("|Hitem:(%d+)")
+        if idMatch then itemID = tonumber(idMatch) end
+    end
+
+    if itemID then
+        local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(itemID)
+        if name then
+            itemName = name
+            quality = quality or q
+            classID = classID or cID
+            subclassID = subclassID or scID
+            equipLoc = equipLoc or eqLoc
+            bindType = bindType or bType
+        elseif C_Item and C_Item.GetItemInfoInstant then
+            local _, _, _, eq, _, c, sc = C_Item.GetItemInfoInstant(itemID)
+            classID = classID or c
+            subclassID = subclassID or sc
+            equipLoc = equipLoc or eq
+        elseif GetItemInfoInstant then
+            local _, _, _, eq, _, c, sc = GetItemInfoInstant(itemID)
+            classID = classID or c
+            subclassID = subclassID or sc
+            equipLoc = equipLoc or eq
+        end
+    end
+
+    local destChar = nil
+    local targetReason = nil
+    local category = nil
+
+    -- 1. Trade Goods (Class 7)
+    if classID == 7 then
+        if subclassID == 5 then
+            category = "Cloth"
+            destChar = self:FindBestCrafterForTrade("Tailoring", "Tailor")
+            targetReason = "Tailoring"
+        elseif subclassID == 9 then
+            category = "Herb"
+            destChar = self:FindBestCrafterForTrade("Alchemy", "Alch")
+            targetReason = "Alchemy"
+        elseif subclassID == 7 then
+            category = "Ore/Stone"
+            destChar = self:FindBestCrafterForTrade("Blacksmithing", "Miner") or self:FindBestCrafterForTrade("Engineering", "Miner")
+            targetReason = "Blacksmithing/Engineering"
+        elseif subclassID == 6 then
+            category = "Leather"
+            destChar = self:FindBestCrafterForTrade("Leatherworking", "Skinner")
+            targetReason = "Leatherworking"
+        elseif subclassID == 8 then
+            category = "Meat"
+            destChar = self:FindBestCrafterForTrade("Cooking", "Cook")
+            targetReason = "Cooking"
+        elseif subclassID == 12 then
+            category = "Enchanting Reagents"
+            destChar = self:FindBestCrafterForTrade("Enchanting", "DE")
+            targetReason = "Enchanting"
+        end
+    end
+
+    -- 2. Disenchantable BoE Gear
+    if not destChar and (classID == 2 or classID == 4) and quality and quality >= 2 then
+        if bindType == 2 or (equipLoc and equipLoc ~= "") then
+            category = "Disenchantable Gear"
+            destChar = self:FindBestCrafterForTrade("Enchanting", "DE")
+            targetReason = "Disenchanting (BoE)"
+        end
+    end
+
+    -- 3. Lockboxes
+    if not destChar and (classID == 0 or (itemName and itemName:lower():find("lockbox", 1, true))) then
+        local chars = self:GetCharactersList("level", false)
+        for _, c in ipairs(chars) do
+            if c.classFile == "ROGUE" then
+                destChar = c
+                targetReason = "Lockpicking"
+                category = "Lockbox"
+                break
+            end
+        end
+    end
+
+    -- 4. Fallback to Bank Mule
+    if not destChar and category then
+        destChar = self:FindBankMule()
+        if destChar then
+            targetReason = "Bank Mule (Storage)"
+        end
+    end
+
+    if not destChar then return nil end
+
+    local curName = (self.curPlayerFullName or (self.GetPlayerNames and select(3, self:GetPlayerNames())))
+    local isCurrent = false
+    if curName and destChar.name then
+        local n1 = curName:lower()
+        local n2 = destChar.name:lower()
+        if n1 == n2 or n1:find(n2, 1, true) or n2:find(n1, 1, true) then
+            isCurrent = true
+        end
+    end
+
+    return {
+        destChar = destChar,
+        destName = destChar.name or "Unknown",
+        classFile = destChar.classFile,
+        tier = destChar.tier or "UNASSIGNED",
+        reason = targetReason or "Crafting",
+        category = category or "Trade Good",
+        isCurrentPlayer = isCurrent,
+    }
+end
+
+function CLIAlts:GetMailReadySummary()
+    local summary = {
+        totalPackages = 0,
+        totalItems = 0,
+        byRecipient = {},
+    }
+
+    if not C_Container or not C_Container.GetContainerNumSlots then
+        if not GetContainerNumSlots or not GetContainerItemInfo then return summary end
+    end
+
+    local numBags = NUM_BAG_SLOTS or 4
+    for bagID = 0, numBags do
+        local numSlots = self:GetNumContainerSlots(bagID)
+        for slot = 1, numSlots do
+            local itemData = self:GetContainerItemData(bagID, slot)
+            if itemData and itemData.itemID and itemData.itemID > 0 and (itemData.count or 0) > 0 then
+                local dest = self:GetMaterialDestination(itemData.itemID)
+                if dest and not dest.isCurrentPlayer then
+                    local rName = dest.destName
+                    if not summary.byRecipient[rName] then
+                        summary.byRecipient[rName] = {
+                            destChar = dest.destChar,
+                            destName = rName,
+                            classFile = dest.classFile,
+                            tier = dest.tier,
+                            items = {},
+                        }
+                        summary.totalPackages = summary.totalPackages + 1
+                    end
+                    table.insert(summary.byRecipient[rName].items, {
+                        itemID = itemData.itemID,
+                        name = itemData.itemName or string.format("Item #%d", itemData.itemID),
+                        link = itemData.itemLink,
+                        count = itemData.count,
+                        reason = dest.reason,
+                        category = dest.category,
+                    })
+                    summary.totalItems = summary.totalItems + itemData.count
+                end
+            end
+        end
+    end
+    return summary
+end
+
+function CLIAlts:PrintMailRouting()
+    local summary = self:GetMailReadySummary()
+    local t = (self.GetTheme and self:GetTheme()) or {
+        borderHex = "f2c94c",
+        primaryHex = "ffd34e",
+        highlightHex = "ffd34e",
+        readyHex = "55e39a",
+        pendingHex = "ffb547",
+        mutedHex = "a9a08c",
+    }
+
+    local top = string.rep("=", 72)
+    local bottom = string.rep("=", 72)
+
+    self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", top))
+    self:Print(string.format("|cff%sCLIALTS :: INTER-ALT MAIL & SUPPLY CHAIN ROUTER|r", t.highlightHex or "ffd34e"))
+    self:Print("  Scans your bags for materials & BoE goods destined for other alts.")
+    self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 72)))
+
+    if summary.totalPackages == 0 then
+        DEFAULT_CHAT_FRAME:AddMessage("  No items in your bags need to be mailed to other alts right now.")
+        self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", bottom))
+        return "No mail-ready items in bags.", true
+    end
+
+    for rName, group in pairs(summary.byRecipient) do
+        local cName = self:ColorizePlayerName(rName, group.classFile)
+        local tierTag = (group.tier and group.tier ~= "UNASSIGNED") and string.format(" [%s]", group.tier) or ""
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Send to: %s%s (%d item types):", cName, tierTag, #group.items))
+        for _, itm in ipairs(group.items) do
+            local linkStr = itm.link or string.format("|cffffffff%s|r", itm.name)
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("     - %s x%d |cff%s[%s]|r", linkStr, itm.count, t.readyHex or "55e39a", itm.reason))
+        end
+    end
+
+    self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", bottom))
+    local fb = string.format("Mail Router: %d packages (%d items) ready across %d alts.", summary.totalPackages, summary.totalItems, summary.totalPackages)
+    self:Print(string.format("|cff%s%s|r", t.readyHex or "55e39a", fb))
+    return fb, true
+end
+
+-- ----------------------------------------------------------------------------
+-- WoW Forever: Custom Legacy Point (LP) Progress Tracker (Component 6)
+-- ----------------------------------------------------------------------------
+CLIAlts.LP_TIERS = { 10, 16, 18 }
+
+function CLIAlts:CalculateCharacterLP(char)
+    if not char then return 0.0, {} end
+    local pts = 0.0
+    local reasons = {}
+    local lvl = tonumber(char.level) or 1
+
+    if lvl >= 60 then
+        pts = pts + 5.0
+        table.insert(reasons, "L60 (5.0 LP)")
+    elseif lvl >= 35 then
+        pts = pts + 3.0
+        table.insert(reasons, "L35+ (3.0 LP)")
+    elseif lvl >= 25 then
+        pts = pts + 2.0
+        table.insert(reasons, "L25+ (2.0 LP)")
+    elseif lvl >= 20 then
+        pts = pts + 1.0
+        table.insert(reasons, "L20+ (1.0 LP)")
+    end
+
+    if char.professions and char.professions.primary then
+        for _, p in ipairs(char.professions.primary) do
+            local r = tonumber(p.rank) or 0
+            local pAbbr = self:GetProfessionAbbr(p.name)
+            if r >= 300 then
+                pts = pts + 2.0
+                table.insert(reasons, string.format("%s 300 (2.0 LP)", pAbbr))
+            elseif r >= 225 then
+                pts = pts + 1.5
+                table.insert(reasons, string.format("%s 225 (1.5 LP)", pAbbr))
+            elseif r >= 150 then
+                pts = pts + 1.0
+                table.insert(reasons, string.format("%s 150 (1.0 LP)", pAbbr))
+            elseif r >= 75 then
+                pts = pts + 0.5
+                table.insert(reasons, string.format("%s 75 (0.5 LP)", pAbbr))
+            end
+        end
+    end
+    return pts, reasons
+end
+
+function CLIAlts:CalculateAccountLP()
+    local totalCalc = 0.0
+    local breakdown = {}
+    local chars = self:GetCharactersList("level", false)
+
+    for _, c in ipairs(chars) do
+        local pts, reasons = self:CalculateCharacterLP(c)
+        if pts > 0 then
+            totalCalc = totalCalc + pts
+            table.insert(breakdown, {
+                char = c,
+                name = c.name,
+                classFile = c.classFile,
+                level = c.level or 1,
+                tier = c.tier or "UNASSIGNED",
+                points = pts,
+                reasons = reasons,
+            })
+        end
+    end
+
+    local manualLP = CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.legacyPoints)
+    local effectiveLP = (manualLP and manualLP > 0) and manualLP or totalCalc
+
+    local nextTier = 10
+    local tierName = "Tier 1 (10 LP)"
+    if effectiveLP >= 18 then
+        nextTier = 18
+        tierName = "Max Meta (18 LP reached)"
+    elseif effectiveLP >= 16 then
+        nextTier = 18
+        tierName = "Tier 3 (18 LP - Max Meta)"
+    elseif effectiveLP >= 10 then
+        nextTier = 16
+        tierName = "Tier 2 (16 LP - Core Target)"
+    end
+
+    local needed = math.max(0, nextTier - effectiveLP)
+    local pct = math.min(100, math.floor((effectiveLP / nextTier) * 100 + 0.5))
+
+    return {
+        calculatedLP = totalCalc,
+        manualLP = manualLP,
+        effectiveLP = effectiveLP,
+        isManual = (manualLP ~= nil and manualLP > 0),
+        nextTier = nextTier,
+        tierName = tierName,
+        neededLP = needed,
+        percent = pct,
+        breakdown = breakdown,
+    }
+end
+
+function CLIAlts:SetAccountLP(points)
+    if not CLIAltsDB then self:InitDB() end
+    if not CLIAltsDB.settings then CLIAltsDB.settings = {} end
+    if not points or points == "" or points == "auto" or points == "reset" or points == "calc" then
+        CLIAltsDB.settings.legacyPoints = nil
+        local data = self:CalculateAccountLP()
+        return string.format("Legacy Points reset to auto calculation (%.1f LP).", data.effectiveLP), true
+    end
+    local num = tonumber(points)
+    if not num or num < 0 or num > 50 then
+        return "Usage: lp <points|auto> (e.g. lp 14 or lp auto)", false
+    end
+    CLIAltsDB.settings.legacyPoints = num
+    local data = self:CalculateAccountLP()
+    return string.format("Legacy Points manually set to %.1f LP (Target: %d LP, %.1f needed).", num, data.nextTier, data.neededLP), true
+end
+
+function CLIAlts:PrintLegacyPointStatus(arg)
+    if arg and arg ~= "" then
+        local msg, ok = self:SetAccountLP(arg)
+        self:Print(msg)
+        self:RequestRender()
+        return msg, ok
+    end
+
+    local data = self:CalculateAccountLP()
+    local t = (self.GetTheme and self:GetTheme()) or {
+        borderHex = "f2c94c",
+        primaryHex = "ffd34e",
+        highlightHex = "ffd34e",
+        readyHex = "55e39a",
+        pendingHex = "ffb547",
+        mutedHex = "a9a08c",
+    }
+
+    local top = string.rep("=", 72)
+    local bottom = string.rep("=", 72)
+
+    self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", top))
+    self:Print(string.format("|cff%sCLIALTS :: LEGACY POINT (LP) PROGRESS TRACKER (WOW FOREVER)|r", t.highlightHex or "ffd34e"))
+    local modeStr = data.isManual and string.format("|cff%s[MANUAL OVERRIDE: %s LP]|r", t.pendingHex or "ffb547", tostring(data.manualLP)) or "|cff00ff66[AUTO SCANNED]|r"
+    self:Print(string.format("  Current Account LP: |cffffffff%.1f LP|r %s", data.effectiveLP, modeStr))
+    self:Print(string.format("  Next Unlock Tier:   |cffffffff%s|r (%d%% complete)", data.tierName, data.percent))
+    if data.neededLP > 0 then
+        self:Print(string.format("  Gap to Next Tier:   |cff%s%.1f LP needed|r to reach %d LP", t.pendingHex or "ffb547", data.neededLP, data.nextTier))
+    else
+        self:Print(string.format("  Tier Status:        |cff%sALL TIERS UNLOCKED!|r", t.readyHex or "55e39a"))
+    end
+    self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 72)))
+    self:Print("  Roster Contributions:")
+
+    if #data.breakdown == 0 then
+        DEFAULT_CHAT_FRAME:AddMessage("    No characters have reached Level 20+ or Phase 1 (75) profession cap yet.")
+    else
+        for _, b in ipairs(data.breakdown) do
+            local cName = self:ColorizePlayerName(b.name, b.classFile)
+            local detail = table.concat(b.reasons, ", ")
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("    * %-16s (Lvl %2d): |cffffffff%.1f LP|r [%s]", cName, b.level, b.points, detail))
+        end
+    end
+
+    self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", bottom))
+    self:Print("Tip: Type |cff00ff66/clialts lp <points>|r to override, or |cff00ff66/clialts lp auto|r to reset.")
+    return string.format("Account LP: %.1f/%d (%s)", data.effectiveLP, data.nextTier, data.tierName), true
+end
+
+-- ----------------------------------------------------------------------------
 -- Watchlist System (Feature 5)
 -- ----------------------------------------------------------------------------
 function CLIAlts:ResolveWatchItem(input)

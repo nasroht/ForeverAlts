@@ -1152,8 +1152,233 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = oldDngDB
     end
 
+    do -- 23. WoW Forever Inter-Alt Mail & Supply Chain Router Tests (Component 5)
+    local oldMailDB = CLIAltsDB
+    local testMailDB = {
+        settings = {
+            foreverMode = true,
+            activeTab = 1,
+        },
+        characters = {
+            ["Morvath-Forever"] = {
+                name = "Morvath-Forever",
+                faction = "Horde",
+                class = "Warlock",
+                classFile = "WARLOCK",
+                level = 35,
+                tier = "CORE",
+                professions = {
+                    primary = {
+                        { name = "Tailoring", rank = 150, maxRank = 150 },
+                    },
+                },
+            },
+            ["Thorne-Forever"] = {
+                name = "Thorne-Forever",
+                faction = "Horde",
+                class = "Druid",
+                classFile = "DRUID",
+                level = 25,
+                tier = "RESERVE",
+                professions = {
+                    primary = {
+                        { name = "Alchemy", rank = 125, maxRank = 150 },
+                    },
+                },
+            },
+            ["Maxcraft-Forever"] = {
+                name = "Maxcraft-Forever",
+                faction = "Horde",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 35,
+                tier = "CORE",
+                professions = {
+                    primary = {
+                        { name = "Blacksmithing", rank = 150, maxRank = 150 },
+                    },
+                },
+            },
+            ["Vane-Forever"] = {
+                name = "Vane-Forever",
+                faction = "Horde",
+                class = "Rogue",
+                classFile = "ROGUE",
+                level = 24,
+                tier = "CORE",
+                professions = {
+                    primary = {
+                        { name = "Leatherworking", rank = 140, maxRank = 150 },
+                    },
+                },
+            },
+            ["Mule-Forever"] = {
+                name = "Mule-Forever",
+                faction = "Horde",
+                class = "Hunter",
+                classFile = "HUNTER",
+                level = 1,
+                tier = "BANK",
+            },
+        },
+    }
+    CLIAltsDB = testMailDB
+
+    -- 23a. Crafter lookup
+    local tailor = self:FindBestCrafterForTrade("Tailoring")
+    Assert(tailor ~= nil and tailor.name == "Morvath-Forever", "Mail: FindBestCrafterForTrade finds Morvath for Tailoring")
+
+    local alch = self:FindBestCrafterForTrade("Alchemy")
+    Assert(alch ~= nil and alch.name == "Thorne-Forever", "Mail: FindBestCrafterForTrade finds Thorne for Alchemy")
+
+    local mule = self:FindBankMule()
+    Assert(mule ~= nil and mule.name == "Mule-Forever", "Mail: FindBankMule finds Mule-Forever")
+
+    -- 23b. Material destination resolution: Cloth -> Tailoring
+    local destCloth = self:GetMaterialDestination(nil, nil, 7, 5)
+    Assert(destCloth ~= nil, "Mail: GetMaterialDestination resolves cloth")
+    Assert(destCloth.destName == "Morvath-Forever", "Mail: Cloth routes to Morvath")
+    Assert(destCloth.reason == "Tailoring", "Mail: Cloth routing reason is Tailoring")
+
+    -- 23c. Material destination resolution: Herb -> Alchemy
+    local destHerb = self:GetMaterialDestination(nil, nil, 7, 9)
+    Assert(destHerb ~= nil and destHerb.destName == "Thorne-Forever", "Mail: Herb routes to Thorne")
+    Assert(destHerb.reason == "Alchemy", "Mail: Herb routing reason is Alchemy")
+
+    -- 23d. Material destination resolution: Metal & Stone -> Blacksmithing
+    local destOre = self:GetMaterialDestination(nil, nil, 7, 7)
+    Assert(destOre ~= nil and destOre.destName == "Maxcraft-Forever", "Mail: Ore/Stone routes to Maxcraft")
+
+    -- 23e. Material destination resolution: Leather -> Leatherworking
+    local destLeather = self:GetMaterialDestination(nil, nil, 7, 6)
+    Assert(destLeather ~= nil and destLeather.destName == "Vane-Forever", "Mail: Leather routes to Vane")
+
+    -- 23f. BoE green gear -> Disenchanting fallback or Bank
+    local destGear = self:GetMaterialDestination(nil, "INVTYPE_CHEST", 4, 1, 2)
+    Assert(destGear ~= nil, "Mail: BoE green gear finds destination")
+
+    -- 23g. Unmatched item routes to Bank Mule
+    local destMisc = self:GetMaterialDestination(nil, nil, 7, 10)
+    Assert(destMisc ~= nil and destMisc.destName == "Mule-Forever", "Mail: Unmatched trade goods route to Bank Mule")
+
+    -- 23h. PrintMailRouting execution
+    local fbMail, okMail = self:PrintMailRouting()
+    Assert(okMail == true and fbMail ~= nil, "Mail: PrintMailRouting executes cleanly")
+
+    CLIAltsDB = oldMailDB
+    end
+
+    do -- 24. WoW Forever Legacy Point (LP) Progress Tracker Tests (Component 6)
+    local oldLpDB = CLIAltsDB
+    local testLpDB = {
+        settings = {
+            foreverMode = true,
+            activeTab = 1,
+            legacyPoints = nil,
+        },
+        characters = {
+            ["Novice-Forever"] = {
+                name = "Novice-Forever",
+                faction = "Horde",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 15,
+                tier = "UNASSIGNED",
+                professions = {
+                    primary = {
+                        { name = "Mining", rank = 50, maxRank = 75 },
+                    },
+                },
+            },
+            ["Journeyman-Forever"] = {
+                name = "Journeyman-Forever",
+                faction = "Horde",
+                class = "Shaman",
+                classFile = "SHAMAN",
+                level = 20,
+                tier = "RESERVE",
+                professions = {
+                    primary = {
+                        { name = "Leatherworking", rank = 75, maxRank = 75 },
+                    },
+                },
+            },
+            ["Expert-Forever"] = {
+                name = "Expert-Forever",
+                faction = "Horde",
+                class = "Mage",
+                classFile = "MAGE",
+                level = 35,
+                tier = "CORE",
+                professions = {
+                    primary = {
+                        { name = "Tailoring", rank = 150, maxRank = 150 },
+                        { name = "Enchanting", rank = 150, maxRank = 150 },
+                    },
+                },
+            },
+            ["Champion-Forever"] = {
+                name = "Champion-Forever",
+                faction = "Horde",
+                class = "Hunter",
+                classFile = "HUNTER",
+                level = 60,
+                tier = "CORE",
+                professions = {
+                    primary = {
+                        { name = "Skinning", rank = 300, maxRank = 300 },
+                        { name = "Leatherworking", rank = 300, maxRank = 300 },
+                    },
+                },
+            },
+        },
+    }
+    CLIAltsDB = testLpDB
+
+    -- 24a. Character LP calculations
+    local novPts, _ = self:CalculateCharacterLP(testLpDB.characters["Novice-Forever"])
+    Assert(novPts == 0.0, "LP: Level 15 character with <75 profs earns 0.0 LP")
+
+    local jrnPts, jrnReasons = self:CalculateCharacterLP(testLpDB.characters["Journeyman-Forever"])
+    Assert(jrnPts == 1.5, "LP: Level 20 character with P1 prof cap earns 1.5 LP (1.0 + 0.5)")
+    Assert(#jrnReasons == 2, "LP: Journeyman has 2 LP award reasons")
+
+    local expPts, _ = self:CalculateCharacterLP(testLpDB.characters["Expert-Forever"])
+    Assert(expPts == 5.0, "LP: Level 35 character with 2x P2 prof caps earns 5.0 LP (3.0 + 1.0 + 1.0)")
+
+    local chmPts, _ = self:CalculateCharacterLP(testLpDB.characters["Champion-Forever"])
+    Assert(chmPts == 9.0, "LP: Level 60 character with 2x 300 caps earns 9.0 LP (5.0 + 2.0 + 2.0)")
+
+    -- 24b. Account LP calculations
+    local lpData = self:CalculateAccountLP()
+    Assert(lpData ~= nil, "LP: CalculateAccountLP returns data table")
+    local expectedTotal = 1.5 + 5.0 + 9.0
+    Assert(math.abs(lpData.calculatedLP - expectedTotal) < 0.001, "LP: Account calculated LP sum is 15.5 LP")
+    Assert(lpData.effectiveLP == expectedTotal, "LP: Effective LP matches calculated when no manual override")
+    Assert(lpData.nextTier == 16, "LP: Next tier target for 15.5 LP is Tier 2 (16 LP)")
+    Assert(math.abs(lpData.neededLP - 0.5) < 0.001, "LP: Needed points to Tier 2 is 0.5 LP")
+
+    -- 24c. Manual LP overrides & Reset
+    local setMsg, setOk = self:SetAccountLP(14)
+    Assert(setOk == true and setMsg:find("14.0 LP") ~= nil, "LP: SetAccountLP(14) succeeds")
+    local lpManual = self:CalculateAccountLP()
+    Assert(lpManual.isManual == true and lpManual.effectiveLP == 14, "LP: Effective LP is now 14 (manual override)")
+    Assert(lpManual.neededLP == 2, "LP: Needed points to 16 LP tier is now 2.0 LP")
+
+    local resetMsg, resetOk = self:SetAccountLP("auto")
+    Assert(resetOk == true and resetMsg:find("reset") ~= nil, "LP: SetAccountLP('auto') resets override")
+    local lpReset = self:CalculateAccountLP()
+    Assert(lpReset.isManual == false and lpReset.effectiveLP == expectedTotal, "LP: Reset restores calculated total (15.5 LP)")
+
+    -- 24d. PrintLegacyPointStatus execution
+    local fbLp, okLp = self:PrintLegacyPointStatus()
+    Assert(okLp == true and fbLp:find("Account LP:") ~= nil, "LP: PrintLegacyPointStatus executes and returns summary")
+
+    CLIAltsDB = oldLpDB
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

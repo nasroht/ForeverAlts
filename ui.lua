@@ -2088,15 +2088,23 @@ function CLIAlts:Render()
         restChip = string.format("%d Accruing", metrics.accruing)
     end
 
+    local lpChip = ""
+    if self.CalculateAccountLP then
+        local lpData = self:CalculateAccountLP()
+        if lpData then
+            lpChip = string.format("|cff%sLP: %.1f/%d|r", t.highlightHex or "ffd34e", lpData.effectiveLP, lpData.nextTier)
+        end
+    end
+
     local filterTag = self.activeFilter and string.format(" [FILTER: %s]", self.activeFilter:upper()) or ""
     if mainFrame.summaryText then
         if isComp then
             mainFrame.summaryText:SetText(string.format("[%d ALTS] [%s] [%s] [%sg]%s",
-                metrics.totalAlts, restChip, cdStr, self:FormatNumber(math.floor(metrics.totalGold / 10000)), filterTag))
+                metrics.totalAlts, lpChip ~= "" and lpChip or restChip, cdStr, self:FormatNumber(math.floor(metrics.totalGold / 10000)), filterTag))
         elseif activeTab == 2 then
             local nextCount = nextList and #nextList or 0
             mainFrame.summaryText:SetText(string.format("[ %d IN ROUTE ]  [ %s ]  [ %s ]  [ %s ]%s",
-                nextCount, restChip, cdStr, goldFormatted, filterTag))
+                nextCount, lpChip ~= "" and lpChip or restChip, cdStr, goldFormatted, filterTag))
         elseif activeTab == 3 then
             local perkState = (self.IsWellRestedActive and self:IsWellRestedActive()) and "|cff55e39aACTIVE|r" or "|cffa9a08cOFF|r"
             mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ PERK: %s ]  [ %s ]%s",
@@ -2126,7 +2134,7 @@ function CLIAlts:Render()
                 metrics.totalAlts, cdStr, metrics.activeLocks, goldFormatted, filterTag))
         else
             mainFrame.summaryText:SetText(string.format("[ %d ALTS ]  [ %s ]  [ %s ]  [ %s ]%s",
-                metrics.totalAlts, restChip, cdStr, goldFormatted, filterTag))
+                metrics.totalAlts, lpChip ~= "" and lpChip or restChip, cdStr, goldFormatted, filterTag))
         end
         mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     end
@@ -2867,6 +2875,14 @@ function CLIAlts:ExecutePromptCommand(input)
         local fb, ok = self:PrintDungeonReadiness(args)
         self:SetPromptFeedback(fb or "Dungeon readiness check printed to chat.", not ok)
 
+    elseif cmd == "mail" or cmd == "router" or cmd == "supplychain" then
+        local fb, ok = self:PrintMailRouting()
+        self:SetPromptFeedback(fb or "Mail packages printed to chat.", not ok)
+
+    elseif cmd == "lp" or cmd == "legacypoints" or cmd == "legacypoint" then
+        local fb, ok = self:PrintLegacyPointStatus(args)
+        self:SetPromptFeedback(fb or "Legacy Point status printed to chat.", not ok)
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -3259,6 +3275,11 @@ function CLIAlts:ShowDossierPopup(char)
             table.insert(lines, string.format("ROSTER COHORT:  |cffffd700[%s]|r (Target Level: |cffffffff%d|r)%s", tierStr, tgtLvl, statusTag))
             local roleStr = (char.supply_role and char.supply_role ~= "") and string.format("|cffffffff%s|r", tostring(char.supply_role)) or string.format("|cff%sAuto (detecting learned professions)|r", t.mutedHex or "a9a08c")
             table.insert(lines, string.format("Supply Role:    %s", roleStr))
+            if self.CalculateCharacterLP then
+                local altLP, lpReasons = self:CalculateCharacterLP(char)
+                local lpDetail = (#lpReasons > 0) and (" (" .. table.concat(lpReasons, ", ") .. ")") or ""
+                table.insert(lines, string.format("Legacy Points:  |cffffffff%.1f LP contributed|r%s", altLP, lpDetail))
+            end
         end
 
         table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 68)))
@@ -3986,34 +4007,47 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
         end
     end
 
+    local didAdd = false
+
     local totalCount, breakdown = self:GetItemInventorySummary(itemID)
-    if totalCount <= 0 or not breakdown or #breakdown == 0 then
-        return
+    if totalCount > 0 and breakdown and #breakdown > 0 then
+        tooltip:AddDoubleLine("|cff00ff66[CLIAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
+        for _, entry in ipairs(breakdown) do
+            local _, _, _, colorHex = self:GetClassColor(entry.classFile)
+            colorHex = colorHex or "ffffff"
+            local nameStr = string.format("|cff%s%s|r", colorHex, entry.name)
+            if entry.isCurrent then
+                nameStr = nameStr .. " |cff888888(you)|r"
+            elseif entry.realm and self.curPlayerRealm and entry.realm ~= self.curPlayerRealm then
+                nameStr = nameStr .. string.format(" |cff888888(%s)|r", entry.realm)
+            end
+
+            local countDetail
+            if entry.bag > 0 and entry.bank > 0 then
+                countDetail = string.format("%d (Bags: %d, Bank: %d)", entry.total, entry.bag, entry.bank)
+            elseif entry.bag > 0 then
+                countDetail = string.format("%d (Bags)", entry.bag)
+            else
+                countDetail = string.format("%d (Bank)", entry.bank)
+            end
+
+            tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
+        end
+        didAdd = true
     end
 
-    tooltip._clialtsProcessed = itemID
-
-    tooltip:AddDoubleLine("|cff00ff66[CLIAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
-    for _, entry in ipairs(breakdown) do
-        local _, _, _, colorHex = self:GetClassColor(entry.classFile)
-        colorHex = colorHex or "ffffff"
-        local nameStr = string.format("|cff%s%s|r", colorHex, entry.name)
-        if entry.isCurrent then
-            nameStr = nameStr .. " |cff888888(you)|r"
-        elseif entry.realm and self.curPlayerRealm and entry.realm ~= self.curPlayerRealm then
-            nameStr = nameStr .. string.format(" |cff888888(%s)|r", entry.realm)
+    if self.GetMaterialDestination then
+        local dest = self:GetMaterialDestination(itemID)
+        if dest and not dest.isCurrentPlayer then
+            local _, _, _, cHex = self:GetClassColor(dest.classFile)
+            cHex = cHex or "55e39a"
+            tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Send to:", string.format("|cff%s%s|r (|cffffd700%s|r)", cHex, dest.destName, dest.reason))
+            didAdd = true
         end
+    end
 
-        local countDetail
-        if entry.bag > 0 and entry.bank > 0 then
-            countDetail = string.format("%d (Bags: %d, Bank: %d)", entry.total, entry.bag, entry.bank)
-        elseif entry.bag > 0 then
-            countDetail = string.format("%d (Bags)", entry.bag)
-        else
-            countDetail = string.format("%d (Bank)", entry.bank)
-        end
-
-        tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
+    if didAdd then
+        tooltip._clialtsProcessed = itemID
     end
 end
 

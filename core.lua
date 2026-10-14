@@ -126,6 +126,7 @@ local safeEvents = {
     "PLAYERBANKSLOTS_CHANGED",
     "MAIL_INBOX_UPDATE",
     "MAIL_SHOW",
+    "MAIL_CLOSED",
     "HEARTHSTONE_BOUND",
     "QUEST_TURNED_IN",
     "QUEST_LOG_UPDATE",
@@ -319,9 +320,23 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     elseif event == "BAG_UPDATE_DELAYED" or event == "BAG_UPDATE" then
         CLIAlts:ScheduleInventoryScan(CLIAlts.isBankOpen == true)
 
-    elseif event == "MAIL_INBOX_UPDATE" or event == "MAIL_SHOW" then
+    elseif event == "MAIL_SHOW" then
         CLIAlts:ScanMailInbox()
         CLIAlts:RequestRender()
+        if CLIAlts.GetMailReadySummary and not CLIAlts.hasAnnouncedMailThisSession then
+            local mailSum = CLIAlts:GetMailReadySummary()
+            if mailSum and mailSum.totalPackages > 0 then
+                CLIAlts.hasAnnouncedMailThisSession = true
+                CLIAlts:Print(string.format("|cff57d6e8[Mail Router]|r %d package(s) (%d items) in your bags ready to send to alts! Type |cff00ff66/ca mail|r to view.", mailSum.totalPackages, mailSum.totalItems))
+            end
+        end
+
+    elseif event == "MAIL_INBOX_UPDATE" then
+        CLIAlts:ScanMailInbox()
+        CLIAlts:RequestRender()
+
+    elseif event == "MAIL_CLOSED" then
+        CLIAlts.hasAnnouncedMailThisSession = nil
 
     elseif event == "HEARTHSTONE_BOUND" then
         CLIAlts:CollectCurrentCharacter()
@@ -742,6 +757,12 @@ local function SlashHandler(msg)
 
     elseif cmd == "dungeon" or cmd == "dungeons" or cmd == "dng" then
         CLIAlts:PrintDungeonReadiness(arg)
+
+    elseif cmd == "mail" or cmd == "router" or cmd == "supplychain" then
+        CLIAlts:PrintMailRouting()
+
+    elseif cmd == "lp" or cmd == "legacypoints" or cmd == "legacypoint" then
+        CLIAlts:PrintLegacyPointStatus(arg)
 
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()
