@@ -3618,6 +3618,7 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
 
     -- 1. Trade Goods (Class 7)
     if classID == 7 then
+        category = "Trade Goods"
         if subclassID == 5 then
             category = "Cloth"
             destChar = self:FindBestCrafterForTrade("Tailoring", "Tailor")
