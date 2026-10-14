@@ -1413,8 +1413,12 @@ local RESTED_CACHE_TTL = 1.0
 local restedDataCache = {}
 
 function CLIAlts:InvalidateRestedCache()
-    for k in pairs(restedDataCache) do
-        restedDataCache[k] = nil
+    if wipe then
+        wipe(restedDataCache)
+    else
+        for k in pairs(restedDataCache) do
+            restedDataCache[k] = nil
+        end
     end
 end
 
@@ -1470,7 +1474,13 @@ function CLIAlts:GetRestedData(char, force, nowOverride)
             isResting = false,
             ratePerSec = 0,
         }
-        restedDataCache[charKey] = { time = nowTime, data = maxData }
+        local entry = restedDataCache[charKey]
+        if entry then
+            entry.time = nowTime
+            entry.data = maxData
+        else
+            restedDataCache[charKey] = { time = nowTime, data = maxData }
+        end
         return maxData
     end
 
@@ -1582,7 +1592,13 @@ function CLIAlts:GetRestedData(char, force, nowOverride)
     }
 
     if not nowOverride then
-        restedDataCache[charKey] = { time = nowTime, data = result }
+        local entry = restedDataCache[charKey]
+        if entry then
+            entry.time = nowTime
+            entry.data = result
+        else
+            restedDataCache[charKey] = { time = nowTime, data = result }
+        end
     end
     return result
 end
@@ -2224,6 +2240,49 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         for _, char in ipairs(list) do
             sortValues[char] = self:CalculateRotationScore(char)
         end
+    elseif sortBy == "cd" or sortBy == "cooldown" then
+        local now = time()
+        for _, char in ipairs(list) do
+            local earliest = 9999999999
+            local hasCd = false
+            if char.tradeCooldowns then
+                for _, readyAt in pairs(char.tradeCooldowns) do
+                    hasCd = true
+                    if readyAt <= now then
+                        earliest = -1
+                        break
+                    elseif readyAt < earliest then
+                        earliest = readyAt
+                    end
+                end
+            end
+            if earliest ~= -1 and char.lockouts then
+                for _, data in pairs(char.lockouts) do
+                    local resetTime = (type(data) == "table" and data.resetTime) or data
+                    if resetTime and resetTime > now then
+                        hasCd = true
+                        if resetTime < earliest then earliest = resetTime end
+                    end
+                end
+            end
+            sortValues[char] = hasCd and earliest or 9999999999
+        end
+    elseif sortBy == "prof" then
+        for _, char in ipairs(list) do
+            sortValues[char] = (char.professions and char.professions.primary and char.professions.primary[1] and char.professions.primary[1].name) or ""
+        end
+    elseif sortBy == "note" then
+        for _, char in ipairs(list) do
+            sortValues[char] = (char.note or ""):lower()
+        end
+    elseif sortBy == "hearth" then
+        for _, char in ipairs(list) do
+            sortValues[char] = (char.bindLocation or ""):lower()
+        end
+    elseif sortBy == "location" then
+        for _, char in ipairs(list) do
+            sortValues[char] = (char.location or ""):lower()
+        end
     end
 
     table.sort(list, function(a, b)
@@ -2240,8 +2299,8 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         elseif sortBy == "name" then
             if sortAsc then return (a.name or "") < (b.name or "") else return (a.name or "") > (b.name or "") end
         elseif sortBy == "prof" then
-            local pA = (a.professions and a.professions.primary and a.professions.primary[1] and a.professions.primary[1].name) or ""
-            local pB = (b.professions and b.professions.primary and b.professions.primary[1] and b.professions.primary[1].name) or ""
+            local pA = sortValues[a] or ""
+            local pB = sortValues[b] or ""
             if pA ~= "" and pB == "" then
                 return true
             elseif pA == "" and pB ~= "" then
@@ -2253,54 +2312,17 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         elseif sortBy == "gold" then
             if sortAsc then return (a.money or 0) < (b.money or 0) else return (a.money or 0) > (b.money or 0) end
         elseif sortBy == "cd" or sortBy == "cooldown" then
-            local now = time()
-            local function GetEarliestCd(char)
-                local earliest = 9999999999
-                local hasCd = false
-                if char.tradeCooldowns then
-                    for _, readyAt in pairs(char.tradeCooldowns) do
-                        hasCd = true
-                        if readyAt <= now then return -1 end
-                        if readyAt < earliest then earliest = readyAt end
-                    end
-                end
-                if char.lockouts then
-                    for _, data in pairs(char.lockouts) do
-                        local resetTime = (type(data) == "table" and data.resetTime) or data
-                        if resetTime and resetTime > now then
-                            hasCd = true
-                            if resetTime < earliest then earliest = resetTime end
-                        end
-                    end
-                end
-                if not hasCd then return 9999999999 end
-                return earliest
-            end
-            local cdA = GetEarliestCd(a)
-            local cdB = GetEarliestCd(b)
+            local cdA = sortValues[a] or 9999999999
+            local cdB = sortValues[b] or 9999999999
             if cdA ~= cdB then
                 if sortAsc then return cdA < cdB else return cdA > cdB end
             end
             return (a.name or "") < (b.name or "")
-        elseif sortBy == "note" then
-            local nA = (a.note or ""):lower()
-            local nB = (b.note or ""):lower()
-            if nA ~= nB then
-                if sortAsc then return nA < nB else return nA > nB end
-            end
-            return (a.name or "") < (b.name or "")
-        elseif sortBy == "hearth" then
-            local hA = (a.bindLocation or ""):lower()
-            local hB = (b.bindLocation or ""):lower()
-            if hA ~= hB then
-                if sortAsc then return hA < hB else return hA > hB end
-            end
-            return (a.name or "") < (b.name or "")
-        elseif sortBy == "location" then
-            local lA = (a.location or ""):lower()
-            local lB = (b.location or ""):lower()
-            if lA ~= lB then
-                if sortAsc then return lA < lB else return lA > lB end
+        elseif sortBy == "note" or sortBy == "hearth" or sortBy == "location" then
+            local vA = sortValues[a] or ""
+            local vB = sortValues[b] or ""
+            if vA ~= vB then
+                if sortAsc then return vA < vB else return vA > vB end
             end
             return (a.name or "") < (b.name or "")
         elseif sortBy == "seen" or sortBy == "stale" then
@@ -2395,7 +2417,7 @@ function CLIAlts:GetRosterSummaryMetrics()
         if rested and not rested.isMaxLevel then
             if rested.isFull then
                 capped = capped + 1
-                local wastedSec = self:GetRestedWaste(char)
+                local wastedSec = self:GetRestedWaste(char, nil, rested)
                 if wastedSec and wastedSec > 3600 then
                     wasting = wasting + 1
                 end
@@ -3605,7 +3627,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Rested Waste Tracker & Next Alt Priority (Feature 2)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetRestedWaste(char, nowOverride)
+function CLIAlts:GetRestedWaste(char, nowOverride, precalcRested)
     if not char then return 0, 0, "No waste", "0m" end
     local maxLevel = self:GetMaxLevel()
     local level = char.level or 1
@@ -3613,7 +3635,7 @@ function CLIAlts:GetRestedWaste(char, nowOverride)
         return 0, 0, "MAX LEVEL", "MAX"
     end
 
-    local rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
+    local rested = precalcRested or self:GetRestedData(char, nowOverride ~= nil, nowOverride)
     if not rested or not rested.isFull then
         return 0, 0, "Accruing", "0m"
     end
@@ -3701,7 +3723,7 @@ function CLIAlts:GetLDBText(now, charListOverride)
     return text, cappedCount, totalWastedXP
 end
 
-function CLIAlts:CalculateRotationScore(char, nowOverride)
+function CLIAlts:CalculateRotationScore(char, nowOverride, precalcRested, precalcWastedXP)
     if not char then return -9999999 end
     local lvl = char.level or 1
     local maxLevel = self:GetMaxLevel()
@@ -3720,8 +3742,13 @@ function CLIAlts:CalculateRotationScore(char, nowOverride)
     end
 
     -- 3. Rested state & waste
-    local _, wastedXP = self:GetRestedWaste(char, nowOverride)
-    local rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
+    local rested = precalcRested
+    local wastedXP = precalcWastedXP
+    if not rested then
+        rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
+        local _
+        _, wastedXP = self:GetRestedWaste(char, nowOverride, rested)
+    end
     local isCapped = rested and rested.isFull
     local isCore = (char.tier == "CORE")
     local coreBonus = isCore and 25000 or 0
@@ -3752,15 +3779,15 @@ function CLIAlts:GetNextAltsPriority(nowOverride, charListOverride)
 
             -- Skip characters that have reached their target level
             if level < tgt then
-                local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char, nowOverride)
                 local rested = self:GetRestedData(char, nowOverride ~= nil, nowOverride)
+                local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char, nowOverride, rested)
                 local isCapped = rested and rested.isFull
                 local maxPercent = (rested and rested.maxPercent) or 150
                 local curPercent = (rested and rested.percent) or 0
                 local usableXP = (rested and rested.currentRested) or 0
                 local timeLeftStr = (rested and rested.timeLeftStr) or "---"
 
-                local score = self:CalculateRotationScore(char, nowOverride)
+                local score = self:CalculateRotationScore(char, nowOverride, rested, wastedXP)
 
                 local reason
                 if isCapped then

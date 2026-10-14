@@ -148,6 +148,12 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `page <n>`, `goto <n>` | Navigate to page number |
 | `next` | Print top rotation alts losing rested XP |
 | `plan [hours]` | Generate an optimal leveling session schedule |
+| `role [name] [cohort]` | View or assign character leveling cohort (`core`, `reserve`, `bank`, `none`) |
+| `core <name>` | Assign alt to Core cohort (Target Level 35) |
+| `alt <name>` | Assign alt to Reserve cohort (Target Level 25) |
+| `bank <name>` | Designate alt as Bank Mule (excluded from leveling) |
+| `unassign <name>` | Remove cohort assignment |
+| `prof` | Print profession milestone status across all alts |
 | `watch <item>` | Add item to bag & bank watchlist tracker (supports Shift-clicking item links) |
 | `unwatch <item>` | Remove item from watchlist |
 | `watchlist` | Display inventory totals for watched items |
@@ -155,6 +161,8 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `unlocked <instance>`| Search for alts eligible for raid/dungeon without a lockout |
 | `prune <days>` | Bulk scan and prune characters unseen for N days |
 | `compact`, `c` | Toggle compact mode |
+| `forever`, `wf` | Toggle WoW Forever mode (cohort routing & phase caps) |
+| `tooltips`, `inv` | Toggle inventory item count hover tooltips |
 | `theme <name>` | Set phosphor theme (`amber`, `green`, `cyan`, `mono`, `safe`, `synthwave`, `dracula`) |
 | `scale <val>` | Adjust UI scale (e.g. `scale 1.15`) |
 | `perk [0-5]` | Set or cycle Well Rested legacy perk rank |
@@ -180,6 +188,13 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `/clialts clear` | Clear active filter |
 | `/clialts next` | Recommend top alts to log into (highest wasted rested XP) |
 | `/clialts plan [hours]` | Generate an optimal leveling session schedule (default: 2h) |
+| `/clialts role <name> [cohort]` | View or assign character cohort (`core`, `reserve`, `bank`, `none`) |
+| `/clialts core <name> [lvl]` | Assign alt to Core cohort (default target level 35) |
+| `/clialts alt <name> [lvl]` | Assign alt to Reserve cohort (default target level 25) |
+| `/clialts bank <name>` | Designate alt as Bank Mule (excluded from leveling) |
+| `/clialts unassign <name>` | Unassign alt cohort |
+| `/clialts supply <name> [role]` | Assign profession supply role (e.g. `Tailor/Bags`, `Alch/DE`, `auto`) |
+| `/clialts prof` | Print profession milestones & caps across all alts |
 | `/clialts watch <item>` | Add an item to the bag & bank watchlist tracker |
 | `/clialts unwatch <item>` | Remove an item from the watchlist tracker |
 | `/clialts watchlist` | Print watchlist item totals across all characters |
@@ -193,6 +208,8 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | `/clialts rested` | Print an ASCII summary of all alts' rested XP to chat |
 | `/clialts perk <0-5>` | Set or cycle your Well Rested legacy perk rank (0–5) |
 | `/clialts gold` | Print total account wealth summary across all alts |
+| `/clialts forever` | Toggle WoW Forever mode (cohort routing & phase caps) |
+| `/clialts tooltips` | Toggle inventory item count hover tooltips |
 | `/clialts minimap` | Toggle the minimap icon on or off |
 | `/clialts reset` | Reset main window position to screen center |
 | `/clialts perf` | Print execution latency (Collect & Render) and memory usage |

@@ -585,7 +585,7 @@ end
 -- Tab 2 Forever Route & Rotation Formatters
 local function FmtRouteOrder(char, t)
     t = t or CLIAlts:GetTheme()
-    local priorityList = CLIAlts:GetNextAltsPriority()
+    local priorityList = CLIAlts._cachedPriorityList or CLIAlts:GetNextAltsPriority()
     local charKey = char.fullName or char.name
     for idx, item in ipairs(priorityList) do
         local k = item.char and (item.char.fullName or item.char.name)
@@ -644,7 +644,7 @@ local function FmtRouteReason(char, t)
     end
 
     local rested = CLIAlts:GetRestedData(char)
-    local _, wastedXP = CLIAlts:GetRestedWaste(char)
+    local _, wastedXP = CLIAlts:GetRestedWaste(char, nil, rested)
     if rested and rested.isFull then
         if wastedXP and wastedXP > 0 then
             return string.format("|cff%s! CAPPED: Overflowing (+%s XP waste) - Play now!|r", t.pendingHex or "ffb547", CLIAlts:FormatNumber(wastedXP))
@@ -942,7 +942,7 @@ local function FmtForeverStatus(char, t)
     if rested.isMaxLevel then return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c") end
     if rested.isFull then
         local capPct = rested.maxPercent or 150
-        local _, wastedXP = CLIAlts:GetRestedWaste(char)
+        local _, wastedXP = CLIAlts:GetRestedWaste(char, nil, rested)
         if wastedXP and wastedXP > 0 then
             return string.format("|cff%s%d%% Capped* (+%s)|r", t.pendingHex or "ffb547", capPct, CLIAlts:FormatWasteShort(wastedXP))
         else
@@ -1910,6 +1910,7 @@ function CLIAlts:Render()
     -- Level 1: Recommended Next Action Banner (Forever Route)
     -- ------------------------------------------------------------------------
     local nextList = self:GetNextAltsPriority()
+    self._cachedPriorityList = nextList
     local topNext = nextList and nextList[1]
     if topNext then
         local tc = topNext.char
@@ -2048,7 +2049,7 @@ function CLIAlts:Render()
         mainFrame.summaryText:SetText(string.format("ROSTER: |cffffffff%d|r (%dC/%dA/%dB) | REST: %d Cap | CDS: %s | %sg%s",
             metrics.totalAlts, metrics.core, metrics.alt, metrics.bank, metrics.capped, cdStr, self:FormatNumber(math.floor(metrics.totalGold / 10000)), filterTag))
     elseif activeTab == 2 then
-        local nextCount = #(self:GetNextAltsPriority())
+        local nextCount = nextList and #nextList or 0
         local topName = topNext and topNext.char and (topNext.char.name or topNext.char.fullName) or "None"
         mainFrame.summaryText:SetText(string.format("FOREVER ROUTE | ACTIVE ROTATION: |cffffffff%d|r ALTS | NEXT UP: |cff%s%s|r | %s",
             nextCount, t.highlightHex or "ffd34e", topName, filterTag ~= "" and filterTag or "PRIORITY ORDERED"))
@@ -2093,6 +2094,11 @@ function CLIAlts:Render()
     local xOffset = 16
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0")
+    local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
+    if relayoutHeaders and mainFrame.headerFrame then
+        mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
+    end
 
     for idx = 1, 8 do
         local hCell = mainFrame.headerCells and mainFrame.headerCells[idx]
@@ -2102,10 +2108,12 @@ function CLIAlts:Render()
         if col then
             local colW = isComp and (col.cpw or col.pw) or col.pw
             if hCell then
-                hCell:ClearAllPoints()
-                hCell:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", xOffset, 0)
-                hCell:SetWidth(colW)
-                hCell:SetJustifyH(col.align or "LEFT")
+                if relayoutHeaders then
+                    hCell:ClearAllPoints()
+                    hCell:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", xOffset, 0)
+                    hCell:SetWidth(colW)
+                    hCell:SetJustifyH(col.align or "LEFT")
+                end
 
                 local title = col.title
                 if col.sort and col.sort == sortBy then
@@ -2123,9 +2131,11 @@ function CLIAlts:Render()
             end
 
             if btn and col.sort then
-                btn:ClearAllPoints()
-                btn:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", xOffset, 0)
-                btn:SetSize(colW, 18)
+                if relayoutHeaders then
+                    btn:ClearAllPoints()
+                    btn:SetPoint("LEFT", mainFrame.headerFrame, "LEFT", xOffset, 0)
+                    btn:SetSize(colW, 18)
+                end
                 btn.sortKey = col.sort
                 btn.colTitle = col.title
                 btn:Show()
@@ -2223,6 +2233,12 @@ function CLIAlts:Render()
                 row:SetBackdropBorderColor(0, 0, 0, 0)
             end
 
+            local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0")
+            local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
+            if relayoutRow then
+                row.lastLayoutKey = rowLayoutKey
+            end
+
             local rowXOffset = 16
             for idx = 1, 8 do
                 local cell = row.cells and row.cells[idx]
@@ -2230,10 +2246,12 @@ function CLIAlts:Render()
                 if cell then
                     if col then
                         local colW = isComp and (col.cpw or col.pw) or col.pw
-                        cell:ClearAllPoints()
-                        cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
-                        cell:SetWidth(colW)
-                        cell:SetJustifyH(col.align or "LEFT")
+                        if relayoutRow then
+                            cell:ClearAllPoints()
+                            cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
+                            cell:SetWidth(colW)
+                            cell:SetJustifyH(col.align or "LEFT")
+                        end
                         cell:SetText(col.fmt(char, t) or "")
                         cell:Show()
                         rowXOffset = rowXOffset + colW
@@ -2256,6 +2274,7 @@ function CLIAlts:Render()
             row:Hide()
         end
     end
+    self._cachedPriorityList = nil
 end
 
 -- ----------------------------------------------------------------------------
