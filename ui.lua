@@ -980,7 +980,54 @@ local function FmtForeverStatus(char, t)
     local est = rested.isEstimate and "~" or ""
     return string.format("|cff%s%d%%%s Rested|r", t.primaryHex, pct, est)
 end
-CLIAlts.FmtForeverStatus = FmtForeverStatus
+-- Tab 7 Mail Routing & Supply Chain Formatters
+local function FmtMailProfessions(char, t)
+    t = t or CLIAlts:GetTheme()
+    local profs = char.professions and char.professions.primary
+    if not profs or #profs == 0 then
+        return string.format("|cff%sNo Primary Skills|r", t.mutedHex or "a9a08c")
+    end
+    local parts = {}
+    for _, p in ipairs(profs) do
+        local short = p.name:sub(1, 8)
+        table.insert(parts, string.format("%s %d", short, p.rank or 0))
+    end
+    return table.concat(parts, " · ")
+end
+CLIAlts.FmtMailProfessions = FmtMailProfessions
+
+local function FmtMailRoute(char, t)
+    t = t or CLIAlts:GetTheme()
+    local role, isOverride, autoRole = CLIAlts:GetCharacterEffectiveSupplyRole(char)
+    if isOverride then
+        return string.format("|cff%s%s|r", t.highlightHex or "ffd34e", role)
+    else
+        return string.format("|cff%s%s|r", t.textHex or "f4ead2", autoRole)
+    end
+end
+CLIAlts.FmtMailRoute = FmtMailRoute
+
+local function FmtMailMode(char, t)
+    t = t or CLIAlts:GetTheme()
+    local _, isOverride = CLIAlts:GetCharacterEffectiveSupplyRole(char)
+    if isOverride then
+        return string.format("|cff%s[OVERRIDE]|r", t.pendingHex or "ffb547")
+    else
+        return string.format("|cff%s[AUTO]|r", t.accentHex or "57d6e8")
+    end
+end
+CLIAlts.FmtMailMode = FmtMailMode
+
+local function FmtMailPending(char, t)
+    t = t or CLIAlts:GetTheme()
+    local count, detail = CLIAlts:GetCharacterPendingMail(char)
+    if count > 0 then
+        return string.format("|cff%s%d items (%s)|r", t.readyHex or "55e39a", count, detail)
+    else
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+    end
+end
+CLIAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
     [1] = { -- 1: OVERVIEW
@@ -1031,6 +1078,15 @@ local COLS = {
         { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
         { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
         { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
+    },
+    [7] = { -- 7: MAIL ROUTING & SUPPLY CHAIN
+        { key = "fac",       title = "FAC",                 w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",           w = 16, pw = 160, cpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "tier",      title = "ROLE",                w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
+        { key = "profs",     title = "PROFESSIONS",         w = 20, pw = 240, cpw = 175, align = "LEFT",   sort = "prof",     fmt = FmtMailProfessions },
+        { key = "route",     title = "ASSIGNED MATERIALS",  w = 24, pw = 280, cpw = 210, align = "LEFT",   sort = "supply",   fmt = FmtMailRoute },
+        { key = "mode",      title = "MODE",                w = 8,  pw = 110, cpw = 90,  align = "CENTER", fmt = FmtMailMode },
+        { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, align = "RIGHT",  fmt = FmtMailPending },
     },
 }
 
@@ -1364,6 +1420,7 @@ function CLIAlts:CreateMainFrame()
         { id = 4, text = "Professions", compact = "Profs",    viewTitle = "PROFESSIONS & MILESTONES", stdWidth = 96 },
         { id = 5, text = "Economy",     compact = "Econ",     viewTitle = "ECONOMY & WEALTH",        stdWidth = 76 },
         { id = 6, text = "Cooldowns",   compact = "CDs",      viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 86 },
+        { id = 7, text = "Mail Routes", compact = "Mail",     viewTitle = "MAIL ROUTING & SUPPLY CHAIN", stdWidth = 96 },
     }
     frame.tabButtons = {}
     local prevTab = nil
@@ -1846,8 +1903,16 @@ function CLIAlts:CreateMainFrame()
             if self.charData then
                 CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
                 CLIAlts:Render()
+                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
                 if button == "RightButton" then
                     CLIAlts:ShowRowContextMenu(self, self.charData)
+                elseif curTab == 7 then
+                    if IsShiftKeyDown and IsShiftKeyDown() then
+                        CLIAlts:CycleCharacterSupplyRole(self.charData)
+                        CLIAlts:RequestRender()
+                    else
+                        CLIAlts:ShowMailRouteDialog(self.charData)
+                    end
                 elseif IsShiftKeyDown and IsShiftKeyDown() and CLIAlts:IsForeverMode() then
                     CLIAlts:CycleCharacterTier(self.charData)
                     CLIAlts:RequestRender()
@@ -1911,7 +1976,19 @@ function CLIAlts:CreateMainFrame()
                     GameTooltip:AddLine(string.format("Note: |cffffd700%s|r", self.charData.note), 1, 0.85, 0.2)
                 end
 
-                if CLIAlts:IsForeverMode() then
+                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
+                if curTab == 7 then
+                    local role, isOv, autoRole = CLIAlts:GetCharacterEffectiveSupplyRole(self.charData)
+                    GameTooltip:AddLine(" ")
+                    GameTooltip:AddLine("Mail Routing & Material Stream:", 1, 0.82, 0)
+                    GameTooltip:AddLine(string.format("Assigned Stream: |cffffffff%s|r (%s)", role, isOv and "|cffffb547OVERRIDE|r" or "|cff57d6e8AUTO|r"), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Auto Suggestion: |cffa9a08c%s|r", autoRole), 0.7, 0.7, 0.7)
+                    local pCount, pDetail = CLIAlts:GetCharacterPendingMail(self.charData)
+                    if pCount > 0 then
+                        GameTooltip:AddLine(string.format("Pending in Bags: |cff55e39a%d items (%s)|r", pCount, pDetail), 0.8, 0.8, 0.8)
+                    end
+                    GameTooltip:AddLine("Left-Click: Configure Route | Shift-Click: Cycle Stream | Right-Click: Menu", 0.7, 0.7, 0.7)
+                elseif CLIAlts:IsForeverMode() then
                     local pAlerts = CLIAlts:GetCharacterProfessionAlerts(self.charData)
                     for _, a in ipairs(pAlerts) do
                         if a.type == "TRAIN" then
@@ -2235,6 +2312,7 @@ function CLIAlts:Render()
         [4] = "PROFESSIONS & MILESTONES",
         [5] = "ECONOMY & WEALTH",
         [6] = "COOLDOWNS & INSTANCE LOCKS",
+        [7] = "MAIL ROUTING & SUPPLY CHAIN",
     }
     local curTabTitle = tabTitles[activeTab] or "OVERVIEW"
     if mainFrame.titleText then
@@ -2246,6 +2324,13 @@ function CLIAlts:Render()
     if mainFrame.subViewTitle then
         mainFrame.subViewTitle:SetText(curTabTitle)
         mainFrame.subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+    end
+    if mainFrame.subViewFilters then
+        if activeTab == 7 then
+            mainFrame.subViewFilters:SetText("CLICK ALT TO CONFIGURE ROUTING · SHIFT-CLICK TO CYCLE")
+        else
+            mainFrame.subViewFilters:SetText("RESTED XP    PROFESSIONS    ECONOMY")
+        end
     end
 
     -- Highlight active tab button with clear amber pill outline
@@ -2292,112 +2377,170 @@ function CLIAlts:Render()
     end
 
     -- ------------------------------------------------------------------------
-    -- Level 1: Recommended Next Action Hero Card
+    -- Level 1: Recommended Next Action Hero Card / Mail Dispatch Hero Card
     -- ------------------------------------------------------------------------
-    local nextList = self:GetNextAltsPriority()
-    self._cachedPriorityList = nextList
-    local topNext = nextList and nextList[1]
-    if topNext then
-        local tc = topNext.char
-        mainFrame.recChar = tc
-        local cName = self:ColorizePlayerName(tc.fullName or tc.name, tc.classFile)
-        local isCur = (tc.fullName and tc.fullName == self.curPlayerFullName) or (tc.name and tc.name == self.curPlayerName)
-        local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
-        local tgtLvl = topNext.targetLevel or ((tc.tier == "CORE" and 35) or (tc.tier == "RESERVE" and 25) or 60)
-        local lvlStr = string.format("Level %d/%d %s", tc.level or 1, tgtLvl, tc.class or "")
-
-        if mainFrame.recCohortBadge then
-            mainFrame.recCohortBadge:Show()
-            if mainFrame.recCohortBadgeText then
-                if tc.tier == "CORE" then
-                    mainFrame.recCohortBadgeText:SetText("|cffffb547CORE|r")
-                elseif tc.tier == "RESERVE" then
-                    mainFrame.recCohortBadgeText:SetText("|cff57d6e8ALT|r")
-                elseif tc.tier == "BANK" then
-                    mainFrame.recCohortBadgeText:SetText("|cffa9a08cBANK|r")
-                else
-                    mainFrame.recCohortBadgeText:SetText("|cffffffffALT|r")
-                end
-            end
-        end
-
-        local profParts = {}
-        if tc.supply_role and tc.supply_role ~= "" then
-            table.insert(profParts, tc.supply_role)
-        end
-        if tc.professions and tc.professions.primary and #tc.professions.primary > 0 then
-            for _, p in ipairs(tc.professions.primary) do
-                table.insert(profParts, string.format("%s %d", p.name or "", p.rank or 0))
-            end
-        end
-        local profSummary = (#profParts > 0) and table.concat(profParts, " · ") or "No primary professions tracked"
-
-        local restStr
-        if topNext.isCapped then
-            restStr = string.format("%d%% Capped", topNext.maxPercent or 150)
-            if topNext.wastedXP and topNext.wastedXP > 0 then
-                restStr = restStr .. string.format(" (+%s XP waste)", self:FormatNumber(topNext.wastedXP))
-            end
-        else
-            restStr = string.format("%d%% Rested (~%s XP)", topNext.percent or 0, self:FormatNumber(topNext.usableXP or 0))
-        end
-
-        local whyText
-        if topNext.isCapped and topNext.wastedXP and topNext.wastedXP > 0 then
-            whyText = string.format("Rested cap reached with XP overflow (+%s wasted) - play now to prevent XP waste.", self:FormatNumber(topNext.wastedXP))
-        elseif topNext.isCapped then
-            whyText = string.format("At %d%% Rested cap with double XP active - optimal time to level.", topNext.maxPercent or 150)
-        elseif tc.tier == "CORE" then
-            whyText = string.format("Core cohort priority with largest available rested pool (~%s XP).", self:FormatNumber(topNext.usableXP or 0))
-        else
-            whyText = string.format("Highest available rested XP pool (~%s XP) ready for progression.", self:FormatNumber(topNext.usableXP or 0))
-        end
-
-        if mainFrame.recHeroTitle then
-            mainFrame.recHeroTitle:SetText(string.format("%s%s · %s", curPrefix, cName, lvlStr))
-        end
-        if mainFrame.recProfLine then
-            mainFrame.recProfLine:SetText(profSummary)
-            mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        end
-        if mainFrame.recRestLine then
-            mainFrame.recRestLine:SetText(string.format("%s · Rested XP opportunity", restStr))
-            mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-        end
-        if mainFrame.recReasonLine then
-            mainFrame.recReasonLine:SetText(whyText)
-            mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        end
-        if mainFrame.recBtnDossier then
-            mainFrame.recBtnDossier:Show()
-            mainFrame.recBtnDossier:SetScript("OnClick", function()
-                CLIAlts:ShowDossierPopup(tc)
-            end)
-        end
-        if mainFrame.recBtnSetup then mainFrame.recBtnSetup:Hide() end
-    else
+    if activeTab == 7 then
         mainFrame.recChar = nil
         if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
-        if mainFrame.recHeroTitle then
-            mainFrame.recHeroTitle:SetText("All characters up to date")
+        if mainFrame.recBadge then
+            mainFrame.recBadge:SetText("MAIL DISPATCH & SUPPLY CHAIN")
         end
-        if mainFrame.recProfLine then
-            mainFrame.recProfLine:SetText("Target level reached for all active cohorts.")
-            mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        end
-        if mainFrame.recRestLine then
-            mainFrame.recRestLine:SetText("")
-        end
-        if mainFrame.recReasonLine then
-            mainFrame.recReasonLine:SetText("Setup: Assign Core (L35) or Alt (L25) cohorts below to activate recommendations.")
-            mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        local mailSummary = self:GetMailReadySummary()
+        if mailSummary.totalPackages > 0 then
+            if mainFrame.recHeroTitle then
+                mainFrame.recHeroTitle:SetText(string.format("%d Pending In-Bag Packages Ready (%d items)", mailSummary.totalPackages, mailSummary.totalItems))
+            end
+            if mainFrame.recProfLine then
+                mainFrame.recProfLine:SetText("Materials & BoE goods found in bags destined for specialized crafters & mules.")
+                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
+            if mainFrame.recRestLine then
+                mainFrame.recRestLine:SetText(string.format("Send to: %d recipients ready for dispatch", mailSummary.totalPackages))
+                mainFrame.recRestLine:SetTextColor(t.ready[1], t.ready[2], t.ready[3])
+            end
+            if mainFrame.recReasonLine then
+                mainFrame.recReasonLine:SetText("Click an alt below to configure routing, or click [ VIEW CHAT ] for bag mail breakdown.")
+                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
+        else
+            if mainFrame.recHeroTitle then
+                mainFrame.recHeroTitle:SetText("All Bag Materials Dispatched")
+            end
+            if mainFrame.recProfLine then
+                mainFrame.recProfLine:SetText("No pending trade goods or profession materials in your bags need mailing.")
+                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
+            if mainFrame.recRestLine then
+                mainFrame.recRestLine:SetText("Supply routes active across all tracked characters.")
+                mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            end
+            if mainFrame.recReasonLine then
+                mainFrame.recReasonLine:SetText("Configure auto-suggested or custom material streams for any character below.")
+                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
         end
         if mainFrame.recBtnDossier then mainFrame.recBtnDossier:Hide() end
         if mainFrame.recBtnSetup then
             mainFrame.recBtnSetup:Show()
+            if mainFrame.recBtnSetup.label then
+                mainFrame.recBtnSetup.label:SetText("[ VIEW CHAT ]")
+            end
             mainFrame.recBtnSetup:SetScript("OnClick", function()
-                CLIAlts:ShowHelpPopup()
+                CLIAlts:PrintMailRouting()
             end)
+        end
+    else
+        if mainFrame.recBadge then
+            mainFrame.recBadge:SetText("RECOMMENDED NEXT")
+        end
+        if mainFrame.recBtnSetup and mainFrame.recBtnSetup.label then
+            mainFrame.recBtnSetup.label:SetText("[ GUIDE ]")
+        end
+        local nextList = self:GetNextAltsPriority()
+        self._cachedPriorityList = nextList
+        local topNext = nextList and nextList[1]
+        if topNext then
+            local tc = topNext.char
+            mainFrame.recChar = tc
+            local cName = self:ColorizePlayerName(tc.fullName or tc.name, tc.classFile)
+            local isCur = (tc.fullName and tc.fullName == self.curPlayerFullName) or (tc.name and tc.name == self.curPlayerName)
+            local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
+            local tgtLvl = topNext.targetLevel or ((tc.tier == "CORE" and 35) or (tc.tier == "RESERVE" and 25) or 60)
+            local lvlStr = string.format("Level %d/%d %s", tc.level or 1, tgtLvl, tc.class or "")
+
+            if mainFrame.recCohortBadge then
+                mainFrame.recCohortBadge:Show()
+                if mainFrame.recCohortBadgeText then
+                    if tc.tier == "CORE" then
+                        mainFrame.recCohortBadgeText:SetText("|cffffb547CORE|r")
+                    elseif tc.tier == "RESERVE" then
+                        mainFrame.recCohortBadgeText:SetText("|cff57d6e8ALT|r")
+                    elseif tc.tier == "BANK" then
+                        mainFrame.recCohortBadgeText:SetText("|cffa9a08cBANK|r")
+                    else
+                        mainFrame.recCohortBadgeText:SetText("|cffffffffALT|r")
+                    end
+                end
+            end
+
+            local profParts = {}
+            if tc.supply_role and tc.supply_role ~= "" then
+                table.insert(profParts, tc.supply_role)
+            end
+            if tc.professions and tc.professions.primary and #tc.professions.primary > 0 then
+                for _, p in ipairs(tc.professions.primary) do
+                    table.insert(profParts, string.format("%s %d", p.name or "", p.rank or 0))
+                end
+            end
+            local profSummary = (#profParts > 0) and table.concat(profParts, " · ") or "No primary professions tracked"
+
+            local restStr
+            if topNext.isCapped then
+                restStr = string.format("%d%% Capped", topNext.maxPercent or 150)
+                if topNext.wastedXP and topNext.wastedXP > 0 then
+                    restStr = restStr .. string.format(" (+%s XP waste)", self:FormatNumber(topNext.wastedXP))
+                end
+            else
+                restStr = string.format("%d%% Rested (~%s XP)", topNext.percent or 0, self:FormatNumber(topNext.usableXP or 0))
+            end
+
+            local whyText
+            if topNext.isCapped and topNext.wastedXP and topNext.wastedXP > 0 then
+                whyText = string.format("Rested cap reached with XP overflow (+%s wasted) - play now to prevent XP waste.", self:FormatNumber(topNext.wastedXP))
+            elseif topNext.isCapped then
+                whyText = string.format("At %d%% Rested cap with double XP active - optimal time to level.", topNext.maxPercent or 150)
+            elseif tc.tier == "CORE" then
+                whyText = string.format("Core cohort priority with largest available rested pool (~%s XP).", self:FormatNumber(topNext.usableXP or 0))
+            else
+                whyText = string.format("Highest available rested XP pool (~%s XP) ready for progression.", self:FormatNumber(topNext.usableXP or 0))
+            end
+
+            if mainFrame.recHeroTitle then
+                mainFrame.recHeroTitle:SetText(string.format("%s%s · %s", curPrefix, cName, lvlStr))
+            end
+            if mainFrame.recProfLine then
+                mainFrame.recProfLine:SetText(profSummary)
+                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
+            if mainFrame.recRestLine then
+                mainFrame.recRestLine:SetText(string.format("%s · Rested XP opportunity", restStr))
+                mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            end
+            if mainFrame.recReasonLine then
+                mainFrame.recReasonLine:SetText(whyText)
+                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
+            if mainFrame.recBtnDossier then
+                mainFrame.recBtnDossier:Show()
+                mainFrame.recBtnDossier:SetScript("OnClick", function()
+                    CLIAlts:ShowDossierPopup(tc)
+                end)
+            end
+            if mainFrame.recBtnSetup then mainFrame.recBtnSetup:Hide() end
+        else
+            mainFrame.recChar = nil
+            if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
+            if mainFrame.recHeroTitle then
+                mainFrame.recHeroTitle:SetText("All characters up to date")
+            end
+            if mainFrame.recProfLine then
+                mainFrame.recProfLine:SetText("Target level reached for all active cohorts.")
+                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
+            if mainFrame.recRestLine then
+                mainFrame.recRestLine:SetText("")
+            end
+            if mainFrame.recReasonLine then
+                mainFrame.recReasonLine:SetText("Setup: Assign Core (L35) or Alt (L25) cohorts below to activate recommendations.")
+                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            end
+            if mainFrame.recBtnDossier then mainFrame.recBtnDossier:Hide() end
+            if mainFrame.recBtnSetup then
+                mainFrame.recBtnSetup:Show()
+                mainFrame.recBtnSetup:SetScript("OnClick", function()
+                    CLIAlts:ShowHelpPopup()
+                end)
+            end
         end
     end
 
@@ -2414,38 +2557,89 @@ function CLIAlts:Render()
     end
 
     if mainFrame.kpiCards then
-        -- 1. RESTED characters count
-        local restedCount = 0
-        for _, c in ipairs(charList) do
-            local r = self:GetRestedData(c)
-            if r and not r.isMaxLevel and (r.currentRested or 0) > 0 then
-                restedCount = restedCount + 1
+        if activeTab == 7 then
+            local mailSummary = self:GetMailReadySummary()
+            local autoCount = 0
+            local overrideCount = 0
+            for _, c in ipairs(charList) do
+                local _, isOv = self:GetCharacterEffectiveSupplyRole(c)
+                if isOv then
+                    overrideCount = overrideCount + 1
+                else
+                    autoCount = autoCount + 1
+                end
             end
-        end
-        if mainFrame.kpiCards.rested and mainFrame.kpiCards.rested.val then
-            mainFrame.kpiCards.rested.val:SetText(tostring(restedCount))
-            mainFrame.kpiCards.rested.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-        end
-
-        -- 2. PROFESSIONS / Tracked roles
-        local profCount = 0
-        for _, c in ipairs(charList) do
-            if (c.professions and c.professions.primary and #c.professions.primary > 0) or (c.supply_role and c.supply_role ~= "") then
-                profCount = profCount + 1
+            if mainFrame.kpiCards.rested then
+                if mainFrame.kpiCards.rested.title then mainFrame.kpiCards.rested.title:SetText("ROUTED ALTS") end
+                if mainFrame.kpiCards.rested.val then
+                    mainFrame.kpiCards.rested.val:SetText(tostring(#charList))
+                    mainFrame.kpiCards.rested.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+                end
+                if mainFrame.kpiCards.rested.sub then mainFrame.kpiCards.rested.sub:SetText("Supply network alts") end
             end
-        end
-        if mainFrame.kpiCards.profs and mainFrame.kpiCards.profs.val then
-            mainFrame.kpiCards.profs.val:SetText(tostring(profCount))
-            mainFrame.kpiCards.profs.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-        end
+            if mainFrame.kpiCards.profs then
+                if mainFrame.kpiCards.profs.title then mainFrame.kpiCards.profs.title:SetText("ROUTING MODES") end
+                if mainFrame.kpiCards.profs.val then
+                    mainFrame.kpiCards.profs.val:SetText(string.format("%d OVR · %d AUTO", overrideCount, autoCount))
+                    mainFrame.kpiCards.profs.val:SetTextColor(t.accent[1], t.accent[2], t.accent[3])
+                end
+                if mainFrame.kpiCards.profs.sub then mainFrame.kpiCards.profs.sub:SetText("Custom overrides vs auto") end
+            end
+            if mainFrame.kpiCards.gold then
+                if mainFrame.kpiCards.gold.title then mainFrame.kpiCards.gold.title:SetText("BAG PACKAGES") end
+                if mainFrame.kpiCards.gold.val then
+                    mainFrame.kpiCards.gold.val:SetText(tostring(mailSummary.totalPackages or 0))
+                    mainFrame.kpiCards.gold.val:SetTextColor(t.ready[1], t.ready[2], t.ready[3])
+                end
+                if mainFrame.kpiCards.gold.sub then mainFrame.kpiCards.gold.sub:SetText(string.format("%d items ready", mailSummary.totalItems or 0)) end
+            end
+        else
+            if mainFrame.kpiCards.rested and mainFrame.kpiCards.rested.title then
+                mainFrame.kpiCards.rested.title:SetText("RESTED")
+                mainFrame.kpiCards.rested.sub:SetText("Characters")
+            end
+            if mainFrame.kpiCards.profs and mainFrame.kpiCards.profs.title then
+                mainFrame.kpiCards.profs.title:SetText("PROFESSIONS")
+                mainFrame.kpiCards.profs.sub:SetText("Tracked roles")
+            end
+            if mainFrame.kpiCards.gold and mainFrame.kpiCards.gold.title then
+                mainFrame.kpiCards.gold.title:SetText("GOLD")
+                mainFrame.kpiCards.gold.sub:SetText("Combined wealth")
+            end
 
-        -- 3. GOLD / Combined wealth
-        if mainFrame.kpiCards.gold and mainFrame.kpiCards.gold.val then
-            local g = math.floor((metrics.totalGold or 0) / 10000)
-            local s = math.floor(((metrics.totalGold or 0) % 10000) / 100)
-            local goldStr = (g > 0) and string.format("%dg", g) or string.format("%ds", s)
-            mainFrame.kpiCards.gold.val:SetText(goldStr)
-            mainFrame.kpiCards.gold.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            -- 1. RESTED characters count
+            local restedCount = 0
+            for _, c in ipairs(charList) do
+                local r = self:GetRestedData(c)
+                if r and not r.isMaxLevel and (r.currentRested or 0) > 0 then
+                    restedCount = restedCount + 1
+                end
+            end
+            if mainFrame.kpiCards.rested and mainFrame.kpiCards.rested.val then
+                mainFrame.kpiCards.rested.val:SetText(tostring(restedCount))
+                mainFrame.kpiCards.rested.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            end
+
+            -- 2. PROFESSIONS / Tracked roles
+            local profCount = 0
+            for _, c in ipairs(charList) do
+                if (c.professions and c.professions.primary and #c.professions.primary > 0) or (c.supply_role and c.supply_role ~= "") then
+                    profCount = profCount + 1
+                end
+            end
+            if mainFrame.kpiCards.profs and mainFrame.kpiCards.profs.val then
+                mainFrame.kpiCards.profs.val:SetText(tostring(profCount))
+                mainFrame.kpiCards.profs.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            end
+
+            -- 3. GOLD / Combined wealth
+            if mainFrame.kpiCards.gold and mainFrame.kpiCards.gold.val then
+                local g = math.floor((metrics.totalGold or 0) / 10000)
+                local s = math.floor(((metrics.totalGold or 0) % 10000) / 100)
+                local goldStr = (g > 0) and string.format("%dg", g) or string.format("%ds", s)
+                mainFrame.kpiCards.gold.val:SetText(goldStr)
+                mainFrame.kpiCards.gold.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            end
         end
     end
 
@@ -2527,6 +2721,9 @@ function CLIAlts:Render()
             activeSortAsc = false
         elseif activeTab == 6 then
             activeSortBy = "cooldown"
+            activeSortAsc = true
+        elseif activeTab == 7 then
+            activeSortBy = "name"
             activeSortAsc = true
         end
     end
@@ -2923,7 +3120,7 @@ end
 
 function CLIAlts:SwitchTab(tabId)
     tabId = tonumber(tabId)
-    if not tabId or tabId < 1 or tabId > 6 then return end
+    if not tabId or tabId < 1 or tabId > 7 then return end
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.activeTab = tabId
     end
@@ -3942,7 +4139,7 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
     if not contextMenu then
         local cm = CreateFrame("Frame", "CLIAltsContextMenu", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         cm:Hide()
-        cm:SetSize(210, 206)
+        cm:SetSize(216, 230)
         cm:SetFrameStrata("DIALOG")
         cm:EnableMouse(true)
         tinsert(UISpecialFrames, "CLIAltsContextMenu")
@@ -3992,7 +4189,11 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
                 CLIAlts:SetCharacterCohort(name, "BANK")
                 CLIAlts:Render()
             end },
-            { key = "watch", label = "5. Toggle Watchlist", fn = function(c)
+            { key = "route", label = "5. Configure Mail Route...", fn = function(c)
+                cm:Hide()
+                CLIAlts:ShowMailRouteDialog(c)
+            end },
+            { key = "watch", label = "6. Toggle Watchlist", fn = function(c)
                 cm:Hide()
                 local name = c.fullName or c.name
                 if CLIAlts.ToggleWatchlist then
@@ -4000,11 +4201,11 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
                 end
                 CLIAlts:Render()
             end },
-            { key = "delete", label = "6. Remove Alt...", fn = function(c)
+            { key = "delete", label = "7. Remove Alt...", fn = function(c)
                 cm:Hide()
                 CLIAlts:ShowConfirmDelete(c)
             end },
-            { key = "cancel", label = "7. Cancel", fn = function()
+            { key = "cancel", label = "8. Cancel", fn = function()
                 cm:Hide()
             end },
         }
@@ -4012,7 +4213,7 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
         local y = -34
         for _, act in ipairs(actions) do
             local btn = CreateFrame("Button", nil, cm, BackdropTemplateMixin and "BackdropTemplate" or nil)
-            btn:SetSize(194, 20)
+            btn:SetSize(200, 20)
             btn:SetPoint("TOPLEFT", cm, "TOPLEFT", 8, y)
             btn:SetBackdrop({
                 bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -4099,6 +4300,245 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
         contextMenu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x + 8, y + 8)
     end
     contextMenu:Show()
+end
+
+-- ----------------------------------------------------------------------------
+-- Mail Routing & Material Stream Configuration Dialog
+-- ----------------------------------------------------------------------------
+local mailRouteDialog = nil
+
+function CLIAlts:GetMailRouteDialog()
+    return mailRouteDialog
+end
+
+function CLIAlts:ShowMailRouteDialog(charData)
+    if not charData then return end
+
+    if not mailRouteDialog then
+        local dlg = CreateFrame("Frame", "CLIAltsMailRouteDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        dlg:Hide()
+        dlg:SetSize(480, 360)
+        dlg:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        dlg:SetFrameStrata("DIALOG")
+        dlg:EnableMouse(true)
+        tinsert(UISpecialFrames, "CLIAltsMailRouteDialog")
+
+        dlg:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+
+        -- Title
+        local title = dlg:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(title, 13, "OUTLINE")
+        title:SetPoint("TOPLEFT", dlg, "TOPLEFT", 16, -14)
+        dlg.title = title
+
+        -- Subtitle (Char info)
+        local subtitle = dlg:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(subtitle, 11)
+        subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+        dlg.subtitle = subtitle
+
+        -- Status panel container for Current Routing & Auto Suggestion
+        local statusBox = CreateFrame("Frame", nil, dlg, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        statusBox:SetSize(448, 70)
+        statusBox:SetPoint("TOPLEFT", dlg, "TOPLEFT", 16, -56)
+        statusBox:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        dlg.statusBox = statusBox
+
+        local autoLabel = statusBox:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(autoLabel, 10, "")
+        autoLabel:SetPoint("TOPLEFT", statusBox, "TOPLEFT", 10, -8)
+        dlg.autoLabel = autoLabel
+
+        local currentLabel = statusBox:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(currentLabel, 11, "OUTLINE")
+        currentLabel:SetPoint("TOPLEFT", autoLabel, "BOTTOMLEFT", 0, -4)
+        dlg.currentLabel = currentLabel
+
+        local modeBadge = statusBox:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(modeBadge, 10, "OUTLINE")
+        modeBadge:SetPoint("TOPRIGHT", statusBox, "TOPRIGHT", -10, -8)
+        dlg.modeBadge = modeBadge
+
+        -- Revert to Auto button
+        local btnRevert = CreateRetroButton(statusBox, "[ REVERT TO AUTO SUGGESTION ]", 230, 20, function()
+            if dlg.targetChar then
+                local cName = dlg.targetChar.fullName or dlg.targetChar.name
+                CLIAlts:SetCharacterSupplyRole(cName, "auto")
+                CLIAlts:ShowMailRouteDialog(dlg.targetChar)
+                CLIAlts:RequestRender()
+            end
+        end)
+        btnRevert:SetPoint("BOTTOMLEFT", statusBox, "BOTTOMLEFT", 10, 8)
+        dlg.btnRevert = btnRevert
+
+        local secHeader = dlg:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(secHeader, 10, "OUTLINE")
+        secHeader:SetPoint("TOPLEFT", statusBox, "BOTTOMLEFT", 0, -10)
+        secHeader:SetText("ASSIGN PRESET DESTINATION STREAM:")
+        dlg.secHeader = secHeader
+
+        -- Presets container (2 columns x 5 rows)
+        local presets = {
+            { label = "Cloth (Tailoring)",             role = "Cloth (Tailor)" },
+            { label = "Herbs (Alchemy)",                role = "Herbs (Alch)" },
+            { label = "Ore & Stone (Smith / Eng)",      role = "Ore/Stone (Mining)" },
+            { label = "Leather & Hides (LW)",          role = "Leather (LW)" },
+            { label = "Enchanting Reagents & DE",       role = "Enchanting (DE)" },
+            { label = "Cooking (Meat & Fish)",          role = "Cooking (Meat)" },
+            { label = "Lockboxes (Rogue)",              role = "Lockboxes" },
+            { label = "Bank Mule (General Storage)",    role = "Bank Mule" },
+            { label = "Exclude (Do Not Mail)",          role = "Exclude" },
+        }
+
+        dlg.presetButtons = {}
+        for pIdx, pDef in ipairs(presets) do
+            local col = ((pIdx - 1) % 2)
+            local row = math.floor((pIdx - 1) / 2)
+            local btnX = 16 + (col * 228)
+            local btnY = -152 - (row * 24)
+
+            local pBtn = CreateRetroButton(dlg, "[ " .. pDef.label .. " ]", 220, 20, function()
+                if dlg.targetChar then
+                    local cName = dlg.targetChar.fullName or dlg.targetChar.name
+                    CLIAlts:SetCharacterSupplyRole(cName, pDef.role)
+                    CLIAlts:ShowMailRouteDialog(dlg.targetChar)
+                    CLIAlts:RequestRender()
+                end
+            end, 10)
+            pBtn:SetPoint("TOPLEFT", dlg, "TOPLEFT", btnX, btnY)
+            pBtn.roleValue = pDef.role
+            dlg.presetButtons[pIdx] = pBtn
+        end
+
+        -- Custom EditBox Stream Input
+        local customLabel = dlg:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(customLabel, 10, "")
+        customLabel:SetPoint("TOPLEFT", dlg, "TOPLEFT", 16, -276)
+        customLabel:SetText("Custom stream keyword:")
+        dlg.customLabel = customLabel
+
+        local editBox = CreateFrame("EditBox", "CLIAltsMailCustomEdit", dlg, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        editBox:SetSize(260, 20)
+        editBox:SetPoint("TOPLEFT", customLabel, "BOTTOMLEFT", 0, -4)
+        editBox:SetAutoFocus(false)
+        editBox:SetFontObject("GameFontHighlightSmall")
+        self:SetWidgetFont(editBox, 11)
+        editBox:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 4, right = 4, top = 2, bottom = 2 }
+        })
+        editBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+        dlg.editBox = editBox
+
+        local btnSetCustom = CreateRetroButton(dlg, "[ SET CUSTOM ]", 110, 20, function()
+            if dlg.targetChar and dlg.editBox then
+                local txt = dlg.editBox:GetText()
+                if txt and txt:gsub("%s+", "") ~= "" then
+                    local cName = dlg.targetChar.fullName or dlg.targetChar.name
+                    CLIAlts:SetCharacterSupplyRole(cName, txt)
+                    dlg.editBox:ClearFocus()
+                    CLIAlts:ShowMailRouteDialog(dlg.targetChar)
+                    CLIAlts:RequestRender()
+                end
+            end
+        end)
+        btnSetCustom:SetPoint("LEFT", editBox, "RIGHT", 8, 0)
+        dlg.btnSetCustom = btnSetCustom
+
+        -- Bottom Close button
+        local btnClose = CreateRetroButton(dlg, "[ CLOSE ]", 80, 20, function()
+            dlg:Hide()
+        end)
+        btnClose:SetPoint("BOTTOMRIGHT", dlg, "BOTTOMRIGHT", -16, 12)
+        dlg.btnClose = btnClose
+
+        mailRouteDialog = dlg
+    end
+
+    local dlg = mailRouteDialog
+    dlg.targetChar = charData
+    local t = self:GetTheme()
+
+    if dlg.SetBackdropColor then
+        dlg:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+    end
+    if dlg.SetBackdropBorderColor then
+        dlg:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.9)
+    end
+
+    if dlg.statusBox then
+        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+        if dlg.statusBox.SetBackdropColor then
+            dlg.statusBox:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.85)
+        end
+        if dlg.statusBox.SetBackdropBorderColor then
+            dlg.statusBox:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.4)
+        end
+    end
+
+    if dlg.editBox then
+        if dlg.editBox.SetBackdropColor then
+            dlg.editBox:SetBackdropColor(0.04, 0.03, 0.02, 0.9)
+        end
+        if dlg.editBox.SetBackdropBorderColor then
+            dlg.editBox:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.6)
+        end
+        dlg.editBox:SetTextColor(t.text[1], t.text[2], t.text[3])
+    end
+
+    local cName = charData.fullName or charData.name or "Character"
+    local coloredName = self:ColorizePlayerName(cName, charData.classFile)
+    local tierStr = (charData.tier == "CORE" and "CORE") or (charData.tier == "RESERVE" and "ALT") or (charData.tier == "BANK" and "BANK") or "ALT"
+    local lvlStr = string.format("Level %d %s [%s]", charData.level or 1, charData.class or "", tierStr)
+
+    local profParts = {}
+    if charData.professions and charData.professions.primary then
+        for _, p in ipairs(charData.professions.primary) do
+            table.insert(profParts, string.format("%s (%d)", p.name, p.rank or 0))
+        end
+    end
+    local profText = (#profParts > 0) and table.concat(profParts, " · ") or "No primary professions"
+
+    dlg.title:SetText(string.format("|cff%sCLIAlts :: MAIL ROUTING & SUPPLY CHAIN|r", t.highlightHex or "ffd34e"))
+    dlg.subtitle:SetText(string.format("%s · %s · %s", coloredName, lvlStr, profText))
+
+    local curRole, isOverride, autoRole = self:GetCharacterEffectiveSupplyRole(charData)
+
+    dlg.autoLabel:SetText(string.format("|cff%sAuto Suggestion: %s|r", t.dimHex or "a9a08c", autoRole))
+    if isOverride then
+        dlg.currentLabel:SetText(string.format("Active Stream: |cff%s%s|r", t.highlightHex or "ffd34e", curRole))
+        dlg.modeBadge:SetText(string.format("|cff%s[MANUAL OVERRIDE]|r", t.pendingHex or "ffb547"))
+        if dlg.btnRevert then
+            dlg.btnRevert:Show()
+            if dlg.btnRevert.label then
+                dlg.btnRevert.label:SetTextColor(t.accent[1], t.accent[2], t.accent[3])
+            end
+        end
+    else
+        dlg.currentLabel:SetText(string.format("Active Stream: |cff%s%s|r", t.textHex or "f4ead2", autoRole))
+        dlg.modeBadge:SetText(string.format("|cff%s[AUTO ROUTED]|r", t.accentHex or "57d6e8"))
+        if dlg.btnRevert then
+            dlg.btnRevert:Hide()
+        end
+    end
+
+    if dlg.editBox then
+        dlg.editBox:SetText(charData.supply_role or "")
+    end
+
+    dlg:Show()
 end
 
 -- ----------------------------------------------------------------------------

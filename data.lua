@@ -2349,6 +2349,11 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         for _, char in ipairs(list) do
             sortValues[char] = (char.location or ""):lower()
         end
+    elseif sortBy == "supply" then
+        for _, char in ipairs(list) do
+            local role = self:GetCharacterEffectiveSupplyRole(char)
+            sortValues[char] = (role or ""):lower()
+        end
     end
 
     table.sort(list, function(a, b)
@@ -2384,7 +2389,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 if sortAsc then return cdA < cdB else return cdA > cdB end
             end
             return (a.name or "") < (b.name or "")
-        elseif sortBy == "note" or sortBy == "hearth" or sortBy == "location" then
+        elseif sortBy == "note" or sortBy == "hearth" or sortBy == "location" or sortBy == "supply" then
             local vA = sortValues[a] or ""
             local vB = sortValues[b] or ""
             if vA ~= vB then
@@ -3523,6 +3528,151 @@ end
 -- ----------------------------------------------------------------------------
 -- WoW Forever: Inter-Alt Mail & Supply Chain Router (Component 5)
 -- ----------------------------------------------------------------------------
+CLIAlts.STANDARD_SUPPLY_ROLES = {
+    { key = "auto",     label = "Auto (Suggested by Professions)", role = nil },
+    { key = "cloth",    label = "Cloth & Tailoring",              role = "Cloth (Tailor)" },
+    { key = "herbs",    label = "Herbs & Alchemy",                role = "Herbs (Alch)" },
+    { key = "ore",      label = "Ore, Stone & Mining",            role = "Ore/Stone (Mining)" },
+    { key = "leather",  label = "Leather & Skinning",             role = "Leather (LW)" },
+    { key = "ench",     label = "Enchanting Reagents & BoE DE",   role = "Enchanting (DE)" },
+    { key = "cooking",  label = "Meat & Fish (Cooking)",         role = "Cooking (Meat)" },
+    { key = "lockbox",  label = "Lockboxes (Rogue)",              role = "Lockboxes" },
+    { key = "bank",     label = "Bank Mule (General Storage)",    role = "Bank Mule" },
+    { key = "exclude",  label = "Exclude (No Mail Packages)",     role = "None" },
+}
+
+function CLIAlts:GetCharacterAutoSupplyRole(char)
+    if not char then return "None" end
+    if char.tier == "BANK" then
+        return "Bank Mule (Storage)"
+    end
+
+    local roles = {}
+    if char.professions and char.professions.primary then
+        for _, p in ipairs(char.professions.primary) do
+            local pName = (p.name or ""):lower()
+            if pName:find("tailor", 1, true) then
+                table.insert(roles, "Cloth (Tailoring)")
+            elseif pName:find("alch", 1, true) then
+                table.insert(roles, "Herbs (Alchemy)")
+            elseif pName:find("blacksmith", 1, true) or pName:find("engin", 1, true) or pName:find("mining", 1, true) then
+                table.insert(roles, "Ore & Stone (Smith/Eng)")
+            elseif pName:find("leather", 1, true) or pName:find("skin", 1, true) then
+                table.insert(roles, "Leather (Leatherworking)")
+            elseif pName:find("enchant", 1, true) then
+                table.insert(roles, "Enchanting & BoE DE")
+            end
+        end
+    end
+
+    if char.classFile == "ROGUE" and #roles == 0 then
+        table.insert(roles, "Lockboxes (Rogue)")
+    end
+
+    if #roles == 0 and char.professions and char.professions.secondary then
+        for _, s in ipairs(char.professions.secondary) do
+            local sName = (s.name or ""):lower()
+            if sName:find("cook", 1, true) then
+                table.insert(roles, "Cooking (Meat & Fish)")
+                break
+            end
+        end
+    end
+
+    if #roles == 0 then
+        return "None (Accruing Alt)"
+    end
+    return table.concat(roles, " · ")
+end
+
+function CLIAlts:GetCharacterEffectiveSupplyRole(char)
+    if not char then return "None", false, "None" end
+    local autoRole = self:GetCharacterAutoSupplyRole(char)
+    if char.supply_role and char.supply_role ~= "" and char.supply_role:lower() ~= "auto" then
+        return char.supply_role, true, autoRole
+    end
+    return autoRole, false, autoRole
+end
+
+function CLIAlts:CycleCharacterSupplyRole(char)
+    if not char then return "Auto" end
+    local cur = (char.supply_role or ""):lower()
+    local nextRole = nil
+    local nextLabel = "Auto"
+
+    if cur == "" or cur == "auto" then
+        nextRole = "Cloth (Tailor)"
+        nextLabel = "Cloth (Tailor)"
+    elseif cur:find("cloth", 1, true) or cur:find("tailor", 1, true) then
+        nextRole = "Herbs (Alch)"
+        nextLabel = "Herbs (Alch)"
+    elseif cur:find("herb", 1, true) or cur:find("alch", 1, true) then
+        nextRole = "Ore/Stone (Mining)"
+        nextLabel = "Ore/Stone (Mining)"
+    elseif cur:find("ore", 1, true) or cur:find("mine", 1, true) or cur:find("stone", 1, true) then
+        nextRole = "Leather (LW)"
+        nextLabel = "Leather (LW)"
+    elseif cur:find("leather", 1, true) or cur:find("lw", 1, true) or cur:find("skin", 1, true) then
+        nextRole = "Enchanting (DE)"
+        nextLabel = "Enchanting (DE)"
+    elseif cur:find("ench", 1, true) or cur:find("de", 1, true) then
+        nextRole = "Cooking (Meat)"
+        nextLabel = "Cooking (Meat)"
+    elseif cur:find("cook", 1, true) or cur:find("meat", 1, true) or cur:find("fish", 1, true) then
+        nextRole = "Lockboxes"
+        nextLabel = "Lockboxes"
+    elseif cur:find("lock", 1, true) or cur:find("box", 1, true) then
+        nextRole = "Bank Mule"
+        nextLabel = "Bank Mule"
+    elseif cur:find("bank", 1, true) or cur:find("mule", 1, true) or cur:find("storage", 1, true) then
+        nextRole = "None"
+        nextLabel = "None (Excluded)"
+    else
+        nextRole = nil
+        nextLabel = "Auto"
+    end
+
+    char.supply_role = nextRole
+    local name = char.fullName or char.name
+    self:Print(string.format("Mail Routing for %s set to: |cffffd34e%s|r", name, nextLabel))
+    return nextLabel
+end
+
+function CLIAlts:GetCharacterPendingMail(char)
+    if not char then return 0, "No items" end
+    local summary = self:GetMailReadySummary()
+    local name = char.name
+    local grp = summary.byRecipient and summary.byRecipient[name]
+    if not grp and char.fullName and summary.byRecipient then
+        grp = summary.byRecipient[char.fullName]
+    end
+    if not grp and summary.byRecipient then
+        for k, g in pairs(summary.byRecipient) do
+            if k:find(name, 1, true) or name:find(k, 1, true) then
+                grp = g
+                break
+            end
+        end
+    end
+    if not grp or not grp.items or #grp.items == 0 then
+        return 0, "No items"
+    end
+
+    local total = 0
+    local names = {}
+    for _, itm in ipairs(grp.items) do
+        total = total + (itm.count or 1)
+        if #names < 2 then
+            table.insert(names, string.format("%s x%d", itm.name or "Item", itm.count or 1))
+        end
+    end
+    local detail = table.concat(names, ", ")
+    if #grp.items > 2 then
+        detail = detail .. string.format(" (+%d more)", #grp.items - 2)
+    end
+    return total, detail
+end
+
 function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
     local chars = self:GetCharactersList("level", false)
     local bestChar = nil
@@ -3531,32 +3681,65 @@ function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
     for _, c in ipairs(chars) do
         local matches = false
         local profRank = 0
+        local isOverride = false
+        local srole = (c.supply_role or ""):lower()
 
-        -- Check supply role override first
-        if preferredRole and c.supply_role and c.supply_role:lower():find(preferredRole:lower(), 1, true) then
-            matches = true
-            profRank = 150
-        end
-
-        -- Check primary professions
-        if not matches and c.professions and c.professions.primary then
-            for _, p in ipairs(c.professions.primary) do
-                local pName = (p.name or ""):lower()
-                if pName:find(targetProfession:lower(), 1, true) then
+        if srole ~= "none" and srole ~= "exclude" and srole ~= "excluded" then
+            -- Check supply role override first
+            if preferredRole and srole ~= "" then
+                local pLower = preferredRole:lower()
+                if srole:find(pLower, 1, true) then
                     matches = true
-                    profRank = tonumber(p.rank) or 0
-                    break
+                    isOverride = true
+                    profRank = 150
+                elseif pLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true)) then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
+                elseif pLower:find("alch", 1, true) and (srole:find("herb", 1, true) or srole:find("alch", 1, true)) then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
+                elseif (pLower:find("miner", 1, true) or pLower:find("smith", 1, true) or pLower:find("eng", 1, true)) and (srole:find("ore", 1, true) or srole:find("miner", 1, true) or srole:find("stone", 1, true) or srole:find("smith", 1, true) or srole:find("bs", 1, true)) then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
+                elseif (pLower:find("skin", 1, true) or pLower:find("leather", 1, true)) and (srole:find("leather", 1, true) or srole:find("skin", 1, true) or srole:find("lw", 1, true)) then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
+                elseif pLower:find("cook", 1, true) and (srole:find("cook", 1, true) or srole:find("meat", 1, true) or srole:find("fish", 1, true)) then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
+                elseif pLower:find("de", 1, true) and (srole:find("de", 1, true) or srole:find("ench", 1, true) or srole:find("disenchant", 1, true)) then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
                 end
             end
-        end
 
-        if matches then
-            local tierScore = (c.tier == "CORE" and 1000) or (c.tier == "RESERVE" and 500) or 100
-            local skillNeedScore = math.max(0, 300 - profRank)
-            local score = tierScore + skillNeedScore
-            if score > bestScore then
-                bestScore = score
-                bestChar = c
+            -- Check primary professions
+            if not matches and c.professions and c.professions.primary then
+                for _, p in ipairs(c.professions.primary) do
+                    local pName = (p.name or ""):lower()
+                    if pName:find(targetProfession:lower(), 1, true) then
+                        matches = true
+                        profRank = tonumber(p.rank) or 0
+                        break
+                    end
+                end
+            end
+
+            if matches then
+                local overrideScore = isOverride and 2000 or 0
+                local tierScore = (c.tier == "CORE" and 1000) or (c.tier == "RESERVE" and 500) or 100
+                local skillNeedScore = math.max(0, 300 - profRank)
+                local score = overrideScore + tierScore + skillNeedScore
+                if score > bestScore then
+                    bestScore = score
+                    bestChar = c
+                end
             end
         end
     end
@@ -3566,7 +3749,8 @@ end
 function CLIAlts:FindBankMule()
     local chars = self:GetCharactersList("level", false)
     for _, c in ipairs(chars) do
-        if c.tier == "BANK" then
+        local srole = (c.supply_role or ""):lower()
+        if c.tier == "BANK" or srole:find("bank", 1, true) or srole:find("mule", 1, true) or srole:find("storage", 1, true) then
             return c
         end
     end

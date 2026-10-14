@@ -996,9 +996,9 @@ function CLIAlts:RunSelfTest()
     Assert(sortedByRole[2].tier == "RESERVE", "Dashboard: RESERVE/ALT role sorted second")
     Assert(sortedByRole[3].tier == "BANK", "Dashboard: BANK role sorted third")
 
-    -- 21e. Context Menu & 6-Tab View Architectures
+    -- 21e. Context Menu & 7-Tab View Architectures
     if self.GetColumns then
-        for tabId = 1, 6 do
+        for tabId = 1, 7 do
             local cols = self:GetColumns(tabId)
             Assert(cols ~= nil and #cols > 0, "Navigation: Tab " .. tabId .. " returns valid column definitions")
         end
@@ -1009,7 +1009,7 @@ function CLIAlts:RunSelfTest()
         Assert(cm ~= nil, "Interactions: Context menu frame created successfully")
         if cm then
             Assert(cm:IsShown() == true, "Interactions: Context menu is shown on invocation")
-            Assert(cm.buttons ~= nil and #cm.buttons == 7, "Interactions: Context menu has 7 actionable buttons")
+            Assert(cm.buttons ~= nil and #cm.buttons == 8, "Interactions: Context menu has 8 actionable buttons")
             cm:Hide()
             Assert(cm:IsShown() == false, "Interactions: Context menu dismissed safely")
         end
@@ -1264,6 +1264,51 @@ function CLIAlts:RunSelfTest()
     -- 23h. PrintMailRouting execution
     local fbMail, okMail = self:PrintMailRouting()
     Assert(okMail == true and fbMail ~= nil, "Mail: PrintMailRouting executes cleanly")
+
+    -- 23i. Auto supply role deduction
+    local autoTailor = self:GetCharacterAutoSupplyRole(testMailDB.characters["Morvath-Forever"])
+    Assert(autoTailor:find("Cloth", 1, true) ~= nil, "Mail: Morvath auto suggests Cloth stream")
+    local autoAlch = self:GetCharacterAutoSupplyRole(testMailDB.characters["Thorne-Forever"])
+    Assert(autoAlch:find("Herb", 1, true) ~= nil, "Mail: Thorne auto suggests Herbs stream")
+    local autoMule = self:GetCharacterAutoSupplyRole(testMailDB.characters["Mule-Forever"])
+    Assert(autoMule:find("Bank", 1, true) ~= nil, "Mail: Mule auto suggests Bank Mule stream")
+
+    -- 23j. Effective supply role (Auto vs Manual Override)
+    local effRole, isOverride, autoSuggested = self:GetCharacterEffectiveSupplyRole(testMailDB.characters["Morvath-Forever"])
+    Assert(isOverride == false, "Mail: Morvath has no override initially")
+    Assert(effRole == autoSuggested, "Mail: Effective role matches auto-suggested role")
+
+    -- Set manual override
+    local setMsg, setOk = self:SetCharacterSupplyRole("Morvath-Forever", "Herbs (Alch)")
+    Assert(setOk == true and setMsg:find("Herbs") ~= nil, "Mail: SetCharacterSupplyRole overrides Morvath to Herbs")
+    local effRole2, isOverride2, _ = self:GetCharacterEffectiveSupplyRole(testMailDB.characters["Morvath-Forever"])
+    Assert(isOverride2 == true and effRole2 == "Herbs (Alch)", "Mail: Morvath now has manual override active")
+
+    -- Revert back to auto
+    local _, revOk = self:SetCharacterSupplyRole("Morvath-Forever", "auto")
+    Assert(revOk == true, "Mail: SetCharacterSupplyRole with 'auto' clears override")
+    local effRole3, isOverride3, _ = self:GetCharacterEffectiveSupplyRole(testMailDB.characters["Morvath-Forever"])
+    Assert(isOverride3 == false and effRole3:find("Cloth", 1, true) ~= nil, "Mail: Morvath reverted back to auto Cloth")
+
+    -- 23k. CycleCharacterSupplyRole
+    local nextRole1 = self:CycleCharacterSupplyRole(testMailDB.characters["Mule-Forever"])
+    Assert(nextRole1 == "Cloth (Tailor)", "Mail: First cycle from auto is Cloth (Tailor)")
+    local nextRole2 = self:CycleCharacterSupplyRole(testMailDB.characters["Mule-Forever"])
+    Assert(nextRole2 == "Herbs (Alch)", "Mail: Second cycle is Herbs (Alch)")
+
+    -- 23l. Mail Route Configuration Dialog
+    if self.ShowMailRouteDialog then
+        self:ShowMailRouteDialog(testMailDB.characters["Morvath-Forever"])
+        local dlg = self.GetMailRouteDialog and self:GetMailRouteDialog()
+        Assert(dlg ~= nil, "MailUI: MailRouteDialog created successfully")
+        if dlg then
+            Assert(dlg:IsShown() == true, "MailUI: MailRouteDialog is visible on invocation")
+            Assert(dlg.statusBox ~= nil, "MailUI: MailRouteDialog has status panel")
+            Assert(dlg.presetButtons ~= nil and #dlg.presetButtons >= 9, "MailUI: MailRouteDialog has 9 preset stream buttons")
+            dlg:Hide()
+            Assert(dlg:IsShown() == false, "MailUI: MailRouteDialog dismissed cleanly")
+        end
+    end
 
     CLIAltsDB = oldMailDB
     end

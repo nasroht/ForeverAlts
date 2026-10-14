@@ -33,7 +33,7 @@ The main dashboard is organized into **three streamlined visual regions** design
 ```
 
 ### 1. Unified Header & Navigation Bar
-- **Header Line**: Integrates the window title (`[#] CLIALTS :: ALT MONITOR` or `:: FOREVER ROUTE`) directly alongside the 6 view tabs (`[OVERVIEW]`, `[ROUTE]`, `[RESTED]`, `[PROFS]`, `[GOLD]`, `[CDS]`).
+- **Header Line**: Integrates the window title (`[#] CLIALTS :: ALT MONITOR` or `:: FOREVER ROUTE`) directly alongside the 7 view tabs (`[OVERVIEW]`, `[ROUTE]`, `[RESTED]`, `[PROFS]`, `[GOLD]`, `[CDS]`, `[MAIL]`).
 - **Control Affordances**: Compact action pills docked on the right: `[C]` (Compact mode), `[T]` (CRT Phosphor Theme), `[?]` (Help manual), and `[X]` (Close).
 - **Decluttered Layout**: Eliminates redundant ASCII divider bars to maximize vertical scanability and breathing room.
 
@@ -51,7 +51,7 @@ The main dashboard is organized into **three streamlined visual regions** design
 
 ---
 
-## 6 Dedicated Views
+## 7 Dedicated Views
 
 | Tab | View Name | Description | Key Columns |
 | :---: | :--- | :--- | :--- |
@@ -61,6 +61,7 @@ The main dashboard is organized into **three streamlined visual regions** design
 | **`4`** | **`[ PROFS ]`** | Primary and secondary crafting tracking with phase milestones. | `FAC`, `CHARACTER`, `LVL`, `PRIMARY PROF 1`, `PRIMARY PROF 2`, `SECONDARY SKILLS` |
 | **`5`** | **`[ GOLD ]`** | Wealth distribution, share percentages, and zone locations. | `FAC`, `CHARACTER`, `LVL`, `GOLD & SILVER`, `SHARE`, `LAST ZONE`, `HEARTHSTONE` |
 | **`6`** | **`[ CDS ]`** | Trade skill timers and dungeon/raid lockouts sorted by readiness. | `FAC`, `CHARACTER`, `LVL`, `TRADE COOLDOWNS`, `SAVED INSTANCES / LOCKS` |
+| **`7`** | **`[ MAIL ]`** | Mail routing and supply chain router with auto suggestions & manual overrides. | `FAC`, `CHARACTER`, `ROLE`, `PROFESSIONS`, `ASSIGNED MATERIALS`, `MODE`, `BAGS READY` |
 
 ---
 
@@ -180,7 +181,7 @@ Inside the CLIAlts window, type directly into the `> ` prompt:
 | Command | Description |
 | :--- | :--- |
 | `/clialts`, `/cli`, `/ca` | Toggle the main TUI monitor dashboard |
-| `/clialts [1-6]` | Switch directly to a specific tab (1: Overview, 2: Route, 3: Rested, 4: Profs, 5: Econ, 6: CDs) |
+| `/clialts [1-7]` | Switch directly to a specific tab (1: Overview, 2: Route, 3: Rested, 4: Profs, 5: Econ, 6: CDs, 7: Mail) |
 | `/clialts theme [name]` | Cycle or set phosphor theme (`amber`, `green`, `cyan`, `mono`, `safe`, `synthwave`, `dracula`) |
 | `/clialts compact` | Toggle one-key compact mode (680px slim window) |
 | `/clialts scale <0.7-1.8>` | Set UI scale (e.g. `1.2` or `120%`) |
