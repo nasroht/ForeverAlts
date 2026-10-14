@@ -171,7 +171,7 @@ C_Timer = C_Timer or {
 
 -- 4. Load CLIAlts Addon Files in TOC order
 local addon = {}
-local files = { "data.lua", "minimap.lua", "ui.lua", "core.lua" }
+local files = { "data.lua", "minimap.lua", "ui.lua", "core.lua", "tests/selftest.lua" }
 
 print("============================================================")
 print("CLIAlts CI Test Runner: Loading files under plain Lua 5.1...")

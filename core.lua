@@ -169,8 +169,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             CLIAlts:InitDB()
             CLIAlts:CacheCurrentPlayer()
             CLIAlts:CreateMinimapButton()
-            CLIAlts:CreateMainFrame()
-            CLIAlts:ApplyTheme()
             if CLIAlts.InitLDB then CLIAlts:InitLDB() end
             if CLIAlts.UpdateLDB then CLIAlts:UpdateLDB() end
         end
@@ -179,8 +177,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:InitDB()
         CLIAlts:CacheCurrentPlayer()
         CLIAlts:CreateMinimapButton()
-        CLIAlts:CreateMainFrame()
-        CLIAlts:ApplyTheme()
         if CLIAlts.InitLDB then CLIAlts:InitLDB() end
         if CLIAlts.UpdateLDB then CLIAlts:UpdateLDB() end
         CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
