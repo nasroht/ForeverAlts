@@ -3597,8 +3597,7 @@ end
 function CLIAlts:CycleCharacterSupplyRole(char)
     if not char then return "Auto" end
     local cur = (char.supply_role or ""):lower()
-    local nextRole = nil
-    local nextLabel = "Auto"
+    local nextRole, nextLabel
 
     if cur == "" or cur == "auto" then
         nextRole = "Cloth (Tailor)"

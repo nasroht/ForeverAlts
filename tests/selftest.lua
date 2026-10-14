@@ -1279,13 +1279,13 @@ function CLIAlts:RunSelfTest()
     Assert(effRole == autoSuggested, "Mail: Effective role matches auto-suggested role")
 
     -- Set manual override
-    local setMsg, setOk = self:SetCharacterSupplyRole("Morvath-Forever", "Herbs (Alch)")
+    local setOk, setMsg = self:SetCharacterSupplyRole("Morvath-Forever", "Herbs (Alch)")
     Assert(setOk == true and setMsg:find("Herbs") ~= nil, "Mail: SetCharacterSupplyRole overrides Morvath to Herbs")
     local effRole2, isOverride2, _ = self:GetCharacterEffectiveSupplyRole(testMailDB.characters["Morvath-Forever"])
     Assert(isOverride2 == true and effRole2 == "Herbs (Alch)", "Mail: Morvath now has manual override active")
 
     -- Revert back to auto
-    local _, revOk = self:SetCharacterSupplyRole("Morvath-Forever", "auto")
+    local revOk, _ = self:SetCharacterSupplyRole("Morvath-Forever", "auto")
     Assert(revOk == true, "Mail: SetCharacterSupplyRole with 'auto' clears override")
     local effRole3, isOverride3, _ = self:GetCharacterEffectiveSupplyRole(testMailDB.characters["Morvath-Forever"])
     Assert(isOverride3 == false and effRole3:find("Cloth", 1, true) ~= nil, "Mail: Morvath reverted back to auto Cloth")

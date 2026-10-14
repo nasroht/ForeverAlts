@@ -980,6 +980,8 @@ local function FmtForeverStatus(char, t)
     local est = rested.isEstimate and "~" or ""
     return string.format("|cff%s%d%%%s Rested|r", t.primaryHex, pct, est)
 end
+CLIAlts.FmtForeverStatus = FmtForeverStatus
+
 -- Tab 7 Mail Routing & Supply Chain Formatters
 local function FmtMailProfessions(char, t)
     t = t or CLIAlts:GetTheme()
@@ -2379,6 +2381,10 @@ function CLIAlts:Render()
     -- ------------------------------------------------------------------------
     -- Level 1: Recommended Next Action Hero Card / Mail Dispatch Hero Card
     -- ------------------------------------------------------------------------
+    local nextList = self:GetNextAltsPriority()
+    self._cachedPriorityList = nextList
+    local topNext = nextList and nextList[1]
+
     if activeTab == 7 then
         mainFrame.recChar = nil
         if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
@@ -2436,9 +2442,6 @@ function CLIAlts:Render()
         if mainFrame.recBtnSetup and mainFrame.recBtnSetup.label then
             mainFrame.recBtnSetup.label:SetText("[ GUIDE ]")
         end
-        local nextList = self:GetNextAltsPriority()
-        self._cachedPriorityList = nextList
-        local topNext = nextList and nextList[1]
         if topNext then
             local tc = topNext.char
             mainFrame.recChar = tc
