@@ -12,7 +12,7 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 -- Constants & Terminal Configuration
 -- ----------------------------------------------------------------------------
 local FONT_PATH = "Interface\\AddOns\\" .. (addonName or "clialts") .. "\\media\\VT323-Regular.ttf"
-local DEFAULT_FONT_SIZE = 15
+local DEFAULT_FONT_SIZE = 18
 local LINE_WIDTH = 110
 local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
 
@@ -950,7 +950,7 @@ end
 
 function CLIAlts:SetFontSize(size)
     size = tonumber(size) or DEFAULT_FONT_SIZE
-    size = math.min(22, math.max(12, size))
+    size = math.min(24, math.max(12, size))
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.fontSize = size
     end
@@ -1527,62 +1527,62 @@ CLIAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
     [1] = { -- 1: OVERVIEW
-        { key = "name",      title = "CHARACTER",         w = 26, pw = 360, cpw = 300, mpw = 240, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 70,  mpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "rested",    title = "RESTED XP",         w = 32, pw = 450, cpw = 380, mpw = 270, align = "LEFT",   sort = "rested",   fmt = FmtRested },
-        { key = "eta",       title = "STATUS",            w = 14, pw = 200, cpw = 0,   mpw = 110, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "name",      title = "CHARACTER",         w = 26, pw = 360, cpw = 300, mpw = 310, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 70,  mpw = 70,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "rested",    title = "RESTED XP",         w = 32, pw = 450, cpw = 380, mpw = 305, align = "LEFT",   sort = "rested",   fmt = FmtRested },
+        { key = "eta",       title = "STATUS",            w = 14, pw = 200, cpw = 0,   mpw = 130, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [2] = { -- 2: FOREVER ROUTE
-        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, mpw = 110, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  mpw = 48,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
-        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  mpw = 50,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
-        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  mpw = 80,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
-        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  mpw = 65,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
+        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 38,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
+        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
+        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  mpw = 95,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
+        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  mpw = 75,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
         { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
-        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 290, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
+        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 370, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
     },
     [3] = { -- 3: RESTED XP MONITOR
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, mpw = 115, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 34,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   mpw = 115, padRight = 10, mpadRight = 10, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 115, padRight = 14, cpadRight = 10, mpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 118, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 75,  padRight = 8, mpadRight = 8, align = "RIGHT",  fmt = FmtRate },
-        { key = "eta",       title = "STATUS",            w = 12, pw = 150, cpw = 120, mpw = 78,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, mpw = 145, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   mpw = 135, padRight = 10, mpadRight = 10, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
+        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 140, padRight = 14, cpadRight = 10, mpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 150, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 85,  padRight = 8, mpadRight = 8, align = "RIGHT",  fmt = FmtRate },
+        { key = "eta",       title = "STATUS",            w = 12, pw = 150, cpw = 120, mpw = 90,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 300, cpw = 220, mpw = 170, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
-        { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 295, cpw = 220, mpw = 170, align = "LEFT",   fmt = FmtProf2 },
-        { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 250, cpw = 180, mpw = 150, align = "LEFT",   fmt = FmtSecProf },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 155, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 300, cpw = 220, mpw = 205, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
+        { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 295, cpw = 220, mpw = 205, align = "LEFT",   fmt = FmtProf2 },
+        { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 250, cpw = 180, mpw = 180, align = "LEFT",   fmt = FmtSecProf },
     },
     [5] = { -- 5: ECONOMY & WEALTH
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD & SILVER",     w = 14, pw = 200, cpw = 160, mpw = 145, padRight = 32, cpadRight = 20, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
-        { key = "location",  title = "LAST ZONE",         w = 18, pw = 310, cpw = 220, mpw = 170, align = "LEFT",   sort = "location", fmt = FmtLocation },
-        { key = "hearth",    title = "HEARTHSTONE",       w = 18, pw = 330, cpw = 230, mpw = 175, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 155, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "gold",      title = "GOLD & SILVER",     w = 14, pw = 200, cpw = 160, mpw = 175, padRight = 32, cpadRight = 20, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "location",  title = "LAST ZONE",         w = 18, pw = 310, cpw = 220, mpw = 205, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",       w = 18, pw = 330, cpw = 230, mpw = 210, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [6] = { -- 6: COOLDOWNS & INSTANCE LOCKS
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, mpw = 245, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
-        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, mpw = 245, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 155, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, mpw = 295, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
+        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, mpw = 295, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
     },
     [7] = { -- 7: MAIL ROUTING & SUPPLY CHAIN
-        { key = "fac",       title = "FAC",                 w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",           w = 16, pw = 160, cpw = 130, mpw = 120, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "tier",      title = "ROLE",                w = 8,  pw = 65,  cpw = 55,  mpw = 48,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
-        { key = "profs",     title = "PROFESSIONS",         w = 20, pw = 240, cpw = 175, mpw = 135, align = "LEFT",   sort = "prof",     fmt = FmtMailProfessions },
-        { key = "route",     title = "ASSIGNED MATERIALS",  w = 24, pw = 280, cpw = 210, mpw = 165, align = "LEFT",   sort = "supply",   fmt = FmtMailRoute },
-        { key = "mode",      title = "MODE",                w = 8,  pw = 110, cpw = 90,  mpw = 75,  align = "CENTER", fmt = FmtMailMode },
-        { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 115, align = "RIGHT",  fmt = FmtMailPending },
+        { key = "fac",       title = "FAC",                 w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",           w = 16, pw = 160, cpw = 130, mpw = 150, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "tier",      title = "ROLE",                w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
+        { key = "profs",     title = "PROFESSIONS",         w = 20, pw = 240, cpw = 175, mpw = 160, align = "LEFT",   sort = "prof",     fmt = FmtMailProfessions },
+        { key = "route",     title = "ASSIGNED MATERIALS",  w = 24, pw = 280, cpw = 210, mpw = 195, align = "LEFT",   sort = "supply",   fmt = FmtMailRoute },
+        { key = "mode",      title = "MODE",                w = 8,  pw = 110, cpw = 90,  mpw = 85,  align = "CENTER", fmt = FmtMailMode },
+        { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 140, align = "RIGHT",  fmt = FmtMailPending },
     },
 }
 
@@ -1649,7 +1649,7 @@ end
 function CLIAlts:ApplyLayoutSize()
     if not mainFrame then return end
     if not mainFrame.isLegacyUI then
-        mainFrame:SetSize(1260, 800)
+        mainFrame:SetSize(1440, 800)
         return
     end
     local isComp = self:IsCompact()
@@ -2780,7 +2780,7 @@ function CLIAlts:CreateLegacyMainFrame()
 end
 
 -- ============================================================================
--- Modern v2 Main Frame Construction (Design System v2: 1260x800)
+-- Modern v2 Main Frame Construction (Design System v2: 1440x800)
 -- ============================================================================
 function CLIAlts:CreateModernMainFrame()
     if mainFrame then return mainFrame end
@@ -2793,7 +2793,7 @@ function CLIAlts:CreateModernMainFrame()
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame.isLegacyUI = false
     frame:Hide()
-    frame:SetSize(1260, 800)
+    frame:SetSize(1440, 800)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
@@ -2953,7 +2953,9 @@ function CLIAlts:CreateModernMainFrame()
     frame.btnSettings = btnSettings
 
     local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-    local btnPerk = CreateRetroButton(topBar, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 136, 22, function(self)
+    local initLpData = CLIAlts:CalculateAccountLP()
+    local initLpVal = (initLpData and initLpData.effectiveLP) or 0
+    local btnPerk = CreateRetroButton(topBar, string.format("[ WELL RESTED: R%d · %.1f LP ]", initPerkRank, initLpVal), 170, 22, function(self)
         CLIAlts:CycleWellRestedPerk()
         if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
@@ -2990,11 +2992,11 @@ function CLIAlts:CreateModernMainFrame()
     end
     frame.btnPerk = btnPerk
 
-    -- 2. Left Sidebar (190px)
+    -- 2. Left Sidebar (210px)
     local sidebar = CreateFrame("Frame", "CLIAltsSidebar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
     sidebar:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -48)
     sidebar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 34)
-    sidebar:SetWidth(190)
+    sidebar:SetWidth(210)
     sidebar:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3019,7 +3021,7 @@ function CLIAlts:CreateModernMainFrame()
     for _, def in ipairs(navDefs) do
         local thisTabId = def.id
         local navBtn = CreateFrame("Button", nil, sidebar, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        navBtn:SetSize(170, 34)
+        navBtn:SetSize(190, 34)
         if not prevNavBtn then
             navBtn:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 10, -14)
         else
@@ -3098,8 +3100,8 @@ function CLIAlts:CreateModernMainFrame()
 
     -- Pinned Account Wealth Widget at bottom of sidebar
     local wealthWidget = CreateFrame("Frame", "CLIAltsWealthWidget", sidebar)
-    wealthWidget:SetSize(166, 68)
-    wealthWidget:SetPoint("BOTTOMLEFT", sidebar, "BOTTOMLEFT", 14, 16)
+    wealthWidget:SetSize(186, 68)
+    wealthWidget:SetPoint("BOTTOMLEFT", sidebar, "BOTTOMLEFT", 12, 16)
     wealthWidget:EnableMouse(true)
     frame.wealthWidget = wealthWidget
 
@@ -3290,11 +3292,11 @@ function CLIAlts:CreateModernMainFrame()
         end
     end)
 
-    -- 4. Right Detail Panel (320px)
+    -- 4. Right Detail Panel (340px)
     local detailPanel = CreateFrame("Frame", "CLIAltsDetailPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
     detailPanel:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -56)
     detailPanel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 42)
-    detailPanel:SetWidth(320)
+    detailPanel:SetWidth(340)
     detailPanel:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3897,6 +3899,54 @@ function CLIAlts:CreateModernMainFrame()
     end)
     frame.btnSort = btnSort
 
+    -- Prominent Well Rested & LP Badge for Rested XP view
+    local wellRestedBadge = CreateFrame("Button", "CLIAltsWellRestedBadge", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    wellRestedBadge:SetHeight(22)
+    wellRestedBadge:SetWidth(220)
+    wellRestedBadge:SetPoint("RIGHT", btnSort, "LEFT", -10, 0)
+    wellRestedBadge:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if wellRestedBadge.SetBackdropColor then wellRestedBadge:SetBackdropColor(panelR, panelG, panelB, 0.85) end
+    if wellRestedBadge.SetBackdropBorderColor then wellRestedBadge:SetBackdropBorderColor(brandR, brandG, brandB, 0.85) end
+
+    local wellRestedBadgeText = wellRestedBadge:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(wellRestedBadgeText, 11, "OUTLINE")
+    wellRestedBadgeText:SetPoint("CENTER", wellRestedBadge, "CENTER", 0, 0)
+    wellRestedBadgeText:SetTextColor(brandR, brandG, brandB)
+    wellRestedBadge.text = wellRestedBadgeText
+    wellRestedBadge:Hide()
+    frame.wellRestedBadge = wellRestedBadge
+
+    wellRestedBadge:SetScript("OnClick", function()
+        CLIAlts:CycleWellRestedPerk()
+        CLIAlts:Render()
+    end)
+    wellRestedBadge:SetScript("OnEnter", function(self)
+        if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:AddLine("WoW Forever: Well Rested & Legacy Points", 1, 0.82, 0)
+        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local lpData = CLIAlts:CalculateAccountLP()
+        GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 1, 1, 1)
+        GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
+        GameTooltip:AddLine("Commands: |cff00ff66/ca perk <0-5>|r  |cff00ff66/ca lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    wellRestedBadge:SetScript("OnLeave", function(self)
+        if self.SetBackdropColor then self:SetBackdropColor(panelR, panelG, panelB, 0.85) end
+        GameTooltip:Hide()
+    end)
+
     local mailActionBar = CreateFrame("Frame", "CLIAltsMailActionBar", filterBar)
     mailActionBar:SetAllPoints(filterBar)
     mailActionBar:Hide()
@@ -3939,7 +3989,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.headerCells = {}
     for i = 1, 8 do
         local hCell = headerFrame:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(hCell, 11, "OUTLINE")
+        self:SetWidgetFont(hCell, 12, "OUTLINE")
         hCell:SetWordWrap(false)
         hCell:SetHeight(18)
         frame.headerCells[i] = hCell
@@ -4033,40 +4083,40 @@ function CLIAlts:CreateModernMainFrame()
         row.classRing = classRing
 
         local classRingInitial = classRing:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(classRingInitial, 15, "OUTLINE")
+        self:SetWidgetFont(classRingInitial, 16, "OUTLINE")
         classRingInitial:SetPoint("CENTER", classRing, "CENTER", 0, 0)
         row.classRingInitial = classRingInitial
 
         -- Name & Subline (level race class · faction)
-        -- Separated cleanly with vertical clearance and generous horizontal width (up to x=305)
+        -- Separated cleanly with vertical clearance and generous horizontal width (up to x=385)
         local nameLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(nameLine, 14, "OUTLINE")
+        self:SetWidgetFont(nameLine, 16, "OUTLINE")
         nameLine:SetPoint("TOPLEFT", classRing, "TOPRIGHT", 12, 1)
-        nameLine:SetPoint("RIGHT", row, "LEFT", 305, 0)
+        nameLine:SetPoint("RIGHT", row, "LEFT", 385, 0)
         nameLine:SetJustifyH("LEFT")
         nameLine:SetWordWrap(false)
         nameLine:SetText("")
         row.nameLine = nameLine
 
         local subLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(subLine, 11, "")
+        self:SetWidgetFont(subLine, 13, "")
         subLine:SetPoint("BOTTOMLEFT", classRing, "BOTTOMRIGHT", 12, 0)
-        subLine:SetPoint("RIGHT", row, "LEFT", 305, 0)
+        subLine:SetPoint("RIGHT", row, "LEFT", 385, 0)
         subLine:SetJustifyH("LEFT")
         subLine:SetWordWrap(false)
         subLine:SetText("")
         row.subLine = subLine
 
-        -- Rested XP Progress Bar & Label (anchored with generous room at x=320)
+        -- Rested XP Progress Bar & Label (anchored with generous room at x=405)
         local restLabel = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(restLabel, 12, "OUTLINE")
-        restLabel:SetPoint("BOTTOMLEFT", row, "LEFT", 320, 4)
+        self:SetWidgetFont(restLabel, 13, "OUTLINE")
+        restLabel:SetPoint("BOTTOMLEFT", row, "LEFT", 405, 4)
         restLabel:SetText("")
         row.restLabel = restLabel
         row.restPercentText = restLabel
 
         local restBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        restBarBg:SetSize(140, 6)
+        restBarBg:SetSize(160, 6)
         restBarBg:SetPoint("TOPLEFT", restLabel, "BOTTOMLEFT", 0, -3)
         restBarBg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -4110,7 +4160,7 @@ function CLIAlts:CreateModernMainFrame()
 
         -- Status Pill
         local statusPill = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        statusPill:SetSize(104, 24)
+        statusPill:SetSize(120, 24)
         statusPill:SetPoint("LEFT", restBarBg, "RIGHT", 20, 6)
         statusPill:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -4121,7 +4171,7 @@ function CLIAlts:CreateModernMainFrame()
         row.statusPill = statusPill
 
         local statusPillText = statusPill:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(statusPillText, 11, "OUTLINE")
+        self:SetWidgetFont(statusPillText, 12, "OUTLINE")
         statusPillText:SetPoint("CENTER", statusPill, "CENTER", 0, 0)
         statusPillText:SetText("")
         row.statusPillText = statusPillText
@@ -4129,7 +4179,7 @@ function CLIAlts:CreateModernMainFrame()
 
         -- Right-Aligned Gold Value
         local goldText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(goldText, 14, "OUTLINE")
+        self:SetWidgetFont(goldText, 16, "OUTLINE")
         goldText:SetPoint("RIGHT", row, "RIGHT", -16, 0)
         goldText:SetJustifyH("RIGHT")
         goldText:SetText("")
@@ -4139,9 +4189,9 @@ function CLIAlts:CreateModernMainFrame()
         row.cells = {}
         for j = 1, 8 do
             local cell = row:CreateFontString(nil, "OVERLAY")
-            self:SetWidgetFont(cell, 12)
+            self:SetWidgetFont(cell, 13)
             cell:SetWordWrap(false)
-            cell:SetHeight(18)
+            cell:SetHeight(20)
             cell:SetText("")
             row.cells[j] = cell
         end
@@ -4611,6 +4661,11 @@ function CLIAlts:Render()
     if mainFrame.subViewFilters then
         if activeTab == 7 then
             mainFrame.subViewFilters:SetText("CLICK ALT TO CONFIGURE ROUTING · SHIFT-CLICK TO CYCLE")
+        elseif activeTab == 3 then
+            local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+            local lpData = self:CalculateAccountLP()
+            local lpVal = (lpData and lpData.effectiveLP) or 0
+            mainFrame.subViewFilters:SetText(string.format("WELL RESTED: RANK %d (+%d%%) · ACCOUNT LP: %.1f LP", r, r * 4, lpVal))
         else
             mainFrame.subViewFilters:SetText("RESTED XP    PROFESSIONS    ECONOMY")
         end
@@ -4668,6 +4723,20 @@ function CLIAlts:Render()
         end
     end
 
+    if mainFrame.wellRestedBadge then
+        if activeTab == 3 and not self:IsRetail() then
+            local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+            local lpData = self:CalculateAccountLP()
+            local lpVal = (lpData and lpData.effectiveLP) or 0
+            local badgeStr = string.format("Well Rested: Rank %d (+%d%%) · %.1f LP", r, r * 4, lpVal)
+            mainFrame.wellRestedBadge.text:SetText(badgeStr)
+            mainFrame.wellRestedBadge:SetWidth(math.max(160, #badgeStr * 7 + 20))
+            mainFrame.wellRestedBadge:Show()
+        else
+            mainFrame.wellRestedBadge:Hide()
+        end
+    end
+
     if mainFrame.headerFrame then
         if activeTab == 1 then
             mainFrame.headerFrame:Hide()
@@ -4688,7 +4757,10 @@ function CLIAlts:Render()
             mainFrame.btnPerk:Show()
             if mainFrame.btnPerk.label then
                 local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-                mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
+                local lpData = self:CalculateAccountLP()
+                local lpVal = (lpData and lpData.effectiveLP) or 0
+                mainFrame.btnPerk.label:SetText(string.format("[ WELL RESTED: R%d · %.1f LP ]", r, lpVal))
+                mainFrame.btnPerk:SetWidth(170)
             end
         end
     end
@@ -5070,7 +5142,7 @@ function CLIAlts:Render()
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
     local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v6"
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v7"
     local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
     if relayoutHeaders and mainFrame.headerFrame then
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
@@ -5313,8 +5385,8 @@ function CLIAlts:Render()
                             local pct = rested.percent or 0
                             local maxPct = rested.maxPercent or 150
                             local ratio = math.min(1.0, math.max(0, pct / maxPct))
-                            local maxBarW = (row.restBarBg and row.restBarBg.GetWidth and row.restBarBg:GetWidth()) or 140
-                            if not maxBarW or maxBarW <= 0 then maxBarW = 140 end
+                            local maxBarW = (row.restBarBg and row.restBarBg.GetWidth and row.restBarBg:GetWidth()) or 160
+                            if not maxBarW or maxBarW <= 0 then maxBarW = 160 end
                             local barW = math.floor(maxBarW * ratio)
                             if row.restBarFill then
                                 row.restBarFill:SetWidth(math.max(1, barW))
@@ -5400,7 +5472,7 @@ function CLIAlts:Render()
                         if row.goldText then row.goldText:Hide() end
 
                         local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v6"
+                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v7"
                         local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                         if relayoutRow then
                             row.lastLayoutKey = rowLayoutKey

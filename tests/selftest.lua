@@ -443,11 +443,11 @@ function CLIAlts:RunSelfTest()
         local modernFrame = self:RecreateMainFrame()
         Assert(modernFrame ~= nil, "ModernUI: RecreateMainFrame creates modern frame")
         Assert(modernFrame.isLegacyUI == false, "ModernUI: isLegacyUI flag is false")
-        Assert(modernFrame:GetWidth() == 1260 and modernFrame:GetHeight() == 800,
-            "ModernUI: base dimensions are 1260x800")
+        Assert(modernFrame:GetWidth() == 1440 and modernFrame:GetHeight() == 800,
+            "ModernUI: base dimensions are 1440x800")
         Assert(modernFrame.topBar ~= nil, "ModernUI: 48px top bar created")
-        Assert(modernFrame.sidebar ~= nil, "ModernUI: 190px sidebar created")
-        Assert(modernFrame.detailPanel ~= nil, "ModernUI: 320px right detail panel created")
+        Assert(modernFrame.sidebar ~= nil, "ModernUI: 210px sidebar created")
+        Assert(modernFrame.detailPanel ~= nil, "ModernUI: 340px right detail panel created")
         Assert(modernFrame.cmdBar ~= nil, "ModernUI: 34px bottom command bar created")
         Assert(modernFrame.searchBox ~= nil, "ModernUI: search EditBox created in top bar")
         Assert(modernFrame.wealthWidget ~= nil, "ModernUI: wealth widget created in sidebar")
@@ -535,7 +535,7 @@ function CLIAlts:RunSelfTest()
         for _, col in ipairs(cols7) do
             totalMpw = totalMpw + (col.mpw or 0)
         end
-        Assert(totalMpw <= 700, "ModernMailUI: Tab 7 columns total mpw fits in 700px container")
+        Assert(totalMpw <= 850, "ModernMailUI: Tab 7 columns total mpw fits in 854px container")
 
         -- Test switching back to Tab 1
         CLIAltsDB.settings.activeTab = 1
@@ -2946,7 +2946,7 @@ function CLIAlts:RunSelfTest()
     local modFrame = self:CreateModernMainFrame()
     Assert(modFrame ~= nil and modFrame.isLegacyUI == false, "ModernUI: CreateModernMainFrame creates modern frame")
 
-    -- 28a. Tab 3 (Rested XP Monitor) Modern Columns Fit within 700px bounds
+    -- 28a. Tab 3 (Rested XP Monitor) Modern Columns Fit within 854px bounds
     local tab3Cols = self:GetColumns(3)
     Assert(#tab3Cols == 8, "ModernUI: Tab 3 has 8 active columns in modern view")
     local totalMpw = 0
@@ -2954,7 +2954,7 @@ function CLIAlts:RunSelfTest()
         Assert(col.mpw and col.mpw > 0, string.format("ModernUI: Tab 3 col '%s' defines positive mpw", col.key or "unknown"))
         totalMpw = totalMpw + (col.mpw or 0)
     end
-    Assert(totalMpw <= 700, string.format("ModernUI: Tab 3 total modern column width (%dpx) fits inside row bounds (<= 700px)", totalMpw))
+    Assert(totalMpw <= 850, string.format("ModernUI: Tab 3 total modern column width (%dpx) fits inside row bounds (<= 850px)", totalMpw))
 
     -- 28b. Concise Modern XP & Rested Formatters
     local mockAlt = {

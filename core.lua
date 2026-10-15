@@ -661,15 +661,15 @@ local function SlashHandler(msg)
     elseif cmd == "font" or cmd == "fontsize" then
         if arg and arg ~= "" then
             local sz = tonumber(arg)
-            if sz and sz >= 12 and sz <= 22 then
+            if sz and sz >= 12 and sz <= 24 then
                 CLIAlts:SetFontSize(sz)
                 CLIAlts:Print(string.format("Terminal font size set to %dpx.", sz))
             else
-                CLIAlts:Print("Usage: |cff00ff66/clialts font <12-22>|r")
+                CLIAlts:Print("Usage: |cff00ff66/clialts font <12-24>|r")
             end
         else
-            local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 15
-            CLIAlts:Print(string.format("Current font size: %dpx. Usage: |cff00ff66/clialts font <12-22>|r", cur))
+            local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
+            CLIAlts:Print(string.format("Current font size: %dpx. Usage: |cff00ff66/clialts font <12-24>|r", cur))
         end
 
     elseif cmd == "gold" then
