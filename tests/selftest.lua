@@ -620,7 +620,7 @@ function CLIAlts:RunSelfTest()
         Assert(r1.subLine:GetText() == "47 Orc Warrior · Horde", "RowList: Row 1 displays subline '47 Orc Warrior · Horde'")
         Assert(r1.classRingInitial:GetText() == "T", "RowList: Row 1 displays initial 'T'")
         Assert(r1.goldText:GetText() == "412g", "RowList: Row 1 displays formatted gold '412g'")
-        Assert(r1.restLabel:GetText() == "150% rested (cap)", "RowList: Row 1 displays '150% rested (cap)'")
+        Assert(r1.restLabel:GetText() == "5% XP (1,000 / 20,000)", "RowList: Row 1 displays level XP progress '5% XP (1,000 / 20,000)'")
         Assert(r1.statusPillText:GetText():find("Losing") ~= nil, "RowList: Row 1 displays 'Losing' in status pill")
 
         -- Test Selection
@@ -1184,6 +1184,8 @@ function CLIAlts:RunSelfTest()
         -- Rested Card: Capped with waste
         Assert(dp.restedCard.status:GetText():find("Capped") ~= nil and dp.restedCard.status:GetText():find("wasted") ~= nil, "Phase 6: Rested card shows 'Capped ..., ~... XP wasted'")
         Assert(dp.restedCard.rate:GetText():find("banks about") ~= nil and dp.restedCard.rate:GetText():find("per hour") ~= nil, "Phase 6: Rested card rate displays 'banks about ... per hour'")
+        Assert(dp.restedCard.barBg ~= nil and dp.restedCard.barFill ~= nil, "Phase 6: Rested card has progress bar")
+        Assert(dp.restedCard.barBg:IsShown() == true, "Phase 6: Rested card progress bar is visible")
 
         -- Info Card: Location, Hearth, Last seen, Note
         Assert(dp.infoCard.loc:GetText():find("Orgrimmar") ~= nil, "Phase 6: infoCard shows location 'Orgrimmar'")

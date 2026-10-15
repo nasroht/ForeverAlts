@@ -3373,7 +3373,7 @@ function CLIAlts:CreateModernMainFrame()
     local restedCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     restedCard:SetPoint("TOPLEFT", detailAvatar, "BOTTOMLEFT", 0, -14)
     restedCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    restedCard:SetHeight(96)
+    restedCard:SetHeight(112)
     restedCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3405,9 +3405,30 @@ function CLIAlts:CreateModernMainFrame()
     rcStatus:SetTextColor(warnR, warnG, warnB)
     restedCard.status = rcStatus
 
+    local rcBarBg = CreateFrame("Frame", nil, restedCard, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    rcBarBg:SetHeight(8)
+    rcBarBg:SetPoint("TOPLEFT", rcStatus, "BOTTOMLEFT", 0, -4)
+    rcBarBg:SetPoint("RIGHT", restedCard, "RIGHT", -10, 0)
+    rcBarBg:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 0, right = 0, top = 0, bottom = 0 }
+    })
+    if rcBarBg.SetBackdropColor then rcBarBg:SetBackdropColor(lineR, lineG, lineB, 1.0) end
+    if rcBarBg.SetBackdropBorderColor then rcBarBg:SetBackdropBorderColor(0, 0, 0, 0) end
+    restedCard.barBg = rcBarBg
+
+    local rcBarFill = rcBarBg:CreateTexture(nil, "ARTWORK")
+    rcBarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+    rcBarFill:SetPoint("TOPLEFT", rcBarBg, "TOPLEFT", 0, 0)
+    rcBarFill:SetPoint("BOTTOMLEFT", rcBarBg, "BOTTOMLEFT", 0, 0)
+    rcBarFill:SetWidth(0)
+    restedCard.barFill = rcBarFill
+
     local rcRate = restedCard:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(rcRate, 13, "")
-    rcRate:SetPoint("TOPLEFT", rcStatus, "BOTTOMLEFT", 0, -3)
+    rcRate:SetPoint("TOPLEFT", rcBarBg, "BOTTOMLEFT", 0, -4)
     rcRate:SetPoint("RIGHT", restedCard, "RIGHT", -10, 0)
     rcRate:SetJustifyH("LEFT")
     rcRate:SetWordWrap(false)
@@ -4140,16 +4161,18 @@ function CLIAlts:CreateModernMainFrame()
         subLine:SetText("")
         row.subLine = subLine
 
-        -- Rested XP Progress Bar & Label (anchored with generous room at x=405)
+        -- Level XP Progress Bar & Label (anchored with generous room at x=405)
         local restLabel = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(restLabel, 13, "OUTLINE")
         restLabel:SetPoint("BOTTOMLEFT", row, "LEFT", 405, 4)
+        restLabel:SetJustifyH("LEFT")
+        restLabel:SetWordWrap(false)
         restLabel:SetText("")
         row.restLabel = restLabel
         row.restPercentText = restLabel
 
         local restBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        restBarBg:SetSize(160, 6)
+        restBarBg:SetSize(180, 7)
         restBarBg:SetPoint("TOPLEFT", restLabel, "BOTTOMLEFT", 0, -3)
         restBarBg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -4173,16 +4196,17 @@ function CLIAlts:CreateModernMainFrame()
         restBarBg:EnableMouse(true)
         restBarBg:SetScript("OnEnter", function(self)
             if row.charData then
-                local rested = CLIAlts:GetRestedData(row.charData)
-                local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-                local lpData = CLIAlts:CalculateAccountLP()
+                local xpData = CLIAlts:GetLevelProgressData(row.charData)
                 GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                GameTooltip:AddLine(string.format("Rested XP: %s", row.charData.name or ""), 1, 1, 1)
-                if rested and not rested.isMaxLevel then
-                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%d%%|r (~%s XP)", rested.percent or 0, CLIAlts:FormatNumber(rested.currentRested or 0)), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Cap: |cffffffff%d%%|r (Well Rested Rank %d: +%d%%)", rested.maxPercent or 150, r, r * 4), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Time to Cap: |cffffd700%s|r", rested.timeLeftStr or "---"), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 0.8, 0.8, 0.8)
+                GameTooltip:AddLine(string.format("Level %d Progress: %s", row.charData.level or 1, row.charData.name or ""), 1, 1, 1)
+                if xpData and not xpData.isMaxLevel then
+                    GameTooltip:AddLine(string.format("XP Gained: |cffffffff%s / %s|r (|cff00ff66%d%%|r)", CLIAlts:FormatNumber(xpData.curXP), CLIAlts:FormatNumber(xpData.maxXP), xpData.percent), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Remaining to Level %d: |cffffd700%s XP|r", (row.charData.level or 1) + 1, CLIAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
+                    local rested = CLIAlts:GetRestedData(row.charData)
+                    if rested and not rested.isMaxLevel then
+                        GameTooltip:AddLine(" ")
+                        GameTooltip:AddLine(string.format("Rested XP Pool: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.7, 0.7, 0.7)
+                    end
                 else
                     GameTooltip:AddLine("Level cap reached.", 0.8, 0.8, 0.8)
                 end
@@ -4195,6 +4219,7 @@ function CLIAlts:CreateModernMainFrame()
         local statusPill = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
         statusPill:SetSize(120, 24)
         statusPill:SetPoint("LEFT", restBarBg, "RIGHT", 20, 6)
+        restLabel:SetPoint("RIGHT", statusPill, "LEFT", -10, 0)
         statusPill:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -4466,6 +4491,16 @@ function CLIAlts:UpdateDetailPanel()
             local poolXP = rested.currentRested or rested.usableXP or 0
             local est = rested.isEstimate and "~" or ""
             local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
+
+            if dp.restedCard.barBg and dp.restedCard.barFill then
+                local ratio = math.min(1.0, math.max(0, pct / maxPct))
+                local maxBarW = dp.restedCard.barBg:GetWidth()
+                if not maxBarW or maxBarW <= 0 then maxBarW = 312 end
+                local barW = math.floor(maxBarW * ratio)
+                dp.restedCard.barFill:SetWidth(math.max(1, barW))
+                dp.restedCard.barBg:Show()
+            end
+
             if pct >= maxPct then
                 if wastedSec and wastedSec > 0 then
                     local dur = timeStr or "0m"
@@ -4477,6 +4512,9 @@ function CLIAlts:UpdateDetailPanel()
                     dp.restedCard.status:SetText(string.format("At Rested Cap (%d%%)", maxPct))
                     dp.restedCard.status:SetTextColor(fillR, fillG, fillB)
                 end
+                if dp.restedCard.barFill then
+                    dp.restedCard.barFill:SetVertexColor(warnR, warnG, warnB, 1.0)
+                end
                 if dp.restedCard.rate then
                     dp.restedCard.rate:SetText(string.format("Logging in now banks about %s XP per hour.", self:FormatNumber(estRate)))
                     dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
@@ -4484,6 +4522,9 @@ function CLIAlts:UpdateDetailPanel()
             else
                 dp.restedCard.status:SetText(string.format("%s%d%% Rested (%s XP pool)", est, pct, self:FormatNumber(poolXP)))
                 dp.restedCard.status:SetTextColor(brandR, brandG, brandB)
+                if dp.restedCard.barFill then
+                    dp.restedCard.barFill:SetVertexColor(fillR, fillG, fillB, 1.0)
+                end
                 if dp.restedCard.rate then
                     dp.restedCard.rate:SetText(string.format("Caps in %s · Banks about %s XP per hour", rested.timeLeftStr or "---", self:FormatNumber(estRate)))
                     dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
@@ -4493,6 +4534,9 @@ function CLIAlts:UpdateDetailPanel()
             if dp.restedCard.status then
                 dp.restedCard.status:SetText("Target Level Reached")
                 dp.restedCard.status:SetTextColor(fillR, fillG, fillB)
+            end
+            if dp.restedCard.barBg then
+                dp.restedCard.barBg:Hide()
             end
             if dp.restedCard.rate then
                 dp.restedCard.rate:SetText("Level cap reached - Rested XP no longer accumulates.")
@@ -5412,37 +5456,33 @@ function CLIAlts:Render()
                             row.subLine:Show()
                         end
 
-                        -- 4. Rested XP Status Bar & Label
-                        local rested = self:GetRestedData(char)
-                        if rested and not rested.isMaxLevel then
-                            local pct = rested.percent or 0
-                            local maxPct = rested.maxPercent or 150
-                            local ratio = math.min(1.0, math.max(0, pct / maxPct))
-                            local maxBarW = (row.restBarBg and row.restBarBg.GetWidth and row.restBarBg:GetWidth()) or 160
-                            if not maxBarW or maxBarW <= 0 then maxBarW = 160 end
+                        -- 4. Level Progress Bar & Label (XP gained out of required for next level)
+                        local xpData = self:GetLevelProgressData(char)
+                        if xpData and not xpData.isMaxLevel then
+                            local ratio = xpData.ratio or 0
+                            local maxBarW = (row.restBarBg and row.restBarBg.GetWidth and row.restBarBg:GetWidth()) or 180
+                            if not maxBarW or maxBarW <= 0 then maxBarW = 180 end
                             local barW = math.floor(maxBarW * ratio)
                             if row.restBarFill then
                                 row.restBarFill:SetWidth(math.max(1, barW))
+                                row.restBarFill:SetVertexColor(brandR, brandG, brandB, 1.0)
                             end
                             if row.restBarBg then
                                 row.restBarBg:Show()
                             end
 
                             if row.restLabel then
-                                if pct >= maxPct then
-                                    row.restLabel:SetText(string.format("%d%% rested (cap)", maxPct))
-                                    row.restLabel:SetTextColor(warnR, warnG, warnB)
-                                    if row.restBarFill then row.restBarFill:SetVertexColor(warnR, warnG, warnB, 1.0) end
+                                if xpData.maxXP and xpData.maxXP > 0 then
+                                    row.restLabel:SetText(string.format("%d%% XP (%s / %s)", xpData.percent, self:FormatNumber(xpData.curXP), self:FormatNumber(xpData.maxXP)))
                                 else
-                                    row.restLabel:SetText(string.format("%d%%", pct))
-                                    row.restLabel:SetTextColor(textR, textG, textB)
-                                    if row.restBarFill then row.restBarFill:SetVertexColor(fillR, fillG, fillB, 1.0) end
+                                    row.restLabel:SetText(string.format("%d%% XP", xpData.percent))
                                 end
+                                row.restLabel:SetTextColor(textR, textG, textB)
                                 row.restLabel:Show()
                             end
                         else
                             if row.restLabel then
-                                row.restLabel:SetText("Max level")
+                                row.restLabel:SetText("Max Level")
                                 row.restLabel:SetTextColor(mutedR, mutedG, mutedB)
                                 row.restLabel:Show()
                             end
@@ -5750,6 +5790,14 @@ function CLIAlts:ApplyTheme()
                 if card then
                     if card.SetBackdropColor then card:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
                     if card.SetBackdropBorderColor then card:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+                end
+            end
+            if dp.restedCard and dp.restedCard.barBg and dp.restedCard.barBg.SetBackdropColor then
+                dp.restedCard.barBg:SetBackdropColor(lineR, lineG, lineB, 1.0)
+            end
+            for _, r in ipairs(rowFrames) do
+                if r.restBarBg and r.restBarBg.SetBackdropColor then
+                    r.restBarBg:SetBackdropColor(lineR, lineG, lineB, 1.0)
                 end
             end
         end
