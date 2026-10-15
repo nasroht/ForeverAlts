@@ -129,6 +129,8 @@ local safeEvents = {
     "MAIL_CLOSED",
     "MAIL_SEND_SUCCESS",
     "MAIL_SUCCESS",
+    "BAG_OPEN",
+    "BAG_CLOSED",
     "HEARTHSTONE_BOUND",
     "QUEST_TURNED_IN",
     "QUEST_LOG_UPDATE",
@@ -322,6 +324,14 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
 
     elseif event == "BAG_UPDATE_DELAYED" or event == "BAG_UPDATE" then
         CLIAlts:ScheduleInventoryScan(CLIAlts.isBankOpen == true)
+        if CLIAlts.UpdateBagSortButtonAnchor then
+            CLIAlts:UpdateBagSortButtonAnchor()
+        end
+
+    elseif event == "BAG_OPEN" or event == "BAG_CLOSED" then
+        if CLIAlts.UpdateBagSortButtonAnchor then
+            CLIAlts:UpdateBagSortButtonAnchor()
+        end
 
     elseif event == "MAIL_SHOW" then
         CLIAlts:ScanMailInbox()

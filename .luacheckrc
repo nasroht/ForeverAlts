@@ -97,6 +97,9 @@ globals = {
     "WOW_PROJECT_CLASSIC",
     "GetBuildInfo",
     "C_AddOns",
+    "GetCVar",
+    "GetCVarBool",
+    "SetCVar",
 
     -- WoW Skills, Craft & Trade APIs
     "GetProfessions",
@@ -166,6 +169,11 @@ globals = {
     "GetSendMailItem",
     "ATTACHMENTS_MAX_SEND",
     "UseContainerItem",
+    "ToggleAllBags",
+    "OpenAllBags",
+    "CloseAllBags",
+    "OpenBag",
+    "CloseBag",
 
     -- WoW Hooking, Libraries & Profiling
     "hooksecurefunc",

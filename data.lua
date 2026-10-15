@@ -5590,6 +5590,18 @@ function CLIAlts:GetItemSortScore(itemID, count)
     return sortScore, sortKey, catPriority
 end
 
+local function DoPickupContainerItem(bag, slot)
+    if C_Container and C_Container.PickupContainerItem then
+        C_Container.PickupContainerItem(bag, slot)
+    elseif PickupContainerItem then
+        PickupContainerItem(bag, slot)
+    end
+end
+
+local function CanPickupContainerItem()
+    return (C_Container and C_Container.PickupContainerItem) or PickupContainerItem
+end
+
 function CLIAlts:ConsolidateBagStacks()
     if InCombatLockdown and InCombatLockdown() then return false end
     if CursorHasItem and CursorHasItem() then return false end
@@ -5631,10 +5643,10 @@ function CLIAlts:ConsolidateBagStacks()
                     local a = list[i]
                     local b = list[j]
                     if a and b and a.count < a.maxStack and b.count > 0 then
-                        if PickupContainerItem and ClearCursor then
+                        if CanPickupContainerItem() and ClearCursor then
                             ClearCursor()
-                            PickupContainerItem(b.bag, b.slot)
-                            PickupContainerItem(a.bag, a.slot)
+                            DoPickupContainerItem(b.bag, b.slot)
+                            DoPickupContainerItem(a.bag, a.slot)
                             ClearCursor()
                             local transfer = math.min(b.count, a.maxStack - a.count)
                             a.count = a.count + transfer
@@ -5663,14 +5675,28 @@ function CLIAlts:SortBags()
         return false
     end
 
-    -- 1. Check native Blizzard sorting API (Retail / Modern Classic)
+    -- 1. Check native Blizzard sorting API (Retail / Modern Classic / WoW Forever)
     if C_Container and C_Container.SortBags then
         local ok = pcall(C_Container.SortBags)
         if ok then
             self:Print("Bags sorted.")
+            if PlaySound and SOUNDKIT and SOUNDKIT.IG_BACKPACK_OPEN then
+                pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN)
+            end
             return true
         end
-    elseif _G["SortBags"] and type(_G["SortBags"]) == "function" and _G["SortBags"] ~= self.SortBags then
+    end
+
+    local autoSortBtn = rawget(_G, "BagItemAutoSortButton")
+    if autoSortBtn and autoSortBtn.Click then
+        local ok = pcall(function() autoSortBtn:Click() end)
+        if ok then
+            self:Print("Bags sorted.")
+            return true
+        end
+    end
+
+    if _G["SortBags"] and type(_G["SortBags"]) == "function" and _G["SortBags"] ~= self.SortBags then
         local ok = pcall(_G["SortBags"])
         if ok then
             self:Print("Bags sorted.")
@@ -5691,7 +5717,7 @@ function CLIAlts:StopBagSort()
 end
 
 function CLIAlts:StartCustomBagSort()
-    if not PickupContainerItem then
+    if not CanPickupContainerItem() then
         self:Print("Bag sorting API not available on this client.")
         return false
     end
@@ -5859,8 +5885,8 @@ function CLIAlts:StartCustomBagSort()
 
                 if sourceIdx then
                     ClearCursor()
-                    PickupContainerItem(current[sourceIdx].bag, current[sourceIdx].slot)
-                    PickupContainerItem(curItem.bag, curItem.slot)
+                    DoPickupContainerItem(current[sourceIdx].bag, current[sourceIdx].slot)
+                    DoPickupContainerItem(curItem.bag, curItem.slot)
                     ClearCursor()
                     return -- One move per tick
                 end

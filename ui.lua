@@ -5108,37 +5108,88 @@ function CLIAlts:ApplyThemeToBagButton()
     end
 end
 
+function CLIAlts:UpdateBagSortButtonAnchor()
+    local btn = self.bagSortButton
+    if not btn then return end
+    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false then
+        btn:Hide()
+        return
+    end
+
+    local combinedFrame = rawget(_G, "ContainerFrameCombinedBags")
+    local singleFrame = rawget(_G, "ContainerFrame1")
+
+    local combinedShown = combinedFrame and ((combinedFrame.IsVisible and combinedFrame:IsVisible()) or (combinedFrame.IsShown and combinedFrame:IsShown()))
+    local singleShown = singleFrame and ((singleFrame.IsVisible and singleFrame:IsVisible()) or (singleFrame.IsShown and singleFrame:IsShown()))
+
+    local targetParent = nil
+    local isCombined = false
+
+    if combinedShown then
+        targetParent = combinedFrame
+        isCombined = true
+    elseif singleShown then
+        targetParent = singleFrame
+        isCombined = false
+    else
+        -- Check CVar setting to pre-anchor to expected frame
+        local cvar = (GetCVar and GetCVar("combinedBags")) or (GetCVarBool and GetCVarBool("combinedBags") and "1" or "0")
+        if cvar == "1" and combinedFrame then
+            targetParent = combinedFrame
+            isCombined = true
+        else
+            targetParent = singleFrame or combinedFrame
+            isCombined = (targetParent == combinedFrame)
+        end
+    end
+
+    if not targetParent then return end
+
+    local closeBtn
+    if isCombined and combinedFrame then
+        closeBtn = combinedFrame.CloseButton or rawget(_G, "ContainerFrameCombinedBagsCloseButton")
+    elseif singleFrame then
+        closeBtn = singleFrame.CloseButton or rawget(_G, "ContainerFrame1CloseButton")
+    end
+
+    btn:SetParent(targetParent)
+    btn:ClearAllPoints()
+    if closeBtn then
+        btn:SetPoint("RIGHT", closeBtn, "LEFT", -3, 0)
+    else
+        btn:SetPoint("TOPRIGHT", targetParent, "TOPRIGHT", -28, -6)
+    end
+
+    local strata = targetParent:GetFrameStrata() or "HIGH"
+    btn:SetFrameStrata(strata)
+    local fl = targetParent:GetFrameLevel() or 10
+    if closeBtn and closeBtn.GetFrameLevel then
+        fl = math.max(fl, closeBtn:GetFrameLevel() or 10)
+    end
+    btn:SetFrameLevel(fl + 2)
+
+    if combinedShown or singleShown then
+        btn:Show()
+    else
+        btn:Hide()
+    end
+end
+
 function CLIAlts:InitBagSortButton()
-    if self.bagSortButton then return self.bagSortButton end
+    if self.bagSortButton then
+        self:UpdateBagSortButtonAnchor()
+        return self.bagSortButton
+    end
     if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false then
         return nil
     end
 
-    local parent = nil
-    local anchorTo = nil
-    if ContainerFrame1 and ContainerFrame1CloseButton then
-        parent = ContainerFrame1
-        anchorTo = ContainerFrame1CloseButton
-    elseif ContainerFrameCombinedBags and ContainerFrameCombinedBagsCloseButton then
-        parent = ContainerFrameCombinedBags
-        anchorTo = ContainerFrameCombinedBagsCloseButton
-    elseif ContainerFrame1 then
-        parent = ContainerFrame1
-        anchorTo = ContainerFrame1
-    elseif ContainerFrameCombinedBags then
-        parent = ContainerFrameCombinedBags
-        anchorTo = ContainerFrameCombinedBags
-    end
+    local combinedFrame = rawget(_G, "ContainerFrameCombinedBags")
+    local singleFrame = rawget(_G, "ContainerFrame1")
+    local defaultParent = combinedFrame or singleFrame or UIParent
 
-    if not parent then return nil end
-
-    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", defaultParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btn:SetSize(18, 18)
-    if anchorTo == ContainerFrame1CloseButton or anchorTo == ContainerFrameCombinedBagsCloseButton then
-        btn:SetPoint("RIGHT", anchorTo, "LEFT", -3, 0)
-    else
-        btn:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -28, -6)
-    end
     btn:SetFrameStrata("HIGH")
 
     if btn.SetBackdrop then
@@ -5171,6 +5222,7 @@ function CLIAlts:InitBagSortButton()
             GameTooltip:AddLine("|cfff2c94cCLIAlts: Bag Auto-Sort|r")
             GameTooltip:AddLine("|cff55e39aLeft-Click|r: Auto-sort and consolidate bags", 0.9, 0.9, 0.9)
             GameTooltip:AddLine("|cff57d6e8Right-Click|r: Open CLIAlts Dashboard", 0.9, 0.9, 0.9)
+            GameTooltip:AddLine("|cffa9a08cSupports both Combined Bags & Separate Bags|r", 0.7, 0.7, 0.7)
             GameTooltip:AddLine("|cffa9a08c/sortbags or /clialts sortbtn to toggle|r", 0.7, 0.7, 0.7)
             GameTooltip:Show()
         end
@@ -5196,6 +5248,44 @@ function CLIAlts:InitBagSortButton()
 
     self.bagSortButton = btn
     self:ApplyThemeToBagButton()
+
+    -- Hook show/hide on both container frames
+    local hookFrame = function(frame)
+        if frame and frame.HookScript and not frame.__clialtsHooked then
+            frame.__clialtsHooked = true
+            frame:HookScript("OnShow", function()
+                CLIAlts:UpdateBagSortButtonAnchor()
+            end)
+            frame:HookScript("OnHide", function()
+                CLIAlts:UpdateBagSortButtonAnchor()
+            end)
+        end
+    end
+
+    hookFrame(singleFrame)
+    hookFrame(combinedFrame)
+
+    -- Hook standard Blizzard bag toggle functions if available
+    if not self.hasHookedBagFunctions and hooksecurefunc then
+        self.hasHookedBagFunctions = true
+        if rawget(_G, "ToggleAllBags") then
+            pcall(hooksecurefunc, "ToggleAllBags", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+        end
+        if rawget(_G, "OpenAllBags") then
+            pcall(hooksecurefunc, "OpenAllBags", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+        end
+        if rawget(_G, "CloseAllBags") then
+            pcall(hooksecurefunc, "CloseAllBags", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+        end
+        if rawget(_G, "OpenBag") then
+            pcall(hooksecurefunc, "OpenBag", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+        end
+        if rawget(_G, "CloseBag") then
+            pcall(hooksecurefunc, "CloseBag", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+        end
+    end
+
+    self:UpdateBagSortButtonAnchor()
     return btn
 end
 
@@ -5215,9 +5305,8 @@ function CLIAlts:ToggleBagSortButton(enable)
     if enable then
         if not self.bagSortButton then
             self:InitBagSortButton()
-        end
-        if self.bagSortButton then
-            self.bagSortButton:Show()
+        else
+            self:UpdateBagSortButtonAnchor()
         end
     else
         if self.bagSortButton then

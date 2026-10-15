@@ -1578,6 +1578,29 @@ function CLIAlts:RunSelfTest()
     Assert(toggleOn == true and CLIAltsDB.settings.showBagSortButton == true, "ToggleBagSortButton(true) enables setting")
     Assert(sortBtn:IsShown() == true, "ToggleBagSortButton(true) shows button")
 
+    -- 25e. Bag Sort Button anchor switching between Combined Bags and Separate Bags
+    ContainerFrameCombinedBags:Show()
+    ContainerFrame1:Hide()
+    self:UpdateBagSortButtonAnchor()
+    Assert(sortBtn.parent == ContainerFrameCombinedBags, "UpdateBagSortButtonAnchor: Anchors to ContainerFrameCombinedBags when combined bags shown")
+    Assert(sortBtn:IsShown() == true, "UpdateBagSortButtonAnchor: Button visible on ContainerFrameCombinedBags")
+
+    ContainerFrameCombinedBags:Hide()
+    ContainerFrame1:Show()
+    self:UpdateBagSortButtonAnchor()
+    Assert(sortBtn.parent == ContainerFrame1, "UpdateBagSortButtonAnchor: Anchors to ContainerFrame1 when separate bags shown")
+    Assert(sortBtn:IsShown() == true, "UpdateBagSortButtonAnchor: Button visible on ContainerFrame1")
+
+    ContainerFrameCombinedBags:Hide()
+    ContainerFrame1:Hide()
+    self:UpdateBagSortButtonAnchor()
+    Assert(sortBtn:IsShown() == false, "UpdateBagSortButtonAnchor: Hides when all bag frames hidden")
+
+    -- Restore frames
+    ContainerFrameCombinedBags:Show()
+    ContainerFrame1:Show()
+    self:UpdateBagSortButtonAnchor()
+
     -- Clean up mocks
     GetItemInfoInstant = oldGetItemInfoInstant
     GetItemInfo = oldGetItemInfo

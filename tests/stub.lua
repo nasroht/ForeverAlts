@@ -47,10 +47,14 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:EnableMouseWheel(...) end
     function frame:SetMovable(...) end
     function frame:SetClampedToScreen(...) end
+    function frame:SetParent(p) self.parent = p end
+    function frame:GetParent() return self.parent end
     function frame:RegisterForClicks(...) end
     function frame:RegisterForDrag(...) end
-    function frame:SetFrameStrata(...) end
-    function frame:SetFrameLevel(...) end
+    function frame:SetFrameStrata(s) self.strata = s end
+    function frame:GetFrameStrata() return self.strata or "HIGH" end
+    function frame:SetFrameLevel(l) self.level = l end
+    function frame:GetFrameLevel() return self.level or 10 end
     function frame:SetBackdrop(...) end
     function frame:SetBackdropColor(...) end
     function frame:SetBackdropBorderColor(...) end
@@ -157,8 +161,17 @@ PickupContainerItem = PickupContainerItem or function(bag, slot) end
 GetContainerNumFreeSlots = GetContainerNumFreeSlots or function(bag) return 0, 0 end
 ContainerFrame1 = ContainerFrame1 or CreateDummyFrame("Frame", "ContainerFrame1")
 ContainerFrame1CloseButton = ContainerFrame1CloseButton or CreateDummyFrame("Button", "ContainerFrame1CloseButton", ContainerFrame1)
+ContainerFrame1.CloseButton = ContainerFrame1CloseButton
 ContainerFrameCombinedBags = ContainerFrameCombinedBags or CreateDummyFrame("Frame", "ContainerFrameCombinedBags")
 ContainerFrameCombinedBagsCloseButton = ContainerFrameCombinedBagsCloseButton or CreateDummyFrame("Button", "ContainerFrameCombinedBagsCloseButton", ContainerFrameCombinedBags)
+ContainerFrameCombinedBags.CloseButton = ContainerFrameCombinedBagsCloseButton
+BagItemAutoSortButton = BagItemAutoSortButton or CreateDummyFrame("Button", "BagItemAutoSortButton")
+BagItemAutoSortButton.Click = function(self) if C_Container and C_Container.SortBags then C_Container.SortBags() end end
+
+local mockCVars = { combinedBags = "0" }
+GetCVar = GetCVar or function(cvar) return mockCVars[cvar] or "0" end
+GetCVarBool = GetCVarBool or function(cvar) return mockCVars[cvar] == "1" end
+SetCVar = SetCVar or function(cvar, val) mockCVars[cvar] = tostring(val) end
 
 ATTACHMENTS_MAX_SEND = ATTACHMENTS_MAX_SEND or 12
 SendMailFrame = SendMailFrame or CreateDummyFrame("Frame", "SendMailFrame")
@@ -172,7 +185,11 @@ UseContainerItem = UseContainerItem or function(bag, slot) end
 C_Container = C_Container or {
     GetContainerNumSlots = function(bagID) return 0 end,
     GetContainerItemInfo = function(bagID, slot) return nil end,
+    PickupContainerItem = function(bagID, slot) end,
+    SortBags = function() end,
 }
+C_Container.PickupContainerItem = C_Container.PickupContainerItem or PickupContainerItem
+C_Container.SortBags = C_Container.SortBags or function() end
 C_QuestLog = C_QuestLog or {
     IsQuestFlaggedCompleted = function(questID) return false end,
     GetNumQuestLogEntries = function() return 0 end,
