@@ -1624,6 +1624,13 @@ function CLIAlts:RunSelfTest()
     }
     local oldGetItemData = self.GetContainerItemData
     local oldGetNumSlots = self.GetNumContainerSlots
+    local oldGetItemInfo = GetItemInfo
+    GetItemInfo = function(id)
+        if id == 2592 then
+            return "Wool Cloth", "item:2592", 1, 0, 0, "Trade Goods", "Cloth", 20, "", "", 10, 7, 5, 0
+        end
+        return nil
+    end
     self.GetContainerItemData = function(_, bag, slot)
         if mockBagItems[bag] and mockBagItems[bag][slot] then
             local itm = mockBagItems[bag][slot]
@@ -1681,6 +1688,7 @@ function CLIAlts:RunSelfTest()
     self.GetNumContainerSlots = oldGetNumSlots
     ClickSendMailItemButton = oldClickSendMail
     GetSendMailItem = oldGetSendMailItem
+    GetItemInfo = oldGetItemInfo
     SendMailFrame:Hide()
     CLIAltsDB = oldMailDB
     end

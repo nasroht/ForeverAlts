@@ -4008,7 +4008,7 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient)
     end
 
     -- Determine recipient group
-    local chosenGroup = nil
+    local chosenGroup
     if targetRecipient and summary.byRecipient[targetRecipient] then
         chosenGroup = summary.byRecipient[targetRecipient]
     else
