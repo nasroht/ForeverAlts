@@ -2545,6 +2545,7 @@ function CLIAlts:CreateLegacyMainFrame()
 
         rowFrames[i] = row
     end
+    frame.rowFrames = rowFrames
 
     -- Bottom border ASCII line
     local tableBotAscii = frame:CreateFontString(nil, "OVERLAY")
@@ -2806,6 +2807,33 @@ function CLIAlts:CreateModernMainFrame()
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         CLIAlts:SaveWindowPosition(self)
+    end)
+
+    -- Keyboard Navigation (Phase 6: Up/Down arrow selection and Enter)
+    frame:EnableKeyboard(true)
+    if frame.SetPropagateKeyboardInput then
+        frame:SetPropagateKeyboardInput(true)
+    end
+    frame:SetScript("OnKeyDown", function(self, key)
+        if InCombatLockdown and InCombatLockdown() then return end
+        if (self.searchBox and self.searchBox:HasFocus())
+            or (self.promptBox and self.promptBox:HasFocus()) then
+            return
+        end
+
+        if key == "UP" or key == "DOWN" then
+            CLIAlts:NavigateSelection(key == "UP" and -1 or 1)
+        elseif key == "ENTER" then
+            local char = CLIAlts:GetSelectedOrCurChar()
+            if char then
+                if CLIAlts:IsCompact() then
+                    CLIAlts:ShowDossierPopup(char)
+                else
+                    CLIAlts:UpdateDetailPanel()
+                    CLIAlts:Render()
+                end
+            end
+        end
     end)
 
     frame:SetBackdrop({
@@ -3286,11 +3314,149 @@ function CLIAlts:CreateModernMainFrame()
     rcRate:SetTextColor(mutedR, mutedG, mutedB)
     restedCard.rate = rcRate
 
-    -- Mail & Supply Stream Card
+    -- 2b. Location, Hearth, Last Seen, Note Card (Phase 6)
+    local infoCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    infoCard:SetPoint("TOPLEFT", restedCard, "BOTTOMLEFT", 0, -8)
+    infoCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
+    infoCard:SetHeight(86)
+    infoCard:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if infoCard.SetBackdropColor then infoCard:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+    if infoCard.SetBackdropBorderColor then infoCard:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    detailPanel.infoCard = infoCard
+
+    local icHeader = infoCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(icHeader, 10, "")
+    icHeader:SetPoint("TOPLEFT", infoCard, "TOPLEFT", 10, -8)
+    icHeader:SetText("LOCATION & STATUS")
+    icHeader:SetTextColor(mutedR, mutedG, mutedB)
+    infoCard.header = icHeader
+
+    local icLoc = infoCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(icLoc, 11, "")
+    icLoc:SetPoint("TOPLEFT", icHeader, "BOTTOMLEFT", 0, -2)
+    icLoc:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
+    icLoc:SetJustifyH("LEFT")
+    icLoc:SetText("Location: Unknown")
+    icLoc:SetTextColor(textR, textG, textB)
+    infoCard.loc = icLoc
+
+    local icHearth = infoCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(icHearth, 11, "")
+    icHearth:SetPoint("TOPLEFT", icLoc, "BOTTOMLEFT", 0, -2)
+    icHearth:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
+    icHearth:SetJustifyH("LEFT")
+    icHearth:SetText("Hearth: Unknown")
+    icHearth:SetTextColor(textR, textG, textB)
+    infoCard.hearth = icHearth
+
+    local icSeen = infoCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(icSeen, 11, "")
+    icSeen:SetPoint("TOPLEFT", icHearth, "BOTTOMLEFT", 0, -2)
+    icSeen:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
+    icSeen:SetJustifyH("LEFT")
+    icSeen:SetText("Last seen: Unknown")
+    icSeen:SetTextColor(textR, textG, textB)
+    infoCard.seen = icSeen
+
+    local icNote = infoCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(icNote, 11, "")
+    icNote:SetPoint("TOPLEFT", icSeen, "BOTTOMLEFT", 0, -2)
+    icNote:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
+    icNote:SetJustifyH("LEFT")
+    icNote:SetText("Note: None")
+    icNote:SetTextColor(textR, textG, textB)
+    infoCard.note = icNote
+
+    -- 2c. Professions & Cooldowns Card (Phase 6)
+    local profCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    profCard:SetPoint("TOPLEFT", infoCard, "BOTTOMLEFT", 0, -8)
+    profCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
+    profCard:SetHeight(84)
+    profCard:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if profCard.SetBackdropColor then profCard:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+    if profCard.SetBackdropBorderColor then profCard:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    detailPanel.profCard = profCard
+
+    local pcHeader = profCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(pcHeader, 10, "")
+    pcHeader:SetPoint("TOPLEFT", profCard, "TOPLEFT", 10, -8)
+    pcHeader:SetText("PROFESSIONS & COOLDOWNS")
+    pcHeader:SetTextColor(mutedR, mutedG, mutedB)
+    profCard.header = pcHeader
+
+    local pcPrimary = profCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(pcPrimary, 11, "")
+    pcPrimary:SetPoint("TOPLEFT", pcHeader, "BOTTOMLEFT", 0, -2)
+    pcPrimary:SetPoint("RIGHT", profCard, "RIGHT", -10, 0)
+    pcPrimary:SetJustifyH("LEFT")
+    pcPrimary:SetText("Primary: None learned")
+    pcPrimary:SetTextColor(textR, textG, textB)
+    profCard.primary = pcPrimary
+
+    local pcSecondary = profCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(pcSecondary, 11, "")
+    pcSecondary:SetPoint("TOPLEFT", pcPrimary, "BOTTOMLEFT", 0, -2)
+    pcSecondary:SetPoint("RIGHT", profCard, "RIGHT", -10, 0)
+    pcSecondary:SetJustifyH("LEFT")
+    pcSecondary:SetText("Secondary: None learned")
+    pcSecondary:SetTextColor(textR, textG, textB)
+    profCard.secondary = pcSecondary
+
+    local pcCooldowns = profCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(pcCooldowns, 11, "")
+    pcCooldowns:SetPoint("TOPLEFT", pcSecondary, "BOTTOMLEFT", 0, -2)
+    pcCooldowns:SetPoint("RIGHT", profCard, "RIGHT", -10, 0)
+    pcCooldowns:SetJustifyH("LEFT")
+    pcCooldowns:SetText("Cooldowns: None ready")
+    pcCooldowns:SetTextColor(textR, textG, textB)
+    profCard.cooldowns = pcCooldowns
+
+    -- 2d. Saved Instances & Lockouts Card (Phase 6)
+    local lockCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    lockCard:SetPoint("TOPLEFT", profCard, "BOTTOMLEFT", 0, -8)
+    lockCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
+    lockCard:SetHeight(52)
+    lockCard:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if lockCard.SetBackdropColor then lockCard:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+    if lockCard.SetBackdropBorderColor then lockCard:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    detailPanel.lockCard = lockCard
+
+    local lcHeader = lockCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(lcHeader, 10, "")
+    lcHeader:SetPoint("TOPLEFT", lockCard, "TOPLEFT", 10, -8)
+    lcHeader:SetText("SAVED INSTANCES & LOCKOUTS")
+    lcHeader:SetTextColor(mutedR, mutedG, mutedB)
+    lockCard.header = lcHeader
+
+    local lcLocks = lockCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(lcLocks, 11, "")
+    lcLocks:SetPoint("TOPLEFT", lcHeader, "BOTTOMLEFT", 0, -2)
+    lcLocks:SetPoint("RIGHT", lockCard, "RIGHT", -10, 0)
+    lcLocks:SetJustifyH("LEFT")
+    lcLocks:SetText("Lockouts: No active locks")
+    lcLocks:SetTextColor(textR, textG, textB)
+    lockCard.locks = lcLocks
+
+    -- 3. Mail & Supply Stream Card
     local mailCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    mailCard:SetPoint("TOPLEFT", restedCard, "BOTTOMLEFT", 0, -12)
+    mailCard:SetPoint("TOPLEFT", lockCard, "BOTTOMLEFT", 0, -8)
     mailCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    mailCard:SetHeight(102)
+    mailCard:SetHeight(92)
     mailCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3899,6 +4065,7 @@ function CLIAlts:CreateModernMainFrame()
 
         rowFrames[i] = row
     end
+    frame.rowFrames = rowFrames
 
     frame:SetScript("OnShow", function(self)
         pcall(function()
@@ -3954,9 +4121,37 @@ function CLIAlts:RecreateMainFrame()
     return self:CreateMainFrame()
 end
 
+function CLIAlts:GetVisibleCharactersList()
+    local activeTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
+    local activeSortBy = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "rested"
+    local activeSortAsc = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc ~= nil) and CLIAltsDB.settings.sortAsc or false
+    if mainFrame and mainFrame.isLegacyUI then
+        if activeTab == 2 then
+            activeSortBy = "rotation"
+            activeSortAsc = false
+        elseif activeTab == 3 then
+            activeSortBy = "rested"
+            activeSortAsc = false
+        elseif activeTab == 4 then
+            activeSortBy = "prof"
+            activeSortAsc = true
+        elseif activeTab == 5 then
+            activeSortBy = "gold"
+            activeSortAsc = false
+        elseif activeTab == 6 then
+            activeSortBy = "cooldown"
+            activeSortAsc = true
+        elseif activeTab == 7 then
+            activeSortBy = "name"
+            activeSortAsc = true
+        end
+    end
+    return self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
+end
+
 function CLIAlts:GetSelectedOrCurChar()
     local selectedKey = self.selectedCharKey
-    local charList = self:GetCharactersList()
+    local charList = self:GetVisibleCharactersList()
     if selectedKey then
         for _, c in ipairs(charList) do
             if (c.fullName and c.fullName == selectedKey) or (c.name and c.name == selectedKey) then
@@ -3991,9 +4186,17 @@ function CLIAlts:UpdateDetailPanel()
     -- 1. Avatar & Identity
     local rawName = char.name or char.fullName or "Unknown"
     local initial = rawName:sub(1, 1):upper()
-    if dp.avatar and dp.avatar.text then
-        dp.avatar.text:SetText(initial)
-        dp.avatar.text:SetTextColor(brandR, brandG, brandB)
+    local classFile = char.classFile or "WARRIOR"
+    local cr, cg, cb = self:GetClassColor(classFile)
+
+    if dp.avatar then
+        if dp.avatar.SetBackdropBorderColor then
+            dp.avatar:SetBackdropBorderColor(cr, cg, cb, 0.9)
+        end
+        if dp.avatar.text then
+            dp.avatar.text:SetText(initial)
+            dp.avatar.text:SetTextColor(cr, cg, cb)
+        end
     end
 
     if dp.name then
@@ -4013,6 +4216,7 @@ function CLIAlts:UpdateDetailPanel()
     -- 2. Rested XP Card
     if dp.restedCard then
         local rested = self:GetRestedData(char)
+        local estRate = char.xpHour or 38000
         if rested and not rested.isMaxLevel then
             local pct = rested.percent or 0
             local maxPct = rested.maxPercent or 150
@@ -4030,17 +4234,17 @@ function CLIAlts:UpdateDetailPanel()
                     dp.restedCard.status:SetText(string.format("At Rested Cap (%d%%)", maxPct))
                     dp.restedCard.status:SetTextColor(fillR, fillG, fillB)
                 end
+                if dp.restedCard.rate then
+                    dp.restedCard.rate:SetText(string.format("Logging in now banks about %s XP per hour played.", self:FormatNumber(estRate)))
+                    dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
+                end
             else
                 dp.restedCard.status:SetText(string.format("%s%d%% Rested (%s XP pool)", est, pct, self:FormatNumber(poolXP)))
                 dp.restedCard.status:SetTextColor(brandR, brandG, brandB)
-            end
-            if dp.restedCard.rate then
-                if pct >= maxPct then
-                    dp.restedCard.rate:SetText("Logging in now leverages full 200% rested XP.")
-                else
-                    dp.restedCard.rate:SetText(string.format("ETA to cap: %s (%s/hr in sanctuary)", rested.timeLeftStr or "---", rested.rateStr or "1 bubble"))
+                if dp.restedCard.rate then
+                    dp.restedCard.rate:SetText(string.format("Caps in %s · Banks about %s XP per hour played.", rested.timeLeftStr or "---", self:FormatNumber(estRate)))
+                    dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
                 end
-                dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
             end
         else
             if dp.restedCard.status then
@@ -4050,6 +4254,71 @@ function CLIAlts:UpdateDetailPanel()
             if dp.restedCard.rate then
                 dp.restedCard.rate:SetText("Level cap reached - Rested XP no longer accumulates.")
                 dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
+            end
+        end
+    end
+
+    -- 2b. Location & Status Card (Phase 6)
+    if dp.infoCard then
+        local restTag = char.loggedOutInRestZone and "|cff4CC2D6[Resting]|r" or "|cffF2B84B[Wild]|r"
+        if dp.infoCard.loc then
+            dp.infoCard.loc:SetText(string.format("Location: |cffffffff%s|r %s", tostring(char.location or "Unknown"), restTag))
+        end
+        if dp.infoCard.hearth then
+            dp.infoCard.hearth:SetText(string.format("Hearth: |cffffffff%s|r", tostring(char.bindLocation or "Unknown")))
+        end
+        if dp.infoCard.seen then
+            local isStale, daysInactive = self:IsCharStale(char)
+            local staleTag = (isStale and daysInactive) and string.format(" |cffF2B84B[STALE: %dd]|r", tonumber(daysInactive) or 0) or ""
+            local seenDate = self:FormatDateSafe(char.lastUpdate)
+            dp.infoCard.seen:SetText(string.format("Last seen: |cffffffff%s|r (%s)%s", self:GetTimeAgo(char.lastUpdate), seenDate, staleTag))
+        end
+        if dp.infoCard.note then
+            local noteStr = (char.note and char.note ~= "") and string.format("|cffffd700%s|r", tostring(char.note)) or "|cff9AA6B8None|r"
+            dp.infoCard.note:SetText(string.format("Note: %s", noteStr))
+        end
+    end
+
+    -- 2c. Professions & Cooldowns Card (Phase 6)
+    if dp.profCard then
+        if dp.profCard.primary then
+            local primList = {}
+            if char.professions and char.professions.primary and #char.professions.primary > 0 then
+                for _, p in ipairs(char.professions.primary) do
+                    table.insert(primList, string.format("%s (%d/%d)", p.name or "Unknown", p.rank or 0, p.maxRank or 0))
+                end
+            end
+            local primStr = (#primList > 0) and table.concat(primList, ", ") or "None learned"
+            dp.profCard.primary:SetText(string.format("Primary: |cffffffff%s|r", primStr))
+        end
+        if dp.profCard.secondary then
+            local secList = {}
+            if char.professions and char.professions.secondary and #char.professions.secondary > 0 then
+                for _, s in ipairs(char.professions.secondary) do
+                    table.insert(secList, string.format("%s (%d/%d)", s.name or "Unknown", s.rank or 0, s.maxRank or 0))
+                end
+            end
+            local secStr = (#secList > 0) and table.concat(secList, ", ") or "None learned"
+            dp.profCard.secondary:SetText(string.format("Secondary: |cffffffff%s|r", secStr))
+        end
+        if dp.profCard.cooldowns then
+            local cdText = FmtTradeCooldowns(char)
+            if not char.tradeCooldowns or not next(char.tradeCooldowns) then
+                dp.profCard.cooldowns:SetText("Cooldowns: |cff9AA6B8None ready|r")
+            else
+                dp.profCard.cooldowns:SetText(string.format("Cooldowns: %s", cdText))
+            end
+        end
+    end
+
+    -- 2d. Saved Instances & Lockouts Card (Phase 6)
+    if dp.lockCard then
+        if dp.lockCard.locks then
+            local lockText = FmtRaidLocks(char)
+            if not char.lockouts or not next(char.lockouts) then
+                dp.lockCard.locks:SetText("Lockouts: |cff9AA6B8No active locks|r")
+            else
+                dp.lockCard.locks:SetText(string.format("Lockouts: %s", lockText))
             end
         end
     end
@@ -4077,6 +4346,34 @@ function CLIAlts:UpdateDetailPanel()
             dp.mailCard.pending:SetText("No pending materials in bags")
             dp.mailCard.pending:SetTextColor(mutedR, mutedG, mutedB)
         end
+    end
+end
+
+function CLIAlts:NavigateSelection(delta)
+    local chars = self:GetVisibleCharactersList()
+    if not chars or #chars == 0 then return end
+    local curChar = self:GetSelectedOrCurChar()
+    local curIndex = 1
+    if curChar then
+        for i, c in ipairs(chars) do
+            if (c.fullName and curChar.fullName and c.fullName == curChar.fullName)
+                or (c.name and curChar.name and c.name == curChar.name) then
+                curIndex = i
+                break
+            end
+        end
+    end
+    local newIndex = math.max(1, math.min(#chars, curIndex + delta))
+    local sel = chars[newIndex]
+    if sel then
+        self.selectedCharKey = sel.fullName or sel.name
+        local rpp = (self.GetRowsPerPage and self:GetRowsPerPage()) or 12
+        local page = math.floor((newIndex - 1) / rpp) + 1
+        if page ~= currentPage then
+            currentPage = page
+        end
+        PlayRetroSound()
+        self:Render()
     end
 end
 
@@ -5178,8 +5475,16 @@ function CLIAlts:ApplyTheme()
             if mainFrame.wealthWidget.delta then mainFrame.wealthWidget.delta:SetTextColor(fillR, fillG, fillB) end
         end
         if mainFrame.detailPanel then
-            if mainFrame.detailPanel.SetBackdropColor then mainFrame.detailPanel:SetBackdropColor(panelR, panelG, panelB, panelA) end
-            if mainFrame.detailPanel.SetBackdropBorderColor then mainFrame.detailPanel:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+            local dp = mainFrame.detailPanel
+            if dp.SetBackdropColor then dp:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if dp.SetBackdropBorderColor then dp:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+            local cards = { dp.restedCard, dp.infoCard, dp.profCard, dp.lockCard, dp.mailCard }
+            for _, card in ipairs(cards) do
+                if card then
+                    if card.SetBackdropColor then card:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+                    if card.SetBackdropBorderColor then card:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+                end
+            end
         end
         if mainFrame.cmdBar then
             if mainFrame.cmdBar.SetBackdropColor then mainFrame.cmdBar:SetBackdropColor(panelR, panelG, panelB, panelA) end
@@ -5959,8 +6264,31 @@ function CLIAlts:GetCustomRolePopup()
     return customRolePopup
 end
 
-function CLIAlts:ShowDossierPopup(char)
+function CLIAlts:ShowDossierPopup(char, forcePopup)
     if not char then return end
+
+    if type(char) == "string" then
+        local found = nil
+        for _, c in ipairs(self:GetCharactersList() or {}) do
+            if (c.fullName and c.fullName == char) or (c.name and c.name == char) then
+                found = c
+                break
+            end
+        end
+        char = found or { name = char }
+    end
+
+    self.selectedCharKey = char.fullName or char.name
+
+    if not forcePopup and not self:IsCompact() and not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI) then
+        if dossierPopup and dossierPopup.Hide then dossierPopup:Hide() end
+        if not mainFrame or not mainFrame:IsShown() then
+            self:Toggle(true)
+        end
+        self:UpdateDetailPanel()
+        self:Render()
+        return
+    end
 
     if not dossierPopup then
         local t = self:GetTheme()

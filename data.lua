@@ -2353,6 +2353,9 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     else
         sortBy = sortBy or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "level"
     end
+    if sortAsc == nil and CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc ~= nil then
+        sortAsc = CLIAltsDB.settings.sortAsc
+    end
 
     local sortValues = {}
     if sortBy == "rested" then

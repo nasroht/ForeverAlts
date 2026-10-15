@@ -1076,6 +1076,260 @@ function CLIAlts:RunSelfTest()
         mFrame.searchBox:SetText("")
     end
 
+    do -- 11i. Phase 6: Detail Panel, Cards & Keyboard Navigation Tests
+        local mFrame = self:CreateModernMainFrame()
+        mFrame:Show()
+
+        local oldChars = CLIAltsDB and CLIAltsDB.characters
+        local oldSettings = CLIAltsDB and CLIAltsDB.settings
+        local oldSelected = self.selectedCharKey
+        local now = time()
+
+        -- Mock dataset: 3 alts
+        -- Alt 1 (Horde, level 47, capped rested XP with 2d waste, has note, Alchemy 300, First Aid 300, ready transmute CD)
+        -- Alt 2 (Alliance, level 60, max level, Molten Core lockout, no note)
+        -- Alt 3 (Alliance, level 25, accruing rested XP, wild logout, no professions)
+        CLIAltsDB.characters = {
+            ["HordeAlpha"] = {
+                name = "HordeAlpha",
+                fullName = "HordeAlpha-Realm",
+                faction = "Horde",
+                race = "Orc",
+                class = "Shaman",
+                classFile = "SHAMAN",
+                level = 47,
+                tier = "CORE",
+                maxXP = 20000,
+                restedXP = 30000,
+                lastUpdate = now - (2 * 86400),
+                isResting = true,
+                loggedOutInRestZone = true,
+                location = "Orgrimmar",
+                bindLocation = "The Crossroads",
+                note = "Transmute specialist",
+                professions = {
+                    primary = { { name = "Alchemy", rank = 300, maxRank = 300 } },
+                    secondary = { { name = "First Aid", rank = 300, maxRank = 300 } },
+                },
+                tradeCooldowns = { ["Transmute: Arcanite"] = now - 500 },
+                lockouts = {},
+            },
+            ["AllyBeta"] = {
+                name = "AllyBeta",
+                fullName = "AllyBeta-Realm",
+                faction = "Alliance",
+                race = "Human",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 60,
+                tier = "CORE",
+                maxXP = 50000,
+                restedXP = 0,
+                lastUpdate = now,
+                isResting = true,
+                loggedOutInRestZone = true,
+                location = "Ironforge",
+                bindLocation = "Ironforge",
+                note = nil,
+                lockouts = {
+                    ["Molten Core"] = { resetTime = now + 86400, id = 991 },
+                },
+            },
+            ["AllyGamma"] = {
+                name = "AllyGamma",
+                fullName = "AllyGamma-Realm",
+                faction = "Alliance",
+                race = "Night Elf",
+                class = "Priest",
+                classFile = "PRIEST",
+                level = 25,
+                tier = "RESERVE",
+                maxXP = 15000,
+                restedXP = 5000,
+                lastUpdate = now,
+                isResting = false,
+                loggedOutInRestZone = false,
+                location = "Ashenvale",
+                bindLocation = "Astranaar",
+                note = "",
+            },
+        }
+        self:InvalidateRestedCache()
+        CLIAltsDB.settings = { activeTab = 1, compact = false, foreverMode = false, sortBy = "name", sortAsc = true }
+
+        -- 1. Verify detailPanel and its component cards exist
+        local dp = mFrame.detailPanel
+        Assert(dp ~= nil, "Phase 6: detailPanel exists on mainFrame")
+        Assert(dp.avatar ~= nil, "Phase 6: dp.avatar exists")
+        Assert(dp.name ~= nil, "Phase 6: dp.name exists")
+        Assert(dp.sub ~= nil, "Phase 6: dp.sub exists")
+        Assert(dp.restedCard ~= nil, "Phase 6: dp.restedCard exists")
+        Assert(dp.infoCard ~= nil, "Phase 6: dp.infoCard exists")
+        Assert(dp.profCard ~= nil, "Phase 6: dp.profCard exists")
+        Assert(dp.lockCard ~= nil, "Phase 6: dp.lockCard exists")
+        Assert(dp.mailCard ~= nil, "Phase 6: dp.mailCard exists")
+        Assert(dp.btnRemove ~= nil, "Phase 6: dp.btnRemove exists")
+        Assert(dp.btnPlan ~= nil, "Phase 6: dp.btnPlan exists")
+        Assert(dp.btnEditNote ~= nil, "Phase 6: dp.btnEditNote exists")
+
+        -- 2. Test Alt 1 (HordeAlpha) Selection & Detail Panel Population
+        self.selectedCharKey = "HordeAlpha-Realm"
+        self:UpdateDetailPanel()
+
+        Assert(dp.name:GetText():find("HordeAlpha") ~= nil, "Phase 6: dp.name shows HordeAlpha")
+        Assert(dp.avatar.text:GetText() == "H", "Phase 6: dp.avatar text displays initial 'H'")
+        Assert(dp.sub:GetText():find("47 Orc Shaman") ~= nil, "Phase 6: dp.sub displays level, race, class")
+        Assert(dp.sub:GetText():find("Horde") ~= nil and dp.sub:GetText():find("%(Core%)") ~= nil, "Phase 6: dp.sub displays faction and cohort tier")
+
+        -- Rested Card: Capped with waste
+        Assert(dp.restedCard.status:GetText():find("Capped") ~= nil and dp.restedCard.status:GetText():find("wasted") ~= nil, "Phase 6: Rested card shows 'Capped ..., ~... XP wasted'")
+        Assert(dp.restedCard.rate:GetText():find("banks about") ~= nil and dp.restedCard.rate:GetText():find("per hour played") ~= nil, "Phase 6: Rested card rate displays 'banks about ... per hour played'")
+
+        -- Info Card: Location, Hearth, Last seen, Note
+        Assert(dp.infoCard.loc:GetText():find("Orgrimmar") ~= nil, "Phase 6: infoCard shows location 'Orgrimmar'")
+        Assert(dp.infoCard.loc:GetText():find("%[Resting%]") ~= nil, "Phase 6: infoCard shows '[Resting]' tag")
+        Assert(dp.infoCard.hearth:GetText():find("The Crossroads") ~= nil, "Phase 6: infoCard shows hearth 'The Crossroads'")
+        Assert(dp.infoCard.seen:GetText():find("Last seen:") ~= nil, "Phase 6: infoCard shows 'Last seen:'")
+        Assert(dp.infoCard.note:GetText():find("Transmute specialist") ~= nil, "Phase 6: infoCard shows player note")
+
+        -- Prof Card: Primary, Secondary, Cooldowns
+        Assert(dp.profCard.primary:GetText():find("Alchemy %(300/300%)") ~= nil, "Phase 6: profCard shows primary profession")
+        Assert(dp.profCard.secondary:GetText():find("First Aid %(300/300%)") ~= nil, "Phase 6: profCard shows secondary profession")
+        Assert(dp.profCard.cooldowns:GetText():find("READY") ~= nil, "Phase 6: profCard shows READY trade cooldown")
+
+        -- Lock Card: Locks
+        Assert(dp.lockCard.locks:GetText():find("No active locks") ~= nil, "Phase 6: lockCard shows 'No active locks'")
+
+        -- 3. Test Alt 2 (AllyBeta - Level 60 Max Level & Active Lockout)
+        self.selectedCharKey = "AllyBeta-Realm"
+        self:UpdateDetailPanel()
+
+        Assert(dp.name:GetText():find("AllyBeta") ~= nil, "Phase 6: dp.name shows AllyBeta")
+        Assert(dp.restedCard.status:GetText() == "Target Level Reached", "Phase 6: Rested card status is exactly 'Target Level Reached' for max level alt")
+        Assert(dp.restedCard.rate:GetText():find("Level cap reached") ~= nil, "Phase 6: Rested card rate shows 'Level cap reached'")
+        Assert(dp.lockCard.locks:GetText():find("MC: in") ~= nil, "Phase 6: lockCard shows active MC lockout")
+        Assert(dp.infoCard.note:GetText():find("None") ~= nil, "Phase 6: infoCard shows Note: None when no note set")
+
+        -- 4. Test Alt 3 (AllyGamma - Accruing Rested & Wilderness Logout)
+        self.selectedCharKey = "AllyGamma-Realm"
+        self:UpdateDetailPanel()
+
+        Assert(dp.name:GetText():find("AllyGamma") ~= nil, "Phase 6: dp.name shows AllyGamma")
+        Assert(dp.infoCard.loc:GetText():find("%[Wild%]") ~= nil, "Phase 6: infoCard shows '[Wild]' tag for wilderness logout")
+        Assert(dp.profCard.primary:GetText():find("None learned") ~= nil, "Phase 6: profCard shows 'None learned' for primary")
+        Assert(dp.restedCard.status:GetText():find("Rested") ~= nil and dp.restedCard.status:GetText():find("XP pool") ~= nil, "Phase 6: Rested card shows XP pool for accruing alt")
+        Assert(dp.restedCard.rate:GetText():find("Caps in") ~= nil, "Phase 6: Rested card rate shows 'Caps in ...'")
+
+        -- 5. Test Action Buttons on detailPanel
+        -- 5a. Plan session button executes 'plan 2'
+        dp.btnPlan:GetScript("OnClick")(dp.btnPlan)
+        local hist = CLIAltsDB.commandHistory or {}
+        Assert(hist[#hist] == "plan 2", "Phase 6: btnPlan executed 'plan 2'")
+
+        -- 5b. Edit note button sets promptBox text and focuses
+        self.selectedCharKey = "HordeAlpha-Realm"
+        dp.btnEditNote:GetScript("OnClick")(dp.btnEditNote)
+        Assert(mFrame.promptBox:GetText() == "note HordeAlpha ", "Phase 6: btnEditNote populated promptBox with 'note HordeAlpha '")
+        Assert(mFrame.promptBox:HasFocus() == true, "Phase 6: btnEditNote focused promptBox")
+        mFrame.promptBox:ClearFocus()
+
+        -- 5c. Remove button opens confirm delete popup
+        dp.btnRemove:GetScript("OnClick")(dp.btnRemove)
+        local cp = _G["CLIAltsConfirmPopup"]
+        Assert(cp ~= nil and cp:IsShown() == true, "Phase 6: btnRemove opened confirmation modal")
+        cp:Hide()
+
+        -- 6. Test Keyboard Navigation & Selection Persistence
+        -- Sorted alphabetically: AllyBeta (1), AllyGamma (2), HordeAlpha (3)
+        self.selectedCharKey = "AllyBeta-Realm"
+        self:Render()
+        Assert(self:GetSelectedOrCurChar().name == "AllyBeta", "Phase 6: Initial selected alt is AllyBeta")
+
+        -- Navigate down (+1)
+        self:NavigateSelection(1)
+        Assert(self:GetSelectedOrCurChar().name == "AllyGamma", "Phase 6: NavigateSelection(1) advances to AllyGamma")
+
+        -- Selection persistence across Render()
+        self:Render()
+        local rowList = self:GetRowFrames()
+        local isRow2Selected = (rowList[2] and rowList[2].charData and rowList[2].charData.name == "AllyGamma")
+        Assert(isRow2Selected == true, "Phase 6: Row 2 represents AllyGamma in sorted list")
+
+        -- Navigate down (+1)
+        self:NavigateSelection(1)
+        Assert(self:GetSelectedOrCurChar().name == "HordeAlpha", "Phase 6: NavigateSelection(1) advances to HordeAlpha")
+
+        -- Clamping at bottom of list
+        self:NavigateSelection(1)
+        Assert(self:GetSelectedOrCurChar().name == "HordeAlpha", "Phase 6: NavigateSelection(1) clamps at bottom of list")
+
+        -- Navigate up (-1)
+        self:NavigateSelection(-1)
+        Assert(self:GetSelectedOrCurChar().name == "AllyGamma", "Phase 6: NavigateSelection(-1) moves back to AllyGamma")
+
+        self:NavigateSelection(-1)
+        Assert(self:GetSelectedOrCurChar().name == "AllyBeta", "Phase 6: NavigateSelection(-1) moves back to AllyBeta")
+
+        -- Clamping at top of list
+        self:NavigateSelection(-1)
+        Assert(self:GetSelectedOrCurChar().name == "AllyBeta", "Phase 6: NavigateSelection(-1) clamps at top of list")
+
+        -- 7. Test OnKeyDown Script Handlers
+        local onKeyDownScript = mFrame:GetScript("OnKeyDown")
+        Assert(onKeyDownScript ~= nil, "Phase 6: mainFrame has OnKeyDown script")
+
+        -- 7a. Combat Lockdown Guard
+        local oldCombat = InCombatLockdown
+        InCombatLockdown = function() return true end
+        onKeyDownScript(mFrame, "DOWN")
+        Assert(self:GetSelectedOrCurChar().name == "AllyBeta", "Phase 6: OnKeyDown DOWN ignored during combat")
+        InCombatLockdown = oldCombat
+
+        -- 7b. Focus Guard (SearchBox & PromptBox)
+        mFrame.searchBox:SetFocus()
+        onKeyDownScript(mFrame, "DOWN")
+        Assert(self:GetSelectedOrCurChar().name == "AllyBeta", "Phase 6: OnKeyDown DOWN ignored when searchBox has focus")
+        mFrame.searchBox:ClearFocus()
+
+        mFrame.promptBox:SetFocus()
+        onKeyDownScript(mFrame, "DOWN")
+        Assert(self:GetSelectedOrCurChar().name == "AllyBeta", "Phase 6: OnKeyDown DOWN ignored when promptBox has focus")
+        mFrame.promptBox:ClearFocus()
+
+        -- 7c. Key DOWN execution
+        onKeyDownScript(mFrame, "DOWN")
+        Assert(self:GetSelectedOrCurChar().name == "AllyGamma", "Phase 6: OnKeyDown DOWN advances selection outside combat")
+
+        -- 7d. Key UP execution
+        onKeyDownScript(mFrame, "UP")
+        Assert(self:GetSelectedOrCurChar().name == "AllyBeta", "Phase 6: OnKeyDown UP reverses selection outside combat")
+
+        -- 7e. Key ENTER in standard mode updates detail panel
+        onKeyDownScript(mFrame, "ENTER")
+        Assert(dp.name:GetText():find("AllyBeta") ~= nil, "Phase 6: OnKeyDown ENTER updates detailPanel in standard mode")
+
+        -- 8. Test ShowDossierPopup Dual-Mode (Detail Panel in Standard vs Floating Popup in Compact)
+        -- Standard mode: ShowDossierPopup updates selection & detail panel without opening popup
+        local curDossier = self.GetDossierPopup and self:GetDossierPopup()
+        if curDossier then curDossier:Hide() end
+        self:ShowDossierPopup(CLIAltsDB.characters["HordeAlpha"])
+        Assert(self.selectedCharKey == "HordeAlpha-Realm" or self.selectedCharKey == "HordeAlpha", "Phase 6: ShowDossierPopup in standard mode updates selectedCharKey")
+        Assert(dp.name:GetText():find("HordeAlpha") ~= nil, "Phase 6: ShowDossierPopup in standard mode updates detail panel")
+        Assert(curDossier == nil or curDossier:IsShown() == false, "Phase 6: ShowDossierPopup in standard mode does NOT show floating dossierPopup")
+
+        -- Compact mode: ShowDossierPopup opens floating dossierPopup
+        CLIAltsDB.settings.compact = true
+        self:ShowDossierPopup(CLIAltsDB.characters["AllyBeta"])
+        local compDossier = self.GetDossierPopup and self:GetDossierPopup()
+        Assert(compDossier ~= nil and compDossier:IsShown() == true, "Phase 6: ShowDossierPopup in compact mode opens floating dossierPopup")
+        compDossier:Hide()
+
+        -- Restore DB & State
+        CLIAltsDB.characters = oldChars
+        CLIAltsDB.settings = oldSettings
+        self.selectedCharKey = oldSelected
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()
@@ -1534,6 +1788,8 @@ function CLIAlts:RunSelfTest()
 
     -- 19e. Dossier Popup modal rendering resilience
     if self.ShowDossierPopup then
+        local savedCompact = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.compact
+        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.compact = true end
         self:ShowDossierPopup(testRotDB.characters["CoreLeveling"])
         local dp = self.GetDossierPopup and self:GetDossierPopup()
         Assert(dp ~= nil, "Dossier: dossierPopup frame created")
@@ -1560,6 +1816,7 @@ function CLIAlts:RunSelfTest()
             dp:Hide()
             Assert(dp:IsShown() == false, "Dossier: popup successfully closed")
         end
+        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.compact = savedCompact end
     end
 
     CLIAltsDB = oldRotDB
@@ -2747,7 +3004,7 @@ function CLIAlts:RunSelfTest()
     self.curPlayerKey = savedKey
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
