@@ -599,6 +599,11 @@ local function SlashHandler(msg)
             end
         end
 
+    elseif cmd == "settings" or cmd == "config" or cmd == "options" or cmd == "pref" or cmd == "preferences" then
+        if CLIAlts.ShowSettingsDialog then
+            CLIAlts:ShowSettingsDialog()
+        end
+
     elseif cmd == "scale" then
         if arg and arg ~= "" then
             local clean = arg:gsub("%%", "")

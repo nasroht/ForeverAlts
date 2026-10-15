@@ -36,6 +36,7 @@ globals = {
     -- Addon Globals & SavedVariables
     "CLIAltsDB",
     "CLIAltsMainFrame",
+    "CLIAltsSettingsDialog",
     "CLIAltsFocusEnterBtn",
     "CLIAltsFocusSlashBtn",
     "SLASH_CLIALTS1",

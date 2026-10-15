@@ -1183,7 +1183,7 @@ function CLIAlts:RunSelfTest()
 
         -- Rested Card: Capped with waste
         Assert(dp.restedCard.status:GetText():find("Capped") ~= nil and dp.restedCard.status:GetText():find("wasted") ~= nil, "Phase 6: Rested card shows 'Capped ..., ~... XP wasted'")
-        Assert(dp.restedCard.rate:GetText():find("banks about") ~= nil and dp.restedCard.rate:GetText():find("per hour played") ~= nil, "Phase 6: Rested card rate displays 'banks about ... per hour played'")
+        Assert(dp.restedCard.rate:GetText():find("banks about") ~= nil and dp.restedCard.rate:GetText():find("per hour") ~= nil, "Phase 6: Rested card rate displays 'banks about ... per hour'")
 
         -- Info Card: Location, Hearth, Last seen, Note
         Assert(dp.infoCard.loc:GetText():find("Orgrimmar") ~= nil, "Phase 6: infoCard shows location 'Orgrimmar'")
@@ -1487,6 +1487,76 @@ function CLIAlts:RunSelfTest()
         -- Restore State
         CLIAltsDB.settings = oldSettings
         CLIAltsDB.characters = oldChars
+    end
+
+    -- 11k. Dedicated Settings Dialog Tests
+    do
+        local oldSettings = CLIAltsDB.settings
+        CLIAltsDB.settings = {
+            theme = "BLIZZARD",
+            fontSize = 18,
+            scale = 1.0,
+            soundDisabled = false,
+            showBagSortButton = true,
+            showInventoryTooltips = true,
+            showMailAutoFillButton = true,
+            autoMailConsumables = false,
+            legacyUI = false,
+        }
+
+        self:ShowSettingsDialog()
+        local sd = _G["CLIAltsSettingsDialog"]
+        Assert(sd ~= nil, "SettingsUI: CLIAltsSettingsDialog frame exists")
+        Assert(sd:IsShown() == true, "SettingsUI: CLIAltsSettingsDialog is shown")
+        Assert(sd.themeButtons ~= nil and #sd.themeButtons == 8, "SettingsUI: Has 8 CRT theme buttons")
+        Assert(sd.fontButtons ~= nil and #sd.fontButtons == 7, "SettingsUI: Has 7 typography font buttons")
+        Assert(sd.scaleButtons ~= nil and #sd.scaleButtons == 6, "SettingsUI: Has 6 UI scale buttons")
+        Assert(sd.btnAudio ~= nil, "SettingsUI: Has Audio SFX toggle")
+        Assert(sd.btnSort ~= nil, "SettingsUI: Has Bag Sort Button toggle")
+        Assert(sd.btnTip ~= nil, "SettingsUI: Has Cross-Alt Tooltip toggle")
+        Assert(sd.btnMail ~= nil, "SettingsUI: Has Mail Auto-Fill toggle")
+        Assert(sd.btnCons ~= nil, "SettingsUI: Has Auto-Mail Consumables toggle")
+        Assert(sd.btnMode ~= nil, "SettingsUI: Has UI Style Mode toggle")
+        Assert(sd.btnCenter ~= nil, "SettingsUI: Has Center Window action button")
+        Assert(sd.btnReset ~= nil, "SettingsUI: Has Reset Defaults action button")
+        Assert(sd.btnClose ~= nil, "SettingsUI: Has Close button")
+
+        -- Test clicking theme button (e.g. Amber)
+        local btnAmber = sd.themeButtons[2]
+        btnAmber:GetScript("OnClick")(btnAmber)
+        Assert(CLIAltsDB.settings.theme == "AMBER", "SettingsUI: Clicking theme button updates theme to AMBER")
+        Assert(btnAmber.isSelected == true, "SettingsUI: Selected theme button has isSelected = true")
+
+        -- Test clicking font button (e.g. 20px)
+        local btnFont20 = sd.fontButtons[5]
+        btnFont20:GetScript("OnClick")(btnFont20)
+        Assert(CLIAltsDB.settings.fontSize == 20, "SettingsUI: Clicking font button updates fontSize to 20")
+
+        -- Test clicking scale button (e.g. 115%)
+        local btnScale115 = sd.scaleButtons[4]
+        btnScale115:GetScript("OnClick")(btnScale115)
+        Assert(math.abs(CLIAltsDB.settings.scale - 1.15) < 0.01, "SettingsUI: Clicking scale button updates scale to 1.15")
+
+        -- Test Audio SFX toggle
+        sd.btnAudio:GetScript("OnClick")(sd.btnAudio)
+        Assert(CLIAltsDB.settings.soundDisabled == true, "SettingsUI: Audio toggle disables sound")
+
+        -- Test Reset Defaults
+        sd.btnReset:GetScript("OnClick")(sd.btnReset)
+        Assert(CLIAltsDB.settings.theme == "BLIZZARD", "SettingsUI: Reset defaults restores theme to BLIZZARD")
+        Assert(CLIAltsDB.settings.fontSize == 18, "SettingsUI: Reset defaults restores font to 18")
+        Assert(math.abs(CLIAltsDB.settings.scale - 1.0) < 0.01, "SettingsUI: Reset defaults restores scale to 1.0")
+
+        -- Test Close button
+        sd.btnClose:GetScript("OnClick")(sd.btnClose)
+        Assert(sd:IsShown() == false, "SettingsUI: Clicking Close button hides settings dialog")
+
+        -- Test slash command /clialts settings opens dialog
+        SlashCmdList["CLIALTS"]("settings")
+        Assert(sd:IsShown() == true, "SettingsUI: /clialts settings opens settings dialog")
+        sd:Hide()
+
+        CLIAltsDB.settings = oldSettings
     end
 
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
@@ -3163,7 +3233,7 @@ function CLIAlts:RunSelfTest()
     self.curPlayerKey = savedKey
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

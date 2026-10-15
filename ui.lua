@@ -27,6 +27,7 @@ local customRolePopup = nil
 local confirmPopup = nil
 local helpPopup = nil
 local exportPopup = nil
+local settingsDialog = nil
 local probeString = nil
 local renderDirty = false
 
@@ -432,6 +433,7 @@ end
 -- Audio & Button Helpers
 -- ----------------------------------------------------------------------------
 local function PlayRetroSound()
+    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.soundDisabled then return end
     pcall(function()
         if SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON then
             PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
@@ -481,13 +483,23 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
     btn:SetScript("OnLeave", function(self)
         local curT = CLIAlts:GetTheme()
         local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        if self.SetBackdropColor then
-            self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75)
+        if self.isSelected then
+            if self.SetBackdropColor then
+                self:SetBackdropColor(curT.border[1], curT.border[2], curT.border[3], 0.35)
+            end
+            if self.SetBackdropBorderColor then
+                self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 1)
+            end
+            self.label:SetTextColor(curT.highlight[1], curT.highlight[2], curT.highlight[3])
+        else
+            if self.SetBackdropColor then
+                self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75)
+            end
+            if self.SetBackdropBorderColor then
+                self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.8)
+            end
+            self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
         end
-        if self.SetBackdropBorderColor then
-            self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.8)
-        end
-        self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
     end)
 
     if onClick then
@@ -2947,9 +2959,27 @@ function CLIAlts:CreateModernMainFrame()
     frame.btnHelp = btnHelp
 
     local btnSettings = CreateRetroButton(topBar, "Settings", 66, 22, function()
-        CLIAlts:CycleTheme()
+        CLIAlts:ShowSettingsDialog()
     end)
     btnSettings:SetPoint("RIGHT", btnHelp, "LEFT", -8, 0)
+    btnSettings:SetScript("OnEnter", function(self)
+        local curT = CLIAlts:GetTheme()
+        if self.SetBackdropColor then self:SetBackdropColor(curT.border[1], curT.border[2], curT.border[3], 0.25) end
+        if self.SetBackdropBorderColor then self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 1) end
+        self.label:SetTextColor(curT.highlight[1], curT.highlight[2], curT.highlight[3])
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+        GameTooltip:AddLine("CLIAlts Settings & Preferences", 1, 0.82, 0)
+        GameTooltip:AddLine("Configure themes, font sizes, UI scale, and automations.", 0.8, 0.8, 0.8)
+        GameTooltip:Show()
+    end)
+    btnSettings:SetScript("OnLeave", function(self)
+        local curT = CLIAlts:GetTheme()
+        local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+        if self.SetBackdropColor then self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75) end
+        if self.SetBackdropBorderColor then self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.8) end
+        self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
+        GameTooltip:Hide()
+    end)
     frame.btnSettings = btnSettings
 
     local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
@@ -3378,7 +3408,10 @@ function CLIAlts:CreateModernMainFrame()
     local rcRate = restedCard:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(rcRate, 13, "")
     rcRate:SetPoint("TOPLEFT", rcStatus, "BOTTOMLEFT", 0, -3)
-    rcRate:SetText("Logging in now banks about 38k XP per hour played.")
+    rcRate:SetPoint("RIGHT", restedCard, "RIGHT", -10, 0)
+    rcRate:SetJustifyH("LEFT")
+    rcRate:SetWordWrap(false)
+    rcRate:SetText("Logging in now banks about 38k XP per hour.")
     rcRate:SetTextColor(mutedR, mutedG, mutedB)
     restedCard.rate = rcRate
 
@@ -4445,14 +4478,14 @@ function CLIAlts:UpdateDetailPanel()
                     dp.restedCard.status:SetTextColor(fillR, fillG, fillB)
                 end
                 if dp.restedCard.rate then
-                    dp.restedCard.rate:SetText(string.format("Logging in now banks about %s XP per hour played.", self:FormatNumber(estRate)))
+                    dp.restedCard.rate:SetText(string.format("Logging in now banks about %s XP per hour.", self:FormatNumber(estRate)))
                     dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
                 end
             else
                 dp.restedCard.status:SetText(string.format("%s%d%% Rested (%s XP pool)", est, pct, self:FormatNumber(poolXP)))
                 dp.restedCard.status:SetTextColor(brandR, brandG, brandB)
                 if dp.restedCard.rate then
-                    dp.restedCard.rate:SetText(string.format("Caps in %s · Banks about %s XP per hour played.", rested.timeLeftStr or "---", self:FormatNumber(estRate)))
+                    dp.restedCard.rate:SetText(string.format("Caps in %s · Banks about %s XP per hour", rested.timeLeftStr or "---", self:FormatNumber(estRate)))
                     dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
                 end
             end
@@ -5867,6 +5900,9 @@ function CLIAlts:ApplyTheme()
     if self.UpdateMailAutoFillButton then
         self:UpdateMailAutoFillButton()
     end
+    if settingsDialog and settingsDialog:IsShown() and self.UpdateSettingsDialog then
+        self:UpdateSettingsDialog()
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -6109,6 +6145,10 @@ function CLIAlts:ExecutePromptCommand(input)
     elseif cmd == "export" or cmd == "csv" then
         self:ShowExportPopup()
         self:SetPromptFeedback("CSV Export window opened.")
+
+    elseif cmd == "settings" or cmd == "config" or cmd == "options" or cmd == "pref" then
+        self:ShowSettingsDialog()
+        self:SetPromptFeedback("Settings dialog opened.")
 
     elseif cmd == "compact" or cmd == "c" then
         self:ToggleCompact()
@@ -7763,6 +7803,351 @@ function CLIAlts:ShowExportPopup()
     if exportPopup.editBox then
         exportPopup.editBox:SetFocus()
         exportPopup.editBox:HighlightText()
+    end
+end
+
+-- ----------------------------------------------------------------------------
+-- Interactive Settings & Preferences Modal Dialog
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetSettingsDialog()
+    return settingsDialog
+end
+
+function CLIAlts:ShowSettingsDialog()
+    if not settingsDialog then
+        local sd = CreateFrame("Frame", "CLIAltsSettingsDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        sd:Hide()
+        sd:SetSize(680, 520)
+        sd:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        sd:SetFrameStrata("DIALOG")
+        sd:EnableMouse(true)
+        sd:SetMovable(true)
+        sd:RegisterForDrag("LeftButton")
+        sd:SetScript("OnDragStart", function(self) self:StartMoving() end)
+        sd:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+        tinsert(UISpecialFrames, "CLIAltsSettingsDialog")
+
+        sd:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 2,
+            insets = { left = 2, right = 2, top = 2, bottom = 2 }
+        })
+
+        -- Title & Subtitle
+        local title = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(title, 15, "OUTLINE")
+        title:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -16)
+        title:SetText("CLIALTS :: SETTINGS & PREFERENCES")
+        sd.title = title
+
+        local sub = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(sub, 12, "")
+        sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+        sub:SetText("Configure visual themes, typography size, UI scale, and addon automations.")
+        sd.sub = sub
+
+        local topClose = CreateRetroButton(sd, "[X]", 32, 20, function()
+            sd:Hide()
+        end)
+        topClose:SetPoint("TOPRIGHT", sd, "TOPRIGHT", -16, -16)
+        sd.topClose = topClose
+
+        -- Section 1: Themes
+        local secTheme = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(secTheme, 13, "OUTLINE")
+        secTheme:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -68)
+        secTheme:SetText("[ COLOR THEMES ]")
+        sd.secTheme = secTheme
+
+        local themes = {
+            { key = "BLIZZARD", name = "Blizzard Gold" },
+            { key = "AMBER", name = "VT220 Amber" },
+            { key = "GREEN", name = "Phosphor CRT" },
+            { key = "CYAN", name = "Cyberdeck Cyan" },
+            { key = "MONO", name = "Monochrome" },
+            { key = "COLORBLIND", name = "Phosphor Safe" },
+            { key = "SYNTHWAVE", name = "Synthwave CRT" },
+            { key = "DRACULA", name = "Dracula Terminal" },
+        }
+        sd.themeButtons = {}
+        for i, info in ipairs(themes) do
+            local col = (i - 1) % 4
+            local row = math.floor((i - 1) / 4)
+            local btn = CreateRetroButton(sd, info.name, 150, 24, function()
+                CLIAltsDB.settings = CLIAltsDB.settings or {}
+                CLIAltsDB.settings.theme = info.key
+                CLIAltsDB.settings.themeExplicit = true
+                CLIAlts:ApplyTheme()
+                CLIAlts:Render()
+                CLIAlts:UpdateSettingsDialog()
+            end, 11)
+            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + (col * 160), -92 - (row * 30))
+            btn.themeKey = info.key
+            btn.themeName = info.name
+            table.insert(sd.themeButtons, btn)
+        end
+
+        -- Section 2: Terminal Font Size
+        local secFont = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(secFont, 13, "OUTLINE")
+        secFont:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -164)
+        secFont:SetText("[ TERMINAL FONT SIZE ]")
+        sd.secFont = secFont
+
+        local fontSizes = { 12, 14, 16, 18, 20, 22, 24 }
+        sd.fontButtons = {}
+        for i, sz in ipairs(fontSizes) do
+            local label = (sz == 18) and string.format("%dpx*", sz) or string.format("%dpx", sz)
+            local btn = CreateRetroButton(sd, label, 85, 24, function()
+                CLIAlts:SetFontSize(sz)
+                CLIAlts:UpdateSettingsDialog()
+            end, 11)
+            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 92), -188)
+            btn.fontSize = sz
+            table.insert(sd.fontButtons, btn)
+        end
+
+        -- Section 3: Display Scale
+        local secScale = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(secScale, 13, "OUTLINE")
+        secScale:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -224)
+        secScale:SetText("[ DISPLAY SCALE ]")
+        sd.secScale = secScale
+
+        local scaleList = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
+        sd.scaleButtons = {}
+        for i, sc in ipairs(scaleList) do
+            local pct = math.floor(sc * 100 + 0.5)
+            local label = (math.abs(sc - 1.0) < 0.05) and string.format("%d%%*", pct) or string.format("%d%%", pct)
+            local btn = CreateRetroButton(sd, label, 100, 24, function()
+                CLIAlts:SetScale(sc)
+                CLIAlts:Render()
+                CLIAlts:UpdateSettingsDialog()
+            end, 11)
+            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 108), -248)
+            btn.scaleVal = sc
+            table.insert(sd.scaleButtons, btn)
+        end
+
+        -- Section 4: Interface & Automation Toggles
+        local secToggles = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(secToggles, 13, "OUTLINE")
+        secToggles:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -284)
+        secToggles:SetText("[ INTERFACE & AUTOMATION ]")
+        sd.secToggles = secToggles
+
+        -- Col 1 toggles (x = 20, width = 310)
+        local btnAudio = CreateRetroButton(sd, "Audio SFX: ENABLED", 310, 26, function()
+            CLIAltsDB.settings = CLIAltsDB.settings or {}
+            CLIAltsDB.settings.soundDisabled = not CLIAltsDB.settings.soundDisabled
+            CLIAlts:UpdateSettingsDialog()
+        end, 11)
+        btnAudio:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -308)
+        sd.btnAudio = btnAudio
+
+        local btnSort = CreateRetroButton(sd, "Bag Sort Button: ENABLED", 310, 26, function()
+            local cur = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false)
+            CLIAlts:ToggleBagSortButton(not cur)
+            CLIAlts:UpdateSettingsDialog()
+        end, 11)
+        btnSort:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -338)
+        sd.btnSort = btnSort
+
+        local btnTip = CreateRetroButton(sd, "Cross-Alt Tooltips: ENABLED", 310, 26, function()
+            CLIAltsDB.settings = CLIAltsDB.settings or {}
+            CLIAltsDB.settings.showInventoryTooltips = (CLIAltsDB.settings.showInventoryTooltips == false)
+            CLIAlts:UpdateSettingsDialog()
+        end, 11)
+        btnTip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -368)
+        sd.btnTip = btnTip
+
+        -- Col 2 toggles (x = 345, width = 310)
+        local btnMail = CreateRetroButton(sd, "Mail Auto-Fill: ENABLED", 310, 26, function()
+            local cur = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showMailAutoFillButton == false)
+            CLIAlts:ToggleMailAutoFillButton(not cur)
+            CLIAlts:UpdateSettingsDialog()
+        end, 11)
+        btnMail:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -308)
+        sd.btnMail = btnMail
+
+        local btnCons = CreateRetroButton(sd, "Route Consumables: DISABLED", 310, 26, function()
+            CLIAltsDB.settings = CLIAltsDB.settings or {}
+            CLIAltsDB.settings.autoMailConsumables = not CLIAltsDB.settings.autoMailConsumables
+            CLIAlts:UpdateSettingsDialog()
+        end, 11)
+        btnCons:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -338)
+        sd.btnCons = btnCons
+
+        local btnMode = CreateRetroButton(sd, "UI Style: Modern v2", 310, 26, function()
+            CLIAltsDB.settings = CLIAltsDB.settings or {}
+            CLIAltsDB.settings.legacyUI = not CLIAltsDB.settings.legacyUI
+            if CLIAlts.RecreateMainFrame then
+                local wasShown = mainFrame and mainFrame:IsShown()
+                CLIAlts:RecreateMainFrame()
+                if wasShown and mainFrame then
+                    mainFrame:Show()
+                    CLIAlts:Render()
+                end
+            end
+            CLIAlts:UpdateSettingsDialog()
+        end, 11)
+        btnMode:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -368)
+        sd.btnMode = btnMode
+
+        -- Tip Note
+        local tip = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(tip, 11, "")
+        tip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -408)
+        tip:SetText("Tip: Chat commands /clialts theme <name>, /clialts font <12-24>, /clialts scale <val> also work.")
+        sd.tip = tip
+
+        -- Bottom utility buttons
+        local btnCenter = CreateRetroButton(sd, "[ Center Window ]", 150, 26, function()
+            if mainFrame then
+                mainFrame:ClearAllPoints()
+                mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+                if CLIAltsDB and CLIAltsDB.settings then
+                    CLIAltsDB.settings.windowPos = nil
+                end
+                CLIAlts:Print("Main window centered on screen.")
+            end
+        end, 11)
+        btnCenter:SetPoint("BOTTOMLEFT", sd, "BOTTOMLEFT", 20, 18)
+        sd.btnCenter = btnCenter
+
+        local btnReset = CreateRetroButton(sd, "[ Reset Defaults ]", 140, 26, function()
+            CLIAltsDB.settings = CLIAltsDB.settings or {}
+            CLIAltsDB.settings.theme = "BLIZZARD"
+            CLIAltsDB.settings.themeExplicit = true
+            CLIAlts:SetScale(1.0)
+            CLIAlts:SetFontSize(18)
+            CLIAlts:ApplyTheme()
+            CLIAlts:Render()
+            CLIAlts:UpdateSettingsDialog()
+            CLIAlts:Print("Visual settings reset to defaults.")
+        end, 11)
+        btnReset:SetPoint("LEFT", btnCenter, "RIGHT", 12, 0)
+        sd.btnReset = btnReset
+
+        local btnClose = CreateRetroButton(sd, "[ Close ]", 90, 26, function()
+            sd:Hide()
+        end, 11)
+        btnClose:SetPoint("BOTTOMRIGHT", sd, "BOTTOMRIGHT", -20, 18)
+        sd.btnClose = btnClose
+
+        settingsDialog = sd
+    end
+
+    self:UpdateSettingsDialog()
+    settingsDialog:Show()
+end
+
+function CLIAlts:UpdateSettingsDialog()
+    if not settingsDialog then return end
+    local t = self:GetTheme()
+
+    if settingsDialog.SetBackdropColor then
+        settingsDialog:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+    end
+    if settingsDialog.SetBackdropBorderColor then
+        settingsDialog:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+    end
+
+    if settingsDialog.title then settingsDialog.title:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+    if settingsDialog.sub then settingsDialog.sub:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+    if settingsDialog.secTheme then settingsDialog.secTheme:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
+    if settingsDialog.secFont then settingsDialog.secFont:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
+    if settingsDialog.secScale then settingsDialog.secScale:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
+    if settingsDialog.secToggles then settingsDialog.secToggles:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
+    if settingsDialog.tip then settingsDialog.tip:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+
+    -- Theme buttons
+    local curTheme = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
+    for _, btn in ipairs(settingsDialog.themeButtons or {}) do
+        local isSel = (btn.themeKey == curTheme)
+        btn.isSelected = isSel
+        btn.label:SetText(string.format("%s %s", isSel and "[●]" or "[ ]", btn.themeName or ""))
+        if isSel then
+            btn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 1) end
+            if btn.SetBackdropColor then btn:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.35) end
+        else
+            btn.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.4) end
+            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+            if btn.SetBackdropColor then btn:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.75) end
+        end
+    end
+
+    -- Font size buttons
+    local curFont = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
+    for _, btn in ipairs(settingsDialog.fontButtons or {}) do
+        local isSel = (btn.fontSize == curFont)
+        btn.isSelected = isSel
+        local base = (btn.fontSize == 18) and string.format("%dpx*", btn.fontSize) or string.format("%dpx", btn.fontSize)
+        btn.label:SetText(string.format("%s %s", isSel and "[●]" or "[ ]", base))
+        if isSel then
+            btn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 1) end
+            if btn.SetBackdropColor then btn:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.35) end
+        else
+            btn.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.4) end
+            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+            if btn.SetBackdropColor then btn:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.75) end
+        end
+    end
+
+    -- Scale buttons
+    local curScale = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+    for _, btn in ipairs(settingsDialog.scaleButtons or {}) do
+        local isSel = (math.abs(btn.scaleVal - curScale) < 0.05)
+        btn.isSelected = isSel
+        local pct = math.floor(btn.scaleVal * 100 + 0.5)
+        local base = (math.abs(btn.scaleVal - 1.0) < 0.05) and string.format("%d%%*", pct) or string.format("%d%%", pct)
+        btn.label:SetText(string.format("%s %s", isSel and "[●]" or "[ ]", base))
+        if isSel then
+            btn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+            if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 1) end
+            if btn.SetBackdropColor then btn:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.35) end
+        else
+            btn.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+            if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.4) end
+            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+            if btn.SetBackdropColor then btn:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.75) end
+        end
+    end
+
+    -- Toggles
+    local sfxOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.soundDisabled)
+    if settingsDialog.btnAudio then
+        settingsDialog.btnAudio.label:SetText(string.format("Audio SFX: %s", sfxOn and "|cff00ff66ENABLED|r" or "|cffff4444MUTED|r"))
+    end
+
+    local sortOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false)
+    if settingsDialog.btnSort then
+        settingsDialog.btnSort.label:SetText(string.format("Bag Sort Button: %s", sortOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
+    end
+
+    local tipOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showInventoryTooltips == false)
+    if settingsDialog.btnTip then
+        settingsDialog.btnTip.label:SetText(string.format("Cross-Alt Tooltips: %s", tipOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
+    end
+
+    local mailOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showMailAutoFillButton == false)
+    if settingsDialog.btnMail then
+        settingsDialog.btnMail.label:SetText(string.format("Mail Auto-Fill: %s", mailOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
+    end
+
+    local consOn = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoMailConsumables == true)
+    if settingsDialog.btnCons then
+        settingsDialog.btnCons.label:SetText(string.format("Route Consumables: %s", consOn and "|cff00ff66ON (Active)|r" or "|cffffb033OFF (Protected)|r"))
+    end
+
+    local isLegacy = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI == true)
+    if settingsDialog.btnMode then
+        settingsDialog.btnMode.label:SetText(string.format("UI Style: %s", isLegacy and "|cffffd100Classic Retro Table|r" or "|cff33d9ffModern v2 (Cards)|r"))
     end
 end
 
