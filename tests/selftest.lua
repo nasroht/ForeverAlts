@@ -757,6 +757,138 @@ function CLIAlts:RunSelfTest()
         end
     end
 
+    do -- 11g. Phase 4: Play Next Banner Tests
+        local mFrame = self:CreateModernMainFrame()
+        local banner = mFrame.nextBanner
+        Assert(banner ~= nil, "Phase 4: nextBanner exists")
+        Assert(banner:GetHeight() == 110, "Phase 4: nextBanner height is 110px")
+        Assert(banner.title ~= nil and banner.title:GetText() == "Play next", "Phase 4: banner.title displays 'Play next'")
+        Assert(banner.headline ~= nil, "Phase 4: banner.headline exists")
+        Assert(banner.cards ~= nil and #banner.cards == 3, "Phase 4: banner has 3 pooled cards")
+        Assert(banner.planLine ~= nil, "Phase 4: banner.planLine exists")
+        Assert(banner.emptyText ~= nil, "Phase 4: banner.emptyText exists")
+
+        -- 1. Full 3-alt scenario matching Artboard B (Thor, Ragnar, Åse)
+        local oldChars = CLIAltsDB and CLIAltsDB.characters
+        local oldSettings = CLIAltsDB and CLIAltsDB.settings
+        local now = time()
+
+        CLIAltsDB.characters = {
+            ["Thor-Pyrewood"] = {
+                name = "Thor",
+                fullName = "Thor-Pyrewood",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 47,
+                tier = "CORE",
+                maxXP = 20000,
+                restedXP = 30000,
+                lastUpdate = now - (3 * 86400 + 4 * 3600),
+                isResting = true,
+            },
+            ["Ragnar-Pyrewood"] = {
+                name = "Ragnar",
+                fullName = "Ragnar-Pyrewood",
+                class = "Rogue",
+                classFile = "ROGUE",
+                level = 41,
+                tier = "CORE",
+                maxXP = 20000,
+                restedXP = 30000,
+                lastUpdate = now - (11 * 3600),
+                isResting = true,
+            },
+            ["Ase-Pyrewood"] = {
+                name = "Åse",
+                fullName = "Ase-Pyrewood",
+                class = "Paladin",
+                classFile = "PALADIN",
+                level = 52,
+                tier = "RESERVE",
+                maxXP = 576000,
+                restedXP = 864000 - 22800,
+                lastUpdate = now,
+                isResting = true,
+            },
+        }
+        CLIAltsDB.settings = { activeTab = 1, compact = false }
+        mFrame:Show()
+        self:Render()
+
+        Assert(banner:IsShown() == true, "Phase 4: nextBanner is visible on Tab 1")
+        Assert(banner.headline:IsShown() == true, "Phase 4: Headline is shown when alts are losing XP")
+        Assert(banner.headline:GetText() == "2 alts are losing rested XP right now", "Phase 4: Headline text is '2 alts are losing rested XP right now' (got: " .. tostring(banner.headline:GetText()) .. ")")
+
+        -- Verify Card 1 (Thor)
+        local c1 = banner.cards[1]
+        Assert(c1:IsShown() == true, "Phase 4: Card 1 is shown")
+        Assert(c1.title:GetText() == "1. Thor", "Phase 4: Card 1 title is '1. Thor' (got: " .. tostring(c1.title:GetText()) .. ")")
+        Assert(c1.meta:GetText():find("47") ~= nil, "Phase 4: Card 1 meta includes level 47")
+        Assert(c1.reason:GetText():find("Capped 3d 4h") ~= nil and c1.reason:GetText():find("lost") ~= nil, "Phase 4: Card 1 reason is 'Capped 3d 4h · ~52k lost' (got: " .. tostring(c1.reason:GetText()) .. ")")
+
+        -- Verify Card 2 (Ragnar)
+        local c2 = banner.cards[2]
+        Assert(c2:IsShown() == true, "Phase 4: Card 2 is shown")
+        Assert(c2.title:GetText() == "2. Ragnar", "Phase 4: Card 2 title is '2. Ragnar'")
+        Assert(c2.reason:GetText():find("Capped 11h") ~= nil and c2.reason:GetText():find("lost") ~= nil, "Phase 4: Card 2 reason is 'Capped 11h · ~6k lost' (got: " .. tostring(c2.reason:GetText()) .. ")")
+
+        -- Verify Card 3 (Åse)
+        local c3 = banner.cards[3]
+        Assert(c3:IsShown() == true, "Phase 4: Card 3 is shown")
+        Assert(c3.title:GetText() == "3. Åse", "Phase 4: Card 3 title is '3. Åse'")
+        Assert(c3.reason:GetText():find("Caps in") ~= nil, "Phase 4: Card 3 reason is 'Caps in ...' (got: " .. tostring(c3.reason:GetText()) .. ")")
+
+        -- Verify Plan Line
+        Assert(banner.planLine:IsShown() == true, "Phase 4: Plan line is shown in standard mode")
+        local planText = banner.planLine:GetText()
+        Assert(planText:find("2h plan:") ~= nil, "Phase 4: Plan line starts with '2h plan:'")
+        Assert(planText:find("none wasted") ~= nil or planText:find("Thor") ~= nil, "Phase 4: Plan line lists recommended allocation")
+
+        -- 2. Card Click Selection
+        c2:GetScript("OnClick")(c2)
+        Assert(self.selectedCharKey == "Ragnar-Pyrewood", "Phase 4: Clicking card 2 selects Ragnar-Pyrewood")
+
+        -- 3. Compact Mode Hiding Plan Line
+        CLIAltsDB.settings.compact = true
+        CLIAltsDB.settings.compactMode = true
+        self:Render()
+        Assert(banner.planLine:IsShown() == false, "Phase 4: Plan line is hidden in compact mode")
+        CLIAltsDB.settings.compact = false
+        CLIAltsDB.settings.compactMode = false
+
+        -- 4. Headline Hides When n is 0
+        CLIAltsDB.characters = {
+            ["Ase-Pyrewood"] = {
+                name = "Åse",
+                fullName = "Ase-Pyrewood",
+                class = "Paladin",
+                classFile = "PALADIN",
+                level = 52,
+                tier = "RESERVE",
+                maxXP = 576000,
+                restedXP = 864000 - 22800,
+                lastUpdate = now,
+                isResting = true,
+            },
+        }
+        self:Render()
+        Assert(banner.headline:IsShown() == false, "Phase 4: Headline hides when 0 alts are losing XP")
+        Assert(banner.cards[1]:IsShown() == true, "Phase 4: Card 1 still shown when n=0")
+
+        -- 5. Empty State ("Nothing is being wasted")
+        CLIAltsDB.characters = {}
+        self:Render()
+        Assert(banner.emptyText:IsShown() == true, "Phase 4: Empty state text is shown when roster empty")
+        Assert(banner.emptyText:GetText() == "Nothing is being wasted", "Phase 4: Empty state shows 'Nothing is being wasted'")
+        Assert(banner.cards[1]:IsShown() == false, "Phase 4: Card 1 hidden in empty state")
+        Assert(banner.headline:IsShown() == false, "Phase 4: Headline hidden in empty state")
+
+        -- Restore DB
+        CLIAltsDB.characters = oldChars
+        CLIAltsDB.settings = oldSettings
+        self.selectedCharKey = nil
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()

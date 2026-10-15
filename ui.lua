@@ -605,6 +605,149 @@ function CLIAlts:GetRowFrames()
 end
 
 -- ----------------------------------------------------------------------------
+-- Play Next Banner (Phase 4 Modern Overview)
+-- ----------------------------------------------------------------------------
+function CLIAlts:UpdatePlayNextBanner()
+    local banner = mainFrame and mainFrame.nextBanner
+    if not banner or not banner:IsShown() then return end
+
+    local brandR, brandG, brandB = self:Hex("brand")
+    local warnR, warnG, warnB = self:Hex("warn")
+    local fillR, fillG, fillB = self:Hex("fill")
+    local textR, textG, textB = self:Hex("text")
+    local mutedR, mutedG, mutedB = self:Hex("muted")
+
+    local bannerW = banner:GetWidth() or 700
+    local cardW = math.floor((bannerW - 24 - 16) / 3)
+    if cardW < 120 then cardW = 120 end
+
+    local priorityList = self:GetNextAltsPriority()
+    local losingCount = 0
+    local allChars = self:GetCharactersList()
+    for _, c in ipairs(allChars) do
+        local wastedSec = self:GetRestedWaste(c)
+        if wastedSec and wastedSec > 0 then
+            losingCount = losingCount + 1
+        end
+    end
+
+    if banner.title then
+        banner.title:SetTextColor(brandR, brandG, brandB)
+    end
+
+    -- 1. Headline ("<n> alts are losing rested XP right now", hides when n is 0)
+    if banner.headline then
+        if losingCount > 0 then
+            local headStr = (losingCount == 1) and "1 alt is losing rested XP right now" or string.format("%d alts are losing rested XP right now", losingCount)
+            banner.headline:SetText(headStr)
+            banner.headline:SetTextColor(warnR, warnG, warnB)
+            banner.headline:Show()
+        else
+            banner.headline:Hide()
+        end
+    end
+
+    -- 2. Cards & Empty State ("Nothing is being wasted")
+    if #priorityList == 0 then
+        if banner.emptyText then
+            banner.emptyText:SetText("Nothing is being wasted")
+            banner.emptyText:SetTextColor(mutedR, mutedG, mutedB)
+            banner.emptyText:Show()
+        end
+        if banner.cards then
+            for i = 1, 3 do
+                banner.cards[i]:Hide()
+            end
+        end
+        if banner.planLine then
+            banner.planLine:Hide()
+        end
+        return
+    else
+        if banner.emptyText then
+            banner.emptyText:Hide()
+        end
+    end
+
+    for i = 1, 3 do
+        local card = banner.cards and banner.cards[i]
+        local item = priorityList[i]
+        if card then
+            card:SetWidth(cardW)
+            if item and item.char then
+                local char = item.char
+                card.charData = char
+
+                local classFile = char.classFile or "WARRIOR"
+                local cr, cg, cb = self:GetClassColor(classFile)
+                local class = char.class or char.className or classFile
+
+                if card.title then
+                    card.title:SetText(string.format("%d. %s", i, char.name or "Unknown"))
+                    card.title:SetTextColor(cr, cg, cb)
+                end
+
+                if card.meta then
+                    card.meta:SetText(string.format("%d %s", char.level or 1, class))
+                    card.meta:SetTextColor(mutedR, mutedG, mutedB)
+                end
+
+                if card.reason then
+                    if item.wastedSec and item.wastedSec > 0 then
+                        local dur = item.timeStr or "0m"
+                        dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
+                        if dur == "Just capped" then dur = "0m" end
+                        local lostXP = self:FormatWasteShort(item.wastedXP) .. " XP"
+                        card.reason:SetText(string.format("Capped %s · ~%s lost", dur, lostXP))
+                        card.reason:SetTextColor(warnR, warnG, warnB)
+                    elseif item.isCapped then
+                        card.reason:SetText(string.format("Capped (%d%%) · Ready to play", item.maxPercent or 150))
+                        card.reason:SetTextColor(warnR, warnG, warnB)
+                    else
+                        local rested = self:GetRestedData(char)
+                        local timeLeftStr = (rested and rested.timeLeftStr) or "---"
+                        card.reason:SetText(string.format("Caps in %s", timeLeftStr))
+                        card.reason:SetTextColor(fillR, fillG, fillB)
+                    end
+                end
+
+                card:Show()
+            else
+                card.charData = nil
+                card:Hide()
+            end
+        end
+    end
+
+    -- 3. Plan Line (default 2h, hidden in compact mode)
+    if banner.planLine then
+        if self:IsCompact() then
+            banner.planLine:Hide()
+        else
+            local schedule = self:GenerateLevelingPlan(2)
+            if schedule and #schedule > 0 then
+                local planParts = {}
+                local totalPlanXP = 0
+                for _, cand in ipairs(schedule) do
+                    table.insert(planParts, string.format("%s %dm", cand.name, cand.mins))
+                    local xpHour = cand.xpHour or 35000
+                    totalPlanXP = totalPlanXP + math.floor((xpHour * (cand.mins / 60)) * 2)
+                end
+                local planAltsStr = table.concat(planParts, ", then ")
+                local xpStr = self:FormatWasteShort(totalPlanXP) .. " XP"
+                banner.planLine:SetText(string.format("2h plan: %s · about %s, none wasted", planAltsStr, xpStr))
+                banner.planLine:SetTextColor(textR, textG, textB)
+                banner.planLine:Show()
+            else
+                banner.planLine:SetText("2h plan: All active alts rested · Nothing is being wasted")
+                banner.planLine:SetTextColor(mutedR, mutedG, mutedB)
+                banner.planLine:Show()
+            end
+        end
+    end
+end
+
+-- ----------------------------------------------------------------------------
 -- Window Position Persistence
 -- ----------------------------------------------------------------------------
 function CLIAlts:SaveWindowPosition(frame)
@@ -3125,46 +3268,127 @@ function CLIAlts:CreateModernMainFrame()
     frame.nextBanner = nextBanner
     frame.recPanel = nextBanner
 
-    local recBadge = nextBanner:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recBadge, 10, "OUTLINE")
-    recBadge:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -8)
-    recBadge:SetText("PLAY NEXT")
-    recBadge:SetTextColor(brandR, brandG, brandB)
-    frame.recBadge = recBadge
+    -- 1. Title ("Play next")
+    local bannerTitle = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(bannerTitle, 15, "OUTLINE")
+    bannerTitle:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -10)
+    bannerTitle:SetText("Play next")
+    bannerTitle:SetTextColor(brandR, brandG, brandB)
+    nextBanner.title = bannerTitle
+    frame.recHeroTitle = bannerTitle
 
-    local recHeroTitle = nextBanner:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recHeroTitle, 15, "OUTLINE")
-    recHeroTitle:SetPoint("TOPLEFT", recBadge, "BOTTOMLEFT", 0, -4)
-    recHeroTitle:SetText("Play next")
-    recHeroTitle:SetTextColor(brandR, brandG, brandB)
-    frame.recHeroTitle = recHeroTitle
+    -- 2. Headline ("<n> alts are losing rested XP right now", hides when n is 0)
+    local bannerHeadline = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(bannerHeadline, 12, "OUTLINE")
+    bannerHeadline:SetPoint("TOPRIGHT", nextBanner, "TOPRIGHT", -12, -12)
+    bannerHeadline:SetText("")
+    bannerHeadline:SetTextColor(warnR, warnG, warnB)
+    nextBanner.headline = bannerHeadline
+    frame.recReasonLine = bannerHeadline
 
-    local recBtnSetup = CreateRetroButton(nextBanner, "[ GUIDE ]", 80, 20, function()
-        CLIAlts:ShowHelpPopup()
+    -- 3. Empty State Text ("Nothing is being wasted")
+    local bannerEmpty = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(bannerEmpty, 13, "OUTLINE")
+    bannerEmpty:SetPoint("CENTER", nextBanner, "CENTER", 0, -4)
+    bannerEmpty:SetText("Nothing is being wasted")
+    bannerEmpty:SetTextColor(mutedR, mutedG, mutedB)
+    bannerEmpty:Hide()
+    nextBanner.emptyText = bannerEmpty
+
+    -- 4. Three Cards (name, level class, one reason line)
+    nextBanner.cards = {}
+    for i = 1, 3 do
+        local card = CreateFrame("Button", "CLIAltsPlayNextCard" .. i, nextBanner, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        card:SetHeight(44)
+        if i == 1 then
+            card:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -32)
+        else
+            card:SetPoint("TOPLEFT", nextBanner.cards[i - 1], "TOPRIGHT", 8, 0)
+        end
+        card:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if card.SetBackdropColor then card:SetBackdropColor(raisedR, raisedG, raisedB, 0.70) end
+        if card.SetBackdropBorderColor then card:SetBackdropBorderColor(lineR, lineG, lineB, 0.50) end
+
+        local cardTitle = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(cardTitle, 12, "OUTLINE")
+        cardTitle:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -6)
+        cardTitle:SetText("")
+        card.title = cardTitle
+
+        local cardMeta = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(cardMeta, 11, "")
+        cardMeta:SetPoint("LEFT", cardTitle, "RIGHT", 5, 0)
+        cardMeta:SetText("")
+        cardMeta:SetTextColor(mutedR, mutedG, mutedB)
+        card.meta = cardMeta
+
+        local cardReason = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(cardReason, 10, "")
+        cardReason:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -24)
+        cardReason:SetPoint("RIGHT", card, "RIGHT", -6, 0)
+        cardReason:SetJustifyH("LEFT")
+        cardReason:SetText("")
+        card.reason = cardReason
+
+        card:SetScript("OnClick", function(cSelf)
+            if cSelf.charData then
+                CLIAlts.selectedCharKey = cSelf.charData.fullName or cSelf.charData.name
+                local charsList = CLIAlts:GetCharactersList()
+                local rowsPerPage = CLIAlts:GetRowsPerPage()
+                for idx, c in ipairs(charsList) do
+                    if (c.fullName and c.fullName == CLIAlts.selectedCharKey) or (c.name and c.name == CLIAlts.selectedCharKey) then
+                        currentPage = math.floor((idx - 1) / rowsPerPage) + 1
+                        break
+                    end
+                end
+                PlayRetroSound()
+                CLIAlts:Render()
+            end
+        end)
+        card:SetScript("OnEnter", function(cSelf)
+            if cSelf.SetBackdropBorderColor then
+                cSelf:SetBackdropBorderColor(brandR, brandG, brandB, 0.90)
+            end
+            if cSelf.SetBackdropColor then
+                cSelf:SetBackdropColor(raisedR, raisedG, raisedB, 1.0)
+            end
+        end)
+        card:SetScript("OnLeave", function(cSelf)
+            if cSelf.SetBackdropBorderColor then
+                cSelf:SetBackdropBorderColor(lineR, lineG, lineB, 0.50)
+            end
+            if cSelf.SetBackdropColor then
+                cSelf:SetBackdropColor(raisedR, raisedG, raisedB, 0.70)
+            end
+        end)
+
+        nextBanner.cards[i] = card
+    end
+
+    -- 5. Plan Line (from existing planner, default 2h, hidden in compact mode)
+    local bannerPlanLine = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(bannerPlanLine, 11, "")
+    bannerPlanLine:SetPoint("BOTTOMLEFT", nextBanner, "BOTTOMLEFT", 12, 8)
+    bannerPlanLine:SetPoint("BOTTOMRIGHT", nextBanner, "BOTTOMRIGHT", -12, 8)
+    bannerPlanLine:SetText("")
+    bannerPlanLine:SetTextColor(textR, textG, textB)
+    nextBanner.planLine = bannerPlanLine
+
+    nextBanner:SetScript("OnSizeChanged", function(bSelf)
+        local bw = bSelf:GetWidth() or 700
+        local cw = math.floor((bw - 24 - 16) / 3)
+        if cw < 120 then cw = 120 end
+        if bSelf.cards then
+            for i = 1, 3 do
+                bSelf.cards[i]:SetWidth(cw)
+            end
+        end
     end)
-    recBtnSetup:SetPoint("TOPRIGHT", nextBanner, "TOPRIGHT", -12, -8)
-    recBtnSetup:Hide()
-    frame.recBtnSetup = recBtnSetup
-
-    local recProfLine = nextBanner:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recProfLine, 11, "")
-    recProfLine:SetPoint("TOPLEFT", recHeroTitle, "BOTTOMLEFT", 0, -4)
-    recProfLine:SetText("")
-    recProfLine:SetTextColor(mutedR, mutedG, mutedB)
-    frame.recProfLine = recProfLine
-
-    local recRestLine = nextBanner:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recRestLine, 11, "")
-    recRestLine:SetPoint("TOPLEFT", recProfLine, "BOTTOMLEFT", 0, -4)
-    recRestLine:SetText("")
-    frame.recRestLine = recRestLine
-
-    local recReasonLine = nextBanner:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recReasonLine, 10, "")
-    recReasonLine:SetPoint("BOTTOMLEFT", nextBanner, "BOTTOMLEFT", 12, 10)
-    recReasonLine:SetText("2 alts are losing rested XP right now")
-    recReasonLine:SetTextColor(warnR, warnG, warnB)
-    frame.recReasonLine = recReasonLine
 
     -- Filter Bar (Phase 5 placeholder)
     local filterBar = CreateFrame("Frame", "CLIAltsFilterBar", mainCol)
@@ -3786,7 +4010,29 @@ function CLIAlts:Render()
     self._cachedPriorityList = nextList
     local topNext = nextList and nextList[1]
 
-    if activeTab == 7 then
+    if not mainFrame.isLegacyUI then
+        if activeTab == 1 then
+            if mainFrame.nextBanner then
+                mainFrame.nextBanner:Show()
+                self:UpdatePlayNextBanner()
+            end
+            if mainFrame.filterBar then
+                mainFrame.filterBar:ClearAllPoints()
+                mainFrame.filterBar:SetPoint("TOPLEFT", mainFrame.nextBanner, "BOTTOMLEFT", 0, -8)
+                mainFrame.filterBar:SetPoint("TOPRIGHT", mainFrame.nextBanner, "BOTTOMRIGHT", 0, -8)
+            end
+        else
+            if mainFrame.nextBanner then
+                mainFrame.nextBanner:Hide()
+            end
+            if mainFrame.filterBar then
+                mainFrame.filterBar:ClearAllPoints()
+                mainFrame.filterBar:SetPoint("TOPLEFT", mainFrame.mainCol, "TOPLEFT", 0, 0)
+                mainFrame.filterBar:SetPoint("TOPRIGHT", mainFrame.mainCol, "TOPRIGHT", 0, 0)
+            end
+        end
+    else
+        if activeTab == 7 then
         mainFrame.recChar = nil
         if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
         if mainFrame.recBadge then
@@ -3946,6 +4192,7 @@ function CLIAlts:Render()
                 end)
             end
         end
+    end
     end
 
     -- ------------------------------------------------------------------------

@@ -512,7 +512,7 @@ end
 CLIAlts.SafeAfter = SafeAfter
 
 function CLIAlts:IsCompact()
-    return (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.compactMode == true)
+    return (CLIAltsDB and CLIAltsDB.settings and (CLIAltsDB.settings.compactMode == true or CLIAltsDB.settings.compact == true))
 end
 
 function CLIAlts:ToggleCompact()
