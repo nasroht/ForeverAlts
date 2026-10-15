@@ -1072,6 +1072,9 @@ CLIAlts.FmtMailMode = FmtMailMode
 
 local function FmtMailPending(char, t)
     t = t or CLIAlts:GetTheme()
+    if CLIAlts:IsCurrentPlayer(char) then
+        return string.format("|cff%s(Logged In)|r", t.mutedHex or "a9a08c")
+    end
     local count, detail = CLIAlts:GetCharacterPendingMail(char)
     if count > 0 then
         return string.format("|cff%s%d items (%s)|r", t.readyHex or "55e39a", count, detail)
@@ -6264,7 +6267,7 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
             didAdd = true
         else
             local dest = self:GetMaterialDestination(itemID)
-            if dest and not dest.isCurrentPlayer then
+            if dest and not dest.isCurrentPlayer and not self:IsCurrentPlayer(dest.destName) and not self:IsCurrentPlayer(dest.destChar) then
                 local _, _, _, cHex = self:GetClassColor(dest.classFile)
                 cHex = cHex or "55e39a"
                 tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Send to:", string.format("|cff%s%s|r (|cffffd700%s|r)", cHex, dest.destName, dest.reason))

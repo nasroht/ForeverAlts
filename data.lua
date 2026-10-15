@@ -607,9 +607,58 @@ function CLIAlts:IsCurrentPlayer(char)
     if not self.curPlayerKey then
         self:CacheCurrentPlayer()
     end
+    local curPrim = (UnitName and UnitName("player")) or self.curPlayerPrimary
+    local curFull = self.curPlayerFullName
     local curKey = self.curPlayerKey
-    if not curKey then return false end
-    return (char.key == curKey) or (char.fullName == curKey) or (char.name == curKey)
+
+    if (not curPrim or curPrim == "Unknown") and not curFull and not curKey then
+        return false
+    end
+
+    local targetName, targetFull, targetKey
+    if type(char) == "string" then
+        targetName = char
+        targetFull = char
+        targetKey = char
+    elseif type(char) == "table" then
+        targetName = char.primaryName or char.name
+        targetFull = char.fullName or char.name
+        targetKey = char.key
+    else
+        return false
+    end
+
+    local function norm(s)
+        if not s or type(s) ~= "string" then return nil end
+        local clean = s:gsub("%-[^%-]+$", ""):lower():match("^%s*(.-)%s*$")
+        if clean == "" or clean == "unknown" then return nil end
+        return clean
+    end
+
+    local normCurPrim = norm(curPrim)
+    local normCurFull = norm(curFull)
+    local normCurKey = norm(curKey)
+
+    local normTargetName = norm(targetName)
+    local normTargetFull = norm(targetFull)
+    local normTargetKey = norm(targetKey)
+
+    if normTargetName and (normTargetName == normCurPrim or normTargetName == normCurFull or normTargetName == normCurKey) then
+        return true
+    end
+    if normTargetFull and (normTargetFull == normCurPrim or normTargetFull == normCurFull or normTargetFull == normCurKey) then
+        return true
+    end
+    if normTargetKey and (normTargetKey == normCurPrim or normTargetKey == normCurFull or normTargetKey == normCurKey) then
+        return true
+    end
+
+    local tLower = tostring(targetName):lower():match("^%s*(.-)%s*$")
+    if curPrim and tLower ~= "unknown" and tLower == curPrim:lower() then return true end
+    if curFull and tLower ~= "unknown" and tLower == curFull:lower() then return true end
+    if curKey and tLower ~= "unknown" and tLower == tostring(curKey):lower() then return true end
+
+    return false
 end
 
 function CLIAlts:GetCharacterKey(name, realm)
@@ -3647,6 +3696,9 @@ end
 
 function CLIAlts:GetCharacterPendingMail(char)
     if not char then return 0, "No items" end
+    if self:IsCurrentPlayer(char) then
+        return 0, "Logged in"
+    end
     local summary = self._cachedMailReadySummary or self:GetMailReadySummary()
     local name = char.name
     local grp = summary.byRecipient and summary.byRecipient[name]
@@ -3686,66 +3738,69 @@ function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
     local bestScore = -1
 
     for _, c in ipairs(chars) do
-        local matches = false
-        local profRank = 0
-        local isOverride = false
-        local srole = (c.supply_role or ""):lower()
+        -- Never route mail to the character currently logged in
+        if not self:IsCurrentPlayer(c) then
+            local matches = false
+            local profRank = 0
+            local isOverride = false
+            local srole = (c.supply_role or ""):lower()
 
-        if srole ~= "none" and srole ~= "exclude" and srole ~= "excluded" then
-            -- Check supply role override first
-            if preferredRole and srole ~= "" then
-                local pLower = preferredRole:lower()
-                if srole:find(pLower, 1, true) then
-                    matches = true
-                    isOverride = true
-                    profRank = 150
-                elseif pLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true)) then
-                    matches = true
-                    isOverride = true
-                    profRank = 150
-                elseif pLower:find("alch", 1, true) and (srole:find("herb", 1, true) or srole:find("alch", 1, true)) then
-                    matches = true
-                    isOverride = true
-                    profRank = 150
-                elseif (pLower:find("miner", 1, true) or pLower:find("smith", 1, true) or pLower:find("eng", 1, true)) and (srole:find("ore", 1, true) or srole:find("miner", 1, true) or srole:find("stone", 1, true) or srole:find("smith", 1, true) or srole:find("bs", 1, true)) then
-                    matches = true
-                    isOverride = true
-                    profRank = 150
-                elseif (pLower:find("skin", 1, true) or pLower:find("leather", 1, true)) and (srole:find("leather", 1, true) or srole:find("skin", 1, true) or srole:find("lw", 1, true)) then
-                    matches = true
-                    isOverride = true
-                    profRank = 150
-                elseif pLower:find("cook", 1, true) and (srole:find("cook", 1, true) or srole:find("meat", 1, true) or srole:find("fish", 1, true)) then
-                    matches = true
-                    isOverride = true
-                    profRank = 150
-                elseif pLower:find("de", 1, true) and (srole:find("de", 1, true) or srole:find("ench", 1, true) or srole:find("disenchant", 1, true)) then
-                    matches = true
-                    isOverride = true
-                    profRank = 150
-                end
-            end
-
-            -- Check primary professions
-            if not matches and c.professions and c.professions.primary then
-                for _, p in ipairs(c.professions.primary) do
-                    local pName = (p.name or ""):lower()
-                    if pName:find(targetProfession:lower(), 1, true) then
+            if srole ~= "none" and srole ~= "exclude" and srole ~= "excluded" then
+                -- Check supply role override first
+                if preferredRole and srole ~= "" then
+                    local pLower = preferredRole:lower()
+                    if srole:find(pLower, 1, true) then
                         matches = true
-                        profRank = tonumber(p.rank) or 0
-                        break
+                        isOverride = true
+                        profRank = 150
+                    elseif pLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif pLower:find("alch", 1, true) and (srole:find("herb", 1, true) or srole:find("alch", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif (pLower:find("miner", 1, true) or pLower:find("smith", 1, true) or pLower:find("eng", 1, true)) and (srole:find("ore", 1, true) or srole:find("miner", 1, true) or srole:find("stone", 1, true) or srole:find("smith", 1, true) or srole:find("bs", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif (pLower:find("skin", 1, true) or pLower:find("leather", 1, true)) and (srole:find("leather", 1, true) or srole:find("skin", 1, true) or srole:find("lw", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif pLower:find("cook", 1, true) and (srole:find("cook", 1, true) or srole:find("meat", 1, true) or srole:find("fish", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif pLower:find("de", 1, true) and (srole:find("de", 1, true) or srole:find("ench", 1, true) or srole:find("disenchant", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
                     end
                 end
-            end
 
-            if matches then
-                local overrideScore = isOverride and 2000 or 0
-                local tierScore = (c.tier == "CORE" and 1000) or (c.tier == "RESERVE" and 500) or 100
-                local skillNeedScore = math.max(0, 300 - profRank)
-                local score = overrideScore + tierScore + skillNeedScore
-                if score > bestScore then
-                    bestScore = score
-                    bestChar = c
+                -- Check primary professions
+                if not matches and c.professions and c.professions.primary then
+                    for _, p in ipairs(c.professions.primary) do
+                        local pName = (p.name or ""):lower()
+                        if pName:find(targetProfession:lower(), 1, true) then
+                            matches = true
+                            profRank = tonumber(p.rank) or 0
+                            break
+                        end
+                    end
+                end
+
+                if matches then
+                    local overrideScore = isOverride and 2000 or 0
+                    local tierScore = (c.tier == "CORE" and 1000) or (c.tier == "RESERVE" and 500) or 100
+                    local skillNeedScore = math.max(0, 300 - profRank)
+                    local score = overrideScore + tierScore + skillNeedScore
+                    if score > bestScore then
+                        bestScore = score
+                        bestChar = c
+                    end
                 end
             end
         end
@@ -3756,9 +3811,12 @@ end
 function CLIAlts:FindBankMule()
     local chars = self:GetCharactersList("level", false)
     for _, c in ipairs(chars) do
-        local srole = (c.supply_role or ""):lower()
-        if c.tier == "BANK" or srole:find("bank", 1, true) or srole:find("mule", 1, true) or srole:find("storage", 1, true) then
-            return c
+        -- Never route mail to the character currently logged in
+        if not self:IsCurrentPlayer(c) then
+            local srole = (c.supply_role or ""):lower()
+            if c.tier == "BANK" or srole:find("bank", 1, true) or srole:find("mule", 1, true) or srole:find("storage", 1, true) then
+                return c
+            end
         end
     end
     return nil
@@ -4091,7 +4149,7 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     if not destChar and isLockbox then
         local chars = self:GetCharactersList("level", false)
         for _, c in ipairs(chars) do
-            if c.classFile == "ROGUE" then
+            if c.classFile == "ROGUE" and not self:IsCurrentPlayer(c) then
                 destChar = c
                 targetReason = "Lockpicking"
                 category = "Lockbox"
@@ -4108,17 +4166,8 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
         end
     end
 
-    if not destChar then return nil end
-
-    local curName = (self.curPlayerFullName or (self.GetPlayerNames and select(3, self:GetPlayerNames())))
-    local isCurrent = false
-    if curName and destChar.name then
-        local n1 = curName:lower()
-        local n2 = destChar.name:lower()
-        if n1 == n2 or n1:find(n2, 1, true) or n2:find(n1, 1, true) then
-            isCurrent = true
-        end
-    end
+    -- Absolute Rule: Never route mail to the character currently logged in!
+    if not destChar or self:IsCurrentPlayer(destChar) then return nil end
 
     return {
         destChar = destChar,
@@ -4127,7 +4176,7 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
         tier = destChar.tier or "UNASSIGNED",
         reason = targetReason or "Crafting",
         category = category or "Trade Good",
-        isCurrentPlayer = isCurrent,
+        isCurrentPlayer = false,
     }
 end
 
@@ -4149,7 +4198,7 @@ function CLIAlts:GetMailReadySummary()
             local itemID, count, itemLink = self:GetContainerItemData(bagID, slot)
             if itemID and itemID > 0 and (count or 0) > 0 then
                 local dest = self:GetMaterialDestination(itemID)
-                if dest and not dest.isCurrentPlayer then
+                if dest and not dest.isCurrentPlayer and not self:IsCurrentPlayer(dest.destName) and not self:IsCurrentPlayer(dest.destChar) then
                     local rName = dest.destName
                     if not summary.byRecipient[rName] then
                         summary.byRecipient[rName] = {
@@ -4228,6 +4277,12 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient)
         return false, "In combat"
     end
 
+    -- Explicit safety check on targetRecipient
+    if targetRecipient and self:IsCurrentPlayer(targetRecipient) then
+        self:Print("|cffff4444[Mail Router]|r Cannot auto-fill mail: recipient is the currently logged in character.|r")
+        return false, "Recipient is current player"
+    end
+
     local isSendMailVisible = SendMailFrame and ((SendMailFrame.IsVisible and SendMailFrame:IsVisible()) or (SendMailFrame.IsShown and SendMailFrame:IsShown()))
     if not isSendMailVisible then
         -- Attempt to switch to Send Mail tab if MailFrame is open
@@ -4258,19 +4313,29 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient)
     -- Determine recipient group
     local chosenGroup
     if targetRecipient and summary.byRecipient[targetRecipient] then
-        chosenGroup = summary.byRecipient[targetRecipient]
+        if not self:IsCurrentPlayer(targetRecipient) then
+            chosenGroup = summary.byRecipient[targetRecipient]
+        end
     else
         local sortedRecipients = {}
         for _, group in pairs(summary.byRecipient) do
-            table.insert(sortedRecipients, group)
+            if not self:IsCurrentPlayer(group.destName) and not self:IsCurrentPlayer(group.destChar) then
+                table.insert(sortedRecipients, group)
+            end
         end
         table.sort(sortedRecipients, function(a, b) return a.destName < b.destName end)
         chosenGroup = sortedRecipients[1]
     end
 
     if not chosenGroup or not chosenGroup.items or #chosenGroup.items == 0 then
-        self:Print("No routed items found for this recipient.")
+        self:Print("No items in your bags match routing rules for other alts.")
         return false, "No items for recipient"
+    end
+
+    -- Final absolute guard against self-mailing
+    if self:IsCurrentPlayer(chosenGroup.destName) or self:IsCurrentPlayer(chosenGroup.destChar) then
+        self:Print("|cffff4444[Mail Router]|r Cannot route mail to the character currently logged in.|r")
+        return false, "Cannot mail to self"
     end
 
     -- 1. Fill Recipient "To:"

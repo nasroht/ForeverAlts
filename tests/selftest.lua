@@ -2072,8 +2072,94 @@ function CLIAlts:RunSelfTest()
         end
     end
 
+    -- ------------------------------------------------------------------------
+    -- 29. Self-Mailing Prevention Guard (Never Route Mail to Current Character)
+    -- ------------------------------------------------------------------------
+    local savedPrimary = self.curPlayerPrimary
+    local savedFull = self.curPlayerFullName
+    local savedKey = self.curPlayerKey
+
+    -- 29a. IsCurrentPlayer matches direct, stripped realm, and table
+    self.curPlayerPrimary = "TestPlayer"
+    self.curPlayerFullName = "TestPlayer-ClassicBeta"
+    self.curPlayerKey = "TestPlayer-ClassicBeta"
+
+    Assert(self:IsCurrentPlayer("TestPlayer") == true, "SelfMailGuard: IsCurrentPlayer matches primary name")
+    Assert(self:IsCurrentPlayer("TestPlayer-ClassicBeta") == true, "SelfMailGuard: IsCurrentPlayer matches full name with realm")
+    Assert(self:IsCurrentPlayer({ name = "TestPlayer" }) == true, "SelfMailGuard: IsCurrentPlayer matches character table")
+    Assert(self:IsCurrentPlayer("OtherAlt") == false, "SelfMailGuard: IsCurrentPlayer returns false for other characters")
+
+    -- 29b. Crafter lookup skips current character
+    local oldDB = CLIAltsDB
+    CLIAltsDB = {
+        settings = {
+            ignoredMailItems = {},
+            autoMailConsumables = false,
+        },
+        characters = {
+            ["CrafterOne-Forever"] = {
+                name = "CrafterOne",
+                fullName = "CrafterOne-Forever",
+                classFile = "MAGE",
+                level = 35,
+                tier = "CORE",
+                professions = { primary = { { name = "Tailoring", rank = 150, maxRank = 150 } } },
+            },
+            ["CrafterTwo-Forever"] = {
+                name = "CrafterTwo",
+                fullName = "CrafterTwo-Forever",
+                classFile = "PRIEST",
+                level = 20,
+                tier = "RESERVE",
+                professions = { primary = { { name = "Tailoring", rank = 75, maxRank = 150 } } },
+            },
+            ["BankMule-Forever"] = {
+                name = "BankMule",
+                fullName = "BankMule-Forever",
+                classFile = "WARRIOR",
+                level = 1,
+                tier = "BANK",
+            },
+        },
+    }
+
+    -- When logged in as CrafterOne (the primary Tailor), cloth should route to CrafterTwo, NOT CrafterOne!
+    self.curPlayerPrimary = "CrafterOne"
+    self.curPlayerFullName = "CrafterOne-Forever"
+    self.curPlayerKey = "CrafterOne-Forever"
+
+    local bestTailor = self:FindBestCrafterForTrade("Tailoring")
+    Assert(bestTailor ~= nil and bestTailor.name == "CrafterTwo", "SelfMailGuard: FindBestCrafterForTrade skips logged-in CrafterOne and routes to CrafterTwo")
+
+    local clothDest = self:GetMaterialDestination(nil, nil, 7, 5)
+    Assert(clothDest ~= nil and clothDest.destName == "CrafterTwo", "SelfMailGuard: Cloth routes to CrafterTwo, not self")
+
+    -- When logged in as BankMule, BankMule is never returned by FindBankMule or GetMaterialDestination
+    self.curPlayerPrimary = "BankMule"
+    self.curPlayerFullName = "BankMule-Forever"
+    self.curPlayerKey = "BankMule-Forever"
+
+    local muleDest = self:FindBankMule()
+    Assert(muleDest == nil, "SelfMailGuard: FindBankMule returns nil when logged in as BankMule")
+    local miscDest = self:GetMaterialDestination(nil, nil, 7, 10)
+    Assert(miscDest == nil, "SelfMailGuard: Unmatched item destination is nil when logged into BankMule (no self-mail)")
+
+    -- 29c. Pending mail check returns 0 for current player
+    local pendingCount, pendingReason = self:GetCharacterPendingMail(CLIAltsDB.characters["BankMule-Forever"])
+    Assert(pendingCount == 0 and pendingReason == "Logged in", "SelfMailGuard: GetCharacterPendingMail returns 0 and 'Logged in' for active character")
+
+    -- 29d. FillSendMailNextBatch rejects targeting self
+    local fillOk, fillErr = self:FillSendMailNextBatch("BankMule")
+    Assert(fillOk == false and fillErr == "Recipient is current player", "SelfMailGuard: FillSendMailNextBatch rejects self-mailing explicitly")
+
+    -- Restore state
+    CLIAltsDB = oldDB
+    self.curPlayerPrimary = savedPrimary
+    self.curPlayerFullName = savedFull
+    self.curPlayerKey = savedKey
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
