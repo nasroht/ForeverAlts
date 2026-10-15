@@ -41,6 +41,7 @@ globals = {
     "SLASH_CLIALTS1",
     "SLASH_CLIALTS2",
     "SLASH_CLIALTS3",
+    "SLASH_CLIALTS_SORT1",
     "SlashCmdList",
 
     -- WoW Frame & UI APIs
@@ -146,6 +147,16 @@ globals = {
     "TooltipDataProcessor",
     "ItemRefTooltip",
     "Enum",
+    "PickupContainerItem",
+    "ClearCursor",
+    "CursorHasItem",
+    "GetContainerNumFreeSlots",
+    "InCombatLockdown",
+    "ContainerFrame1",
+    "ContainerFrame1CloseButton",
+    "ContainerFrameCombinedBags",
+    "ContainerFrameCombinedBagsCloseButton",
+    "BagItemAutoSortButton",
 
     -- WoW Hooking, Libraries & Profiling
     "hooksecurefunc",

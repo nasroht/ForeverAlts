@@ -384,6 +384,7 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.staleDays = tonumber(CLIAltsDB.settings.staleDays) or 30
     CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode == true)
     if CLIAltsDB.settings.showInventoryTooltips == nil then CLIAltsDB.settings.showInventoryTooltips = true end
+    if CLIAltsDB.settings.showBagSortButton == nil then CLIAltsDB.settings.showBagSortButton = true end
     if CLIAltsDB.settings.foreverMode == false and self:IsForeverClient() then
         CLIAltsDB.settings.foreverMode = nil
     end
@@ -5361,6 +5362,359 @@ function CLIAlts:PrintUnlockedAlts(query, nowTimestamp, mockChars)
         fb = string.format("All %d alts locked for %s.", #locked, canonName)
     end
     return fb, true
+end
+
+-- ----------------------------------------------------------------------------
+-- Automatic Bag Sorting & Stack Consolidation Engine (Feature 8)
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetItemSortScore(itemID, count)
+    itemID = tonumber(itemID)
+    if not itemID or itemID <= 0 then
+        return 99999999, "99_empty"
+    end
+
+    local itemName, _, quality, _, _, itemType, _, _, _, _, _, classID, subclassID = nil, nil, 1
+    if GetItemInfo then
+        itemName, _, quality, _, _, itemType, _, _, _, _, _, classID, subclassID = GetItemInfo(itemID)
+    end
+    if not classID and C_Item and C_Item.GetItemInfoInstant then
+        local _, _, _, _, _, c, sc = C_Item.GetItemInfoInstant(itemID)
+        classID = classID or c
+        subclassID = subclassID or sc
+    elseif not classID and GetItemInfoInstant then
+        local _, _, _, _, _, c, sc = GetItemInfoInstant(itemID)
+        classID = classID or c
+        subclassID = subclassID or sc
+    end
+
+    quality = quality or 1
+    classID = classID or 15
+    subclassID = subclassID or 0
+    itemName = itemName or ("Item #" .. tostring(itemID))
+
+    local catPriority = 80
+    if quality == 0 then
+        -- Poor / Gray vendor junk (grouped at the end before empty slots)
+        catPriority = 90
+    elseif classID == 12 or itemType == "Quest" then
+        -- Quest items
+        catPriority = 10
+    elseif classID == 0 or itemType == "Consumable" then
+        -- Consumables (Potions, Elixirs, Flasks, Food, Water, Bandages)
+        catPriority = 20
+    elseif classID == 7 or itemType == "Trade Goods" then
+        -- Trade Goods & Crafting Reagents
+        catPriority = 30
+    elseif classID == 1 or itemType == "Container" then
+        -- Bags & Containers
+        catPriority = 40
+    elseif classID == 9 or itemType == "Recipe" then
+        -- Recipes, Plans, Patterns, Schematics
+        catPriority = 50
+    elseif classID == 2 or itemType == "Weapon" then
+        -- Weapons (higher quality first)
+        catPriority = 60 - math.min(quality, 5)
+    elseif classID == 4 or itemType == "Armor" then
+        -- Armor & Wearable Gear (higher quality first)
+        catPriority = 70 - math.min(quality, 5)
+    elseif classID == 15 or itemType == "Miscellaneous" then
+        -- Tools, Reagents, Keys, Pets, Mounts
+        catPriority = 80
+    end
+
+    local sortScore = catPriority * 10000000 + (subclassID * 100000) + math.min(itemID, 99999)
+    local sortKey = string.format("%02d_%02d_%s_%06d_%08d", catPriority, subclassID, itemName:lower(), 999999 - (count or 1), itemID)
+    return sortScore, sortKey
+end
+
+function CLIAlts:ConsolidateBagStacks()
+    if InCombatLockdown and InCombatLockdown() then return false end
+    if CursorHasItem and CursorHasItem() then return false end
+
+    local numBags = NUM_BAG_SLOTS or 4
+    local partialStacks = {}
+
+    for bagID = 0, numBags do
+        local isSpecial = false
+        if bagID > 0 and GetContainerNumFreeSlots then
+            local _, bagType = GetContainerNumFreeSlots(bagID)
+            if bagType and bagType ~= 0 then isSpecial = true end
+        end
+
+        if not isSpecial then
+            local numSlots = self:GetNumContainerSlots(bagID)
+            for slot = 1, numSlots do
+                local itemID, count = self:GetContainerItemData(bagID, slot)
+                if itemID and itemID > 0 and count and count > 0 then
+                    local maxStack = 1
+                    if GetItemInfo then
+                        local _, _, _, _, _, _, _, stack = GetItemInfo(itemID)
+                        maxStack = tonumber(stack) or 1
+                    end
+                    if maxStack > 1 and count < maxStack then
+                        if not partialStacks[itemID] then partialStacks[itemID] = {} end
+                        table.insert(partialStacks[itemID], { bag = bagID, slot = slot, count = count, maxStack = maxStack })
+                    end
+                end
+            end
+        end
+    end
+
+    local didMerge = false
+    for _, list in pairs(partialStacks) do
+        if #list > 1 then
+            for i = 1, #list - 1 do
+                for j = i + 1, #list do
+                    local a = list[i]
+                    local b = list[j]
+                    if a and b and a.count < a.maxStack and b.count > 0 then
+                        if PickupContainerItem and ClearCursor then
+                            ClearCursor()
+                            PickupContainerItem(b.bag, b.slot)
+                            PickupContainerItem(a.bag, a.slot)
+                            ClearCursor()
+                            local transfer = math.min(b.count, a.maxStack - a.count)
+                            a.count = a.count + transfer
+                            b.count = b.count - transfer
+                            didMerge = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return didMerge
+end
+
+function CLIAlts:SortBags()
+    if InCombatLockdown and InCombatLockdown() then
+        self:Print("|cffff4444Cannot sort bags while in combat.|r")
+        return false
+    end
+    if CursorHasItem and CursorHasItem() then
+        self:Print("|cffff4444Cannot sort bags while holding an item on the cursor.|r")
+        return false
+    end
+    if self.isSortingBags then
+        self:Print("Bag sorting is already in progress...")
+        return false
+    end
+
+    -- 1. Check native Blizzard sorting API (Retail / Modern Classic)
+    if C_Container and C_Container.SortBags then
+        local ok = pcall(C_Container.SortBags)
+        if ok then
+            self:Print("Bags sorted.")
+            return true
+        end
+    elseif _G["SortBags"] and type(_G["SortBags"]) == "function" and _G["SortBags"] ~= self.SortBags then
+        local ok = pcall(_G["SortBags"])
+        if ok then
+            self:Print("Bags sorted.")
+            return true
+        end
+    end
+
+    -- 2. Custom Lua Sorter Engine (WoW Forever / 3.3.5 / Vanilla fallback)
+    return self:StartCustomBagSort()
+end
+
+function CLIAlts:StopBagSort()
+    if self.sortFrame then
+        self.sortFrame:Hide()
+    end
+    self.isSortingBags = false
+    if ClearCursor then ClearCursor() end
+end
+
+function CLIAlts:StartCustomBagSort()
+    if not PickupContainerItem then
+        self:Print("Bag sorting API not available on this client.")
+        return false
+    end
+
+    -- Step 1: Consolidate partial stacks first
+    self:ConsolidateBagStacks()
+
+    -- Step 2: Gather all movable slots across general inventory bags
+    local numBags = NUM_BAG_SLOTS or 4
+    local slotRefs = {}
+
+    for bagID = 0, numBags do
+        local isSpecial = false
+        if bagID > 0 and GetContainerNumFreeSlots then
+            local _, bagType = GetContainerNumFreeSlots(bagID)
+            if bagType and bagType ~= 0 then
+                isSpecial = true
+            end
+        end
+
+        if not isSpecial then
+            local numSlots = self:GetNumContainerSlots(bagID)
+            for slot = 1, numSlots do
+                table.insert(slotRefs, { bag = bagID, slot = slot })
+            end
+        end
+    end
+
+    if #slotRefs == 0 then return false end
+
+    -- Step 3: Snapshot current items and build desired target arrangement
+    local currentItems = {}
+    local sortList = {}
+
+    for idx, ref in ipairs(slotRefs) do
+        local itemID, count, link = self:GetContainerItemData(ref.bag, ref.slot)
+        local score, key = self:GetItemSortScore(itemID, count)
+        local entry = {
+            index = idx,
+            bag = ref.bag,
+            slot = ref.slot,
+            itemID = itemID or 0,
+            count = count or 0,
+            link = link,
+            score = score,
+            key = key,
+        }
+        currentItems[idx] = entry
+        table.insert(sortList, entry)
+    end
+
+    table.sort(sortList, function(a, b)
+        if a.score ~= b.score then
+            return a.score < b.score
+        end
+        return a.key < b.key
+    end)
+
+    -- Check if already sorted
+    local alreadySorted = true
+    for idx = 1, #sortList do
+        if currentItems[idx].itemID ~= sortList[idx].itemID or currentItems[idx].count ~= sortList[idx].count then
+            alreadySorted = false
+            break
+        end
+    end
+
+    if alreadySorted then
+        self:Print("Bags are already organized.")
+        if PlaySound and SOUNDKIT and SOUNDKIT.IG_BACKPACK_OPEN then
+            pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN)
+        end
+        return true
+    end
+
+    -- Start asynchronous sorting ticker
+    if not self.sortFrame then
+        self.sortFrame = CreateFrame("Frame", "CLIAltsSortFrame", UIParent)
+    end
+
+    self.isSortingBags = true
+    local sf = self.sortFrame
+    sf.slotRefs = slotRefs
+    sf.desired = sortList
+    sf.startTime = (GetTime and GetTime()) or 0
+    sf.timeSinceMove = 0
+
+    sf:SetScript("OnUpdate", function(f, elapsed)
+        if InCombatLockdown and InCombatLockdown() then
+            f:Hide()
+            CLIAlts.isSortingBags = false
+            CLIAlts:Print("|cffff4444Bag sorting paused: In combat.|r")
+            return
+        end
+
+        local curTime = (GetTime and GetTime()) or 0
+        if curTime > f.startTime + 15 then
+            f:Hide()
+            CLIAlts.isSortingBags = false
+            CLIAlts:Print("Bag sorting timed out.")
+            return
+        end
+
+        f.timeSinceMove = (f.timeSinceMove or 0) + (elapsed or 0.1)
+        if f.timeSinceMove < 0.08 then return end
+        f.timeSinceMove = 0
+
+        -- Refresh current inventory states
+        local current = {}
+        local allMatched = true
+
+        for idx, ref in ipairs(f.slotRefs) do
+            local itemID, count = CLIAlts:GetContainerItemData(ref.bag, ref.slot)
+            current[idx] = {
+                bag = ref.bag,
+                slot = ref.slot,
+                itemID = itemID or 0,
+                count = count or 0,
+            }
+        end
+
+        -- Check if any item in current bag slots is currently locked
+        for _, cur in ipairs(current) do
+            local isLocked = false
+            if C_Container and C_Container.GetContainerItemInfo then
+                local info = C_Container.GetContainerItemInfo(cur.bag, cur.slot)
+                isLocked = info and info.isLocked
+            elseif GetContainerItemInfo then
+                local _, _, locked = GetContainerItemInfo(cur.bag, cur.slot)
+                isLocked = locked
+            end
+            if isLocked then
+                return -- Wait for lock to clear
+            end
+        end
+
+        -- Find first mismatch and swap
+        for i = 1, #f.desired do
+            local targetItem = f.desired[i]
+            local curItem = current[i]
+
+            if curItem.itemID ~= targetItem.itemID or curItem.count ~= targetItem.count then
+                allMatched = false
+
+                -- Find where targetItem is currently located
+                local sourceIdx = nil
+                for j = i + 1, #current do
+                    if current[j].itemID == targetItem.itemID and current[j].count == targetItem.count then
+                        sourceIdx = j
+                        break
+                    end
+                end
+
+                if not sourceIdx then
+                    for j = i + 1, #current do
+                        if current[j].itemID == targetItem.itemID and targetItem.itemID > 0 then
+                            sourceIdx = j
+                            break
+                        end
+                    end
+                end
+
+                if sourceIdx then
+                    ClearCursor()
+                    PickupContainerItem(current[sourceIdx].bag, current[sourceIdx].slot)
+                    PickupContainerItem(curItem.bag, curItem.slot)
+                    ClearCursor()
+                    return -- One move per tick
+                end
+            end
+        end
+
+        if allMatched then
+            f:Hide()
+            CLIAlts.isSortingBags = false
+            if PlaySound and SOUNDKIT and SOUNDKIT.IG_BACKPACK_OPEN then
+                pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN)
+            end
+            CLIAlts:Print("|cff00ff66Bags sorted successfully.|r")
+            if CLIAlts.RequestRender then CLIAlts:RequestRender() end
+        end
+    end)
+
+    sf:Show()
+    self:Print("Sorting bags...")
+    return true
 end
 
 

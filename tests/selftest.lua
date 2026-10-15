@@ -1484,8 +1484,109 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = oldLpDB
     end
 
+    do -- 25. Bag Auto-Sort & Consolidation Engine Tests
+    local oldSortDB = CLIAltsDB
+    local testSortDB = {
+        settings = {
+            showBagSortButton = true,
+        },
+        characters = {},
+    }
+    CLIAltsDB = testSortDB
+
+    -- 25a. Item sorting scores and categories
+    local emptyScore, _ = self:GetItemSortScore(nil, 0)
+    Assert(emptyScore == 99, "SortBags: Empty/nil item receives score 99")
+
+    -- Test item scores: Quest (10), Consumable (20), Trade Goods (30), Bags (40), Recipes (50), Weapons (60), Armor (70), Junk (90)
+    local mockItemData = {
+        [1001] = { name = "Quest Note", itemClass = 12, itemSubClass = 0, quality = 1 }, -- Quest
+        [1002] = { name = "Healing Potion", itemClass = 0, itemSubClass = 1, quality = 1 }, -- Consumable
+        [1003] = { name = "Copper Ore", itemClass = 7, itemSubClass = 0, quality = 1 }, -- Trade Goods
+        [1004] = { name = "Silk Bag", itemClass = 1, itemSubClass = 0, quality = 1 }, -- Container
+        [1005] = { name = "Recipe: Elixir", itemClass = 9, itemSubClass = 0, quality = 1 }, -- Recipe
+        [1006] = { name = "Iron Sword", itemClass = 2, itemSubClass = 7, quality = 2 }, -- Weapon
+        [1007] = { name = "Leather Belt", itemClass = 4, itemSubClass = 1, quality = 2 }, -- Armor
+        [1008] = { name = "Ruined Pelt", itemClass = 15, itemSubClass = 0, quality = 0 }, -- Poor (Junk)
+    }
+
+    local oldGetItemInfoInstant = GetItemInfoInstant
+    local oldGetItemInfo = GetItemInfo
+    GetItemInfoInstant = function(id)
+        local d = mockItemData[id]
+        if d then
+            return id, d.name, nil, nil, d.quality, d.itemClass, d.itemSubClass
+        end
+        return nil
+    end
+    GetItemInfo = function(id)
+        local d = mockItemData[id]
+        if d then
+            return d.name, nil, d.quality, nil, nil, nil, nil, nil, nil, nil, nil, d.itemClass, d.itemSubClass
+        end
+        return nil
+    end
+
+    local qScore, _ = self:GetItemSortScore(1001, 1)
+    Assert(qScore == 10, "SortBags: Quest item receives score 10")
+    local cScore, _ = self:GetItemSortScore(1002, 5)
+    Assert(cScore == 20, "SortBags: Consumable receives score 20")
+    local tgScore, _ = self:GetItemSortScore(1003, 20)
+    Assert(tgScore == 30, "SortBags: Trade Goods receive score 30")
+    local bagScore, _ = self:GetItemSortScore(1004, 1)
+    Assert(bagScore == 40, "SortBags: Bag receives score 40")
+    local rcpScore, _ = self:GetItemSortScore(1005, 1)
+    Assert(rcpScore == 50, "SortBags: Recipe receives score 50")
+    local wpnScore, _ = self:GetItemSortScore(1006, 1)
+    Assert(wpnScore == 60, "SortBags: Weapon receives score 60")
+    local armScore, _ = self:GetItemSortScore(1007, 1)
+    Assert(armScore == 70, "SortBags: Armor receives score 70")
+    local jnkScore, _ = self:GetItemSortScore(1008, 1)
+    Assert(jnkScore == 90, "SortBags: Junk item receives score 90")
+
+    -- 25b. Stack consolidation execution
+    local stackCalled = false
+    local oldConsolidate = self.ConsolidateBagStacks
+    self.ConsolidateBagStacks = function(s)
+        stackCalled = true
+        return oldConsolidate(s)
+    end
+    self:ConsolidateBagStacks()
+    Assert(stackCalled == true, "SortBags: ConsolidateBagStacks executes without errors")
+    self.ConsolidateBagStacks = oldConsolidate
+
+    -- 25c. SortBags execution and combat guard
+    local oldCombat = InCombatLockdown
+    InCombatLockdown = function() return true end
+    local combatSort = self:SortBags()
+    Assert(combatSort == false, "SortBags: Refuses to sort in combat")
+    InCombatLockdown = function() return false end
+
+    local normalSort = self:SortBags()
+    Assert(normalSort == true, "SortBags: Executes bag sort outside of combat")
+
+    -- 25d. Bag Sort Button UI initialization and toggle
+    local sortBtn = self:InitBagSortButton()
+    Assert(sortBtn ~= nil, "InitBagSortButton: Creates bag sort button")
+    Assert(sortBtn.label ~= nil, "InitBagSortButton: Button contains label fontstring")
+
+    local toggleOff = self:ToggleBagSortButton(false)
+    Assert(toggleOff == false and CLIAltsDB.settings.showBagSortButton == false, "ToggleBagSortButton(false) disables setting")
+    Assert(sortBtn:IsShown() == false, "ToggleBagSortButton(false) hides button")
+
+    local toggleOn = self:ToggleBagSortButton(true)
+    Assert(toggleOn == true and CLIAltsDB.settings.showBagSortButton == true, "ToggleBagSortButton(true) enables setting")
+    Assert(sortBtn:IsShown() == true, "ToggleBagSortButton(true) shows button")
+
+    -- Clean up mocks
+    GetItemInfoInstant = oldGetItemInfoInstant
+    GetItemInfo = oldGetItemInfo
+    InCombatLockdown = oldCombat
+    CLIAltsDB = oldSortDB
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

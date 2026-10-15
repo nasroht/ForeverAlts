@@ -200,6 +200,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         -- Initialize item hover tooltip hooks & initial inventory scan (Feature 6)
         if CLIAlts.InitTooltipHooks then CLIAlts:InitTooltipHooks() end
         if CLIAlts.ScanCurrentInventory then CLIAlts:ScanCurrentInventory(false) end
+        if CLIAlts.InitBagSortButton then CLIAlts:InitBagSortButton() end
 
         -- Immediate snapshot
         local char = CLIAlts:CollectCurrentCharacter(false, true)
@@ -379,8 +380,18 @@ local function SlashHandler(msg)
     elseif cmd == "next" then
         CLIAlts:PrintNextAlts()
 
+    elseif cmd == "sortbags" or cmd == "cleanup" then
+        CLIAlts:SortBags()
+
+    elseif cmd == "sortbtn" or cmd == "sortbutton" then
+        local newState = CLIAlts:ToggleBagSortButton()
+        local stateStr = newState and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+        CLIAlts:Print(string.format("Bag auto-sort button is now %s.", stateStr))
+
     elseif cmd == "sort" then
-        if arg and arg ~= "" then
+        if arg and (arg:lower() == "bags" or arg:lower() == "bag") then
+            CLIAlts:SortBags()
+        elseif arg and arg ~= "" then
             CLIAlts:Toggle(true)
             local map = {
                 name = "name",
@@ -413,7 +424,7 @@ local function SlashHandler(msg)
                 CLIAlts:ToggleSortKey(key)
             end
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts sort <name|level|rotation|cohort|gold|rested|waste|xp>|r")
+            CLIAlts:Print("Usage: |cff00ff66/clialts sort <name|level|rotation|cohort|gold|rested|waste|xp|bags>|r")
         end
 
     elseif cmd == "watch" then
@@ -777,3 +788,8 @@ SLASH_CLIALTS1 = "/clialts"
 SLASH_CLIALTS2 = "/cli"
 SLASH_CLIALTS3 = "/ca"
 SlashCmdList["CLIALTS"] = SlashHandler
+
+SLASH_CLIALTS_SORT1 = "/sortbags"
+SlashCmdList["CLIALTS_SORT"] = function()
+    CLIAlts:SortBags()
+end

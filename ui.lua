@@ -3119,6 +3119,9 @@ function CLIAlts:ApplyTheme()
     if self.UpdateMinimapTheme then
         self:UpdateMinimapTheme()
     end
+    if self.ApplyThemeToBagButton then
+        self:ApplyThemeToBagButton()
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -3583,6 +3586,14 @@ function CLIAlts:ExecutePromptCommand(input)
         local fb, ok = self:PrintLegacyPointStatus(args)
         self:SetPromptFeedback(fb or "Legacy Point status printed to chat.", not ok)
 
+    elseif cmd == "sortbags" or cmd == "cleanup" then
+        self:SortBags()
+        self:SetPromptFeedback("Bag sort started.")
+
+    elseif cmd == "sortbtn" or cmd == "sortbutton" then
+        local newState = self:ToggleBagSortButton()
+        self:SetPromptFeedback(string.format("Bag auto-sort button: %s", newState and "ENABLED" or "DISABLED"))
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -3603,7 +3614,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
     local commands = {
         "1", "2", "3", "4", "5", "6", "7",
         "tab", "mail",
-        "sort", "filter", "find", "clear",
+        "sort", "sortbags", "sortbtn", "filter", "find", "clear",
         "goto", "page", "next", "export", "compact",
         "watch", "unwatch", "watchlist",
         "theme", "scale", "perk", "perf", "selftest",
@@ -4739,6 +4750,8 @@ function CLIAlts:ShowHelpPopup()
         "  /clialts unlocked <inst> - List alts with no active lock (gap finder)",
         "  /clialts prune <days> [confirm] - Bulk purge alts inactive for N days",
         "  /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)",
+        "  /clialts sortbags   - Auto-sort inventory & stack items (/sortbags)",
+        "  /clialts sortbtn    - Toggle [S] bag sort button on backpack",
         "  /clialts forever    - Toggle WoW Forever Cohort mode (auto-active)",
         "  /clialts core <who> - Set Core cohort (Target Level 35)",
         "  /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)",
@@ -4758,6 +4771,8 @@ function CLIAlts:ShowHelpPopup()
         "  > next              - Print alts with highest rested waste",
         "  > watch <item>      - Add item to bag/bank inventory tracker",
         "  > tooltips / inv    - Toggle item hover tooltips (bags/bank alts)",
+        "  > sortbags          - Auto-sort inventory & consolidate stacks",
+        "  > sortbtn           - Toggle [S] button on backpack window",
         "  > core <who> [tgt]  - Set Core cohort (Target 35)",
         "  > alt <who> [tgt]   - Set Alt/Reserve cohort (Target 25)",
         "  > bank <who>        - Set Bank mule (Target 1)",
@@ -5057,5 +5072,139 @@ function CLIAlts:InitTooltipHooks()
             ItemRefTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
         end
     end
+end
+
+-- ----------------------------------------------------------------------------
+-- Bag Auto-Sort Button Integration (ContainerFrame1 / Combined Bags)
+-- ----------------------------------------------------------------------------
+function CLIAlts:ApplyThemeToBagButton()
+    local btn = self.bagSortButton
+    if not btn then return end
+    local t = self:GetTheme()
+    if btn.SetBackdropBorderColor then
+        btn:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.9)
+    end
+    if btn.label then
+        btn.label:SetText(string.format("|cff%s[S]|r", t.highlightHex or "f2c94c"))
+    end
+end
+
+function CLIAlts:InitBagSortButton()
+    if self.bagSortButton then return self.bagSortButton end
+    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false then
+        return nil
+    end
+
+    local parent = nil
+    local anchorTo = nil
+    if ContainerFrame1 and ContainerFrame1CloseButton then
+        parent = ContainerFrame1
+        anchorTo = ContainerFrame1CloseButton
+    elseif ContainerFrameCombinedBags and ContainerFrameCombinedBagsCloseButton then
+        parent = ContainerFrameCombinedBags
+        anchorTo = ContainerFrameCombinedBagsCloseButton
+    elseif ContainerFrame1 then
+        parent = ContainerFrame1
+        anchorTo = ContainerFrame1
+    elseif ContainerFrameCombinedBags then
+        parent = ContainerFrameCombinedBags
+        anchorTo = ContainerFrameCombinedBags
+    end
+
+    if not parent then return nil end
+
+    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    btn:SetSize(18, 18)
+    if anchorTo == ContainerFrame1CloseButton or anchorTo == ContainerFrameCombinedBagsCloseButton then
+        btn:SetPoint("RIGHT", anchorTo, "LEFT", -3, 0)
+    else
+        btn:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -28, -6)
+    end
+    btn:SetFrameStrata("HIGH")
+
+    if btn.SetBackdrop then
+        btn:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            tile = false, tileSize = 0, edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if btn.SetBackdropColor then
+            btn:SetBackdropColor(0.08, 0.08, 0.08, 0.85)
+        end
+        if btn.SetBackdropBorderColor then
+            btn:SetBackdropBorderColor(0.95, 0.79, 0.30, 0.9)
+        end
+    end
+
+    local label = btn:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(label, 13, "OUTLINE")
+    label:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    label:SetText("|cfff2c94c[S]|r")
+    btn.label = label
+
+    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+
+    btn:SetScript("OnEnter", function(s)
+        if GameTooltip then
+            GameTooltip:SetOwner(s, "ANCHOR_TOPRIGHT")
+            GameTooltip:ClearLines()
+            GameTooltip:AddLine("|cfff2c94cCLIAlts: Bag Auto-Sort|r")
+            GameTooltip:AddLine("|cff55e39aLeft-Click|r: Auto-sort and consolidate bags", 0.9, 0.9, 0.9)
+            GameTooltip:AddLine("|cff57d6e8Right-Click|r: Open CLIAlts Dashboard", 0.9, 0.9, 0.9)
+            GameTooltip:AddLine("|cffa9a08c/sortbags or /clialts sortbtn to toggle|r", 0.7, 0.7, 0.7)
+            GameTooltip:Show()
+        end
+        if s.SetBackdropColor then
+            s:SetBackdropColor(0.2, 0.2, 0.1, 0.95)
+        end
+    end)
+
+    btn:SetScript("OnLeave", function(s)
+        if GameTooltip then GameTooltip:Hide() end
+        if s.SetBackdropColor then
+            s:SetBackdropColor(0.08, 0.08, 0.08, 0.85)
+        end
+    end)
+
+    btn:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then
+            CLIAlts:Toggle()
+        else
+            CLIAlts:SortBags()
+        end
+    end)
+
+    self.bagSortButton = btn
+    self:ApplyThemeToBagButton()
+    return btn
+end
+
+function CLIAlts:ToggleBagSortButton(enable)
+    if enable == nil then
+        if CLIAltsDB and CLIAltsDB.settings then
+            enable = not CLIAltsDB.settings.showBagSortButton
+        else
+            enable = true
+        end
+    end
+
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.showBagSortButton = enable
+    end
+
+    if enable then
+        if not self.bagSortButton then
+            self:InitBagSortButton()
+        end
+        if self.bagSortButton then
+            self.bagSortButton:Show()
+        end
+    else
+        if self.bagSortButton then
+            self.bagSortButton:Hide()
+        end
+    end
+    return enable
 end
 

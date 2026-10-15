@@ -149,7 +149,16 @@ Enum = Enum or {
 NUM_BAG_SLOTS = NUM_BAG_SLOTS or 4
 NUM_BANKBAGSLOTS = NUM_BANKBAGSLOTS or 6
 BANK_CONTAINER = BANK_CONTAINER or -1
-REAGENTBANK_CONTAINER = REAGENTBANK_CONTAINER or -3
+InCombatLockdown = InCombatLockdown or function() return false end
+CursorHasItem = CursorHasItem or function() return false end
+ClearCursor = ClearCursor or function() end
+PickupContainerItem = PickupContainerItem or function(bag, slot) end
+GetContainerNumFreeSlots = GetContainerNumFreeSlots or function(bag) return 0, 0 end
+ContainerFrame1 = ContainerFrame1 or CreateDummyFrame("Frame", "ContainerFrame1")
+ContainerFrame1CloseButton = ContainerFrame1CloseButton or CreateDummyFrame("Button", "ContainerFrame1CloseButton", ContainerFrame1)
+ContainerFrameCombinedBags = ContainerFrameCombinedBags or CreateDummyFrame("Frame", "ContainerFrameCombinedBags")
+ContainerFrameCombinedBagsCloseButton = ContainerFrameCombinedBagsCloseButton or CreateDummyFrame("Button", "ContainerFrameCombinedBagsCloseButton", ContainerFrameCombinedBags)
+
 C_Container = C_Container or {
     GetContainerNumSlots = function(bagID) return 0 end,
     GetContainerItemInfo = function(bagID, slot) return nil end,
