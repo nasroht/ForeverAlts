@@ -522,9 +522,14 @@ end
 
 -- ----------------------------------------------------------------------------
 -- Status Pill Formatter (Phase 2/3 Modern Rows)
--- Returns text and style ("warn_fill", "info_outline", "muted_outline")
+-- Returns text and style ("warn_fill", "info_outline", "muted_outline", "dashed_muted")
 -- ----------------------------------------------------------------------------
 function CLIAlts:FmtStatus(char, t)
+    -- Allow call with either dot or colon syntax
+    if self ~= CLIAlts and char == nil and type(self) == "table" and (self.name or self.level) then
+        char = self
+        self = CLIAlts
+    end
     if not char then return "---", "muted_outline" end
     local maxLevel = self.GetMaxLevel and self:GetMaxLevel() or 60
     local level = char.level or 1
@@ -533,32 +538,49 @@ function CLIAlts:FmtStatus(char, t)
     end
 
     local now = time()
-    local lastSeen = char.lastUpdate or char.lastSeen or now
+    local lastSeen = char.lastUpdate or char.logoutTime or char.lastSeen or now
     local unseenDays = math.floor((now - lastSeen) / 86400)
-    if unseenDays >= 30 and (not char.restedXP or char.restedXP == 0) then
-        return string.format("Unseen %dd", unseenDays), "muted_outline"
+    local staleDays = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.staleDays)) or 30
+
+    if unseenDays >= staleDays or char.isStale then
+        return string.format("Unseen %dd", math.max(unseenDays, 1)), "dashed_muted"
     end
 
-    local wastedSec, _, _, timeStr = self:GetRestedWaste(char)
-    if wastedSec and wastedSec > 0 then
-        return "Losing " .. timeStr, "warn_fill"
+    local wastedSec, _, _, timeStr = self:GetRestedWaste(char, now)
+    local rested = self:GetRestedData(char, false, now)
+
+    if (wastedSec and wastedSec > 0) or (rested and rested.isFull) then
+        local dur = timeStr or "0m"
+        dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
+        if dur == "Just capped" then dur = "0m" end
+        return "Losing " .. dur, "warn_fill"
     end
 
-    local rested = self:GetRestedData(char)
-    if rested and rested.isFull then
-        return "Losing " .. (timeStr or "0m"), "warn_fill"
-    elseif rested and rested.timeLeftStr and rested.timeLeftStr ~= "---" then
-        local sec = rested.timeLeftSec or 0
-        local dur = rested.timeLeftStr
+    if rested and not rested.isMaxLevel then
+        local sec = rested.timeToFull or rested.timeLeftSec or 0
+        local dur
+        if sec > 0 then
+            local days = math.floor(sec / 86400)
+            local hours = math.floor((sec % 86400) / 3600)
+            local mins = math.floor((sec % 3600) / 60)
+            if days > 0 then
+                dur = string.format("%dd", days)
+            elseif hours > 0 then
+                dur = string.format("%dh", hours)
+            elseif mins > 0 then
+                dur = string.format("%dm", mins)
+            else
+                dur = "<1m"
+            end
+        else
+            dur = rested.timeLeftStr or "---"
+        end
+
         if sec > 0 and sec < 86400 then
             return "Cap in " .. dur, "info_outline"
-        else
+        elseif sec >= 86400 then
             return "Cap in " .. dur, "muted_outline"
         end
-    end
-
-    if unseenDays >= 30 then
-        return string.format("Unseen %dd", unseenDays), "muted_outline"
     end
 
     return "No rest XP", "muted_outline"
@@ -758,19 +780,16 @@ end
 
 local function FmtETA(char, t)
     t = t or CLIAlts:GetTheme()
-    local rested = CLIAlts:GetRestedData(char)
-    if not rested then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
-    if rested.isMaxLevel then return string.format("|cff%sMAX|r", t.mutedHex or "a9a08c") end
-    if rested.isFull then
-        local wastedSec, _, _, timeStr = CLIAlts:GetRestedWaste(char)
-        if wastedSec and wastedSec > 3600 then
-            return string.format("|cff%s!%s WST|r", t.pendingHex or "ffb547", timeStr or "1h")
-        else
-            return string.format("|cff%s[CAP]|r", t.highlightHex)
-        end
+    local text, style = CLIAlts:FmtStatus(char, t)
+    if style == "warn_fill" or style == "warn" then
+        return string.format("|cff%s%s|r", t.pendingHex or "ffb547", text)
+    elseif style == "info_outline" or style == "info" then
+        return string.format("|cff%s%s|r", t.accentHex or "7fdbff", text)
+    else -- muted_outline or dashed_muted
+        return string.format("|cff%s%s|r", t.mutedHex or "a9a08c", text)
     end
-    return string.format("|cff%s%s|r", t.dimHex, rested.timeLeftStr or "---")
 end
+CLIAlts.FmtETA = FmtETA
 
 -- Tab 2 Forever Route & Rotation Formatters
 local function FmtRouteOrder(char, t)
@@ -1237,7 +1256,7 @@ local COLS = {
         { key = "name",      title = "CHARACTER",         w = 26, pw = 360, cpw = 300, mpw = 240, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 70,  mpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevel },
         { key = "rested",    title = "RESTED XP",         w = 32, pw = 450, cpw = 380, mpw = 270, align = "LEFT",   sort = "rested",   fmt = FmtRested },
-        { key = "eta",       title = "ETA",               w = 14, pw = 200, cpw = 0,   mpw = 110, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "eta",       title = "STATUS",            w = 14, pw = 200, cpw = 0,   mpw = 110, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [2] = { -- 2: FOREVER ROUTE
         { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
@@ -1257,7 +1276,7 @@ local COLS = {
         { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 115, padRight = 14, cpadRight = 10, mpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
         { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 118, align = "LEFT",   fmt = FmtRestedBar },
         { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 75,  padRight = 8, mpadRight = 8, align = "RIGHT",  fmt = FmtRate },
-        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 150, cpw = 120, mpw = 78,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "eta",       title = "STATUS",            w = 12, pw = 150, cpw = 120, mpw = 78,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
@@ -3543,9 +3562,13 @@ function CLIAlts:UpdateDetailPanel()
             local maxPct = rested.maxPercent or 150
             local poolXP = rested.currentRested or rested.usableXP or 0
             local est = rested.isEstimate and "~" or ""
+            local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
             if pct >= maxPct then
-                if rested.wastedXP and rested.wastedXP > 0 then
-                    dp.restedCard.status:SetText(string.format("Capped %s (%s wasted)", rested.timeLeftStr or "", self:FormatNumber(rested.wastedXP)))
+                if wastedSec and wastedSec > 0 then
+                    local dur = timeStr or "0m"
+                    dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
+                    if dur == "Just capped" then dur = "0m" end
+                    dp.restedCard.status:SetText(string.format("Capped %s, ~%s XP wasted", dur, self:FormatNumber(wastedXP)))
                     dp.restedCard.status:SetTextColor(warnR, warnG, warnB)
                 else
                     dp.restedCard.status:SetText(string.format("At Rested Cap (%d%%)", maxPct))
@@ -4366,14 +4389,18 @@ function CLIAlts:Render()
                         local statusText, statusStyle = self:FmtStatus(char, t)
                         if row.statusPill and row.statusPillText then
                             row.statusPillText:SetText(statusText)
-                            if statusStyle == "warn_fill" then
+                            if statusStyle == "warn_fill" or statusStyle == "warn" then
                                 if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(warnR, warnG, warnB, 1.0) end
                                 if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(warnR, warnG, warnB, 1.0) end
                                 row.statusPillText:SetTextColor(0.05, 0.04, 0.02)
-                            elseif statusStyle == "info_outline" then
+                            elseif statusStyle == "info_outline" or statusStyle == "info" then
                                 if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(fillR, fillG, fillB, 0.12) end
                                 if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(fillR, fillG, fillB, 0.85) end
                                 row.statusPillText:SetTextColor(fillR, fillG, fillB)
+                            elseif statusStyle == "dashed_muted" or statusStyle == "dashed" then
+                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(panelR, panelG, panelB, 0.35) end
+                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(lineR, lineG, lineB, 0.50) end
+                                row.statusPillText:SetTextColor(mutedR, mutedG, mutedB)
                             else -- muted_outline
                                 if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(panelR, panelG, panelB, 0.50) end
                                 if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(lineR, lineG, lineB, 0.75) end

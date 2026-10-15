@@ -634,6 +634,129 @@ function CLIAlts:RunSelfTest()
         self.selectedCharKey = nil
     end
 
+    do -- 11f. Phase 3: Status Pill & Wording Tests
+        -- Branch 1: Max Level Alt
+        local sMax, styleMax = self:FmtStatus({ level = 60 })
+        Assert(sMax == "No rest XP", "Phase 3: Max level returns 'No rest XP'")
+        Assert(styleMax == "muted_outline", "Phase 3: Max level returns muted_outline")
+        Assert(self:StripColors(sMax) == "No rest XP", "Phase 3: Text readable with colors disabled (No rest XP)")
+
+        -- Branch 2: Unseen Alt (Offline >= 30 days)
+        local sUnseen, styleUnseen = self:FmtStatus({
+            name = "Sif",
+            level = 18,
+            lastUpdate = time() - (41 * 86400),
+        })
+        Assert(sUnseen == "Unseen 41d", "Phase 3: 41d inactive returns 'Unseen 41d' (got: " .. tostring(sUnseen) .. ")")
+        Assert(styleUnseen == "dashed_muted", "Phase 3: Unseen alt returns dashed_muted style")
+        Assert(self:StripColors(sUnseen) == "Unseen 41d", "Phase 3: Text readable with colors disabled (Unseen 41d)")
+
+        -- Branch 3: Capped & Losing Rested XP (Thor & Ragnar scenarios)
+        local sLosingThor, styleLosingThor = self:FmtStatus({
+            name = "Thor",
+            level = 47,
+            maxXP = 20000,
+            restedXP = 30000,
+            lastUpdate = time() - (3 * 86400 + 4 * 3600),
+            isResting = true,
+        })
+        Assert(sLosingThor == "Losing 3d 4h", "Phase 3: 3d 4h wasted returns 'Losing 3d 4h' (got: " .. tostring(sLosingThor) .. ")")
+        Assert(styleLosingThor == "warn_fill", "Phase 3: Losing alt returns warn_fill style")
+        Assert(self:StripColors(sLosingThor) == "Losing 3d 4h", "Phase 3: Text readable with colors disabled (Losing 3d 4h)")
+
+        local sLosingRagnar, styleLosingRagnar = self:FmtStatus({
+            name = "Ragnar",
+            level = 41,
+            maxXP = 20000,
+            restedXP = 30000,
+            lastUpdate = time() - (11 * 3600),
+            isResting = true,
+        })
+        Assert(sLosingRagnar == "Losing 11h", "Phase 3: 11h wasted returns 'Losing 11h' (got: " .. tostring(sLosingRagnar) .. ")")
+        Assert(styleLosingRagnar == "warn_fill", "Phase 3: Ragnar returns warn_fill style")
+
+        -- Branch 4: Accruing, Cap in under 24h (Åse scenario)
+        -- maxXP = 576000 => rate = 1 XP/sec. Cap = 864,000 XP.
+        -- If restedXP = 864000 - 21600 (6 hours to cap):
+        local sCap6h, styleCap6h = self:FmtStatus({
+            name = "Åse",
+            level = 52,
+            maxXP = 576000,
+            restedXP = 864000 - 21600,
+            lastUpdate = time(),
+            isResting = true,
+        })
+        Assert(sCap6h == "Cap in 6h", "Phase 3: 6h to cap returns 'Cap in 6h' (got: " .. tostring(sCap6h) .. ")")
+        Assert(styleCap6h == "info_outline", "Phase 3: Under 24h cap returns info_outline style")
+        Assert(self:StripColors(sCap6h) == "Cap in 6h", "Phase 3: Text readable with colors disabled (Cap in 6h)")
+
+        -- Branch 5: Accruing, Cap in 24h or more (Brann scenario: 2 days)
+        -- 2 days to cap: 2 * 86400 = 172,800 XP remaining to cap.
+        local sCap2d, styleCap2d = self:FmtStatus({
+            name = "Brann",
+            level = 33,
+            maxXP = 576000,
+            restedXP = 864000 - 172800,
+            lastUpdate = time(),
+            isResting = true,
+        })
+        Assert(sCap2d == "Cap in 2d", "Phase 3: 2d to cap returns 'Cap in 2d' (got: " .. tostring(sCap2d) .. ")")
+        Assert(styleCap2d == "muted_outline", "Phase 3: 24h+ cap returns muted_outline style")
+        Assert(self:StripColors(sCap2d) == "Cap in 2d", "Phase 3: Text readable with colors disabled (Cap in 2d)")
+
+        -- Branch 6: Overview and Rested Tabs Integration (FmtETA delegates to FmtStatus)
+        local testTheme = self:GetTheme()
+        local etaLosing = self.FmtETA and self.FmtETA({
+            level = 47,
+            maxXP = 20000,
+            restedXP = 30000,
+            lastUpdate = time() - (3 * 86400 + 4 * 3600),
+            isResting = true,
+        }, testTheme)
+        Assert(etaLosing ~= nil and etaLosing:find("Losing 3d 4h") ~= nil, "Phase 3: FmtETA on Rested tab formats 'Losing 3d 4h'")
+
+        local etaCap6h = self.FmtETA and self.FmtETA({
+            level = 52,
+            maxXP = 576000,
+            restedXP = 864000 - 21600,
+            lastUpdate = time(),
+            isResting = true,
+        }, testTheme)
+        Assert(etaCap6h ~= nil and etaCap6h:find("Cap in 6h") ~= nil, "Phase 3: FmtETA on Rested tab formats 'Cap in 6h'")
+
+        -- Column Header Verification on Tab 1 & Tab 3
+        local colsOverview = self:GetColumns(1)
+        local statusColOverview = nil
+        for _, c in ipairs(colsOverview) do
+            if c.key == "eta" then statusColOverview = c break end
+        end
+        Assert(statusColOverview ~= nil and statusColOverview.title == "STATUS", "Phase 3: Overview tab has STATUS column")
+
+        local colsRested = self:GetColumns(3)
+        local statusColRested = nil
+        for _, c in ipairs(colsRested) do
+            if c.key == "eta" then statusColRested = c break end
+        end
+        Assert(statusColRested ~= nil and statusColRested.title == "STATUS", "Phase 3: Rested tab has STATUS column")
+
+        -- Branch 7: Exhaustive Roster Single-Status Assertion
+        local sampleRoster = {
+            { name = "Thor", level = 47, maxXP = 20000, restedXP = 30000, lastUpdate = time() - 3600, isResting = true },
+            { name = "Åse", level = 52, maxXP = 576000, restedXP = 864000 - 21600, lastUpdate = time(), isResting = true },
+            { name = "Brann", level = 33, maxXP = 576000, restedXP = 864000 - 172800, lastUpdate = time(), isResting = true },
+            { name = "Sif", level = 18, lastUpdate = time() - (41 * 86400) },
+            { name = "Mjölnir", level = 60 },
+        }
+        for _, alt in ipairs(sampleRoster) do
+            local altStatus, altStyle = self:FmtStatus(alt)
+            Assert(altStatus ~= nil and #altStatus > 0, "Phase 3: Alt " .. alt.name .. " has non-empty status")
+            Assert(altStyle ~= nil, "Phase 3: Alt " .. alt.name .. " has valid style")
+            local clean = self:StripColors(altStatus)
+            local hasValidPrefix = clean:find("^Losing") or clean:find("^Cap in") or clean:find("^Unseen") or (clean == "No rest XP")
+            Assert(hasValidPrefix ~= nil, "Phase 3: Alt " .. alt.name .. " shows exactly one valid status (" .. clean .. ")")
+        end
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()
