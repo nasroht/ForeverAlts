@@ -1,9 +1,18 @@
 # Changelog
 
-All notable changes to **CLIAlts** will be documented in this file.
+All notable changes to **ForeverAlts** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.2.1] - 2026-10-15
+
+### Changed
+- **Rebrand to ForeverAlts**: Dedicated exclusively to World of Warcraft: Forever.
+- **CurseForge Integration**: Updated packaging for new CurseForge project ID `1747176`.
+- **Slash Commands**: Registered primary commands `/foreveralts`, `/fa`, and `/forever` (with `/clialts` and `/ca` preserved as legacy aliases).
+- **Dual SavedVariables**: Added seamless `ForeverAltsDB` and `CLIAltsDB` aliasing so existing character data and configurations carry forward automatically.
+- **Media**: Added official ForeverAlts CRT terminal emblem and updated project documentation.
 
 ## [1.2.0] - 2026-10-15
 

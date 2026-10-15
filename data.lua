@@ -29,7 +29,7 @@ end
 -- ----------------------------------------------------------------------------
 local addonVersion = (C_AddOns and C_AddOns.GetAddOnMetadata and (C_AddOns.GetAddOnMetadata("ForeverAlts", "Version") or C_AddOns.GetAddOnMetadata("clialts", "Version") or C_AddOns.GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
     or (GetAddOnMetadata and (GetAddOnMetadata("ForeverAlts", "Version") or GetAddOnMetadata("clialts", "Version") or GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
-    or "1.2.0"
+    or "1.2.1"
 CLIAlts.VERSION = addonVersion
 ForeverAlts = CLIAlts
 CLIAlts.DB_VERSION = 3
