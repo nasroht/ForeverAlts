@@ -5,6 +5,37 @@ All notable changes to **CLIAlts** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-10-15
+
+### Added
+- **Modern Executive Dashboard**: Complete UI overhaul featuring a high-resolution 1440px wide executive layout, large 18pt typography, class-colored avatar rings, and visual level XP and Rested XP progress bars.
+- **"Play Next" Intelligence & Leveling Session Planner**: Intelligent rotation scoring banner with actionable alt cards, Rested XP burn rates, and automated session planning.
+- **WoW Forever & Classic Suite (Components 1–6)**:
+  - **Component 1 (Roster Categorization & Cohorts)**: Core, Alt, and Bank cohorts with dynamic target leveling goals ("Target Level Reached") and WoW Forever dual-name surname recognition.
+  - **Component 2 (Smart Rotation Engine)**: Calibrated for WoW Forever's *Well Rested* legacy perk (Ranks 0–5) and offline rested calculations.
+  - **Component 3 (Profession Milestones)**: Training thresholds, cooldown monitors, and recipe eligibility tracking.
+  - **Component 4 (Automated Dungeon Quest Tracker)**: Pre-requisite quest chain tracking and dungeon readiness overview.
+  - **Component 5 (Inter-Alt Mail & Supply Chain Router)**: Auto-fill button on `SendMailFrame`, intelligent material destination routing, and instant recipe recognition.
+  - **Component 6 (Legacy Point Progress Tracker)**: In-game LP tracking for milestone rewards.
+- **Secondary Profession Opt-In Routing**:
+  - Dedicated character-level toggles for Cooking (Meat & Fish) and First Aid (Cloth / Bandages) in the Mail Route Dialog, modern detail card, and slash commands (`/ca cook`, `/ca firstaid`).
+  - Cooking and First Aid materials default to safely ignored (kept in player bags) unless explicitly enabled on an alt.
+- **Bag Management & Auto-Sort Engine**:
+  - Built-in `[S]` auto-sort button anchored directly to the backpack (`ContainerFrame1` / `ContainerFrameCombinedBags`) with self-healing visibility monitoring.
+  - Automated multi-bag stack consolidation and fallback sorting engine across Vanilla, Classic Era, and Retail clients.
+- **Cross-Character Inventory & Bank Item Hover Tooltips**: Hover over any item in the world, bags, or bank to view exact item counts held across all tracked alts on the realm.
+- **Dedicated Settings & Preferences Dialog (`/ca settings`)**: Theme picker (Dracula, Amber CRT, Green CRT, Cyberpunk, Classic Dark), font scaling, audio toggles, and feature controls.
+- **Chat Layout Cloner Engine (`/ca clonechat`)**: Clone chat window dimensions, tabs, font sizes, colors, and channels across alts.
+- **Account Liquid Wealth & Dynamic Trend Engine**: Real-time liquid gold calculation and weekly trend indicators.
+
+### Fixed
+- Fixed container item link scanning on Classic Era and WoW Forever 1.12 6-argument container APIs so items and recipes in bags are immediately recognized.
+- Restored direct container frame parenting and frame level layering for the bag auto-sort button to eliminate visual occlusion under WoW's `toplevel="true"` bag windows.
+- Fixed cross-faction mailing guards and self-mailing prevention checks.
+- Eliminated all potential UI taint on Blizzard action bars and bag micro-buttons by decoupling container visibility inspection into an unhooked event watcher.
+
+---
+
 ## [1.1.0] - 2026-10-13
 
 ### Added

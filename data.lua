@@ -29,7 +29,7 @@ end
 -- ----------------------------------------------------------------------------
 local addonVersion = (C_AddOns and C_AddOns.GetAddOnMetadata and (C_AddOns.GetAddOnMetadata("clialts", "Version") or C_AddOns.GetAddOnMetadata(addonName or "clialts", "Version")))
     or (GetAddOnMetadata and (GetAddOnMetadata("clialts", "Version") or GetAddOnMetadata(addonName or "clialts", "Version")))
-    or "1.1.0"
+    or "1.2.0"
 CLIAlts.VERSION = addonVersion
 CLIAlts.DB_VERSION = 3
 local CURRENT_DB_VERSION = 3
