@@ -590,6 +590,7 @@ function CLIAlts:CacheCurrentPlayer()
         self.curPlayerPrimary = primaryName
         self.curPlayerSecondary = secondaryName
         self.curPlayerFullName = fullName
+        self.curPlayerName = primaryName
 
         local realm = (GetRealmName and GetRealmName()) or ""
         if realm == "" then realm = "Forever" end

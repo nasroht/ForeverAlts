@@ -613,6 +613,9 @@ function CLIAlts:GetRowsPerPage()
 end
 
 function CLIAlts:GetRowFrames()
+    if (not rowFrames or #rowFrames == 0) and mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
+        rowFrames = mainFrame.rowFrames
+    end
     return rowFrames
 end
 
@@ -2795,14 +2798,18 @@ end
 -- Modern v2 Main Frame Construction (Design System v2: 1440x800)
 -- ============================================================================
 function CLIAlts:CreateModernMainFrame()
-    if mainFrame then return mainFrame end
-    if _G["CLIAltsMainFrame"] then
+    if mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
+        rowFrames = mainFrame.rowFrames
+        return mainFrame
+    end
+    if _G["CLIAltsMainFrame"] and _G["CLIAltsMainFrame"].rowFrames and #_G["CLIAltsMainFrame"].rowFrames > 0 then
         mainFrame = _G["CLIAltsMainFrame"]
         self.mainFrame = mainFrame
+        rowFrames = mainFrame.rowFrames
         return mainFrame
     end
 
-    local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local frame = _G["CLIAltsMainFrame"] or CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame.isLegacyUI = false
     frame:Hide()
     frame:SetSize(1440, 800)
@@ -4333,10 +4340,14 @@ function CLIAlts:CreateModernMainFrame()
 end
 
 function CLIAlts:CreateMainFrame()
-    if mainFrame then return mainFrame end
-    if _G["CLIAltsMainFrame"] then
+    if mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
+        rowFrames = mainFrame.rowFrames
+        return mainFrame
+    end
+    if _G["CLIAltsMainFrame"] and _G["CLIAltsMainFrame"].rowFrames and #_G["CLIAltsMainFrame"].rowFrames > 0 then
         mainFrame = _G["CLIAltsMainFrame"]
         self.mainFrame = mainFrame
+        rowFrames = mainFrame.rowFrames
         return mainFrame
     end
 
@@ -4348,23 +4359,19 @@ function CLIAlts:CreateMainFrame()
 end
 
 function CLIAlts:RecreateMainFrame()
-    if mainFrame then
-        mainFrame:Hide()
-        mainFrame:ClearAllPoints()
-    end
-    for _, r in ipairs(rowFrames) do
-        if r.Hide then r:Hide() end
-    end
-    rowFrames = {}
-    mainFrame = nil
-    self.mainFrame = nil
-    _G["CLIAltsMainFrame"] = nil
-
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.legacyUI = nil
     end
 
-    return self:CreateModernMainFrame()
+    local frame = self:CreateModernMainFrame()
+    if frame and frame.rowFrames and #frame.rowFrames > 0 then
+        rowFrames = frame.rowFrames
+    end
+    if self.ApplyTheme then self:ApplyTheme() end
+    if self.ApplyFontSizes then self:ApplyFontSizes() end
+    if self.ApplyLayoutSize then self:ApplyLayoutSize() end
+    if self.Render then self:Render() end
+    return frame
 end
 
 function CLIAlts:GetVisibleCharactersList()
@@ -4398,15 +4405,30 @@ end
 function CLIAlts:GetSelectedOrCurChar()
     local selectedKey = self.selectedCharKey
     local charList = self:GetVisibleCharactersList()
+    if not charList or #charList == 0 then
+        charList = self:GetCharactersList()
+    end
+    if not charList or #charList == 0 then
+        self:CollectCurrentCharacter(false, true)
+        charList = self:GetCharactersList()
+    end
+    if not charList or #charList == 0 then
+        return nil
+    end
+
     if selectedKey then
         for _, c in ipairs(charList) do
-            if (c.fullName and c.fullName == selectedKey) or (c.name and c.name == selectedKey) then
+            if (c.fullName and c.fullName == selectedKey) or (c.name and c.name == selectedKey) or (c.key and c.key == selectedKey) then
                 return c
             end
         end
     end
+    local curPrim = self.curPlayerPrimary or self.curPlayerName
     for _, c in ipairs(charList) do
-        if (c.fullName and c.fullName == self.curPlayerFullName) or (c.name and c.name == self.curPlayerName) then
+        if (c.fullName and self.curPlayerFullName and c.fullName == self.curPlayerFullName) or
+           (c.name and self.curPlayerFullName and c.name == self.curPlayerFullName) or
+           (c.name and curPrim and c.name == curPrim) or
+           (c.primaryName and curPrim and c.primaryName == curPrim) then
             return c
         end
     end
@@ -4710,6 +4732,9 @@ function CLIAlts:Render()
     if not mainFrame or not mainFrame:IsShown() then return end
 
     local ok, err = pcall(function()
+        if (not rowFrames or #rowFrames == 0) and mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
+            rowFrames = mainFrame.rowFrames
+        end
         local activeTab = CLIAltsDB.settings.activeTab or 1
         if activeTab == 7 then
             self._cachedMailReadySummary = self:GetMailReadySummary()
@@ -4819,7 +4844,22 @@ function CLIAlts:Render()
         end
     end
 
-    if mainFrame.headerFrame then
+    if mainFrame.headerFrame and mainFrame.rowsContainer and mainFrame.filterBar and mainFrame.mainCol then
+        if activeTab == 1 then
+            mainFrame.headerFrame:Hide()
+            mainFrame.rowsContainer:ClearAllPoints()
+            mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame.filterBar, "BOTTOMLEFT", 0, -4)
+            mainFrame.rowsContainer:SetPoint("BOTTOMRIGHT", mainFrame.mainCol, "BOTTOMRIGHT", 0, 0)
+        else
+            mainFrame.headerFrame:ClearAllPoints()
+            mainFrame.headerFrame:SetPoint("TOPLEFT", mainFrame.filterBar, "BOTTOMLEFT", 0, -4)
+            mainFrame.headerFrame:SetPoint("RIGHT", mainFrame.mainCol, "RIGHT", 0, 0)
+            mainFrame.headerFrame:Show()
+            mainFrame.rowsContainer:ClearAllPoints()
+            mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame.headerFrame, "BOTTOMLEFT", 0, -4)
+            mainFrame.rowsContainer:SetPoint("BOTTOMRIGHT", mainFrame.mainCol, "BOTTOMRIGHT", 0, 0)
+        end
+    elseif mainFrame.headerFrame then
         if activeTab == 1 then
             mainFrame.headerFrame:Hide()
         else
@@ -5306,6 +5346,10 @@ function CLIAlts:Render()
         end
     end
     local chars = self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
+    if (not chars or #chars == 0) and (not self.activeFilter or self.activeFilter == "") then
+        self:CollectCurrentCharacter(false, true)
+        chars = self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
+    end
     local numRows = (self.GetRowsPerPage and self:GetRowsPerPage()) or ROWS_COUNT
     totalPages = math.max(1, math.ceil(#chars / numRows))
     if currentPage > totalPages then currentPage = totalPages end
@@ -8429,19 +8473,22 @@ function CLIAlts:Toggle(show)
             mainFrame = self:CreateMainFrame()
         end
         if not mainFrame then return end
+        if (not rowFrames or #rowFrames == 0) and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
+            rowFrames = mainFrame.rowFrames
+        end
 
         if show == nil then
             if mainFrame:IsShown() then
                 mainFrame:Hide()
             else
-                self:CollectCurrentCharacter()
+                self:CollectCurrentCharacter(false, true)
                 self:ApplyTheme()
                 mainFrame:Show()
                 self:Render()
                 PlayRetroSound()
             end
         elseif show then
-            self:CollectCurrentCharacter()
+            self:CollectCurrentCharacter(false, true)
             self:ApplyTheme()
             mainFrame:Show()
             self:Render()
@@ -8460,7 +8507,7 @@ end
 
 function CLIAlts:Refresh()
     local ok, err = pcall(function()
-        self:CollectCurrentCharacter()
+        self:CollectCurrentCharacter(false, true)
         self:ApplyTheme()
         self:Render()
         self:Print("Database refreshed.")

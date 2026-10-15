@@ -6,6 +6,18 @@ local _, CLIAlts = ...
 CLIAlts = CLIAlts or _G.CLIAlts or {}
 
 function CLIAlts:RunSelfTest()
+    local masterState = {
+        db = CLIAltsDB,
+        primary = self.curPlayerPrimary,
+        secondary = self.curPlayerSecondary,
+        fullName = self.curPlayerFullName,
+        key = self.curPlayerKey,
+        realm = self.curPlayerRealm,
+        name = self.curPlayerName,
+        selected = self.selectedCharKey,
+        filter = self.activeFilter,
+    }
+
     if self.InitDB then
         self:InitDB()
     end
@@ -458,6 +470,9 @@ function CLIAlts:RunSelfTest()
         Assert(restoredModern:GetWidth() == 1440 and restoredModern:GetHeight() == 800,
             "ModernUI: base dimensions remain 1440x800")
         Assert(CLIAltsDB.settings.legacyUI == nil, "ModernUI: legacyUI setting purged from CLIAltsDB")
+        local rf = self:GetRowFrames()
+        Assert(rf ~= nil and #rf == 12, "ModernUI: RecreateMainFrame preserves all 12 pooled rowFrames")
+        Assert(restoredModern.rowFrames ~= nil and #restoredModern.rowFrames == 12, "ModernUI: restoredModern maintains rowFrames table")
 
         if CLIAltsDB and CLIAltsDB.settings then
             CLIAltsDB.settings.theme = oldTheme
@@ -3346,11 +3361,26 @@ function CLIAlts:RunSelfTest()
         sdChat:Hide()
     end
 
-    -- Restore state
-    CLIAltsDB = oldDB
-    self.curPlayerPrimary = savedPrimary
-    self.curPlayerFullName = savedFull
-    self.curPlayerKey = savedKey
+    -- Restore master state
+    if masterState.db then
+        CLIAltsDB = masterState.db
+    else
+        CLIAltsDB = oldDB
+    end
+    self.curPlayerPrimary = masterState.primary or savedPrimary
+    self.curPlayerSecondary = masterState.secondary
+    self.curPlayerFullName = masterState.fullName or savedFull
+    self.curPlayerKey = masterState.key or savedKey
+    self.curPlayerRealm = masterState.realm
+    self.curPlayerName = masterState.name or self.curPlayerPrimary
+    self.selectedCharKey = masterState.selected
+    self.activeFilter = masterState.filter
+    if self.CollectCurrentCharacter then
+        self:CollectCurrentCharacter(false, true)
+    end
+    if self.RequestRender then
+        self:RequestRender()
+    end
 
     if failed == 0 then
         self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine)", passed))
