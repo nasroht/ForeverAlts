@@ -8,7 +8,7 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 _G["CLIAlts"] = CLIAlts
 _G["clialts"] = CLIAlts
 
--- Design Tokens (Default Modern v2 Dark Theme)
+-- Design Tokens (Base Phase 1 Tokens)
 CLIAlts.TOKENS = {
     bg     = "0F131A",
     panel  = "171C26",
@@ -20,6 +20,8 @@ CLIAlts.TOKENS = {
     warn   = "F2B84B",
     fill   = "4CC2D6",
     info   = "7FDBEA",
+    ready  = "33FF66",
+    danger = "FF4444",
     radius = { row = 6, card = 10, window = 12 },
     space  = { 4, 8, 12, 16 },
     rowH   = 52,
@@ -29,6 +31,25 @@ CLIAlts.TOKENS = {
 
 -- Alternative Theme Token Sets
 CLIAlts.THEME_TOKENS = {
+    ["BLIZZARD"] = {
+        bg     = "0B0E14",
+        panel  = "131722",
+        raised = "1B2130",
+        line   = "2A3347",
+        text   = "FFFFFF",
+        muted  = "B0B8C8",
+        brand  = "FFD100",
+        warn   = "FFB033",
+        fill   = "33D9FF",
+        info   = "33D9FF",
+        ready  = "33FF66",
+        danger = "FF4444",
+        radius = { row = 6, card = 10, window = 12 },
+        space  = { 4, 8, 12, 16 },
+        rowH   = 52,
+        minClick = 28,
+        font   = { title = 19, body = 14, small = 12, num = 14 },
+    },
     ["DARK"] = CLIAlts.TOKENS,
     ["AMBER"] = {
         bg     = "100E08",
@@ -133,10 +154,11 @@ CLIAlts.THEME_TOKENS = {
         font   = { title = 19, body = 14, small = 12, num = 14 },
     },
 }
+CLIAlts.THEME_TOKENS["WOW"] = CLIAlts.THEME_TOKENS["BLIZZARD"]
 
 function CLIAlts:GetTokens()
-    local themeKey = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DARK"
-    return self.THEME_TOKENS[themeKey] or self.TOKENS
+    local themeKey = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
+    return self.THEME_TOKENS[themeKey] or self.THEME_TOKENS["BLIZZARD"] or self.TOKENS
 end
 
 function CLIAlts:Hex(token, alpha)

@@ -371,7 +371,9 @@ function CLIAlts:InitDB()
         CLIAltsDB = {}
     end
     CLIAltsDB.settings = CLIAltsDB.settings or {}
-    CLIAltsDB.settings.theme = CLIAltsDB.settings.theme or "AMBER"
+    if not CLIAltsDB.settings.theme or (CLIAltsDB.settings.theme == "AMBER" and not CLIAltsDB.settings.themeExplicit) then
+        CLIAltsDB.settings.theme = "BLIZZARD"
+    end
     CLIAltsDB.settings.minimapPos = CLIAltsDB.settings.minimapPos or 45
     CLIAltsDB.settings.minimapShow = (CLIAltsDB.settings.minimapShow ~= false)
     CLIAltsDB.settings.sortBy = CLIAltsDB.settings.sortBy or "name"

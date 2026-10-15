@@ -34,6 +34,64 @@ local renderDirty = false
 -- CRT Theme Definitions (With Syntax Coloring Hex Codes)
 -- ----------------------------------------------------------------------------
 CLIAlts.THEMES = {
+    ["BLIZZARD"] = {
+        name = "World of Warcraft Best Practice",
+        tag = "WOW",
+        bg = { 0.043, 0.055, 0.078, 0.96 }, -- deep neutral charcoal slate #0B0E14
+        panelBg = { 0.075, 0.090, 0.133, 0.92 }, -- elevated slate panel #131722
+        border = { 0.165, 0.200, 0.278, 0.85 }, -- clean 1px border #2A3347
+        primary = { 1.0, 0.820, 0.0 }, -- Blizzard Gold (NORMAL_FONT_COLOR) #FFD100
+        dim = { 0.690, 0.722, 0.784 }, -- high-contrast readable cool silver #B0B8C8
+        highlight = { 1.0, 0.90, 0.40 }, -- bright gold highlight #FFE566
+        accent = { 0.20, 0.85, 1.0 }, -- Blizzard cyan #33D9FF
+        ready = { 0.20, 1.0, 0.40 }, -- Blizzard green (GREEN_FONT_COLOR) #33FF66
+        pending = { 1.0, 0.69, 0.20 }, -- Blizzard orange (ORANGE_FONT_COLOR) #FFB033
+        blocked = { 1.0, 0.27, 0.27 }, -- Blizzard red (RED_FONT_COLOR) #FF4444
+        rowOdd = { 0.071, 0.082, 0.122, 0.40 },
+        rowEven = { 0.094, 0.114, 0.161, 0.60 },
+        rowHover = { 0.145, 0.176, 0.239, 0.75 },
+        borderHex = "2a3347",
+        primaryHex = "ffd100", -- Blizzard Gold
+        dimHex = "b0b8c8", -- readable cool silver
+        highlightHex = "ffe566",
+        textHex = "ffffff", -- crisp pure white
+        mutedHex = "b0b8c8", -- secondary text silver
+        accentHex = "33d9ff",
+        readyHex = "33ff66",
+        pendingHex = "ffb033",
+        blockedHex = "ff4444",
+        barFill = "|cff33d9ff",
+        barEmpty = "|cff1c2230",
+    },
+    ["DARK"] = {
+        name = "Dark Slate (Phase 1)",
+        tag = "DRK",
+        bg = { 0.059, 0.075, 0.102, 0.96 }, -- #0F131A
+        panelBg = { 0.090, 0.110, 0.149, 0.92 }, -- #171C26
+        border = { 0.169, 0.204, 0.271, 0.85 }, -- #2B3445
+        primary = { 0.910, 0.714, 0.290 }, -- #E8B64A
+        dim = { 0.604, 0.651, 0.722 }, -- #9AA6B8
+        highlight = { 1.0, 0.85, 0.40 },
+        accent = { 0.30, 0.76, 0.84 }, -- #4CC2D6
+        ready = { 0.20, 1.0, 0.40 },
+        pending = { 0.95, 0.72, 0.29 }, -- #F2B84B
+        blocked = { 1.0, 0.27, 0.27 },
+        rowOdd = { 0.090, 0.110, 0.149, 0.40 },
+        rowEven = { 0.137, 0.169, 0.227, 0.60 },
+        rowHover = { 0.169, 0.204, 0.271, 0.75 },
+        borderHex = "2b3445",
+        primaryHex = "e8b64a",
+        dimHex = "9aa6b8",
+        highlightHex = "ffd966",
+        textHex = "f3f5f8",
+        mutedHex = "9aa6b8",
+        accentHex = "4cc2d6",
+        readyHex = "33ff66",
+        pendingHex = "f2b84b",
+        blockedHex = "ff4444",
+        barFill = "|cff4cc2d6",
+        barEmpty = "|cff1a2230",
+    },
     ["AMBER"] = {
         name = "VT220 Amber",
         tag = "AMB",
@@ -240,6 +298,12 @@ CLIAlts.THEMES = {
 }
 
 CLIAlts.THEME_MAP = {
+    blizzard = "BLIZZARD",
+    blizz = "BLIZZARD",
+    wow = "BLIZZARD",
+    dark = "DARK",
+    drk = "DARK",
+    default = "BLIZZARD",
     amber = "AMBER",
     amb = "AMBER",
     green = "GREEN",
@@ -256,31 +320,32 @@ CLIAlts.THEME_MAP = {
     dra = "DRACULA",
 }
 
-local THEME_ORDER = { "AMBER", "GREEN", "CYAN", "MONO", "COLORBLIND", "SYNTHWAVE", "DRACULA" }
+local THEME_ORDER = { "BLIZZARD", "AMBER", "GREEN", "CYAN", "MONO", "COLORBLIND", "SYNTHWAVE", "DRACULA" }
 local SCALES = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
 
 function CLIAlts:GetTheme()
-    local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "AMBER"
-    local t = self.THEMES[key] or self.THEMES["AMBER"]
+    local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
+    local t = self.THEMES[key] or self.THEMES["BLIZZARD"] or self.THEMES["AMBER"]
     -- Ensure non-nil fallbacks for design tokens
-    t.text = t.text or { 0.957, 0.918, 0.824 }
-    t.muted = t.muted or t.dim or { 0.663, 0.627, 0.549 }
-    t.textHex = t.textHex or "f4ead2"
-    t.mutedHex = t.mutedHex or t.dimHex or "a9a08c"
-    t.accentHex = t.accentHex or "57d6e8"
-    t.readyHex = t.readyHex or "55e39a"
-    t.pendingHex = t.pendingHex or "ffb547"
-    t.blockedHex = t.blockedHex or "ff6b6b"
-    t.panelBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-    t.rowOdd = t.rowOdd or { 0.098, 0.082, 0.047, 0.12 }
-    t.rowEven = t.rowEven or { 0.098, 0.082, 0.047, 0.32 }
-    t.rowHover = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+    t.text = t.text or { 1.0, 1.0, 1.0 }
+    t.muted = t.muted or t.dim or { 0.690, 0.722, 0.784 }
+    t.textHex = t.textHex or "ffffff"
+    t.mutedHex = t.mutedHex or t.dimHex or "b0b8c8"
+    t.dimHex = t.dimHex or "b0b8c8"
+    t.accentHex = t.accentHex or "33d9ff"
+    t.readyHex = t.readyHex or "33ff66"
+    t.pendingHex = t.pendingHex or "ffb033"
+    t.blockedHex = t.blockedHex or "ff4444"
+    t.panelBg = t.panelBg or { 0.075, 0.090, 0.133, 0.92 }
+    t.rowOdd = t.rowOdd or { 0.071, 0.082, 0.122, 0.40 }
+    t.rowEven = t.rowEven or { 0.094, 0.114, 0.161, 0.60 }
+    t.rowHover = t.rowHover or { 0.145, 0.176, 0.239, 0.75 }
     return t
 end
 
 function CLIAlts:CycleTheme()
-    local current = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "AMBER"
-    local nextTheme = "AMBER"
+    local current = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
+    local nextTheme = "BLIZZARD"
     for i, name in ipairs(THEME_ORDER) do
         if name == current then
             nextTheme = THEME_ORDER[(i % #THEME_ORDER) + 1]
@@ -288,6 +353,7 @@ function CLIAlts:CycleTheme()
         end
     end
     CLIAltsDB.settings.theme = nextTheme
+    CLIAltsDB.settings.themeExplicit = true
     self:ApplyTheme()
     self:Render()
 end
@@ -4299,80 +4365,79 @@ function CLIAlts:ApplyTheme()
         if mainFrame.legendText then mainFrame.legendText:SetTextColor(mutedR, mutedG, mutedB) end
     end
 
-    if mainFrame.SetBackdropColor then
-        mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
-    end
-    if mainFrame.SetBackdropBorderColor then
-        mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
-    end
-
-    if mainFrame.topAscii then mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-    if mainFrame.titleText then mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-    if mainFrame.midAscii1 then mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-    if mainFrame.recPanel then
-        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        if mainFrame.recPanel.SetBackdropColor then
-            mainFrame.recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
+    if mainFrame.isLegacyUI then
+        if mainFrame.SetBackdropColor then
+            mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
         end
-        if mainFrame.recPanel.SetBackdropBorderColor then
-            mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.55)
+        if mainFrame.SetBackdropBorderColor then
+            mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
         end
-    end
-    if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-    if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(t.text[1], t.text[2], t.text[3]) end
-    if mainFrame.recProfLine then mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
-    if mainFrame.recRestLine then mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-    if mainFrame.recReasonLine then mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
 
-    if mainFrame.badgeTracking then
-        if mainFrame.badgeTracking.SetBackdropColor then
-            mainFrame.badgeTracking:SetBackdropColor(0.04, 0.15, 0.08, 0.85)
-            mainFrame.badgeTracking:SetBackdropBorderColor(t.ready[1], t.ready[2], t.ready[3], 0.7)
-        end
-        if mainFrame.badgeTracking.text then
-            mainFrame.badgeTracking.text:SetTextColor(t.ready[1], t.ready[2], t.ready[3])
-        end
-    end
-
-    if mainFrame.metaText then
-        mainFrame.metaText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-    end
-
-    if mainFrame.subViewTitle then
-        mainFrame.subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-    end
-    if mainFrame.subViewFilters then
-        mainFrame.subViewFilters:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-    end
-
-    if mainFrame.kpiCards then
-        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        for _, card in pairs(mainFrame.kpiCards) do
-            if card.SetBackdropColor then
-                card:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
+        if mainFrame.topAscii then mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+        if mainFrame.titleText then mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+        if mainFrame.midAscii1 then mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+        if mainFrame.recPanel then
+            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+            if mainFrame.recPanel.SetBackdropColor then
+                mainFrame.recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
             end
-            if card.SetBackdropBorderColor then
-                card:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+            if mainFrame.recPanel.SetBackdropBorderColor then
+                mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.55)
             end
-            if card.title then card.title:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
-            if card.val then card.val:SetTextColor(t.text[1], t.text[2], t.text[3]) end
-            if card.sub then card.sub:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
         end
-    end
+        if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+        if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(t.text[1], t.text[2], t.text[3]) end
+        if mainFrame.recProfLine then mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+        if mainFrame.recRestLine then mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+        if mainFrame.recReasonLine then mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+        if mainFrame.subViewTitle then mainFrame.subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
+        if mainFrame.subViewFilters then mainFrame.subViewFilters:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+        if mainFrame.summaryBar and mainFrame.summaryBar.SetBackdropColor then
+            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+            mainFrame.summaryBar:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
+            if mainFrame.summaryBar.SetBackdropBorderColor then
+                mainFrame.summaryBar:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+            end
+        end
+        if mainFrame.summaryText then mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
+        if mainFrame.statusBarText and mainFrame.statusBarText ~= mainFrame.summaryText then
+            mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        end
+        if mainFrame.midAscii2 then mainFrame.midAscii2:SetText("") end
+        if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
+    else
+        -- Modern UI: Restyle recPanel, kpiCards, and subview texts using modern design tokens
+        local panelR, panelG, panelB, panelA = self:Hex("panel")
+        local lineR, lineG, lineB, lineA = self:Hex("line")
+        local brandR, brandG, brandB = self:Hex("brand")
+        local textR, textG, textB = self:Hex("text")
+        local mutedR, mutedG, mutedB = self:Hex("muted")
+        local warnR, warnG, warnB = self:Hex("warn")
+        local readyR, readyG, readyB = self:Hex("ready")
 
-    if mainFrame.summaryBar and mainFrame.summaryBar.SetBackdropColor then
-        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        mainFrame.summaryBar:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
-        if mainFrame.summaryBar.SetBackdropBorderColor then
-            mainFrame.summaryBar:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
+        if mainFrame.recPanel then
+            if mainFrame.recPanel.SetBackdropColor then mainFrame.recPanel:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if mainFrame.recPanel.SetBackdropBorderColor then mainFrame.recPanel:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+        end
+        if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(brandR, brandG, brandB) end
+        if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(textR, textG, textB) end
+        if mainFrame.recProfLine then mainFrame.recProfLine:SetTextColor(mutedR, mutedG, mutedB) end
+        if mainFrame.recRestLine then mainFrame.recRestLine:SetTextColor(readyR, readyG, readyB) end
+        if mainFrame.recReasonLine then mainFrame.recReasonLine:SetTextColor(warnR, warnG, warnB) end
+
+        if mainFrame.subViewTitle then mainFrame.subViewTitle:SetTextColor(brandR, brandG, brandB) end
+        if mainFrame.subViewFilters then mainFrame.subViewFilters:SetTextColor(mutedR, mutedG, mutedB) end
+
+        if mainFrame.kpiCards then
+            for _, card in pairs(mainFrame.kpiCards) do
+                if card.SetBackdropColor then card:SetBackdropColor(panelR, panelG, panelB, panelA) end
+                if card.SetBackdropBorderColor then card:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+                if card.title then card.title:SetTextColor(brandR, brandG, brandB) end
+                if card.val then card.val:SetTextColor(textR, textG, textB) end
+                if card.sub then card.sub:SetTextColor(mutedR, mutedG, mutedB) end
+            end
         end
     end
-    if mainFrame.summaryText then mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
-    if mainFrame.statusBarText and mainFrame.statusBarText ~= mainFrame.summaryText then
-        mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-    end
-    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText("") end
-    if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
     if mainFrame.botAscii then mainFrame.botAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
@@ -4682,11 +4747,12 @@ function CLIAlts:ExecutePromptCommand(input)
             local choice = map and map[args:lower()]
             if choice and self.THEMES and self.THEMES[choice] then
                 CLIAltsDB.settings.theme = choice
+                CLIAltsDB.settings.themeExplicit = true
                 self:ApplyTheme()
                 self:Render()
                 self:SetPromptFeedback(string.format("Theme set to %s (%s)", choice, self.THEMES[choice] and self.THEMES[choice].tag or choice))
             else
-                self:SetPromptFeedback("Themes: amber, green, cyan, mono, safe, synthwave, dracula", true)
+                self:SetPromptFeedback("Themes: blizzard, amber, green, cyan, mono, safe, synthwave, dracula", true)
             end
         else
             self:CycleTheme()
@@ -5021,7 +5087,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
                 end
             end
         elseif cmd == "theme" then
-            local themes = { "amber", "green", "cyan", "mono", "safe", "colorblind", "synthwave", "dracula" }
+            local themes = { "blizzard", "wow", "amber", "green", "cyan", "mono", "safe", "colorblind", "synthwave", "dracula" }
             for _, th in ipairs(themes) do
                 if th:sub(1, #arg) == arg:lower() and th ~= arg:lower() then
                     editBox:SetText("theme " .. th)

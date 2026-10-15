@@ -355,6 +355,16 @@ function CLIAlts:RunSelfTest()
     -- 11. Theme Verification & Compact Mode Tests
     -- 11a. Colorblind, Amber, Synthwave, Dracula Themes
     if self.THEMES then
+        local blizzTheme = self.THEMES["BLIZZARD"]
+        Assert(blizzTheme ~= nil, "Theme: BLIZZARD theme exists in THEMES")
+        Assert(blizzTheme and blizzTheme.tag == "WOW", "Theme: BLIZZARD tag is 'WOW'")
+        Assert(blizzTheme and blizzTheme.primaryHex == "ffd100", "Theme: BLIZZARD primaryHex is authentic Blizzard gold ffd100")
+        Assert(blizzTheme and blizzTheme.textHex == "ffffff", "Theme: BLIZZARD textHex is crisp pure white ffffff")
+        Assert(blizzTheme and blizzTheme.dimHex == "b0b8c8", "Theme: BLIZZARD dimHex is high-contrast readable silver b0b8c8")
+
+        local darkTheme = self.THEMES["DARK"]
+        Assert(darkTheme ~= nil, "Theme: DARK theme exists in THEMES")
+
         local cbTheme = self.THEMES["COLORBLIND"]
         Assert(cbTheme ~= nil, "Colorblind: COLORBLIND theme exists in THEMES")
         Assert(cbTheme and cbTheme.tag == "SAFE", "Colorblind: theme tag is 'SAFE'")
@@ -374,6 +384,7 @@ function CLIAlts:RunSelfTest()
 
         -- Phase 0: verify that every theme name accepted by the command parser maps to a valid theme in THEMES
         local themeMap = self.THEME_MAP or {
+            blizzard = "BLIZZARD", blizz = "BLIZZARD", wow = "BLIZZARD", dark = "DARK", drk = "DARK", default = "BLIZZARD",
             green = "GREEN", grn = "GREEN",
             amber = "AMBER", amb = "AMBER",
             cyan = "CYAN", cyn = "CYAN",
