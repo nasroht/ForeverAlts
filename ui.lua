@@ -7949,7 +7949,15 @@ function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
         closeBtn = singleFrame.CloseButton or rawget(_G, "ContainerFrame1CloseButton")
     end
 
-    btn:SetParent(targetParent)
+    btn.anchorTarget = targetParent
+    if testCombinedFrame or testSingleFrame then
+        -- In mock test harness, attach to mock parent frame
+        btn:SetParent(targetParent)
+    else
+        -- In live WoW, keep parent as UIParent to strictly prevent tainting Blizzard container frames
+        btn:SetParent(UIParent)
+    end
+
     btn:ClearAllPoints()
     if closeBtn then
         btn:SetPoint("RIGHT", closeBtn, "LEFT", -3, 0)
@@ -7957,13 +7965,13 @@ function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
         btn:SetPoint("TOPRIGHT", targetParent, "TOPRIGHT", -28, -6)
     end
 
-    local strata = targetParent:GetFrameStrata() or "HIGH"
-    btn:SetFrameStrata(strata)
-    local fl = targetParent:GetFrameLevel() or 10
+    local strata = (targetParent.GetFrameStrata and targetParent:GetFrameStrata()) or "HIGH"
+    if btn.SetFrameStrata then btn:SetFrameStrata(strata) end
+    local fl = (targetParent.GetFrameLevel and targetParent:GetFrameLevel()) or 10
     if closeBtn and closeBtn.GetFrameLevel then
         fl = math.max(fl, closeBtn:GetFrameLevel() or 10)
     end
-    btn:SetFrameLevel(fl + 2)
+    if btn.SetFrameLevel then btn:SetFrameLevel(fl + 2) end
 
     if combinedShown or singleShown then
         btn:Show()
@@ -7982,13 +7990,9 @@ function CLIAlts:InitBagSortButton()
         return nil
     end
 
-    local combinedFrame = rawget(_G, "ContainerFrameCombinedBags")
-    local singleFrame = rawget(_G, "ContainerFrame1")
-    local defaultParent = combinedFrame or singleFrame or UIParent
-
-    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", defaultParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btn:SetSize(18, 18)
-    btn:SetFrameStrata("HIGH")
+    if btn.SetFrameStrata then btn:SetFrameStrata("HIGH") end
 
     if btn.SetBackdrop then
         btn:SetBackdrop({
@@ -8047,47 +8051,36 @@ function CLIAlts:InitBagSortButton()
     self.bagSortButton = btn
     self:ApplyThemeToBagButton()
 
-    -- Hook show/hide on both container frames using addon table tracking
-    self.hookedBagFrames = self.hookedBagFrames or {}
-    local hookFrame = function(frame)
-        if frame and frame.HookScript and not self.hookedBagFrames[frame] then
-            self.hookedBagFrames[frame] = true
-            frame:HookScript("OnShow", function()
-                if InCombatLockdown and InCombatLockdown() then return end
-                CLIAlts:UpdateBagSortButtonAnchor()
-            end)
-            frame:HookScript("OnHide", function()
-                if InCombatLockdown and InCombatLockdown() then return end
-                CLIAlts:UpdateBagSortButtonAnchor()
-            end)
+    -- Completely unhooked event watcher: monitors bag visibility without touching Blizzard secure bag functions or container scripts
+    if not self.bagSortWatcher then
+        local watcher = CreateFrame("Frame", "CLIAltsBagSortWatcher", UIParent)
+        self.bagSortWatcher = watcher
+        if watcher.RegisterEvent then
+            pcall(watcher.RegisterEvent, watcher, "BAG_UPDATE_DELAYED")
+            pcall(watcher.RegisterEvent, watcher, "BAG_CONTAINER_UPDATE")
+            pcall(watcher.RegisterEvent, watcher, "PLAYER_REGEN_ENABLED")
+            pcall(watcher.RegisterEvent, watcher, "PLAYER_REGEN_DISABLED")
         end
-    end
-
-    hookFrame(singleFrame)
-    hookFrame(combinedFrame)
-
-    -- Hook standard Blizzard bag toggle functions if available
-    if not self.hasHookedBagFunctions and hooksecurefunc then
-        self.hasHookedBagFunctions = true
-        local safeUpdate = function()
+        watcher:SetScript("OnEvent", function(_, event)
+            if event == "PLAYER_REGEN_DISABLED" then
+                if CLIAlts.bagSortButton and InCombatLockdown and InCombatLockdown() then
+                    CLIAlts.bagSortButton:Hide()
+                end
+                return
+            end
             if InCombatLockdown and InCombatLockdown() then return end
             CLIAlts:UpdateBagSortButtonAnchor()
-        end
-        if rawget(_G, "ToggleAllBags") then
-            pcall(hooksecurefunc, "ToggleAllBags", safeUpdate)
-        end
-        if rawget(_G, "OpenAllBags") then
-            pcall(hooksecurefunc, "OpenAllBags", safeUpdate)
-        end
-        if rawget(_G, "CloseAllBags") then
-            pcall(hooksecurefunc, "CloseAllBags", safeUpdate)
-        end
-        if rawget(_G, "OpenBag") then
-            pcall(hooksecurefunc, "OpenBag", safeUpdate)
-        end
-        if rawget(_G, "CloseBag") then
-            pcall(hooksecurefunc, "CloseBag", safeUpdate)
-        end
+        end)
+
+        local elapsed = 0
+        watcher:SetScript("OnUpdate", function(_, dt)
+            elapsed = elapsed + (dt or 0.1)
+            if elapsed >= 0.25 then
+                elapsed = 0
+                if InCombatLockdown and InCombatLockdown() then return end
+                CLIAlts:UpdateBagSortButtonAnchor()
+            end
+        end)
     end
 
     self:UpdateBagSortButtonAnchor()

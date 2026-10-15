@@ -4428,6 +4428,12 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
     end
 
     -- 4. Attach items destined for this recipient
+    if not isSimulated then
+        if OpenAllBags then
+            pcall(OpenAllBags)
+        end
+    end
+
     local attachedCount = 0
     for _, itm in ipairs(chosenGroup.items) do
         if #freeAttachSlots == 0 then break end
@@ -4450,24 +4456,28 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
                 local targetSlot = table.remove(freeAttachSlots, 1)
                 local okAttach = false
 
-                if PickupContainerItem and ClickSendMailItemButton then
-                    if ClearCursor then ClearCursor() end
-                    PickupContainerItem(itm.bag, itm.slot)
-                    ClickSendMailItemButton(targetSlot)
-                    if ClearCursor then ClearCursor() end
-                    okAttach = true
+                if C_Container and C_Container.UseContainerItem then
+                    local ok = pcall(C_Container.UseContainerItem, itm.bag, itm.slot)
+                    okAttach = ok
+                elseif UseContainerItem then
+                    local ok = pcall(UseContainerItem, itm.bag, itm.slot)
+                    okAttach = ok
                 elseif C_Container and C_Container.PickupContainerItem and ClickSendMailItemButton then
                     if ClearCursor then ClearCursor() end
-                    C_Container.PickupContainerItem(itm.bag, itm.slot)
-                    ClickSendMailItemButton(targetSlot)
+                    local ok = pcall(C_Container.PickupContainerItem, itm.bag, itm.slot)
+                    if ok then
+                        pcall(ClickSendMailItemButton, targetSlot)
+                        if ClearCursor then ClearCursor() end
+                        okAttach = true
+                    end
+                elseif PickupContainerItem and ClickSendMailItemButton then
                     if ClearCursor then ClearCursor() end
-                    okAttach = true
-                elseif UseContainerItem then
-                    UseContainerItem(itm.bag, itm.slot)
-                    okAttach = true
-                elseif C_Container and C_Container.UseContainerItem then
-                    C_Container.UseContainerItem(itm.bag, itm.slot)
-                    okAttach = true
+                    local ok = pcall(PickupContainerItem, itm.bag, itm.slot)
+                    if ok then
+                        pcall(ClickSendMailItemButton, targetSlot)
+                        if ClearCursor then ClearCursor() end
+                        okAttach = true
+                    end
                 end
 
                 if okAttach then
@@ -6035,9 +6045,9 @@ end
 
 local function DoPickupContainerItem(bag, slot)
     if C_Container and C_Container.PickupContainerItem then
-        C_Container.PickupContainerItem(bag, slot)
+        pcall(C_Container.PickupContainerItem, bag, slot)
     elseif PickupContainerItem then
-        PickupContainerItem(bag, slot)
+        pcall(PickupContainerItem, bag, slot)
     end
 end
 
@@ -6048,6 +6058,11 @@ end
 function CLIAlts:ConsolidateBagStacks()
     if InCombatLockdown and InCombatLockdown() then return false end
     if CursorHasItem and CursorHasItem() then return false end
+
+    -- Ensure bags are open so ContainerFrame has allocated button slots
+    if OpenAllBags and not (ContainerFrame1 and ContainerFrame1:IsShown()) and not (ContainerFrameCombinedBags and ContainerFrameCombinedBags:IsShown()) then
+        pcall(OpenAllBags)
+    end
 
     local numBags = NUM_BAG_SLOTS or 4
     local partialStacks = {}

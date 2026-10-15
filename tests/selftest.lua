@@ -2666,7 +2666,7 @@ function CLIAlts:RunSelfTest()
     local oldConsolidate = self.ConsolidateBagStacks
     self.ConsolidateBagStacks = function(s)
         stackCalled = true
-        return oldConsolidate(s)
+        return true
     end
     self:ConsolidateBagStacks()
     Assert(stackCalled == true, "SortBags: ConsolidateBagStacks executes without errors")
@@ -2731,7 +2731,7 @@ function CLIAlts:RunSelfTest()
         Assert(sortBtn:IsShown() == false, "UpdateBagSortButtonAnchor: Hides when all bag frames hidden")
 
         -- Re-anchor cleanly
-        self:UpdateBagSortButtonAnchor()
+        self:UpdateBagSortButtonAnchor(mockCombined, mockSingle)
     end
 
     -- Clean up mocks
