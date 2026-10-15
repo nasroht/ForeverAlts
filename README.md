@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="media/logo.jpg" alt="ForeverAlts Logo" width="220" style="border-radius: 16px;" />
+  <img src="https://raw.githubusercontent.com/nasroht/ForeverAlts/main/media/logo.jpg" alt="ForeverAlts Logo" width="220" style="border-radius: 16px;" />
   <h1>ForeverAlts</h1>
   <p><strong>The dedicated alt progression and supply chain manager built exclusively for World of Warcraft: Forever.</strong></p>
 
   [![CI & Release](https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml/badge.svg)](https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml)
   [![CurseForge](https://img.shields.io/badge/CurseForge-1747176-orange.svg)](https://www.curseforge.com/wow/addons/foreveralts)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/nasroht/ForeverAlts/blob/main/LICENSE)
 </div>
 
 ---
@@ -29,7 +29,7 @@ ForeverAlts is designed around the custom progression systems and mechanics of *
     - **Tier 1** (10 LP)
     - **Tier 2** (16 LP - Core Target)
     - **Tier 3** (18 LP)
-  - Tracks rewards for level thresholds (L20 $\to$ 1.0 LP, L35 $\to$ 3.0 LP, L60 $\to$ 5.0 LP) and profession caps (75 $\to$ 0.5 LP, 150 $\to$ 1.0 LP, 300 $\to$ 2.0 LP).
+  - Tracks rewards for level thresholds (L20 → 1.0 LP, L35 → 3.0 LP, L60 → 5.0 LP) and profession caps (75 → 0.5 LP, 150 → 1.0 LP, 300 → 2.0 LP).
   - Live `[ LP: %.1f/%d ]` telemetry progress chip displayed in the dashboard header.
 - **Cohort Milestone Engine**:
   - Assign characters to strategic leveling cohorts: **`CORE`** (Target Level 35), **`RESERVE`** (Target Level 25), **`CAP`** (Target Level 60), or **`BANK`** (Mule storage).
@@ -94,13 +94,13 @@ The main dashboard is organized into three streamlined visual regions designed t
 Keep your crafting alts fueled without manual inventory sorting:
 
 - **Automatic Material Routing**:
-  - **Cloth** $\to$ Tailor alts (or designated First Aid alts)
-  - **Herbs** $\to$ Alchemy alts
-  - **Ore & Stone** $\to$ Blacksmithing & Engineering alts
-  - **Leather** $\to$ Leatherworking alts
-  - **Meat & Fish** $\to$ Designated Cooking alts *(Ignored by default unless explicitly toggled on)*
-  - **BoE Green+ Gear & Reagents** $\to$ Enchanting / Disenchanting alts
-  - **Unassigned Items** $\to$ Designated `BANK` mules
+  - **Cloth** → Tailor alts (or designated First Aid alts)
+  - **Herbs** → Alchemy alts
+  - **Ore & Stone** → Blacksmithing & Engineering alts
+  - **Leather** → Leatherworking alts
+  - **Meat & Fish** → Designated Cooking alts *(Ignored by default unless explicitly toggled on)*
+  - **BoE Green+ Gear & Reagents** → Enchanting / Disenchanting alts
+  - **Unassigned Items** → Designated `BANK` mules
 - **Recipe, Pattern & Schematic Auto-Routing**:
   - Detects all recipes (Patterns, Plans, Schematics, Formulas, Manuals, Designs) across all crafting trades.
   - **"Learn It Yourself" Safety Guard**: Automatically retains unlearned recipes in bags if the current character has the matching profession and needs it.
