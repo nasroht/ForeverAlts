@@ -3982,11 +3982,12 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient)
         return false, "In combat"
     end
 
-    if not SendMailFrame or not SendMailFrame:IsVisible() then
+    local isSendMailVisible = SendMailFrame and ((SendMailFrame.IsVisible and SendMailFrame:IsVisible()) or (SendMailFrame.IsShown and SendMailFrame:IsShown()))
+    if not isSendMailVisible then
         -- Attempt to switch to Send Mail tab if MailFrame is open
         local mft2 = rawget(_G, "MailFrameTab2")
         local mf = rawget(_G, "MailFrame")
-        if mf and mf.IsVisible and mf:IsVisible() and mft2 then
+        if mf and ((mf.IsVisible and mf:IsVisible()) or (mf.IsShown and mf:IsShown())) and mft2 then
             if mft2.Click then
                 mft2:Click()
             elseif mft2.GetScript and mft2:GetScript("OnClick") then
@@ -3995,7 +3996,8 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient)
         end
     end
 
-    if not SendMailFrame or not SendMailFrame:IsVisible() then
+    isSendMailVisible = SendMailFrame and ((SendMailFrame.IsVisible and SendMailFrame:IsVisible()) or (SendMailFrame.IsShown and SendMailFrame:IsShown()))
+    if not isSendMailVisible then
         self:Print("|cffff4444Mailbox Send Mail window is not open.|r")
         return false, "SendMailFrame not visible"
     end

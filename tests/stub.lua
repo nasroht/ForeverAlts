@@ -33,6 +33,7 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:Show() self.shown = true end
     function frame:Hide() self.shown = false end
     function frame:IsShown() return self.shown == true end
+    function frame:IsVisible() return self.shown == true end
     function frame:SetText(txt)
         if self.type == "FontString" and not self.font then
             error("FontString:SetText(): Font not set")

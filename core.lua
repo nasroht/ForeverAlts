@@ -343,7 +343,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     elseif event == "MAIL_SEND_SUCCESS" or event == "MAIL_SUCCESS" then
         if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoFillMailOnSend then
             SafeAfter(0.35, function()
-                if SendMailFrame and SendMailFrame:IsVisible() then
+                local isVisible = SendMailFrame and ((SendMailFrame.IsVisible and SendMailFrame:IsVisible()) or (SendMailFrame.IsShown and SendMailFrame:IsShown()))
+                if isVisible then
                     local summary = CLIAlts:GetMailReadySummary()
                     if summary and summary.totalPackages > 0 then
                         CLIAlts:FillSendMailNextBatch()
