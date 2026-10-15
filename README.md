@@ -3,7 +3,7 @@
   <h1>ForeverAlts</h1>
   <p><strong>The dedicated alt progression and supply chain manager built exclusively for World of Warcraft: Forever.</strong></p>
 
-  [![CI & Release](https://github.com/nasroht/clialts/actions/workflows/ci.yml/badge.svg)](https://github.com/nasroht/clialts/actions/workflows/ci.yml)
+  [![CI & Release](https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml/badge.svg)](https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml)
   [![CurseForge](https://img.shields.io/badge/CurseForge-1747176-orange.svg)](https://www.curseforge.com/wow/addons/foreveralts)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 </div>
