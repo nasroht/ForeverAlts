@@ -3609,6 +3609,30 @@ function CLIAlts:ExecutePromptCommand(input)
         local newState = self:ToggleMailAutoFillButton()
         self:SetPromptFeedback(string.format("Mail auto-fill button: %s", newState and "ENABLED" or "DISABLED"))
 
+    elseif cmd == "mailignore" or cmd == "ignoremail" then
+        local ok, itm = self:IgnoreMailItem(arg)
+        if ok then
+            self:SetPromptFeedback(string.format("Ignored for mail: %s", itm))
+        else
+            self:SetPromptFeedback("Usage: mailignore <[Item Link] or Name or ID>", true)
+        end
+
+    elseif cmd == "mailunignore" or cmd == "unignoremail" then
+        local ok, itm = self:UnignoreMailItem(arg)
+        if ok then
+            self:SetPromptFeedback(string.format("Removed from mail ignore: %s", itm))
+        else
+            self:SetPromptFeedback(string.format("Item not found in ignore list: %s", arg or ""), true)
+        end
+
+    elseif cmd == "mailignores" or cmd == "ignoredmail" then
+        local count = self:ListIgnoredMailItems()
+        self:SetPromptFeedback(string.format("%d items in mail ignore list.", count))
+
+    elseif cmd == "mailconsumables" then
+        local newState = self:ToggleAutoMailConsumables()
+        self:SetPromptFeedback(string.format("Auto-mail consumables: %s", newState and "ENABLED" or "DISABLED"))
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -3628,7 +3652,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
 
     local commands = {
         "1", "2", "3", "4", "5", "6", "7",
-        "tab", "mail", "fillmail", "mailbtn",
+        "tab", "mail", "fillmail", "mailbtn", "mailignore", "mailunignore", "mailignores", "mailconsumables",
         "sort", "sortbags", "sortbtn", "filter", "find", "clear",
         "goto", "page", "next", "export", "compact",
         "watch", "unwatch", "watchlist",
@@ -4505,6 +4529,13 @@ function CLIAlts:ShowMailRouteDialog(charData)
         btnSetCustom:SetPoint("LEFT", editBox, "RIGHT", 8, 0)
         dlg.btnSetCustom = btnSetCustom
 
+        -- Ignored Items button
+        local btnIgnored = CreateRetroButton(dlg, "[ IGNORED ITEMS ]", 140, 20, function()
+            CLIAlts:ListIgnoredMailItems()
+        end)
+        btnIgnored:SetPoint("BOTTOMLEFT", dlg, "BOTTOMLEFT", 16, 12)
+        dlg.btnIgnored = btnIgnored
+
         -- Bottom Close button
         local btnClose = CreateRetroButton(dlg, "[ CLOSE ]", 80, 20, function()
             dlg:Hide()
@@ -4769,6 +4800,9 @@ function CLIAlts:ShowHelpPopup()
         "  /clialts sortbtn    - Toggle [S] bag sort button on backpack",
         "  /clialts fillmail   - Auto-fill next alt mail & attach items (/fillmail)",
         "  /clialts mailbtn    - Toggle auto-fill button on Send Mail frame",
+        "  /clialts mailignore <item> - Exclude item from auto-mail (or hold on cursor)",
+        "  /clialts mailunignore <item> - Remove item from mail ignore list",
+        "  /clialts mailignores - List all currently ignored items for mail",
         "  /clialts forever    - Toggle WoW Forever Cohort mode (auto-active)",
         "  /clialts core <who> - Set Core cohort (Target Level 35)",
         "  /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)",
@@ -5029,12 +5063,18 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
     end
 
     if self.GetMaterialDestination then
-        local dest = self:GetMaterialDestination(itemID)
-        if dest and not dest.isCurrentPlayer then
-            local _, _, _, cHex = self:GetClassColor(dest.classFile)
-            cHex = cHex or "55e39a"
-            tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Send to:", string.format("|cff%s%s|r (|cffffd700%s|r)", cHex, dest.destName, dest.reason))
+        local isIgnored = self.IsItemMailIgnored and self:IsItemMailIgnored(itemID)
+        if isIgnored then
+            tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Status:", "|cffff4444IGNORED (Not Mailed)|r")
             didAdd = true
+        else
+            local dest = self:GetMaterialDestination(itemID)
+            if dest and not dest.isCurrentPlayer then
+                local _, _, _, cHex = self:GetClassColor(dest.classFile)
+                cHex = cHex or "55e39a"
+                tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Send to:", string.format("|cff%s%s|r (|cffffd700%s|r)", cHex, dest.destName, dest.reason))
+                didAdd = true
+            end
         end
     end
 

@@ -387,6 +387,8 @@ function CLIAlts:InitDB()
     if CLIAltsDB.settings.showBagSortButton == nil then CLIAltsDB.settings.showBagSortButton = true end
     if CLIAltsDB.settings.showMailAutoFillButton == nil then CLIAltsDB.settings.showMailAutoFillButton = true end
     if CLIAltsDB.settings.autoFillMailOnSend == nil then CLIAltsDB.settings.autoFillMailOnSend = true end
+    CLIAltsDB.settings.ignoredMailItems = CLIAltsDB.settings.ignoredMailItems or {}
+    if CLIAltsDB.settings.autoMailConsumables == nil then CLIAltsDB.settings.autoMailConsumables = false end
     if CLIAltsDB.settings.foreverMode == false and self:IsForeverClient() then
         CLIAltsDB.settings.foreverMode = nil
     end
@@ -3759,6 +3761,198 @@ function CLIAlts:FindBankMule()
     return nil
 end
 
+function CLIAlts:IsItemMailIgnored(itemID, itemName)
+    if not CLIAltsDB or not CLIAltsDB.settings or not CLIAltsDB.settings.ignoredMailItems then
+        return false
+    end
+    local list = CLIAltsDB.settings.ignoredMailItems
+    if itemID then
+        if list[itemID] or list[tostring(itemID)] then
+            return true
+        end
+    end
+    if itemName and itemName ~= "" then
+        local lowerName = itemName:lower()
+        if list[lowerName] then
+            return true
+        end
+    end
+    return false
+end
+
+function CLIAlts:IgnoreMailItem(itemIdentifier)
+    if not CLIAltsDB or not CLIAltsDB.settings then return false end
+    CLIAltsDB.settings.ignoredMailItems = CLIAltsDB.settings.ignoredMailItems or {}
+
+    local itemID
+    local itemName
+
+    if not itemIdentifier or itemIdentifier == "" then
+        -- Check if player is holding an item on the cursor
+        if GetCursorInfo then
+            local infoType, curItemID, curLink = GetCursorInfo()
+            if infoType == "item" then
+                itemID = curItemID
+                itemIdentifier = curLink or curItemID
+                if ClearCursor then ClearCursor() end
+            end
+        end
+    end
+
+    if not itemIdentifier or itemIdentifier == "" then
+        self:Print("Usage: |cff00ff66/clialts mailignore <[Item Link] or Item Name or Item ID>|r (or hold item on cursor)")
+        return false
+    end
+
+    if type(itemIdentifier) == "string" then
+        local idMatch = itemIdentifier:match("|Hitem:(%d+)")
+        if idMatch then
+            itemID = tonumber(idMatch)
+        else
+            local bracketName = itemIdentifier:match("%[([^%]]+)%]")
+            if bracketName then
+                itemName = bracketName
+            end
+        end
+    end
+
+    if not itemID then
+        itemID = tonumber(itemIdentifier)
+    end
+
+    if itemID and GetItemInfo then
+        local name = GetItemInfo(itemID)
+        if name then itemName = name end
+    end
+
+    if not itemName and type(itemIdentifier) == "string" then
+        itemName = itemIdentifier:gsub("^%s+", ""):gsub("%s+$", "")
+    end
+
+    local cleanName = itemName or (itemID and ("Item #" .. tostring(itemID))) or "Unknown Item"
+    if itemID then
+        CLIAltsDB.settings.ignoredMailItems[itemID] = cleanName
+    end
+    if itemName and itemName ~= "" then
+        CLIAltsDB.settings.ignoredMailItems[itemName:lower()] = true
+    end
+
+    self:Print(string.format("|cff57d6e8[Mail Router]|r Added |cffffffff[%s]|r to mail ignore list. It will not be auto-routed or mailed.", cleanName))
+    if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
+    if self.RequestRender then self:RequestRender() end
+    return true, cleanName
+end
+
+function CLIAlts:UnignoreMailItem(itemIdentifier)
+    if not CLIAltsDB or not CLIAltsDB.settings or not CLIAltsDB.settings.ignoredMailItems then
+        self:Print("No items are currently in the mail ignore list.")
+        return false
+    end
+
+    if not itemIdentifier or itemIdentifier == "" then
+        self:Print("Usage: |cff00ff66/clialts mailunignore <[Item Link] or Item Name or Item ID>|r")
+        return false
+    end
+
+    local itemID = tonumber(itemIdentifier)
+    local itemName
+
+    if type(itemIdentifier) == "string" then
+        local idMatch = itemIdentifier:match("|Hitem:(%d+)")
+        if idMatch then
+            itemID = tonumber(idMatch)
+        else
+            local bracketName = itemIdentifier:match("%[([^%]]+)%]")
+            if bracketName then itemName = bracketName end
+        end
+    end
+
+    if itemID and GetItemInfo then
+        local name = GetItemInfo(itemID)
+        if name then itemName = name end
+    end
+
+    if not itemName and type(itemIdentifier) == "string" then
+        itemName = itemIdentifier:gsub("^%s+", ""):gsub("%s+$", "")
+    end
+
+    local list = CLIAltsDB.settings.ignoredMailItems
+    local removed = false
+    local cleanName = itemName or (itemID and tostring(itemID)) or "Unknown Item"
+
+    if itemID and (list[itemID] or list[tostring(itemID)]) then
+        list[itemID] = nil
+        list[tostring(itemID)] = nil
+        removed = true
+    end
+    if itemName and list[itemName:lower()] then
+        list[itemName:lower()] = nil
+        removed = true
+    end
+
+    for k, v in pairs(list) do
+        if type(v) == "string" and itemName and v:lower() == itemName:lower() then
+            list[k] = nil
+            removed = true
+        end
+    end
+
+    if removed then
+        self:Print(string.format("|cff57d6e8[Mail Router]|r Removed |cffffffff[%s]|r from mail ignore list.", cleanName))
+        if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
+        if self.RequestRender then self:RequestRender() end
+        return true, cleanName
+    else
+        self:Print(string.format("|cff57d6e8[Mail Router]|r [%s] was not found in the mail ignore list.", cleanName))
+        return false
+    end
+end
+
+function CLIAlts:ListIgnoredMailItems()
+    if not CLIAltsDB or not CLIAltsDB.settings or not CLIAltsDB.settings.ignoredMailItems then
+        self:Print("|cff57d6e8[Mail Router]|r No items are currently in the mail ignore list.")
+        return 0
+    end
+
+    local list = CLIAltsDB.settings.ignoredMailItems
+    local unique = {}
+    for k, v in pairs(list) do
+        if type(k) == "number" then
+            table.insert(unique, string.format("Item #%d: %s", k, tostring(v)))
+        elseif type(v) == "string" and not tonumber(k) then
+            table.insert(unique, v)
+        elseif type(k) == "string" and type(v) == "boolean" and v == true then
+            table.insert(unique, k:sub(1,1):upper() .. k:sub(2))
+        end
+    end
+
+    table.sort(unique)
+    if #unique == 0 then
+        self:Print("|cff57d6e8[Mail Router]|r No items are currently in the mail ignore list.")
+        return 0
+    end
+
+    self:Print(string.format("|cff57d6e8[Mail Router]|r Mail Ignore List (%d item%s):", #unique, #unique == 1 and "" or "s"))
+    for _, itemStr in ipairs(unique) do
+        self:Print(string.format("  |cffffb547*|r %s", itemStr))
+    end
+    self:Print("|cffa9a08cType /ca mailunignore <item> to remove an item.|r")
+    return #unique
+end
+
+function CLIAlts:ToggleAutoMailConsumables(enable)
+    if not CLIAltsDB or not CLIAltsDB.settings then return false end
+    if enable == nil then
+        enable = not CLIAltsDB.settings.autoMailConsumables
+    end
+    CLIAltsDB.settings.autoMailConsumables = (enable == true)
+    local stateStr = CLIAltsDB.settings.autoMailConsumables and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r (Safe: food/drink/potions kept in bags)"
+    self:Print(string.format("|cff57d6e8[Mail Router]|r Auto-routing of Consumables is now %s.", stateStr))
+    if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
+    if self.RequestRender then self:RequestRender() end
+    return CLIAltsDB.settings.autoMailConsumables
+end
+
 function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassID, itemSubClassID, itemQuality)
     local itemID = tonumber(itemIdentifier)
     local itemName = nil
@@ -3796,6 +3990,18 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
             subclassID = subclassID or sc
             equipLoc = equipLoc or eq
         end
+    end
+
+    -- User filter check: Ignore list
+    if itemID or itemName then
+        if self.IsItemMailIgnored and self:IsItemMailIgnored(itemID, itemName) then
+            return nil
+        end
+    end
+
+    -- Never auto-mail consumables (food, drink, potions, bandages) unless explicitly enabled
+    if classID == 0 and not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoMailConsumables) then
+        return nil
     end
 
     local destChar = nil
@@ -3841,8 +4047,15 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
         end
     end
 
-    -- 3. Lockboxes
-    if not destChar and (classID == 0 or (itemName and itemName:lower():find("lockbox", 1, true))) then
+    -- 3. Lockboxes (Must actually be a lockbox/strongbox by name, not a consumable)
+    local isLockbox = false
+    if itemName then
+        local lowerName = itemName:lower()
+        if lowerName:find("lockbox", 1, true) or lowerName:find("strongbox", 1, true) or lowerName:find("iron chest", 1, true) or lowerName:find("coffer", 1, true) then
+            isLockbox = true
+        end
+    end
+    if not destChar and isLockbox then
         local chars = self:GetCharactersList("level", false)
         for _, c in ipairs(chars) do
             if c.classFile == "ROGUE" then

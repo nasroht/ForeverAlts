@@ -1716,8 +1716,116 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = oldMailDB
     end
 
+    do -- 27. Consumable Filtering & Mail Ignore List Engine Tests
+    local oldIgnoreDB = CLIAltsDB
+    local testIgnoreDB = {
+        settings = {
+            ignoredMailItems = {},
+            autoMailConsumables = false,
+        },
+        characters = {
+            ["SenderMain"] = {
+                name = "SenderMain",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 30,
+            },
+            ["RogueAlt"] = {
+                name = "RogueAlt",
+                class = "Rogue",
+                classFile = "ROGUE",
+                level = 30,
+                tier = "CORE",
+            },
+            ["TailorAlt"] = {
+                name = "TailorAlt",
+                class = "Mage",
+                classFile = "MAGE",
+                level = 35,
+                tier = "CORE",
+                professions = {
+                    primary = {
+                        { name = "Tailoring", rank = 150, maxRank = 150 },
+                    },
+                },
+            },
+        },
+    }
+    CLIAltsDB = testIgnoreDB
+    self.curPlayerFullName = "SenderMain"
+
+    local oldGetItemInfo = GetItemInfo
+    GetItemInfo = function(id)
+        if id == 4540 then
+            -- Tough Hunk of Bread (Consumable: classID 0, subclassID 5)
+            return "Tough Hunk of Bread", "item:4540", 1, 1, 1, "Consumable", "Food & Drink", 20, "", "", 10, 0, 5, 0
+        elseif id == 4636 then
+            -- Heavy Lockbox (Junk/Misc: classID 15, subclassID 0)
+            return "Heavy Lockbox", "item:4636", 1, 1, 1, "Miscellaneous", "Junk", 1, "", "", 0, 15, 0, 0
+        elseif id == 2592 then
+            -- Wool Cloth (Trade Goods: classID 7, subclassID 5)
+            return "Wool Cloth", "item:2592", 1, 1, 1, "Trade Goods", "Cloth", 20, "", "", 10, 7, 5, 0
+        end
+        return nil
+    end
+
+    -- 27a. Consumables (Food/Drink classID 0) are NOT routed to Rogues or any alt by default
+    local breadDest = self:GetMaterialDestination(4540)
+    Assert(breadDest == nil, "MailIgnore: Consumable (Tough Hunk of Bread) destination is nil, not routed to Rogue")
+
+    -- 27b. Actual Lockboxes ARE routed to Rogues
+    local boxDest = self:GetMaterialDestination(4636)
+    Assert(boxDest ~= nil, "MailIgnore: Heavy Lockbox has valid destination")
+    Assert(boxDest.destName == "RogueAlt", "MailIgnore: Heavy Lockbox routed to RogueAlt")
+    Assert(boxDest.reason == "Lockpicking", "MailIgnore: Routing reason is Lockpicking")
+
+    -- 27c. Trade Goods routed normally prior to ignoring
+    local clothDest = self:GetMaterialDestination(2592)
+    Assert(clothDest ~= nil and clothDest.destName == "TailorAlt", "MailIgnore: Wool Cloth initially routed to TailorAlt")
+
+    -- 27d. Adding item to mail ignore list blocks routing
+    local ignOk, _ = self:IgnoreMailItem("Wool Cloth")
+    Assert(ignOk == true, "MailIgnore: IgnoreMailItem succeeds for Wool Cloth")
+    Assert(self:IsItemMailIgnored(2592) == true, "MailIgnore: IsItemMailIgnored returns true by itemID")
+    Assert(self:IsItemMailIgnored(nil, "Wool Cloth") == true, "MailIgnore: IsItemMailIgnored returns true by itemName")
+    local clothDestAfter = self:GetMaterialDestination(2592)
+    Assert(clothDestAfter == nil, "MailIgnore: Wool Cloth routing returns nil when ignored")
+
+    -- 27e. List ignored mail items
+    local count = self:ListIgnoredMailItems()
+    Assert(count >= 1, "MailIgnore: ListIgnoredMailItems lists at least 1 item")
+
+    -- 27f. Unignoring item restores routing
+    local unignOk = self:UnignoreMailItem("Wool Cloth")
+    Assert(unignOk == true, "MailIgnore: UnignoreMailItem succeeds")
+    Assert(self:IsItemMailIgnored(2592) == false, "MailIgnore: IsItemMailIgnored returns false after unignoring")
+    local clothDestRestored = self:GetMaterialDestination(2592)
+    Assert(clothDestRestored ~= nil and clothDestRestored.destName == "TailorAlt", "MailIgnore: Routing restored to TailorAlt")
+
+    -- 27g. Cursor pickup support in IgnoreMailItem
+    local oldGetCursorInfo = GetCursorInfo
+    GetCursorInfo = function()
+        return "item", 2592, "|cffffffff[Wool Cloth]|r"
+    end
+    local cursorOk, _ = self:IgnoreMailItem()
+    Assert(cursorOk == true, "MailIgnore: IgnoreMailItem without arguments grabs item from cursor")
+    Assert(self:IsItemMailIgnored(2592) == true, "MailIgnore: Cursor-picked item is marked as ignored")
+    self:UnignoreMailItem(2592)
+    GetCursorInfo = oldGetCursorInfo
+
+    -- 27h. ToggleAutoMailConsumables
+    local enabled = self:ToggleAutoMailConsumables(true)
+    Assert(enabled == true and CLIAltsDB.settings.autoMailConsumables == true, "ToggleAutoMailConsumables(true) enables setting")
+    local disabled = self:ToggleAutoMailConsumables(false)
+    Assert(disabled == false and CLIAltsDB.settings.autoMailConsumables == false, "ToggleAutoMailConsumables(false) disables setting")
+
+    -- Clean up mocks
+    GetItemInfo = oldGetItemInfo
+    CLIAltsDB = oldIgnoreDB
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

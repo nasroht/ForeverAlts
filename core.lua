@@ -818,6 +818,18 @@ local function SlashHandler(msg)
     elseif cmd == "mail" or cmd == "router" or cmd == "supplychain" then
         CLIAlts:PrintMailRouting()
 
+    elseif cmd == "mailignore" or cmd == "ignoremail" then
+        CLIAlts:IgnoreMailItem(arg)
+
+    elseif cmd == "mailunignore" or cmd == "unignoremail" then
+        CLIAlts:UnignoreMailItem(arg)
+
+    elseif cmd == "mailignores" or cmd == "ignoredmail" then
+        CLIAlts:ListIgnoredMailItems()
+
+    elseif cmd == "mailconsumables" then
+        CLIAlts:ToggleAutoMailConsumables()
+
     elseif cmd == "lp" or cmd == "legacypoints" or cmd == "legacypoint" then
         CLIAlts:PrintLegacyPointStatus(arg)
 
@@ -844,3 +856,16 @@ SLASH_CLIALTS_FILLMAIL1 = "/fillmail"
 SlashCmdList["CLIALTS_FILLMAIL"] = function()
     CLIAlts:FillSendMailNextBatch()
 end
+
+SLASH_CLIALTS_MAILIGNORE1 = "/mailignore"
+SLASH_CLIALTS_MAILIGNORE2 = "/ignoremail"
+SlashCmdList["CLIALTS_MAILIGNORE"] = function(msg)
+    CLIAlts:IgnoreMailItem(msg)
+end
+
+SLASH_CLIALTS_MAILUNIGNORE1 = "/mailunignore"
+SLASH_CLIALTS_MAILUNIGNORE2 = "/unignoremail"
+SlashCmdList["CLIALTS_MAILUNIGNORE"] = function(msg)
+    CLIAlts:UnignoreMailItem(msg)
+end
+

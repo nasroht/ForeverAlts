@@ -157,6 +157,7 @@ BANK_CONTAINER = BANK_CONTAINER or -1
 InCombatLockdown = InCombatLockdown or function() return false end
 CursorHasItem = CursorHasItem or function() return false end
 ClearCursor = ClearCursor or function() end
+GetCursorInfo = GetCursorInfo or function() return nil end
 PickupContainerItem = PickupContainerItem or function(bag, slot) end
 GetContainerNumFreeSlots = GetContainerNumFreeSlots or function(bag) return 0, 0 end
 ContainerFrame1 = ContainerFrame1 or CreateDummyFrame("Frame", "ContainerFrame1")

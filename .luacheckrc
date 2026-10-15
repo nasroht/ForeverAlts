@@ -43,6 +43,10 @@ globals = {
     "SLASH_CLIALTS3",
     "SLASH_CLIALTS_SORT1",
     "SLASH_CLIALTS_FILLMAIL1",
+    "SLASH_CLIALTS_MAILIGNORE1",
+    "SLASH_CLIALTS_MAILIGNORE2",
+    "SLASH_CLIALTS_MAILUNIGNORE1",
+    "SLASH_CLIALTS_MAILUNIGNORE2",
     "SlashCmdList",
 
     -- WoW Frame & UI APIs
@@ -151,6 +155,7 @@ globals = {
     "TooltipDataProcessor",
     "ItemRefTooltip",
     "Enum",
+    "GetCursorInfo",
     "PickupContainerItem",
     "ClearCursor",
     "CursorHasItem",
