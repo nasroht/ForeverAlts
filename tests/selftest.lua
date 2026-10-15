@@ -2019,8 +2019,61 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = oldIgnoreDB
     end
 
+    -- ------------------------------------------------------------------------
+    -- 28. Modern UI Column Widths & Compact Rested Formatters
+    -- ------------------------------------------------------------------------
+    local modFrame = self:CreateModernMainFrame()
+    Assert(modFrame ~= nil and modFrame.isLegacyUI == false, "ModernUI: CreateModernMainFrame creates modern frame")
+
+    -- 28a. Tab 3 (Rested XP Monitor) Modern Columns Fit within 700px bounds
+    local tab3Cols = self:GetColumns(3)
+    Assert(#tab3Cols == 8, "ModernUI: Tab 3 has 8 active columns in modern view")
+    local totalMpw = 0
+    for _, col in ipairs(tab3Cols) do
+        Assert(col.mpw and col.mpw > 0, string.format("ModernUI: Tab 3 col '%s' defines positive mpw", col.key or "unknown"))
+        totalMpw = totalMpw + (col.mpw or 0)
+    end
+    Assert(totalMpw <= 700, string.format("ModernUI: Tab 3 total modern column width (%dpx) fits inside row bounds (<= 700px)", totalMpw))
+
+    -- 28b. Concise Modern XP & Rested Formatters
+    local mockAlt = {
+        name = "NasGuile",
+        fullName = "NasGuile-Forever",
+        class = "Rogue",
+        classFile = "ROGUE",
+        level = 15,
+        target_level = 15,
+        tier = "CORE",
+        xp = 6204,
+        curXP = 6204,
+        maxXP = 14400,
+        restedXP = 19178,
+        rested = 19178,
+    }
+    for _, col in ipairs(tab3Cols) do
+        if col.key == "curXP" then
+            local str = col.fmt(mockAlt)
+            Assert(str:find("6%.2k/14%.4k") ~= nil, "ModernUI: FmtCurXP produces concise k-notation string in modern view")
+        elseif col.key == "pool" then
+            local str = col.fmt(mockAlt)
+            Assert(str:find("19%.2k XP") ~= nil, "ModernUI: FmtRestedPool produces concise k-notation string in modern view")
+        elseif col.key == "restBar" then
+            local str = col.fmt(mockAlt)
+            Assert(str:find("cap") ~= nil and #str < 120, "ModernUI: FmtRestedBar produces compact cap string in modern view")
+        end
+    end
+
+    -- 28c. Exact Target Level Reached UI Wording Check
+    local tab2Cols = self:GetColumns(2)
+    for _, col in ipairs(tab2Cols) do
+        if col.key == "reason" then
+            local reasonStr = col.fmt(mockAlt)
+            Assert(reasonStr:find("Target Level Reached") ~= nil, "ModernUI: FmtRouteReason uses exact 'Target Level Reached' wording")
+        end
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

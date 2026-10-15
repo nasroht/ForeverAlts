@@ -676,28 +676,46 @@ end
 local function FmtRouteReason(char, t)
     t = t or CLIAlts:GetTheme()
     if char.tier == "BANK" then
+        if mainFrame and not mainFrame.isLegacyUI then
+            return string.format("|cff%sBank Mule (Excluded)|r", t.dimHex or "736953")
+        end
         return string.format("|cff%sDesignated Bank Mule (Excluded from leveling)|r", t.dimHex or "736953")
     end
     local maxLvl = CLIAlts:GetMaxLevel()
     local defaultTgt = (char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or maxLvl
     local tgt = char.target_level or defaultTgt
     if (char.level or 1) >= tgt then
-        return string.format("|cff%sTarget reached (Lvl %d >= %d) - rotation complete|r", t.readyHex or "55e39a", char.level or 1, tgt)
+        if mainFrame and not mainFrame.isLegacyUI then
+            return string.format("|cff%sTarget Level Reached (L%d >= %d)|r", t.readyHex or "55e39a", char.level or 1, tgt)
+        end
+        return string.format("|cff%sTarget Level Reached (Lvl %d >= %d) - rotation complete|r", t.readyHex or "55e39a", char.level or 1, tgt)
     end
 
     local rested = CLIAlts:GetRestedData(char)
     local _, wastedXP = CLIAlts:GetRestedWaste(char, nil, rested)
     if rested and rested.isFull then
         if wastedXP and wastedXP > 0 then
+            if mainFrame and not mainFrame.isLegacyUI then
+                return string.format("|cff%s! CAPPED: +%s XP waste!|r", t.pendingHex or "ffb547", CLIAlts:FormatNumber(wastedXP))
+            end
             return string.format("|cff%s! CAPPED: Overflowing (+%s XP waste) - Play now!|r", t.pendingHex or "ffb547", CLIAlts:FormatNumber(wastedXP))
         else
+            if mainFrame and not mainFrame.isLegacyUI then
+                return string.format("|cff%s* CAPPED: %d%% Rested pool ready|r", t.highlightHex or "ffd34e", rested.maxPercent or 150)
+            end
             return string.format("|cff%s* CAPPED: %d%% Rested pool ready for double XP|r", t.highlightHex or "ffd34e", rested.maxPercent or 150)
         end
     elseif char.tier == "CORE" then
         local xpStr = rested and CLIAlts:FormatNumber(rested.currentRested) or "0"
+        if mainFrame and not mainFrame.isLegacyUI then
+            return string.format("|cff%sCORE: ~%s Rested (Caps: %s)|r", t.primaryHex or "f2c94c", xpStr, rested and rested.timeLeftStr or "---")
+        end
         return string.format("|cff%sCORE PRIORITY: ~%s Rested XP (Caps in %s)|r", t.primaryHex or "f2c94c", xpStr, rested and rested.timeLeftStr or "---")
     else
         local xpStr = rested and CLIAlts:FormatNumber(rested.currentRested) or "0"
+        if mainFrame and not mainFrame.isLegacyUI then
+            return string.format("|cff%sRESERVE: ~%s Rested XP|r", t.mutedHex or "a9a08c", xpStr)
+        end
         return string.format("|cff%sRESERVE ALT: ~%s Rested XP (Accruing toward cap)|r", t.mutedHex or "a9a08c", xpStr)
     end
 end
@@ -709,6 +727,11 @@ local function FmtCurXP(char, t)
     if not xpData or xpData.isMaxLevel then
         return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
     end
+    if mainFrame and not mainFrame.isLegacyUI then
+        local curK = (xpData.curXP or 0) >= 1000 and string.format("%.1fk", (xpData.curXP or 0) / 1000) or tostring(xpData.curXP or 0)
+        local maxK = (xpData.maxXP or 0) >= 1000 and string.format("%.1fk", (xpData.maxXP or 0) / 1000) or tostring(xpData.maxXP or 0)
+        return string.format("|cff%s%s/%s (%d%%)|r", t.textHex or "f4ead2", curK, maxK, xpData.percent or 0)
+    end
     return string.format("|cff%s%s|r |cff%s/ %s (%d%%)|r",
         t.textHex or "f4ead2", CLIAlts:FormatNumber(xpData.curXP),
         t.dimHex or "736953", CLIAlts:FormatNumber(xpData.maxXP), xpData.percent)
@@ -719,6 +742,11 @@ local function FmtRestedPool(char, t)
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
+    end
+    if mainFrame and not mainFrame.isLegacyUI then
+        local curK = (rested.currentRested or 0) >= 1000 and string.format("%.1fk", (rested.currentRested or 0) / 1000) or tostring(rested.currentRested or 0)
+        local capStr = rested.isFull and (string.format("|cff%s%d%%*|r", t.highlightHex, rested.maxPercent or 150)) or (string.format("%d%%", rested.percent or 0))
+        return string.format("|cff%s%s XP (%s)|r", t.textHex or t.primaryHex, curK, capStr)
     end
     local capStr = rested.isFull and (string.format("|cff%s%d%%*|r", t.highlightHex, rested.maxPercent or 150)) or (string.format("%d%%", rested.percent or 0))
     return string.format("|cff%s%s|r |cff%s/ %s (%s)|r",
@@ -745,6 +773,11 @@ local function FmtRestedBar(char, t)
     local capPct = math.floor(ratio * 100)
     local barColor = isFull and t.highlightHex or (t.accentHex or t.primaryHex)
     local labelColor = isFull and t.highlightHex or (t.textHex or t.primaryHex)
+
+    if mainFrame and not mainFrame.isLegacyUI then
+        return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%%%s cap|r",
+            t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, est, capPct, capMark)
+    end
 
     local lvlPct = rested.percent or 0
     return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%%%s cap (%d%% lvl)|r",
@@ -1068,12 +1101,12 @@ local COLS = {
     [3] = { -- 3: RESTED XP MONITOR
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
         { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, mpw = 115, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   mpw = 0,   align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 115, padRight = 14, cpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 175, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 85,  align = "RIGHT",  fmt = FmtRate },
-        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 150, cpw = 120, mpw = 125, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 34,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   mpw = 115, padRight = 10, mpadRight = 10, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
+        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 115, padRight = 14, cpadRight = 10, mpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 118, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 75,  padRight = 8, mpadRight = 8, align = "RIGHT",  fmt = FmtRate },
+        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 150, cpw = 120, mpw = 78,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
@@ -3013,9 +3046,11 @@ function CLIAlts:CreateModernMainFrame()
     -- Initialize backward-compatible row frames for Phase 1
     for i = 1, 8 do
         local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        row:SetSize(700, 52)
+        row:SetHeight(52)
         row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 56))
+        row:SetPoint("RIGHT", rowsContainer, "RIGHT", 0, 0)
         row.rowIndex = i
+        if row.SetClipsChildren then row:SetClipsChildren(true) end
         row:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3050,7 +3085,7 @@ function CLIAlts:CreateModernMainFrame()
         row.restPercentText = restPercentText
 
         local barBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        barBg:SetSize(180, 8)
+        barBg:SetSize(220, 8)
         barBg:SetPoint("LEFT", restPercentText, "RIGHT", 10, 0)
         barBg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -3726,7 +3761,7 @@ function CLIAlts:Render()
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
     local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v5"
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v6"
     local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
     if relayoutHeaders and mainFrame.headerFrame then
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
@@ -3958,7 +3993,7 @@ function CLIAlts:Render()
                     end
 
                     local ratio = math.min(1.0, math.max(0, pct / maxPct))
-                    local maxBarW = isComp and 190 or 280
+                    local maxBarW = isComp and 170 or 220
                     local barW = math.floor(maxBarW * ratio)
                     if row.barFill then
                         row.barFill:SetWidth(math.max(1, barW))
@@ -4010,7 +4045,7 @@ function CLIAlts:Render()
                 if row.etaText then row.etaText:Hide() end
 
                 local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v5"
+                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v6"
                 local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                 if relayoutRow then
                     row.lastLayoutKey = rowLayoutKey

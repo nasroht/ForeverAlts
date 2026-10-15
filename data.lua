@@ -1421,7 +1421,7 @@ function CLIAlts:GetLevelProgressData(char)
     local maxLevel = self:GetMaxLevel()
     local level = char.level or 1
     local isMaxLevel = (level >= maxLevel)
-    local curXP = char.xp or 0
+    local curXP = char.xp or char.curXP or 0
     local maxXP = char.maxXP or 0
 
     -- If currently logged in as this character, read live client values
