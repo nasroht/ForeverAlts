@@ -5370,21 +5370,28 @@ end
 function CLIAlts:GetItemSortScore(itemID, count)
     itemID = tonumber(itemID)
     if not itemID or itemID <= 0 then
-        return 99999999, "99_empty"
+        return 990000000, "99_empty", 99
     end
 
-    local itemName, _, quality, _, _, itemType, _, _, _, _, _, classID, subclassID = nil, nil, 1
+    local itemName, quality, itemType, classID, subclassID
     if GetItemInfo then
-        itemName, _, quality, _, _, itemType, _, _, _, _, _, classID, subclassID = GetItemInfo(itemID)
+        local raw = { GetItemInfo(itemID) }
+        if raw[1] then
+            itemName = raw[1]
+            quality = raw[3]
+            itemType = raw[6]
+            classID = raw[12]
+            subclassID = raw[13]
+        end
     end
     if not classID and C_Item and C_Item.GetItemInfoInstant then
-        local _, _, _, _, _, c, sc = C_Item.GetItemInfoInstant(itemID)
-        classID = classID or c
-        subclassID = subclassID or sc
+        local raw = { C_Item.GetItemInfoInstant(itemID) }
+        classID = raw[6]
+        subclassID = raw[7]
     elseif not classID and GetItemInfoInstant then
-        local _, _, _, _, _, c, sc = GetItemInfoInstant(itemID)
-        classID = classID or c
-        subclassID = subclassID or sc
+        local raw = { GetItemInfoInstant(itemID) }
+        classID = raw[6]
+        subclassID = raw[7]
     end
 
     quality = quality or 1
@@ -5424,7 +5431,7 @@ function CLIAlts:GetItemSortScore(itemID, count)
 
     local sortScore = catPriority * 10000000 + (subclassID * 100000) + math.min(itemID, 99999)
     local sortKey = string.format("%02d_%02d_%s_%06d_%08d", catPriority, subclassID, itemName:lower(), 999999 - (count or 1), itemID)
-    return sortScore, sortKey
+    return sortScore, sortKey, catPriority
 end
 
 function CLIAlts:ConsolidateBagStacks()
@@ -5448,8 +5455,8 @@ function CLIAlts:ConsolidateBagStacks()
                 if itemID and itemID > 0 and count and count > 0 then
                     local maxStack = 1
                     if GetItemInfo then
-                        local _, _, _, _, _, _, _, stack = GetItemInfo(itemID)
-                        maxStack = tonumber(stack) or 1
+                        local raw = { GetItemInfo(itemID) }
+                        maxStack = tonumber(raw[8]) or 1
                     end
                     if maxStack > 1 and count < maxStack then
                         if not partialStacks[itemID] then partialStacks[itemID] = {} end
@@ -5557,7 +5564,10 @@ function CLIAlts:StartCustomBagSort()
         end
     end
 
-    if #slotRefs == 0 then return false end
+    if #slotRefs == 0 then
+        self:Print("Bags are already organized.")
+        return true
+    end
 
     -- Step 3: Snapshot current items and build desired target arrangement
     local currentItems = {}

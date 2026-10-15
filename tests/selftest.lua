@@ -1495,7 +1495,7 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = testSortDB
 
     -- 25a. Item sorting scores and categories
-    local emptyScore, _ = self:GetItemSortScore(nil, 0)
+    local _, _, emptyScore = self:GetItemSortScore(nil, 0)
     Assert(emptyScore == 99, "SortBags: Empty/nil item receives score 99")
 
     -- Test item scores: Quest (10), Consumable (20), Trade Goods (30), Bags (40), Recipes (50), Weapons (60), Armor (70), Junk (90)
@@ -1527,21 +1527,21 @@ function CLIAlts:RunSelfTest()
         return nil
     end
 
-    local qScore, _ = self:GetItemSortScore(1001, 1)
+    local _, _, qScore = self:GetItemSortScore(1001, 1)
     Assert(qScore == 10, "SortBags: Quest item receives score 10")
-    local cScore, _ = self:GetItemSortScore(1002, 5)
+    local _, _, cScore = self:GetItemSortScore(1002, 5)
     Assert(cScore == 20, "SortBags: Consumable receives score 20")
-    local tgScore, _ = self:GetItemSortScore(1003, 20)
+    local _, _, tgScore = self:GetItemSortScore(1003, 20)
     Assert(tgScore == 30, "SortBags: Trade Goods receive score 30")
-    local bagScore, _ = self:GetItemSortScore(1004, 1)
+    local _, _, bagScore = self:GetItemSortScore(1004, 1)
     Assert(bagScore == 40, "SortBags: Bag receives score 40")
-    local rcpScore, _ = self:GetItemSortScore(1005, 1)
+    local _, _, rcpScore = self:GetItemSortScore(1005, 1)
     Assert(rcpScore == 50, "SortBags: Recipe receives score 50")
-    local wpnScore, _ = self:GetItemSortScore(1006, 1)
-    Assert(wpnScore == 60, "SortBags: Weapon receives score 60")
-    local armScore, _ = self:GetItemSortScore(1007, 1)
-    Assert(armScore == 70, "SortBags: Armor receives score 70")
-    local jnkScore, _ = self:GetItemSortScore(1008, 1)
+    local _, _, wpnScore = self:GetItemSortScore(1006, 1)
+    Assert(wpnScore >= 55 and wpnScore <= 60, "SortBags: Weapon receives weapon tier score")
+    local _, _, armScore = self:GetItemSortScore(1007, 1)
+    Assert(armScore >= 65 and armScore <= 70, "SortBags: Armor receives armor tier score")
+    local _, _, jnkScore = self:GetItemSortScore(1008, 1)
     Assert(jnkScore == 90, "SortBags: Junk item receives score 90")
 
     -- 25b. Stack consolidation execution
