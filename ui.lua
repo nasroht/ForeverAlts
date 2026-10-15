@@ -748,6 +748,137 @@ function CLIAlts:UpdatePlayNextBanner()
 end
 
 -- ----------------------------------------------------------------------------
+-- Sidebar Badges Engine (Phase 5)
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetSidebarBadgeCounts(nowOverride)
+    if self._cachedSidebarBadges then
+        return self._cachedSidebarBadges
+    end
+    local now = nowOverride or time()
+    local digest = self.GetLoginDigestItems and self:GetLoginDigestItems(now)
+    local chars = self.GetCharactersList and self:GetCharactersList() or {}
+    local mailSummary = self._cachedMailReadySummary or (self.GetMailReadySummary and self:GetMailReadySummary())
+    local counts = {
+        overview = #chars,
+        rested = (digest and digest.losingAlts) or 0,
+        cooldowns = (digest and ((digest.readyCooldowns or 0) + (digest.unlockedRaids or 0))) or 0,
+        mail = (mailSummary and mailSummary.totalPackages) or 0,
+    }
+    self._cachedSidebarBadges = counts
+    return counts
+end
+
+-- ----------------------------------------------------------------------------
+-- Filter Chips & Sort Engine (Phase 5)
+-- ----------------------------------------------------------------------------
+local SORT_CYCLE = { "rested", "level", "name", "waste", "gold" }
+
+function CLIAlts:CycleSort()
+    local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "rested"
+    local nextKey = "rested"
+    for i, k in ipairs(SORT_CYCLE) do
+        if k == cur then
+            nextKey = SORT_CYCLE[(i % #SORT_CYCLE) + 1]
+            break
+        end
+    end
+    self:ToggleSortKey(nextKey)
+end
+
+function CLIAlts:UpdateFilterChips()
+    if not mainFrame or not mainFrame.filterChips then return end
+
+    local activeTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
+    if activeTab == 7 then
+        if mainFrame.filterChipsBar then mainFrame.filterChipsBar:Hide() end
+        if mainFrame.mailActionBar then mainFrame.mailActionBar:Show() end
+        return
+    else
+        if mainFrame.mailActionBar then mainFrame.mailActionBar:Hide() end
+        if mainFrame.filterChipsBar then mainFrame.filterChipsBar:Show() end
+    end
+
+    local brandR, brandG, brandB = self:Hex("brand")
+    local raisedR, raisedG, raisedB = self:Hex("raised")
+    local panelR, panelG, panelB = self:Hex("panel")
+    local lineR, lineG, lineB = self:Hex("line")
+    local mutedR, mutedG, mutedB = self:Hex("muted")
+
+    -- Character counts for each filter chip
+    local allChars = self.GetCharactersList and self:GetCharactersList(nil, nil, nil) or {}
+    local countAll = #allChars
+    local countHorde = 0
+    local countAlliance = 0
+    local countCapped = 0
+    local countUnder60 = 0
+    local countHasNote = 0
+    local maxLvl = self.GetMaxLevel and self:GetMaxLevel() or 60
+
+    for _, c in ipairs(allChars) do
+        if c.faction == "Horde" then countHorde = countHorde + 1 end
+        if c.faction == "Alliance" then countAlliance = countAlliance + 1 end
+        local r = self.GetRestedData and self:GetRestedData(c)
+        if r and r.isFull then countCapped = countCapped + 1 end
+        if (c.level or 1) < maxLvl then countUnder60 = countUnder60 + 1 end
+        if c.note and c.note ~= "" and c.note:match("%S") then countHasNote = countHasNote + 1 end
+    end
+
+    local counts = {
+        [1] = countAll,
+        [2] = countHorde,
+        [3] = countAlliance,
+        [4] = countCapped,
+        [5] = countUnder60,
+        [6] = countHasNote,
+    }
+
+    local curFilter = self.activeFilter
+    local q = curFilter and curFilter:lower():match("^%s*(.-)%s*$") or ""
+
+    for i, chip in ipairs(mainFrame.filterChips) do
+        local count = counts[i] or 0
+        local chipLabel = string.format("%s %d", chip.baseLabel, count)
+        chip.label:SetText(chipLabel)
+        local strW = (chip.label.GetStringWidth and chip.label:GetStringWidth()) or 40
+        chip:SetWidth(math.max(48, math.floor(strW + 16)))
+
+        -- Determine if this chip is active
+        local isActive = false
+        if i == 1 then
+            isActive = (q == "" or curFilter == nil)
+        elseif i == 2 then
+            isActive = (q == "horde" or q == "h")
+        elseif i == 3 then
+            isActive = (q == "alliance" or q == "ally" or q == "a")
+        elseif i == 4 then
+            isActive = (q == "capped" or q == "cap")
+        elseif i == 5 then
+            isActive = (q == "under 60" or q == "under60" or q == "<60")
+        elseif i == 6 then
+            isActive = (q == "has note" or q == "hasnote" or q == "with note")
+        end
+        chip.isActive = isActive
+
+        if isActive then
+            if chip.SetBackdropColor then chip:SetBackdropColor(raisedR, raisedG, raisedB, 1.0) end
+            if chip.SetBackdropBorderColor then chip:SetBackdropBorderColor(brandR, brandG, brandB, 1.0) end
+            chip.label:SetTextColor(brandR, brandG, brandB)
+        else
+            if chip.SetBackdropColor then chip:SetBackdropColor(panelR, panelG, panelB, 0.8) end
+            if chip.SetBackdropBorderColor then chip:SetBackdropBorderColor(lineR, lineG, lineB, 0.8) end
+            chip.label:SetTextColor(mutedR, mutedG, mutedB)
+        end
+    end
+
+    -- Update Sort Button Text
+    if mainFrame.btnSort and mainFrame.btnSort.label then
+        local curSort = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "Rested"
+        local sortTitle = curSort:sub(1,1):upper() .. curSort:sub(2)
+        mainFrame.btnSort.label:SetText(string.format("Sort: %s ▾", sortTitle))
+    end
+end
+
+-- ----------------------------------------------------------------------------
 -- Window Position Persistence
 -- ----------------------------------------------------------------------------
 function CLIAlts:SaveWindowPosition(frame)
@@ -2757,7 +2888,6 @@ function CLIAlts:CreateModernMainFrame()
         end
         if CLIAlts.SetFilter then
             CLIAlts:SetFilter(text)
-            CLIAlts:Render()
         end
     end)
     searchBox:SetScript("OnEscapePressed", function(self)
@@ -2765,7 +2895,6 @@ function CLIAlts:CreateModernMainFrame()
         self:ClearFocus()
         if CLIAlts.SetFilter then
             CLIAlts:SetFilter("")
-            CLIAlts:Render()
         end
     end)
     searchBox:SetScript("OnEnterPressed", function(self)
@@ -3390,12 +3519,115 @@ function CLIAlts:CreateModernMainFrame()
         end
     end)
 
-    -- Filter Bar (Phase 5 placeholder)
+    -- Filter Bar (Phase 5)
     local filterBar = CreateFrame("Frame", "CLIAltsFilterBar", mainCol)
     filterBar:SetPoint("TOPLEFT", nextBanner, "BOTTOMLEFT", 0, -8)
     filterBar:SetPoint("TOPRIGHT", nextBanner, "BOTTOMRIGHT", 0, -8)
     filterBar:SetHeight(28)
     frame.filterBar = filterBar
+
+    local filterChipsBar = CreateFrame("Frame", "CLIAltsFilterChipsBar", filterBar)
+    filterChipsBar:SetAllPoints(filterBar)
+    frame.filterChipsBar = filterChipsBar
+
+    local chipDefs = {
+        { key = nil,        label = "All" },
+        { key = "horde",    label = "Horde" },
+        { key = "alliance", label = "Alliance" },
+        { key = "capped",   label = "Capped" },
+        { key = "under 60", label = "Under 60" },
+        { key = "has note", label = "Has note" },
+    }
+
+    local filterChips = {}
+    local prevChip = nil
+    for i, def in ipairs(chipDefs) do
+        local chip = CreateFrame("Button", "CLIAltsFilterChip" .. i, filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        chip:SetHeight(22)
+        chip:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if chip.SetBackdropColor then chip:SetBackdropColor(panelR, panelG, panelB, 0.8) end
+        if chip.SetBackdropBorderColor then chip:SetBackdropBorderColor(lineR, lineG, lineB, 0.8) end
+
+        local chipText = chip:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(chipText, 11, "")
+        chipText:SetPoint("CENTER", chip, "CENTER", 0, 0)
+        chipText:SetText(def.label)
+        chipText:SetTextColor(mutedR, mutedG, mutedB)
+        chip.label = chipText
+        chip.filterKey = def.key
+        chip.baseLabel = def.label
+
+        if not prevChip then
+            chip:SetPoint("LEFT", filterChipsBar, "LEFT", 0, 0)
+        else
+            chip:SetPoint("LEFT", prevChip, "RIGHT", 6, 0)
+        end
+
+        chip:SetScript("OnClick", function(cSelf)
+            PlayRetroSound()
+            CLIAlts:SetFilter(cSelf.filterKey)
+        end)
+        chip:SetScript("OnEnter", function(cSelf)
+            if not cSelf.isActive then
+                if cSelf.SetBackdropColor then cSelf:SetBackdropColor(raisedR, raisedG, raisedB, 0.9) end
+                cSelf.label:SetTextColor(textR, textG, textB)
+            end
+        end)
+        chip:SetScript("OnLeave", function(cSelf)
+            if not cSelf.isActive then
+                if cSelf.SetBackdropColor then cSelf:SetBackdropColor(panelR, panelG, panelB, 0.8) end
+                if cSelf.SetBackdropBorderColor then cSelf:SetBackdropBorderColor(lineR, lineG, lineB, 0.8) end
+                cSelf.label:SetTextColor(mutedR, mutedG, mutedB)
+            else
+                if cSelf.SetBackdropColor then cSelf:SetBackdropColor(raisedR, raisedG, raisedB, 1.0) end
+                if cSelf.SetBackdropBorderColor then cSelf:SetBackdropBorderColor(brandR, brandG, brandB, 1.0) end
+                cSelf.label:SetTextColor(brandR, brandG, brandB)
+            end
+        end)
+
+        filterChips[i] = chip
+        prevChip = chip
+    end
+    frame.filterChips = filterChips
+
+    -- Right-aligned Sort Dropdown Button (Phase 5 / Artboard B)
+    local btnSort = CreateFrame("Button", "CLIAltsSortButton", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    btnSort:SetHeight(22)
+    btnSort:SetWidth(120)
+    btnSort:SetPoint("RIGHT", filterChipsBar, "RIGHT", 0, 0)
+    btnSort:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if btnSort.SetBackdropColor then btnSort:SetBackdropColor(panelR, panelG, panelB, 0.8) end
+    if btnSort.SetBackdropBorderColor then btnSort:SetBackdropBorderColor(lineR, lineG, lineB, 0.8) end
+
+    local btnSortText = btnSort:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(btnSortText, 11, "")
+    btnSortText:SetPoint("CENTER", btnSort, "CENTER", 0, 0)
+    btnSortText:SetText("Sort: Rested ▾")
+    btnSortText:SetTextColor(mutedR, mutedG, mutedB)
+    btnSort.label = btnSortText
+    btnSort:SetScript("OnClick", function()
+        PlayRetroSound()
+        CLIAlts:CycleSort()
+    end)
+    btnSort:SetScript("OnEnter", function(bSelf)
+        if bSelf.SetBackdropColor then bSelf:SetBackdropColor(raisedR, raisedG, raisedB, 0.9) end
+        bSelf.label:SetTextColor(textR, textG, textB)
+    end)
+    btnSort:SetScript("OnLeave", function(bSelf)
+        if bSelf.SetBackdropColor then bSelf:SetBackdropColor(panelR, panelG, panelB, 0.8) end
+        bSelf.label:SetTextColor(mutedR, mutedG, mutedB)
+    end)
+    frame.btnSort = btnSort
 
     local mailActionBar = CreateFrame("Frame", "CLIAltsMailActionBar", filterBar)
     mailActionBar:SetAllPoints(filterBar)
@@ -3854,6 +4086,7 @@ end
 local renderTimerPending = false
 
 function CLIAlts:RequestRender()
+    self._cachedSidebarBadges = nil
     renderDirty = true
     if self.UpdateLDB then
         self:UpdateLDB()
@@ -4505,21 +4738,43 @@ function CLIAlts:Render()
     end
 
     if mainFrame.sidebarNavButtons then
-        local mailSummary = self._cachedMailReadySummary or self:GetMailReadySummary()
+        local badgeCounts = self:GetSidebarBadgeCounts()
         for _, navBtn in ipairs(mainFrame.sidebarNavButtons) do
-            if navBtn.tabId == 7 and navBtn.badge then
-                local pkgCount = (mailSummary and mailSummary.totalPackages) or 0
-                if pkgCount > 0 then
-                    navBtn.badge.text:SetText(tostring(pkgCount))
+            if navBtn.badge then
+                if navBtn.tabId == 1 then
+                    navBtn.badge.text:SetText(tostring(badgeCounts.overview or #chars))
                     navBtn.badge:Show()
-                else
-                    navBtn.badge:Hide()
+                elseif navBtn.tabId == 3 then
+                    local count = badgeCounts.rested or 0
+                    if count > 0 then
+                        navBtn.badge.text:SetText(tostring(count))
+                        navBtn.badge:Show()
+                    else
+                        navBtn.badge:Hide()
+                    end
+                elseif navBtn.tabId == 6 then
+                    local count = badgeCounts.cooldowns or 0
+                    if count > 0 then
+                        navBtn.badge.text:SetText(tostring(count))
+                        navBtn.badge:Show()
+                    else
+                        navBtn.badge:Hide()
+                    end
+                elseif navBtn.tabId == 7 then
+                    local count = badgeCounts.mail or 0
+                    if count > 0 then
+                        navBtn.badge.text:SetText(tostring(count))
+                        navBtn.badge:Show()
+                    else
+                        navBtn.badge:Hide()
+                    end
                 end
-            elseif navBtn.tabId == 1 and navBtn.badge then
-                navBtn.badge.text:SetText(tostring(#chars))
-                navBtn.badge:Show()
             end
         end
+    end
+
+    if self.UpdateFilterChips then
+        self:UpdateFilterChips()
     end
 
     -- Render Rows (Overview Phase 2 Component or Multi-Column Rows across Tabs)
@@ -5108,6 +5363,22 @@ function CLIAlts:SetFilter(filterStr)
             self.activeFilter = nil
         end
     end
+
+    -- Bidirectional sync with search edit box
+    if mainFrame and mainFrame.searchBox and not mainFrame.searchBox:HasFocus() then
+        local targetText = self.activeFilter or ""
+        if mainFrame.searchBox:GetText() ~= targetText then
+            mainFrame.searchBox:SetText(targetText)
+        end
+        if mainFrame.searchBox.placeholder then
+            if #targetText > 0 then
+                mainFrame.searchBox.placeholder:Hide()
+            else
+                mainFrame.searchBox.placeholder:Show()
+            end
+        end
+    end
+
     currentPage = 1
     self:Render()
 end

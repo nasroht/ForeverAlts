@@ -889,6 +889,193 @@ function CLIAlts:RunSelfTest()
         self.selectedCharKey = nil
     end
 
+    do -- 11h. Phase 5: Sidebar Badges, Filter Chips & Search Sync Tests
+        local mFrame = self:CreateModernMainFrame()
+        mFrame:Show()
+
+        local oldChars = CLIAltsDB and CLIAltsDB.characters
+        local oldSettings = CLIAltsDB and CLIAltsDB.settings
+        local now = time()
+
+        -- Mock dataset: 4 alts
+        -- Alt 1 (Horde, level 47, capped & losing XP, has note, 1 ready cooldown)
+        -- Alt 2 (Horde, level 60, max level, 1 reset raid lockout)
+        -- Alt 3 (Alliance, level 41, capped & losing XP, no note)
+        -- Alt 4 (Alliance, level 25, accruing, no note)
+        CLIAltsDB.characters = {
+            ["HordeAlpha"] = {
+                name = "HordeAlpha",
+                fullName = "HordeAlpha-Realm",
+                faction = "Horde",
+                class = "Shaman",
+                classFile = "SHAMAN",
+                level = 47,
+                tier = "CORE",
+                maxXP = 20000,
+                restedXP = 30000,
+                lastUpdate = now - (2 * 86400),
+                isResting = true,
+                note = "Transmute specialist",
+                tradeCooldowns = { ["Transmute: Arcanite"] = now - 500 },
+            },
+            ["HordeBeta"] = {
+                name = "HordeBeta",
+                fullName = "HordeBeta-Realm",
+                faction = "Horde",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 60,
+                tier = "CORE",
+                maxXP = 50000,
+                restedXP = 0,
+                lastUpdate = now,
+                lockouts = {
+                    ["Molten Core"] = { resetTime = now - 1000, id = 991 },
+                    ["Onyxia's Lair"] = { resetTime = now + 86400, id = 992 },
+                },
+            },
+            ["AllyAlpha"] = {
+                name = "AllyAlpha",
+                fullName = "AllyAlpha-Realm",
+                faction = "Alliance",
+                class = "Paladin",
+                classFile = "PALADIN",
+                level = 41,
+                tier = "RESERVE",
+                maxXP = 20000,
+                restedXP = 30000,
+                lastUpdate = now - (5 * 3600),
+                isResting = true,
+            },
+            ["AllyBeta"] = {
+                name = "AllyBeta",
+                fullName = "AllyBeta-Realm",
+                faction = "Alliance",
+                class = "Priest",
+                classFile = "PRIEST",
+                level = 25,
+                tier = "RESERVE",
+                maxXP = 15000,
+                restedXP = 5000,
+                lastUpdate = now,
+                isResting = true,
+            },
+        }
+        CLIAltsDB.settings = { activeTab = 1, compact = false, sortBy = "rested" }
+
+        -- 1. Test GetCharactersList filter query additions
+        local listAll = self:GetCharactersList()
+        Assert(#listAll == 4, "Phase 5: GetCharactersList() returns all 4 alts")
+
+        local listCapped = self:GetCharactersList(nil, nil, "capped")
+        Assert(#listCapped == 2, "Phase 5: GetCharactersList('capped') returns 2 capped alts")
+
+        local listUnder60 = self:GetCharactersList(nil, nil, "under 60")
+        Assert(#listUnder60 == 3, "Phase 5: GetCharactersList('under 60') returns 3 alts under level 60")
+
+        local listHasNote = self:GetCharactersList(nil, nil, "has note")
+        Assert(#listHasNote == 1 and listHasNote[1].name == "HordeAlpha", "Phase 5: GetCharactersList('has note') returns 1 alt with note")
+
+        local listHorde = self:GetCharactersList(nil, nil, "horde")
+        Assert(#listHorde == 2, "Phase 5: GetCharactersList('horde') returns 2 Horde alts")
+
+        local listAlly = self:GetCharactersList(nil, nil, "alliance")
+        Assert(#listAlly == 2, "Phase 5: GetCharactersList('alliance') returns 2 Alliance alts")
+
+        -- 2. Test GetLoginDigestItems sidebar counts and badge engine
+        local digest = self:GetLoginDigestItems(now)
+        Assert(digest.losingAlts == 2, "Phase 5: GetLoginDigestItems computes losingAlts == 2 (got: " .. tostring(digest.losingAlts) .. ")")
+        Assert(digest.readyCooldowns == 1, "Phase 5: GetLoginDigestItems computes readyCooldowns == 1")
+        Assert(digest.unlockedRaids == 1, "Phase 5: GetLoginDigestItems computes unlockedRaids == 1 (Molten Core reset)")
+        Assert(digest.cooldownsAndLocks == 2, "Phase 5: GetLoginDigestItems computes cooldownsAndLocks == 2 (1 CD + 1 reset raid)")
+
+        -- 3. Test GetSidebarBadgeCounts & Caching
+        self._cachedSidebarBadges = nil
+        local counts = self:GetSidebarBadgeCounts(now)
+        Assert(counts.overview == 4, "Phase 5: Sidebar overview badge is 4")
+        Assert(counts.rested == 2, "Phase 5: Sidebar rested badge is 2 (2 losing XP)")
+        Assert(counts.cooldowns == 2, "Phase 5: Sidebar cooldowns badge is 2 (1 ready CD + 1 unlocked raid)")
+
+        -- Verify caching
+        Assert(self._cachedSidebarBadges ~= nil, "Phase 5: Sidebar badge counts are cached")
+        mFrame:Hide()
+        self:RequestRender()
+        Assert(self._cachedSidebarBadges == nil, "Phase 5: RequestRender clears _cachedSidebarBadges")
+        mFrame:Show()
+
+        -- 4. Test Sidebar Nav Buttons Rendering
+        self:Render()
+        local navOverview = mFrame.sidebarNavButtons[1]
+        local navRested = mFrame.sidebarNavButtons[2]
+        local navCooldowns = mFrame.sidebarNavButtons[5]
+
+        Assert(navOverview.badge ~= nil and navOverview.badge:IsShown() == true, "Phase 5: Overview badge shown")
+        Assert(navOverview.badge.text:GetText() == "4", "Phase 5: Overview badge displays '4'")
+
+        Assert(navRested.badge ~= nil and navRested.badge:IsShown() == true, "Phase 5: Rested badge shown")
+        Assert(navRested.badge.text:GetText() == "2", "Phase 5: Rested badge displays '2'")
+
+        Assert(navCooldowns.badge ~= nil and navCooldowns.badge:IsShown() == true, "Phase 5: Cooldowns badge shown")
+        Assert(navCooldowns.badge.text:GetText() == "2", "Phase 5: Cooldowns badge displays '2'")
+
+        -- 5. Test Filter Chips Display & Counts
+        Assert(mFrame.filterChips ~= nil and #mFrame.filterChips == 6, "Phase 5: 6 filter chips exist on mainFrame")
+        Assert(mFrame.filterChips[1].label:GetText() == "All 4", "Phase 5: Chip 1 displays 'All 4' (got: " .. tostring(mFrame.filterChips[1].label:GetText()) .. ")")
+        Assert(mFrame.filterChips[2].label:GetText() == "Horde 2", "Phase 5: Chip 2 displays 'Horde 2'")
+        Assert(mFrame.filterChips[3].label:GetText() == "Alliance 2", "Phase 5: Chip 3 displays 'Alliance 2'")
+        Assert(mFrame.filterChips[4].label:GetText() == "Capped 2", "Phase 5: Chip 4 displays 'Capped 2'")
+        Assert(mFrame.filterChips[5].label:GetText() == "Under 60 3", "Phase 5: Chip 5 displays 'Under 60 3'")
+        Assert(mFrame.filterChips[6].label:GetText() == "Has note 1", "Phase 5: Chip 6 displays 'Has note 1'")
+
+        -- Verify initial active chip is All
+        Assert(mFrame.filterChips[1].isActive == true, "Phase 5: 'All' chip is active by default")
+        Assert(mFrame.filterChips[2].isActive == false, "Phase 5: 'Horde' chip is inactive by default")
+
+        -- 6. Test Chip Click & Active Highlight
+        local chipHorde = mFrame.filterChips[2]
+        chipHorde:GetScript("OnClick")(chipHorde)
+        Assert(self.activeFilter == "horde", "Phase 5: Clicking Horde chip sets activeFilter to 'horde'")
+        Assert(mFrame.filterChips[1].isActive == false, "Phase 5: 'All' chip is now inactive")
+        Assert(mFrame.filterChips[2].isActive == true, "Phase 5: 'Horde' chip is now active")
+
+        -- 7. Test Bidirectional Search Box Sync
+        Assert(mFrame.searchBox:GetText() == "horde", "Phase 5: Search box text synced to 'horde' after chip click")
+
+        -- Click All chip -> clears filter and search box
+        local chipAll = mFrame.filterChips[1]
+        chipAll:GetScript("OnClick")(chipAll)
+        Assert(self.activeFilter == nil, "Phase 5: Clicking All chip clears activeFilter")
+        Assert(mFrame.searchBox:GetText() == "", "Phase 5: Search box text cleared after All chip click")
+        Assert(mFrame.filterChips[1].isActive == true, "Phase 5: 'All' chip is active again")
+
+        -- Type in search box -> updates activeFilter and chip highlights
+        mFrame.searchBox:SetText("capped")
+        mFrame.searchBox:GetScript("OnTextChanged")(mFrame.searchBox)
+        Assert(self.activeFilter == "capped", "Phase 5: Typing 'capped' in search box updates activeFilter")
+        Assert(mFrame.filterChips[4].isActive == true, "Phase 5: 'Capped' chip is active after typing 'capped'")
+        Assert(mFrame.filterChips[1].isActive == false, "Phase 5: 'All' chip is inactive")
+
+        -- Escape in search box -> clears filter and highlights All chip
+        mFrame.searchBox:GetScript("OnEscapePressed")(mFrame.searchBox)
+        Assert(self.activeFilter == nil, "Phase 5: Pressing Escape in search box clears activeFilter")
+        Assert(mFrame.searchBox:GetText() == "", "Phase 5: Search box text empty after Escape")
+        Assert(mFrame.filterChips[1].isActive == true, "Phase 5: 'All' chip active after Escape")
+
+        -- 8. Test Sort Button
+        Assert(mFrame.btnSort ~= nil, "Phase 5: Sort button exists")
+        Assert(mFrame.btnSort.label:GetText():find("Sort:") ~= nil, "Phase 5: Sort button displays 'Sort: ...'")
+        local initSort = CLIAltsDB.settings.sortBy
+        mFrame.btnSort:GetScript("OnClick")(mFrame.btnSort)
+        Assert(CLIAltsDB.settings.sortBy ~= initSort, "Phase 5: Clicking Sort button cycles sort")
+
+        -- Restore DB & State
+        CLIAltsDB.characters = oldChars
+        CLIAltsDB.settings = oldSettings
+        self.activeFilter = nil
+        self._cachedSidebarBadges = nil
+        mFrame.searchBox:SetText("")
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()
@@ -2560,7 +2747,7 @@ function CLIAlts:RunSelfTest()
     self.curPlayerKey = savedKey
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

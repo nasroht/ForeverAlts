@@ -2308,6 +2308,14 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 keep = (char.tier == "BANK")
             elseif query == "stale" then
                 keep = self:IsCharStale(char)
+            elseif query == "capped" or query == "cap" then
+                local r = self:GetRestedData(char)
+                keep = (r and r.isFull == true)
+            elseif query == "under 60" or query == "under60" or query == "<60" then
+                local maxLvl = self.GetMaxLevel and self:GetMaxLevel() or 60
+                keep = ((char.level or 1) < maxLvl)
+            elseif query == "has note" or query == "hasnote" or query == "with note" then
+                keep = (char.note ~= nil and char.note ~= "" and char.note:match("%S") ~= nil)
             elseif query:sub(1, 1) == "<" then
                 local maxLvl = tonumber(query:sub(2))
                 keep = maxLvl and ((char.level or 1) < maxLvl)
@@ -5267,6 +5275,48 @@ function CLIAlts:GetLoginDigestItems(nowOverride)
             })
         end
     end
+
+    -- Compute badge totals for sidebar
+    local chars = self:GetCharactersList()
+    local readyCooldowns = 0
+    local unlockedRaids = 0
+    for _, c in ipairs(chars) do
+        if c.tradeCooldowns then
+            for _, readyAt in pairs(c.tradeCooldowns) do
+                if readyAt and now >= readyAt then
+                    readyCooldowns = readyCooldowns + 1
+                end
+            end
+        end
+        if c.lockouts then
+            for _, lockInfo in pairs(c.lockouts) do
+                local resetTime = (type(lockInfo) == "table" and lockInfo.resetTime) or lockInfo
+                if type(resetTime) == "number" and now >= resetTime then
+                    unlockedRaids = unlockedRaids + 1
+                end
+            end
+        end
+        if c.unlockedRaids then
+            if type(c.unlockedRaids) == "number" then
+                unlockedRaids = unlockedRaids + c.unlockedRaids
+            elseif type(c.unlockedRaids) == "table" then
+                unlockedRaids = unlockedRaids + #c.unlockedRaids
+            end
+        end
+    end
+
+    local losingAlts = 0
+    local nextAlts = self.GetNextAltsPriority and self:GetNextAltsPriority(now) or {}
+    for _, it in ipairs(nextAlts) do
+        if it.wastedSec and it.wastedSec > 0 then
+            losingAlts = losingAlts + 1
+        end
+    end
+
+    items.losingAlts = losingAlts
+    items.readyCooldowns = readyCooldowns
+    items.unlockedRaids = unlockedRaids
+    items.cooldownsAndLocks = readyCooldowns + unlockedRaids
 
     return items
 end
