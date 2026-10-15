@@ -2,10 +2,11 @@
   <img src="https://raw.githubusercontent.com/nasroht/ForeverAlts/main/media/logo.jpg" alt="ForeverAlts Logo" width="220" style="border-radius: 16px;" />
   <h1>ForeverAlts</h1>
   <p><strong>The dedicated alt progression and supply chain manager built exclusively for World of Warcraft: Forever.</strong></p>
-
-  [![CI & Release](https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml/badge.svg)](https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml)
-  [![CurseForge](https://img.shields.io/badge/CurseForge-1747176-orange.svg)](https://www.curseforge.com/wow/addons/foreveralts)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/nasroht/ForeverAlts/blob/main/LICENSE)
+  <p>
+    <a href="https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml"><img src="https://github.com/nasroht/ForeverAlts/actions/workflows/ci.yml/badge.svg" alt="CI &amp; Release" /></a>
+    <a href="https://www.curseforge.com/wow/addons/foreveralts"><img src="https://img.shields.io/badge/CurseForge-1747176-orange.svg" alt="CurseForge" /></a>
+    <a href="https://github.com/nasroht/ForeverAlts/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+  </p>
 </div>
 
 ---
