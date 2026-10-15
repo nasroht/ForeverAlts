@@ -2808,8 +2808,8 @@ function CLIAlts:RunSelfTest()
         self:UpdateBagSortButtonAnchor(mockCombined, mockSingle)
         Assert(sortBtn:IsShown() == false, "UpdateBagSortButtonAnchor: Hides when all bag frames hidden")
 
-        -- Re-anchor cleanly
-        self:UpdateBagSortButtonAnchor(mockCombined, mockSingle)
+        -- Re-anchor cleanly back to live UI
+        self:UpdateBagSortButtonAnchor()
     end
 
     -- Clean up mocks

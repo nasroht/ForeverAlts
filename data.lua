@@ -4430,12 +4430,6 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
     end
 
     -- 4. Attach items destined for this recipient
-    if not isSimulated then
-        if OpenAllBags then
-            pcall(OpenAllBags)
-        end
-    end
-
     local attachedCount = 0
     for _, itm in ipairs(chosenGroup.items) do
         if #freeAttachSlots == 0 then break end
@@ -4455,7 +4449,7 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
             end
 
             if not isLocked then
-                local targetSlot = table.remove(freeAttachSlots, 1)
+                local targetSlot = freeAttachSlots[1]
                 local okAttach = false
 
                 if C_Container and C_Container.UseContainerItem then
@@ -4483,6 +4477,7 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
                 end
 
                 if okAttach then
+                    table.remove(freeAttachSlots, 1)
                     attachedCount = attachedCount + 1
                 end
             end
@@ -6060,11 +6055,6 @@ end
 function CLIAlts:ConsolidateBagStacks()
     if InCombatLockdown and InCombatLockdown() then return false end
     if CursorHasItem and CursorHasItem() then return false end
-
-    -- Ensure bags are open so ContainerFrame has allocated button slots
-    if OpenAllBags and not (ContainerFrame1 and ContainerFrame1:IsShown()) and not (ContainerFrameCombinedBags and ContainerFrameCombinedBags:IsShown()) then
-        pcall(OpenAllBags)
-    end
 
     local numBags = NUM_BAG_SLOTS or 4
     local partialStacks = {}
