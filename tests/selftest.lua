@@ -1678,38 +1678,37 @@ function CLIAlts:RunSelfTest()
     Assert(sortBtn:IsShown() == true, "ToggleBagSortButton(true) shows button")
 
     -- 25e. Bag Sort Button anchor switching between Combined Bags and Separate Bags
-    local wasCombinedShown = ContainerFrameCombinedBags and ContainerFrameCombinedBags.IsShown and ContainerFrameCombinedBags:IsShown()
-    local wasSingleShown = ContainerFrame1 and ContainerFrame1.IsShown and ContainerFrame1:IsShown()
+    do
+        local oldCombined = rawget(_G, "ContainerFrameCombinedBags")
+        local oldSingle = rawget(_G, "ContainerFrame1")
 
-    if ContainerFrameCombinedBags and ContainerFrame1 then
-        ContainerFrameCombinedBags:Show()
-        ContainerFrame1:Hide()
+        local mockCombined = CreateFrame("Frame", "CLIAltsMockCombinedBags", UIParent)
+        local mockSingle = CreateFrame("Frame", "CLIAltsMockSingleBag", UIParent)
+        _G["ContainerFrameCombinedBags"] = mockCombined
+        _G["ContainerFrame1"] = mockSingle
+
+        mockCombined:Show()
+        mockSingle:Hide()
         self:UpdateBagSortButtonAnchor()
-        Assert(sortBtn.parent == ContainerFrameCombinedBags, "UpdateBagSortButtonAnchor: Anchors to ContainerFrameCombinedBags when combined bags shown")
+        local p1 = sortBtn.GetParent and sortBtn:GetParent() or sortBtn.parent
+        Assert(p1 == mockCombined, "UpdateBagSortButtonAnchor: Anchors to ContainerFrameCombinedBags when combined bags shown")
         Assert(sortBtn:IsShown() == true, "UpdateBagSortButtonAnchor: Button visible on ContainerFrameCombinedBags")
 
-        ContainerFrameCombinedBags:Hide()
-        ContainerFrame1:Show()
+        mockCombined:Hide()
+        mockSingle:Show()
         self:UpdateBagSortButtonAnchor()
-        Assert(sortBtn.parent == ContainerFrame1, "UpdateBagSortButtonAnchor: Anchors to ContainerFrame1 when separate bags shown")
+        local p2 = sortBtn.GetParent and sortBtn:GetParent() or sortBtn.parent
+        Assert(p2 == mockSingle, "UpdateBagSortButtonAnchor: Anchors to ContainerFrame1 when separate bags shown")
         Assert(sortBtn:IsShown() == true, "UpdateBagSortButtonAnchor: Button visible on ContainerFrame1")
 
-        ContainerFrameCombinedBags:Hide()
-        ContainerFrame1:Hide()
+        mockCombined:Hide()
+        mockSingle:Hide()
         self:UpdateBagSortButtonAnchor()
         Assert(sortBtn:IsShown() == false, "UpdateBagSortButtonAnchor: Hides when all bag frames hidden")
 
-        -- Cleanly restore container frames to their pre-test state (never leave zombie container frames shown!)
-        if wasCombinedShown then
-            ContainerFrameCombinedBags:Show()
-        else
-            ContainerFrameCombinedBags:Hide()
-        end
-        if wasSingleShown then
-            ContainerFrame1:Show()
-        else
-            ContainerFrame1:Hide()
-        end
+        -- Restore real Blizzard global container references
+        _G["ContainerFrameCombinedBags"] = oldCombined
+        _G["ContainerFrame1"] = oldSingle
         self:UpdateBagSortButtonAnchor()
     end
 
