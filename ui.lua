@@ -5122,8 +5122,8 @@ function CLIAlts:UpdateBagSortButtonAnchor()
     local combinedShown = combinedFrame and ((combinedFrame.IsVisible and combinedFrame:IsVisible()) or (combinedFrame.IsShown and combinedFrame:IsShown()))
     local singleShown = singleFrame and ((singleFrame.IsVisible and singleFrame:IsVisible()) or (singleFrame.IsShown and singleFrame:IsShown()))
 
-    local targetParent = nil
-    local isCombined = false
+    local targetParent
+    local isCombined
 
     if combinedShown then
         targetParent = combinedFrame
