@@ -2952,11 +2952,43 @@ function CLIAlts:CreateModernMainFrame()
     btnSettings:SetPoint("RIGHT", btnHelp, "LEFT", -8, 0)
     frame.btnSettings = btnSettings
 
-    local btnSample = CreateRetroButton(topBar, "Sample data", 86, 22, function()
-        CLIAlts:Print("Sample data display.")
+    local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    local btnPerk = CreateRetroButton(topBar, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 136, 22, function(self)
+        CLIAlts:CycleWellRestedPerk()
+        if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
+            self:GetScript("OnEnter")(self)
+        end
+        CLIAlts:Render()
     end)
-    btnSample:SetPoint("RIGHT", btnSettings, "LEFT", -8, 0)
-    frame.btnSample = btnSample
+    btnPerk:SetPoint("RIGHT", btnSettings, "LEFT", -8, 0)
+    btnPerk:SetScript("OnEnter", function(self)
+        local curT = CLIAlts:GetTheme()
+        if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+        GameTooltip:AddLine("WoW Forever: Well Rested & Legacy Points", 1, 0.82, 0)
+        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local lpData = CLIAlts:CalculateAccountLP()
+        GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 1, 1, 1)
+        GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
+        GameTooltip:AddLine("Commands: |cff00ff66/ca perk <0-5>|r  |cff00ff66/ca lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    btnPerk:SetScript("OnLeave", function(self)
+        local curT = CLIAlts:GetTheme()
+        local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+        if self.SetBackdropColor then self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75) end
+        GameTooltip:Hide()
+    end)
+    if CLIAlts:IsRetail() then
+        btnPerk:Hide()
+    end
+    frame.btnPerk = btnPerk
 
     -- 2. Left Sidebar (190px)
     local sidebar = CreateFrame("Frame", "CLIAltsSidebar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -3309,7 +3341,7 @@ function CLIAlts:CreateModernMainFrame()
     local restedCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     restedCard:SetPoint("TOPLEFT", detailAvatar, "BOTTOMLEFT", 0, -14)
     restedCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    restedCard:SetHeight(74)
+    restedCard:SetHeight(82)
     restedCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3325,6 +3357,14 @@ function CLIAlts:CreateModernMainFrame()
     rcHeader:SetPoint("TOPLEFT", restedCard, "TOPLEFT", 10, -8)
     rcHeader:SetText("RESTED XP")
     rcHeader:SetTextColor(mutedR, mutedG, mutedB)
+    restedCard.header = rcHeader
+
+    local rcLP = restedCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(rcLP, 10, "OUTLINE")
+    rcLP:SetPoint("TOPRIGHT", restedCard, "TOPRIGHT", -10, -8)
+    rcLP:SetText("")
+    rcLP:SetTextColor(brandR, brandG, brandB)
+    restedCard.lpText = rcLP
 
     local rcStatus = restedCard:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(rcStatus, 13, "OUTLINE")
@@ -3339,6 +3379,43 @@ function CLIAlts:CreateModernMainFrame()
     rcRate:SetText("Logging in now banks about 38k XP per hour played.")
     rcRate:SetTextColor(mutedR, mutedG, mutedB)
     restedCard.rate = rcRate
+
+    local rcPerk = restedCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(rcPerk, 10, "")
+    rcPerk:SetPoint("TOPLEFT", rcRate, "BOTTOMLEFT", 0, -3)
+    rcPerk:SetText("")
+    rcPerk:SetTextColor(mutedR, mutedG, mutedB)
+    restedCard.perkLine = rcPerk
+
+    restedCard:EnableMouse(true)
+    restedCard:SetScript("OnEnter", function(self)
+        local curT = CLIAlts:GetTheme()
+        if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.45) end
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine("WoW Forever: Well Rested & Legacy Points", 1, 0.82, 0)
+        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local lpData = CLIAlts:CalculateAccountLP()
+        GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 1, 1, 1)
+        GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
+        GameTooltip:AddLine("Commands: |cff00ff66/ca perk <0-5>|r  |cff00ff66/ca lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    restedCard:SetScript("OnLeave", function(self)
+        local curT = CLIAlts:GetTheme()
+        if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+        GameTooltip:Hide()
+    end)
+    restedCard:SetScript("OnMouseDown", function()
+        CLIAlts:CycleWellRestedPerk()
+        CLIAlts:UpdateDetailPanel()
+        CLIAlts:Render()
+    end)
 
     -- 2b. Location, Hearth, Last Seen, Note Card (Phase 6)
     local infoCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -3930,8 +4007,8 @@ function CLIAlts:CreateModernMainFrame()
     local MODERN_ROWS_COUNT = 12
     for i = 1, MODERN_ROWS_COUNT do
         local row = CreateFrame("Button", "CLIAltsModernRow" .. i, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        row:SetHeight(52)
-        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 60))
+        row:SetHeight(54)
+        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 62))
         row:SetPoint("RIGHT", rowsContainer, "RIGHT", 0, 0)
         row.rowIndex = i
         if row.SetClipsChildren then row:SetClipsChildren(true) end
@@ -3962,28 +4039,35 @@ function CLIAlts:CreateModernMainFrame()
         row.classRingInitial = classRingInitial
 
         -- Name & Subline (level race class · faction)
+        -- Separated cleanly with vertical clearance and generous horizontal width (up to x=305)
         local nameLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(nameLine, 15, "OUTLINE")
-        nameLine:SetPoint("TOPLEFT", classRing, "TOPRIGHT", 12, -7)
+        self:SetWidgetFont(nameLine, 14, "OUTLINE")
+        nameLine:SetPoint("TOPLEFT", classRing, "TOPRIGHT", 12, 1)
+        nameLine:SetPoint("RIGHT", row, "LEFT", 305, 0)
+        nameLine:SetJustifyH("LEFT")
+        nameLine:SetWordWrap(false)
         nameLine:SetText("")
         row.nameLine = nameLine
 
         local subLine = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(subLine, 11, "")
-        subLine:SetPoint("BOTTOMLEFT", classRing, "BOTTOMRIGHT", 12, 7)
+        subLine:SetPoint("BOTTOMLEFT", classRing, "BOTTOMRIGHT", 12, 0)
+        subLine:SetPoint("RIGHT", row, "LEFT", 305, 0)
+        subLine:SetJustifyH("LEFT")
+        subLine:SetWordWrap(false)
         subLine:SetText("")
         row.subLine = subLine
 
-        -- Rested XP Progress Bar & Label
+        -- Rested XP Progress Bar & Label (anchored with generous room at x=320)
         local restLabel = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(restLabel, 12, "OUTLINE")
-        restLabel:SetPoint("BOTTOMLEFT", row, "LEFT", 250, 4)
+        restLabel:SetPoint("BOTTOMLEFT", row, "LEFT", 320, 4)
         restLabel:SetText("")
         row.restLabel = restLabel
         row.restPercentText = restLabel
 
         local restBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        restBarBg:SetSize(160, 6)
+        restBarBg:SetSize(140, 6)
         restBarBg:SetPoint("TOPLEFT", restLabel, "BOTTOMLEFT", 0, -3)
         restBarBg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -4004,10 +4088,31 @@ function CLIAlts:CreateModernMainFrame()
         row.restBarFill = restBarFill
         row.barFill = restBarFill
 
+        restBarBg:EnableMouse(true)
+        restBarBg:SetScript("OnEnter", function(self)
+            if row.charData then
+                local rested = CLIAlts:GetRestedData(row.charData)
+                local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+                local lpData = CLIAlts:CalculateAccountLP()
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:AddLine(string.format("Rested XP: %s", row.charData.name or ""), 1, 1, 1)
+                if rested and not rested.isMaxLevel then
+                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%d%%|r (~%s XP)", rested.percent or 0, CLIAlts:FormatNumber(rested.currentRested or 0)), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Cap: |cffffffff%d%%|r (Well Rested Rank %d: +%d%%)", rested.maxPercent or 150, r, r * 4), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Time to Cap: |cffffd700%s|r", rested.timeLeftStr or "---"), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 0.8, 0.8, 0.8)
+                else
+                    GameTooltip:AddLine("Level cap reached.", 0.8, 0.8, 0.8)
+                end
+                GameTooltip:Show()
+            end
+        end)
+        restBarBg:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
         -- Status Pill
         local statusPill = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
         statusPill:SetSize(104, 24)
-        statusPill:SetPoint("LEFT", restBarBg, "RIGHT", 24, 6)
+        statusPill:SetPoint("LEFT", restBarBg, "RIGHT", 20, 6)
         statusPill:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -4246,6 +4351,33 @@ function CLIAlts:UpdateDetailPanel()
     if dp.restedCard then
         local rested = self:GetRestedData(char)
         local estRate = char.xpHour or 38000
+        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local lpData = self:CalculateAccountLP()
+
+        if dp.restedCard.header then
+            if not self:IsRetail() and r > 0 then
+                dp.restedCard.header:SetText(string.format("RESTED XP · WELL RESTED R%d (+%d%%)", r, r * 4))
+            else
+                dp.restedCard.header:SetText("RESTED XP")
+            end
+        end
+        if dp.restedCard.lpText then
+            if not self:IsRetail() and lpData and lpData.effectiveLP then
+                dp.restedCard.lpText:SetText(string.format("|cffe8b64a%.1f LP|r", lpData.effectiveLP))
+                dp.restedCard.lpText:Show()
+            else
+                dp.restedCard.lpText:Hide()
+            end
+        end
+        if dp.restedCard.perkLine then
+            if not self:IsRetail() then
+                dp.restedCard.perkLine:SetText(string.format("Well Rested: |cffffffffR%d/5 (+%d%%)|r · Cap: |cffffffff%d%%|r · LP: |cffe8b64a%.1f LP|r", r, r * 4, 150 + (r * 6), lpData.effectiveLP))
+                dp.restedCard.perkLine:Show()
+            else
+                dp.restedCard.perkLine:Hide()
+            end
+        end
+
         if rested and not rested.isMaxLevel then
             local pct = rested.percent or 0
             local maxPct = rested.maxPercent or 150
@@ -5182,7 +5314,9 @@ function CLIAlts:Render()
                             local pct = rested.percent or 0
                             local maxPct = rested.maxPercent or 150
                             local ratio = math.min(1.0, math.max(0, pct / maxPct))
-                            local barW = math.floor(160 * ratio)
+                            local maxBarW = (row.restBarBg and row.restBarBg.GetWidth and row.restBarBg:GetWidth()) or 140
+                            if not maxBarW or maxBarW <= 0 then maxBarW = 140 end
+                            local barW = math.floor(maxBarW * ratio)
                             if row.restBarFill then
                                 row.restBarFill:SetWidth(math.max(1, barW))
                             end
@@ -5192,7 +5326,7 @@ function CLIAlts:Render()
 
                             if row.restLabel then
                                 if pct >= maxPct then
-                                    row.restLabel:SetText("150% rested (cap)")
+                                    row.restLabel:SetText(string.format("%d%% rested (cap)", maxPct))
                                     row.restLabel:SetTextColor(warnR, warnG, warnB)
                                     if row.restBarFill then row.restBarFill:SetVertexColor(warnR, warnG, warnB, 1.0) end
                                 else

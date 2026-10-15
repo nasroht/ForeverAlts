@@ -561,7 +561,7 @@ function CLIAlts:RunSelfTest()
 
         -- Check first row properties
         local r1 = rows[1]
-        Assert(r1 ~= nil and r1:GetHeight() == 52, "RowList: Row 1 height is 52px")
+        Assert(r1 ~= nil and r1:GetHeight() == 54, "RowList: Row 1 height is 54px")
         Assert(r1.classRing ~= nil, "RowList: Row 1 has classRing")
         Assert(r1.classRing:GetWidth() == 34 and r1.classRing:GetHeight() == 34, "RowList: classRing dimensions are 34x34px")
         Assert(r1.classRingInitial ~= nil, "RowList: Row 1 has classRingInitial")
