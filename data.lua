@@ -3652,32 +3652,44 @@ function CLIAlts:GetCharacterAutoSupplyRole(char)
     end
 
     local roles = {}
+    local seenRoles = {}
+    local function AddRole(role)
+        if role and not seenRoles[role] then
+            seenRoles[role] = true
+            table.insert(roles, role)
+        end
+    end
+
     if char.professions and char.professions.primary then
         for _, p in ipairs(char.professions.primary) do
             local pName = (p.name or ""):lower()
             if pName:find("tailor", 1, true) then
-                table.insert(roles, "Cloth (Tailoring)")
-            elseif pName:find("alch", 1, true) then
-                table.insert(roles, "Herbs (Alchemy)")
+                AddRole("Cloth (Tailoring)")
+            elseif pName:find("alch", 1, true) or pName:find("herb", 1, true) then
+                AddRole("Herbs (Alchemy)")
             elseif pName:find("blacksmith", 1, true) or pName:find("engin", 1, true) or pName:find("mining", 1, true) then
-                table.insert(roles, "Ore & Stone (Smith/Eng)")
+                AddRole("Ore & Stone (Smith/Eng)")
             elseif pName:find("leather", 1, true) or pName:find("skin", 1, true) then
-                table.insert(roles, "Leather (Leatherworking)")
+                AddRole("Leather (Leatherworking)")
             elseif pName:find("enchant", 1, true) then
-                table.insert(roles, "Enchanting & BoE DE")
+                AddRole("Enchanting & BoE DE")
+            elseif pName:find("jewel", 1, true) then
+                AddRole("Gems & Ore (Jewelcrafting)")
+            elseif pName:find("inscript", 1, true) then
+                AddRole("Herbs & Pigments (Inscription)")
             end
         end
     end
 
     if char.classFile == "ROGUE" and #roles == 0 then
-        table.insert(roles, "Lockboxes (Rogue)")
+        AddRole("Lockboxes (Rogue)")
     end
 
     if #roles == 0 and char.professions and char.professions.secondary then
         for _, s in ipairs(char.professions.secondary) do
             local sName = (s.name or ""):lower()
             if sName:find("cook", 1, true) then
-                table.insert(roles, "Cooking (Meat & Fish)")
+                AddRole("Cooking (Meat & Fish)")
                 break
             end
         end

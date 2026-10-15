@@ -2512,6 +2512,33 @@ function CLIAlts:RunSelfTest()
     Assert(autoAlch:find("Herb", 1, true) ~= nil, "Mail: Thorne auto suggests Herbs stream")
     local autoMule = self:GetCharacterAutoSupplyRole(testMailDB.characters["Mule-Forever"])
     Assert(autoMule:find("Bank", 1, true) ~= nil, "Mail: Mule auto suggests Bank Mule stream")
+    do
+        local altSkinLW = {
+            name = "SkinnerAlt",
+            tier = "CORE",
+            professions = {
+                primary = {
+                    { name = "Skinning", rank = 150 },
+                    { name = "Leatherworking", rank = 145 },
+                },
+            },
+        }
+        local autoLW = self:GetCharacterAutoSupplyRole(altSkinLW)
+        Assert(autoLW == "Leather (Leatherworking)", "Mail: Skinning + Leatherworking deduplicates to single Leather stream")
+
+        local altMineSmith = {
+            name = "MinerAlt",
+            tier = "CORE",
+            professions = {
+                primary = {
+                    { name = "Mining", rank = 175 },
+                    { name = "Blacksmithing", rank = 160 },
+                },
+            },
+        }
+        local autoSmith = self:GetCharacterAutoSupplyRole(altMineSmith)
+        Assert(autoSmith == "Ore & Stone (Smith/Eng)", "Mail: Mining + Blacksmithing deduplicates to single Ore & Stone stream")
+    end
 
     -- 23j. Effective supply role (Auto vs Manual Override)
     local effRole, isOverride, autoSuggested = self:GetCharacterEffectiveSupplyRole(testMailDB.characters["Morvath-Forever"])
