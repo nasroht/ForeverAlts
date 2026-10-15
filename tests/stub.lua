@@ -85,10 +85,49 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:EnableKeyboard(...) end
     frame.lines = {}
     function frame:SetOwner(...) end
-    function frame:AddLine(left, r, g, b) table.insert(self.lines, { left = left }) end
-    function frame:AddDoubleLine(left, right, ...) table.insert(self.lines, { left = left, right = right }) end
+    function frame:AddLine(left, r, g, b)
+        table.insert(self.lines, { left = left })
+        if self.name then
+            local idx = #self.lines
+            local fs = _G[self.name .. "TextLeft" .. idx]
+            if not fs then
+                fs = CreateDummyFrame("FontString", self.name .. "TextLeft" .. idx)
+                fs.font = "Fonts\\FRIZQT__.TTF"
+            end
+            fs.text = left
+        end
+    end
+    function frame:AddDoubleLine(left, right, ...)
+        table.insert(self.lines, { left = left, right = right })
+        if self.name then
+            local idx = #self.lines
+            local fs = _G[self.name .. "TextLeft" .. idx]
+            if not fs then
+                fs = CreateDummyFrame("FontString", self.name .. "TextLeft" .. idx)
+                fs.font = "Fonts\\FRIZQT__.TTF"
+            end
+            fs.text = left
+        end
+    end
     function frame:GetItem() return self.itemName, self.itemLink end
     function frame:ClearLines() self.lines = {} end
+    function frame:NumLines() return #(self.lines or {}) end
+    function frame:SetBagItem(bag, slot)
+        local key = tostring(bag) .. ":" .. tostring(slot)
+        if self.mockBagItems and self.mockBagItems[key] then
+            for _, line in ipairs(self.mockBagItems[key]) do
+                self:AddLine(line)
+            end
+        end
+    end
+    function frame:SetItemByID(id)
+        if self.mockItems and self.mockItems[id] then
+            for _, line in ipairs(self.mockItems[id]) do
+                self:AddLine(line)
+            end
+        end
+    end
+    function frame:SetHyperlink(link) end
     function frame:LockHighlight(...) end
     function frame:UnlockHighlight(...) end
     function frame:SetHighlightTexture(...) end

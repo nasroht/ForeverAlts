@@ -2517,6 +2517,42 @@ function CLIAlts:RunSelfTest()
         local destLowRank = self:GetMaterialDestination(nil, nil, 9, 2, 2)
         Assert(destLowRank ~= nil and destLowRank.destName == "Morvath-Forever", "Mail: Recipe routes to Tailor alt regardless of alt skill rank")
         testMailDB.characters["Morvath-Forever"].professions.primary[1].rank = 150
+
+        -- 23g3. SubType string and tooltip-based recipe classification
+        local profFromSubType, roleFromSubType = self:GetRecipeProfessionAndRole(nil, nil, "Unknown Pattern", "Tailoring")
+        Assert(profFromSubType == "Tailoring" and roleFromSubType == "Tailor", "Mail: itemSubType Tailoring maps to Tailor")
+
+        local profGerman, roleGerman = self:GetRecipeProfessionAndRole(nil, nil, "Muster: Mondstoffweste", "Schneiderei")
+        Assert(profGerman == "Tailoring" and roleGerman == "Tailor", "Mail: German itemSubType Schneiderei maps to Tailoring")
+
+        -- Tooltip scanning test
+        local tip = self:GetScanTooltip()
+        if tip then
+            tip.mockItems = {
+                [1001] = { "Pattern: Robe of Power", "Requires Tailoring (125)" },
+                [1002] = { "Pattern: Robe of Power", "Requires Tailoring (125)", "Already known" },
+            }
+            local isK, sProf, sRank = self:ScanRecipeTooltip(1001)
+            Assert(isK == false and sProf == "Tailoring" and sRank == 125, "Mail: ScanRecipeTooltip extracts Requires Tailoring (125)")
+
+            local isK2 = self:ScanRecipeTooltip(1002)
+            Assert(isK2 == true, "Mail: ScanRecipeTooltip detects Already known")
+        end
+
+        -- ShouldCurrentPlayerLearnRecipe routing decision
+        local curCharMock = testMailDB.characters["Mule-Forever"]
+        curCharMock.professions = { primary = { { name = "Tailoring", rank = 50 } } }
+        self.curPlayerFullName = "Mule-Forever"
+        local tailorLearner = testMailDB.characters["Morvath-Forever"]
+        tailorLearner.professions.primary[1].rank = 150
+
+        -- Current player only has Tailoring 50, recipe requires Tailoring 125, alt has 150 -> route to alt (return false)
+        local shouldLearn = self:ShouldCurrentPlayerLearnRecipe("Tailoring", "Robe of Power", 1001, tailorLearner)
+        Assert(shouldLearn == false, "Mail: Low-skill current player yields recipe to higher-skill alt")
+
+        -- Reset mock
+        curCharMock.professions = nil
+        self.curPlayerFullName = nil
     end
 
     -- 23h. PrintMailRouting execution
@@ -2976,6 +3012,25 @@ function CLIAlts:RunSelfTest()
     Assert(fillCount == 1, "MailAutoFill: Attached 1 item")
     Assert(SendMailNameEditBox:GetText() == "TailorAlt-Forever", "MailAutoFill: SendMailNameEditBox contains TailorAlt-Forever")
     Assert(SendMailSubjectEditBox:GetText():find("CLIAlts:") ~= nil, "MailAutoFill: SendMailSubjectEditBox set with CLIAlts prefix")
+
+    -- 26b2. Live mode attachment test via PickupContainerItem and ClickSendMailItemButton
+    local pickedBag, pickedSlot, clickedSlot
+    local oldPickup = PickupContainerItem
+    local oldClick = ClickSendMailItemButton
+    local oldCPickup = C_Container and C_Container.PickupContainerItem
+    local mockPickup = function(b, s) pickedBag = b; pickedSlot = s end
+    PickupContainerItem = mockPickup
+    if C_Container then C_Container.PickupContainerItem = mockPickup end
+    ClickSendMailItemButton = function(s) clickedSlot = s end
+
+    local liveOk, _, liveCount = self:FillSendMailNextBatch(nil, false)
+    Assert(liveOk == true and liveCount == 1, "MailAutoFill: Live mode FillSendMailNextBatch attaches items")
+    Assert(pickedBag == 0 and pickedSlot == 1, "MailAutoFill: Live mode called PickupContainerItem(0, 1)")
+    Assert(clickedSlot == 1, "MailAutoFill: Live mode called ClickSendMailItemButton(1)")
+
+    PickupContainerItem = oldPickup
+    if C_Container then C_Container.PickupContainerItem = oldCPickup end
+    ClickSendMailItemButton = oldClick
 
     -- 26c. AutoFill Mail Button creation and toggle
     local mailBtn = self:InitMailAutoFillButton()

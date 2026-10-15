@@ -3893,6 +3893,135 @@ function CLIAlts:FindBankMule()
     return nil
 end
 
+local scanTooltip = nil
+function CLIAlts:GetScanTooltip()
+    if not scanTooltip and CreateFrame then
+        pcall(function()
+            local parent = UIParent or nil
+            scanTooltip = CreateFrame("GameTooltip", "CLIAltsScanTip", parent, "GameTooltipTemplate")
+            if scanTooltip and scanTooltip.SetOwner then
+                scanTooltip:SetOwner(parent or scanTooltip, "ANCHOR_NONE")
+            end
+        end)
+    end
+    return scanTooltip
+end
+
+function CLIAlts:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
+    local isKnown = false
+    local reqProfession = nil
+    local reqSkill = nil
+
+    -- 1. Modern C_TooltipInfo API (Retail / Shadowlands+)
+    if C_TooltipInfo then
+        pcall(function()
+            local data = nil
+            if bagID and slot and C_TooltipInfo.GetBagItem then
+                data = C_TooltipInfo.GetBagItem(bagID, slot)
+            elseif itemID and C_TooltipInfo.GetItemByID then
+                data = C_TooltipInfo.GetItemByID(itemID)
+            elseif itemLink and C_TooltipInfo.GetHyperlink then
+                data = C_TooltipInfo.GetHyperlink(itemLink)
+            end
+
+            if data and data.lines then
+                for _, line in ipairs(data.lines) do
+                    local t = (line.leftText or ""):lower()
+                    if t:find("already known", 1, true) or t:find("bereits bekannt", 1, true) or t:find("déjà connu", 1, true) then
+                        isKnown = true
+                    end
+                    local rawText = line.leftText or ""
+                    local pName, pRank = rawText:match("Requires%s+([%a%s]+)%s*%((%d+)%)")
+                    if not pName then
+                        pName, pRank = rawText:match("Benötigt%s+([%aäöüÄÖÜß%s]+)%s*%((%d+)%)")
+                    end
+                    if not pName then
+                        pName, pRank = rawText:match("Requiert%s+([%aàâäéèêëîïôöùûüç%s]+)%s*%((%d+)%)")
+                    end
+                    if pName and pRank then
+                        reqProfession = pName:match("^%s*(.-)%s*$")
+                        reqSkill = tonumber(pRank)
+                    end
+                end
+            end
+        end)
+    end
+
+    -- 2. Classic GameTooltipTemplate scanning (Vanilla 1.12, Classic Era 1.14/1.15, WoW Forever)
+    if not reqProfession or not isKnown then
+        pcall(function()
+            local tip = self:GetScanTooltip()
+            if tip and tip.ClearLines then
+                tip:ClearLines()
+                local loaded = false
+                if bagID and slot and tip.SetBagItem then
+                    tip:SetBagItem(bagID, slot)
+                    loaded = true
+                elseif itemID and tip.SetItemByID then
+                    tip:SetItemByID(itemID)
+                    loaded = true
+                elseif itemLink and tip.SetHyperlink then
+                    tip:SetHyperlink(itemLink)
+                    loaded = true
+                end
+
+                if loaded and tip.NumLines then
+                    local numLines = tip:NumLines() or 0
+                    for i = 1, numLines do
+                        local fs = _G["CLIAltsScanTipTextLeft" .. i]
+                        if fs and fs.GetText then
+                            local text = fs:GetText() or ""
+                            local tLower = text:lower()
+                            if tLower:find("already known", 1, true) or tLower:find("bereits bekannt", 1, true) or tLower:find("déjà connu", 1, true) then
+                                isKnown = true
+                            end
+                            local pName, pRank = text:match("Requires%s+([%a%s]+)%s*%((%d+)%)")
+                            if not pName then
+                                pName, pRank = text:match("Benötigt%s+([%aäöüÄÖÜß%s]+)%s*%((%d+)%)")
+                            end
+                            if not pName then
+                                pName, pRank = text:match("Requiert%s+([%aàâäéèêëîïôöùûüç%s]+)%s*%((%d+)%)")
+                            end
+                            if pName and pRank then
+                                reqProfession = pName:match("^%s*(.-)%s*$")
+                                reqSkill = tonumber(pRank)
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+
+    local canonicalProf = nil
+    if reqProfession then
+        local pLower = reqProfession:lower()
+        if pLower:find("tailor", 1, true) or pLower:find("schneider", 1, true) or pLower:find("coutur", 1, true) then
+            canonicalProf = "Tailoring"
+        elseif pLower:find("leather", 1, true) or pLower:find("leder", 1, true) or pLower:find("cuir", 1, true) then
+            canonicalProf = "Leatherworking"
+        elseif pLower:find("alch", 1, true) then
+            canonicalProf = "Alchemy"
+        elseif pLower:find("smith", 1, true) or pLower:find("schmied", 1, true) or pLower:find("forge", 1, true) then
+            canonicalProf = "Blacksmithing"
+        elseif pLower:find("engin", 1, true) or pLower:find("ingén", 1, true) or pLower:find("ingen", 1, true) then
+            canonicalProf = "Engineering"
+        elseif pLower:find("cook", 1, true) or pLower:find("koch", 1, true) or pLower:find("cuis", 1, true) then
+            canonicalProf = "Cooking"
+        elseif pLower:find("first aid", 1, true) or pLower:find("erste hilfe", 1, true) or pLower:find("secour", 1, true) then
+            canonicalProf = "First Aid"
+        elseif pLower:find("enchant", 1, true) or pLower:find("verzaub", 1, true) then
+            canonicalProf = "Enchanting"
+        elseif pLower:find("jewel", 1, true) or pLower:find("juwel", 1, true) or pLower:find("joail", 1, true) then
+            canonicalProf = "Jewelcrafting"
+        elseif pLower:find("inscript", 1, true) or pLower:find("schrift", 1, true) or pLower:find("callig", 1, true) then
+            canonicalProf = "Inscription"
+        end
+    end
+
+    return isKnown, (canonicalProf or reqProfession), reqSkill
+end
+
 function CLIAlts:GetRecipeCraftName(itemName)
     if not itemName or type(itemName) ~= "string" then return nil end
     local clean = itemName:match("^[Pp]attern:%s*(.+)$")
@@ -3904,10 +4033,16 @@ function CLIAlts:GetRecipeCraftName(itemName)
         or itemName:match("^[Dd]esign:%s*(.+)$")
         or itemName:match("^[Tt]echnique:%s*(.+)$")
         or itemName:match("^[Gg]uide:%s*(.+)$")
+        or itemName:match("^[Mm]uster:%s*(.+)$")
+        or itemName:match("^[Pp]läne:%s*(.+)$")
+        or itemName:match("^[Bb]auplan:%s*(.+)$")
+        or itemName:match("^[Aa]nleitung:%s*(.+)$")
+        or itemName:match("^[Pp]atron%s*:%s*(.+)$")
+        or itemName:match("^[Rr]ecette%s*:%s*(.+)$")
     return clean or itemName
 end
 
-function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName)
+function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName, itemSubTypeStr, itemLink, bagID, slot)
     local targetProfession = nil
     local preferredRole = nil
     local subID = tonumber(itemSubClassID)
@@ -3947,43 +4082,96 @@ function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName)
         preferredRole = "Scribe"
     end
 
-    if not targetProfession and itemName then
-        local lower = itemName:lower()
-        if lower:find("^plans:") or lower:find("blacksmith") then
+    if not targetProfession and itemSubTypeStr and type(itemSubTypeStr) == "string" then
+        local sLower = itemSubTypeStr:lower()
+        if sLower:find("tailor", 1, true) or sLower:find("schneider", 1, true) or sLower:find("coutur", 1, true) then
+            targetProfession = "Tailoring"
+            preferredRole = "Tailor"
+        elseif sLower:find("leather", 1, true) or sLower:find("leder", 1, true) or sLower:find("cuir", 1, true) then
+            targetProfession = "Leatherworking"
+            preferredRole = "LW"
+        elseif sLower:find("alch", 1, true) then
+            targetProfession = "Alchemy"
+            preferredRole = "Alch"
+        elseif sLower:find("smith", 1, true) or sLower:find("schmied", 1, true) or sLower:find("forge", 1, true) then
             targetProfession = "Blacksmithing"
             preferredRole = "Smith"
-        elseif lower:find("^schematic:") or lower:find("engineer") then
+        elseif sLower:find("engin", 1, true) or sLower:find("ingén", 1, true) or sLower:find("ingen", 1, true) then
             targetProfession = "Engineering"
             preferredRole = "Eng"
-        elseif lower:find("^formula:") or lower:find("enchant") then
-            targetProfession = "Enchanting"
-            preferredRole = "DE"
-        elseif lower:find("^manual:") or lower:find("bandage") or lower:find("first aid") then
+        elseif sLower:find("cook", 1, true) or sLower:find("koch", 1, true) or sLower:find("cuis", 1, true) then
+            targetProfession = "Cooking"
+            preferredRole = "Cook"
+        elseif sLower:find("first aid", 1, true) or sLower:find("erste hilfe", 1, true) or sLower:find("secour", 1, true) then
             targetProfession = "First Aid"
             preferredRole = "First Aid"
-        elseif lower:find("^pattern:") then
-            if lower:find("leather") or lower:find("hide") or lower:find("scale") or lower:find("armor kit") or lower:find("kodo") or lower:find("murloc") then
+        elseif sLower:find("enchant", 1, true) or sLower:find("verzaub", 1, true) then
+            targetProfession = "Enchanting"
+            preferredRole = "DE"
+        elseif sLower:find("jewel", 1, true) or sLower:find("juwel", 1, true) or sLower:find("joail", 1, true) then
+            targetProfession = "Jewelcrafting"
+            preferredRole = "JC"
+        elseif sLower:find("inscript", 1, true) or sLower:find("schrift", 1, true) or sLower:find("callig", 1, true) then
+            targetProfession = "Inscription"
+            preferredRole = "Scribe"
+        end
+    end
+
+    if not targetProfession and (itemID or itemLink or (bagID and slot)) then
+        local _, reqProf = self:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
+        if reqProf then
+            targetProfession = reqProf
+            if reqProf == "Tailoring" then preferredRole = "Tailor"
+            elseif reqProf == "Leatherworking" then preferredRole = "LW"
+            elseif reqProf == "Alchemy" then preferredRole = "Alch"
+            elseif reqProf == "Blacksmithing" then preferredRole = "Smith"
+            elseif reqProf == "Engineering" then preferredRole = "Eng"
+            elseif reqProf == "Cooking" then preferredRole = "Cook"
+            elseif reqProf == "First Aid" then preferredRole = "First Aid"
+            elseif reqProf == "Enchanting" then preferredRole = "DE"
+            elseif reqProf == "Jewelcrafting" then preferredRole = "JC"
+            elseif reqProf == "Inscription" then preferredRole = "Scribe"
+            end
+        end
+    end
+
+    if not targetProfession and itemName then
+        local lower = itemName:lower()
+        if lower:find("^plans:") or lower:find("blacksmith") or lower:find("^pläne:") then
+            targetProfession = "Blacksmithing"
+            preferredRole = "Smith"
+        elseif lower:find("^schematic:") or lower:find("engineer") or lower:find("^bauplan:") then
+            targetProfession = "Engineering"
+            preferredRole = "Eng"
+        elseif lower:find("^formula:") or lower:find("enchant") or lower:find("^formel:") then
+            targetProfession = "Enchanting"
+            preferredRole = "DE"
+        elseif lower:find("^manual:") or lower:find("bandage") or lower:find("first aid") or lower:find("^anleitung:") then
+            targetProfession = "First Aid"
+            preferredRole = "First Aid"
+        elseif lower:find("^pattern:") or lower:find("^muster:") or lower:find("^patron:") then
+            if lower:find("leather") or lower:find("hide") or lower:find("scale") or lower:find("armor kit") or lower:find("kodo") or lower:find("murloc") or lower:find("scorpid") or lower:find("turtle") or lower:find("leder") or lower:find("balg") then
                 targetProfession = "Leatherworking"
                 preferredRole = "LW"
             else
                 targetProfession = "Tailoring"
                 preferredRole = "Tailor"
             end
-        elseif lower:find("^recipe:") then
-            if lower:find("elixir") or lower:find("potion") or lower:find("flask") or lower:find("transmute") or lower:find("oil") or lower:find("alch") then
+        elseif lower:find("^recipe:") or lower:find("^rezept:") or lower:find("^recette:") then
+            if lower:find("elixir") or lower:find("potion") or lower:find("flask") or lower:find("transmute") or lower:find("oil") or lower:find("alch") or lower:find("trank") or lower:find("elixier") or lower:find("fläschchen") then
                 targetProfession = "Alchemy"
                 preferredRole = "Alch"
-            elseif lower:find("cloth") or lower:find("silk") or lower:find("linen") or lower:find("wool") or lower:find("tailor") or lower:find("robe") or lower:find("boots") or lower:find("bag") then
+            elseif lower:find("cloth") or lower:find("silk") or lower:find("linen") or lower:find("wool") or lower:find("tailor") or lower:find("robe") or lower:find("boots") or lower:find("bag") or lower:find("shirt") or lower:find("cloak") or lower:find("tunic") or lower:find("pants") or lower:find("mantle") or lower:find("vest") or lower:find("gloves") or lower:find("schneider") or lower:find("seiden") or lower:find("leinen") or lower:find("wolle") or lower:find("stoff") then
                 targetProfession = "Tailoring"
                 preferredRole = "Tailor"
             else
                 targetProfession = "Cooking"
                 preferredRole = "Cook"
             end
-        elseif lower:find("^design:") or lower:find("jewel") then
+        elseif lower:find("^design:") or lower:find("jewel") or lower:find("^vorlage:") then
             targetProfession = "Jewelcrafting"
             preferredRole = "JC"
-        elseif lower:find("^technique:") or lower:find("glyph") or lower:find("inscript") then
+        elseif lower:find("^technique:") or lower:find("glyph") or lower:find("inscript") or lower:find("^technik:") then
             targetProfession = "Inscription"
             preferredRole = "Scribe"
         end
@@ -3992,7 +4180,7 @@ function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName)
     return targetProfession, preferredRole
 end
 
-function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, itemID)
+function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, itemID, learner, itemLink, bagID, slot)
     local curChar = nil
     if self.curPlayerKey and CLIAltsDB and CLIAltsDB.characters then
         curChar = CLIAltsDB.characters[self.curPlayerKey]
@@ -4017,11 +4205,13 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
     end
 
     local curHasProf = false
+    local curRank = 0
     local tLower = targetProfession:lower()
     if curChar.professions.primary then
         for _, p in ipairs(curChar.professions.primary) do
             if (p.name or ""):lower():find(tLower, 1, true) then
                 curHasProf = true
+                curRank = tonumber(p.rank) or 0
                 break
             end
         end
@@ -4030,6 +4220,7 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
         for _, s in ipairs(curChar.professions.secondary) do
             if (s.name or ""):lower():find(tLower, 1, true) then
                 curHasProf = true
+                curRank = tonumber(s.rank) or 0
                 break
             end
         end
@@ -4043,27 +4234,60 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
         return false
     end
 
-    local isKnownOnTooltip = false
-    pcall(function()
-        if itemID and C_TooltipInfo and C_TooltipInfo.GetItemByID then
-            local data = C_TooltipInfo.GetItemByID(itemID)
-            if data and data.lines then
-                for _, line in ipairs(data.lines) do
-                    local t = (line.leftText or ""):lower()
-                    if t:find("already known") or t:find("bereits bekannt") or t:find("déjà connu") then
-                        isKnownOnTooltip = true
-                        break
-                    end
-                end
-            end
-        end
-    end)
+    local isKnownOnTooltip, _, reqSkill = self:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
 
     if isKnownOnTooltip then
         if craftName and curChar.knownRecipes then
             curChar.knownRecipes[craftName] = true
         end
         return false
+    end
+
+    -- If another alt is designated as crafter or has superior skill, route to them instead of hoarding
+    if learner then
+        local learnerRank = 0
+        local learnerHasSupplyRole = false
+        local srole = (learner.supply_role or ""):lower()
+        if srole:find(tLower, 1, true) or (tLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true))) then
+            learnerHasSupplyRole = true
+        end
+
+        if learner.professions and learner.professions.primary then
+            for _, p in ipairs(learner.professions.primary) do
+                if (p.name or ""):lower():find(tLower, 1, true) then
+                    learnerRank = tonumber(p.rank) or 0
+                    break
+                end
+            end
+        end
+        if learnerRank == 0 and learner.professions and learner.professions.secondary then
+            for _, s in ipairs(learner.professions.secondary) do
+                if (s.name or ""):lower():find(tLower, 1, true) then
+                    learnerRank = tonumber(s.rank) or 0
+                    break
+                end
+            end
+        end
+
+        -- If current player cannot learn it right now (skill below recipe requirement),
+        -- and the alt can learn it or has higher rank or is designated crafter:
+        if reqSkill and curRank < reqSkill then
+            if learnerRank > curRank or learnerHasSupplyRole or learnerRank >= reqSkill then
+                return false
+            end
+        end
+
+        -- If alt is explicitly configured with a supply role and current player is not:
+        local curRole = (curChar.supply_role or ""):lower()
+        local curHasSupplyRole = curRole:find(tLower, 1, true) or (tLower:find("tailor", 1, true) and (curRole:find("cloth", 1, true) or curRole:find("tailor", 1, true)))
+        if learnerHasSupplyRole and not curHasSupplyRole then
+            return false
+        end
+
+        -- If alt has a higher profession rank than current character:
+        if learnerRank > curRank then
+            return false
+        end
     end
 
     return true
@@ -4426,7 +4650,7 @@ function CLIAlts:ToggleAutoMailConsumables(enable)
     return CLIAltsDB.settings.autoMailConsumables
 end
 
-function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassID, itemSubClassID, itemQuality)
+function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassID, itemSubClassID, itemQuality, itemLink, bagID, slot)
     local itemID = tonumber(itemIdentifier)
     local itemName = nil
     local quality = itemQuality
@@ -4434,6 +4658,8 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     local subclassID = itemSubClassID
     local equipLoc = itemEquipLoc
     local bindType = nil
+    local itemTypeStr = nil
+    local itemSubTypeStr = nil
 
     if not itemID and type(itemIdentifier) == "string" then
         local idMatch = itemIdentifier:match("item:(%d+)")
@@ -4458,6 +4684,8 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
         if rawInfo and rawInfo[1] then
             itemName = rawInfo[1]
             quality = quality or rawInfo[3]
+            itemTypeStr = rawInfo[6]
+            itemSubTypeStr = rawInfo[7]
             equipLoc = equipLoc or rawInfo[9]
             classID = classID or rawInfo[12]
             subclassID = subclassID or rawInfo[13]
@@ -4515,24 +4743,31 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
 
     -- 0. Recipes, Patterns, Plans, Schematics & Formulas (Class 9 or Recipe)
     local isRecipe = (classID == 9)
+    if not isRecipe and itemTypeStr and type(itemTypeStr) == "string" then
+        local tLower = itemTypeStr:lower()
+        if tLower == "recipe" or tLower == "rezept" or tLower == "patron" or tLower == "recette" then
+            isRecipe = true
+        end
+    end
     if not isRecipe and itemName then
         local lName = itemName:lower()
-        if lName:find("^pattern:") or lName:find("^recipe:") or lName:find("^plans:") or lName:find("^schematic:") or lName:find("^formula:") or lName:find("^manual:") or lName:find("^design:") or lName:find("^technique:") then
+        if lName:find("^pattern:") or lName:find("^recipe:") or lName:find("^plans:") or lName:find("^schematic:") or lName:find("^formula:") or lName:find("^manual:") or lName:find("^design:") or lName:find("^technique:") or lName:find("^muster:") or lName:find("^rezept:") or lName:find("^pläne:") or lName:find("^bauplan:") or lName:find("^patron:") or lName:find("^recette:") then
             isRecipe = true
         end
     end
 
     if isRecipe then
         category = "Recipe"
-        local targetProf, preferredRole = self:GetRecipeProfessionAndRole(itemID, subclassID, itemName)
+        local targetProf, preferredRole = self:GetRecipeProfessionAndRole(itemID, subclassID, itemName, itemSubTypeStr, itemLink, bagID, slot)
         local craftName = self:GetRecipeCraftName(itemName)
 
-        -- If current player has this profession and has NOT learned it yet, keep it in bags!
-        if targetProf and self:ShouldCurrentPlayerLearnRecipe(targetProf, craftName, itemID) then
+        local learner, reason = self:FindBestRecipeLearner(targetProf, preferredRole, craftName, itemName)
+
+        -- If current player has this profession and has NOT learned it yet, keep it in bags only if current player should learn it
+        if targetProf and self:ShouldCurrentPlayerLearnRecipe(targetProf, craftName, itemID, learner, itemLink, bagID, slot) then
             return nil
         end
 
-        local learner, reason = self:FindBestRecipeLearner(targetProf, preferredRole, craftName, itemName)
         if learner then
             destChar = learner
             targetReason = reason or (targetProf and (targetProf .. " (Learn)")) or "Recipe"
@@ -4637,7 +4872,7 @@ function CLIAlts:GetMailReadySummary()
         for slot = 1, numSlots do
             local itemID, count, itemLink = self:GetContainerItemData(bagID, slot)
             if itemID and itemID > 0 and (count or 0) > 0 then
-                local dest = self:GetMaterialDestination(itemID)
+                local dest = self:GetMaterialDestination(itemID, nil, nil, nil, nil, itemLink, bagID, slot)
                 if dest and not dest.isCurrentPlayer and not self:IsCurrentPlayer(dest.destName) and not self:IsCurrentPlayer(dest.destChar) then
                     local rName = dest.destName
                     if not summary.byRecipient[rName] then
@@ -4839,27 +5074,30 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
                 local targetSlot = freeAttachSlots[1]
                 local okAttach = false
 
-                if C_Container and C_Container.UseContainerItem then
-                    local ok = pcall(C_Container.UseContainerItem, itm.bag, itm.slot)
-                    okAttach = ok
-                elseif UseContainerItem then
-                    local ok = pcall(UseContainerItem, itm.bag, itm.slot)
-                    okAttach = ok
-                elseif C_Container and C_Container.PickupContainerItem and ClickSendMailItemButton then
-                    if ClearCursor then ClearCursor() end
-                    local ok = pcall(C_Container.PickupContainerItem, itm.bag, itm.slot)
+                -- Direct cursor attachment via PickupContainerItem + ClickSendMailItemButton:
+                -- Never use UseContainerItem first, because right-clicking usable recipes/manuals
+                -- triggers on-use spell cast / learning instead of attaching to the mail slot.
+                local pickupFn = (C_Container and C_Container.PickupContainerItem) or PickupContainerItem
+                if pickupFn and ClickSendMailItemButton then
+                    if ClearCursor then pcall(ClearCursor) end
+                    local ok = pcall(pickupFn, itm.bag, itm.slot)
                     if ok then
                         pcall(ClickSendMailItemButton, targetSlot)
-                        if ClearCursor then ClearCursor() end
-                        okAttach = true
+                        if CursorHasItem and CursorHasItem() then
+                            if ClearCursor then pcall(ClearCursor) end
+                        else
+                            okAttach = true
+                        end
                     end
-                elseif PickupContainerItem and ClickSendMailItemButton then
-                    if ClearCursor then ClearCursor() end
-                    local ok = pcall(PickupContainerItem, itm.bag, itm.slot)
-                    if ok then
-                        pcall(ClickSendMailItemButton, targetSlot)
-                        if ClearCursor then ClearCursor() end
-                        okAttach = true
+                end
+
+                if not okAttach then
+                    if C_Container and C_Container.UseContainerItem then
+                        local ok = pcall(C_Container.UseContainerItem, itm.bag, itm.slot)
+                        okAttach = ok
+                    elseif UseContainerItem then
+                        local ok = pcall(UseContainerItem, itm.bag, itm.slot)
+                        okAttach = ok
                     end
                 end
 
