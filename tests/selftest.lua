@@ -2468,6 +2468,39 @@ function CLIAlts:RunSelfTest()
     local destMisc = self:GetMaterialDestination(nil, nil, 7, 10)
     Assert(destMisc ~= nil and destMisc.destName == "Mule-Forever", "Mail: Unmatched trade goods route to Bank Mule")
 
+    -- 23g2. Recipe & Pattern Auto-Routing
+    do
+        local craftNameTailor = self:GetRecipeCraftName("Pattern: Robe of the Archmage")
+        Assert(craftNameTailor == "Robe of the Archmage", "Mail: GetRecipeCraftName strips Pattern: prefix")
+
+        local craftNameAlch = self:GetRecipeCraftName("Recipe: Elixir of the Mongoose")
+        Assert(craftNameAlch == "Elixir of the Mongoose", "Mail: GetRecipeCraftName strips Recipe: prefix")
+
+        local profTailor, roleTailor = self:GetRecipeProfessionAndRole(nil, 2, "Pattern: Robe of the Archmage")
+        Assert(profTailor == "Tailoring" and roleTailor == "Tailor", "Mail: Subclass 2 maps to Tailoring")
+
+        local profAlch, roleAlch = self:GetRecipeProfessionAndRole(nil, 6, "Recipe: Elixir of the Mongoose")
+        Assert(profAlch == "Alchemy" and roleAlch == "Alch", "Mail: Subclass 6 maps to Alchemy")
+
+        -- Route Tailoring recipe (Class 9, Subclass 2) to Tailor alt (Morvath-Forever)
+        local destPattern = self:GetMaterialDestination(nil, nil, 9, 2, 2)
+        Assert(destPattern ~= nil and destPattern.destName == "Morvath-Forever", "Mail: Tailoring recipe routes to Morvath")
+        Assert(destPattern.category == "Recipe", "Mail: Category is Recipe")
+
+        -- Route Alchemy recipe (Class 9, Subclass 6) to Alch alt (Thorne-Forever)
+        local destRecipe = self:GetMaterialDestination(nil, nil, 9, 6, 2)
+        Assert(destRecipe ~= nil and destRecipe.destName == "Thorne-Forever", "Mail: Alchemy recipe routes to Thorne")
+
+        -- If crafter already knows it, falls back to Bank Mule
+        testMailDB.characters["Morvath-Forever"].knownRecipes = { ["Robe of the Archmage"] = true }
+        local oldGetItemInfo = self.GetItemInfo
+        self.GetItemInfo = function(s, id) return "Pattern: Robe of the Archmage", nil, 2, nil, nil, nil, nil, nil, nil, nil, nil, 9, 2 end
+        local destKnown = self:GetMaterialDestination(99991)
+        Assert(destKnown ~= nil and destKnown.destName == "Mule-Forever", "Mail: Duplicate/Known recipe routes to Bank Mule")
+        self.GetItemInfo = oldGetItemInfo
+        testMailDB.characters["Morvath-Forever"].knownRecipes = nil
+    end
+
     -- 23h. PrintMailRouting execution
     local fbMail, okMail = self:PrintMailRouting()
     Assert(okMail == true and fbMail ~= nil, "Mail: PrintMailRouting executes cleanly")

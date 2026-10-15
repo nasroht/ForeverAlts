@@ -818,6 +818,34 @@ function CLIAlts:CollectTradeCooldowns(existing)
     return cds
 end
 
+function CLIAlts:CollectKnownRecipes(existing)
+    local recipes = {}
+    if existing then
+        for k, v in pairs(existing) do recipes[k] = v end
+    end
+    pcall(function()
+        if GetNumTradeSkills and GetTradeSkillInfo then
+            local n = GetNumTradeSkills() or 0
+            for i = 1, n do
+                local name, skillType = GetTradeSkillInfo(i)
+                if name and skillType ~= "header" then
+                    recipes[name] = true
+                end
+            end
+        end
+        if GetNumCrafts and GetCraftInfo then
+            local n = GetNumCrafts() or 0
+            for i = 1, n do
+                local name, _, craftType = GetCraftInfo(i)
+                if name and craftType ~= "header" then
+                    recipes[name] = true
+                end
+            end
+        end
+    end)
+    return recipes
+end
+
 function CLIAlts:CollectLockouts(existing)
     local locks = {}
     if existing then
@@ -1302,6 +1330,7 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         bindLocation = (bindLocation ~= "" and bindLocation) or "Unknown",
         professions = professions,
         tradeCooldowns = self:CollectTradeCooldowns(existing and existing.tradeCooldowns),
+        knownRecipes = self:CollectKnownRecipes(existing and existing.knownRecipes),
         lockouts = self:CollectLockouts(existing and existing.lockouts),
         mailCount = liveMailCount or (existing and existing.mailCount),
         minMailDays = liveMinMailDays or (existing and existing.minMailDays),
@@ -3810,6 +3839,18 @@ function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
                     end
                 end
 
+                -- Check secondary professions (Cooking, First Aid, Fishing)
+                if not matches and c.professions and c.professions.secondary then
+                    for _, s in ipairs(c.professions.secondary) do
+                        local sName = (s.name or ""):lower()
+                        if sName:find(targetProfession:lower(), 1, true) then
+                            matches = true
+                            profRank = tonumber(s.rank) or 0
+                            break
+                        end
+                    end
+                end
+
                 if matches then
                     local overrideScore = isOverride and 2000 or 0
                     local tierScore = (c.tier == "CORE" and 1000) or (c.tier == "RESERVE" and 500) or 100
@@ -3838,6 +3879,264 @@ function CLIAlts:FindBankMule()
         end
     end
     return nil
+end
+
+function CLIAlts:GetRecipeCraftName(itemName)
+    if not itemName or type(itemName) ~= "string" then return nil end
+    local clean = itemName:match("^[Pp]attern:%s*(.+)$")
+        or itemName:match("^[Rr]ecipe:%s*(.+)$")
+        or itemName:match("^[Pp]lans:%s*(.+)$")
+        or itemName:match("^[Ss]chematic:%s*(.+)$")
+        or itemName:match("^[Ff]ormula:%s*(.+)$")
+        or itemName:match("^[Mm]anual:%s*(.+)$")
+        or itemName:match("^[Dd]esign:%s*(.+)$")
+        or itemName:match("^[Tt]echnique:%s*(.+)$")
+        or itemName:match("^[Gg]uide:%s*(.+)$")
+    return clean or itemName
+end
+
+function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName)
+    local targetProfession = nil
+    local preferredRole = nil
+    local subID = tonumber(itemSubClassID)
+
+    if subID == 1 then
+        targetProfession = "Leatherworking"
+        preferredRole = "LW"
+    elseif subID == 2 then
+        targetProfession = "Tailoring"
+        preferredRole = "Tailor"
+    elseif subID == 3 then
+        targetProfession = "Engineering"
+        preferredRole = "Eng"
+    elseif subID == 4 then
+        targetProfession = "Blacksmithing"
+        preferredRole = "Smith"
+    elseif subID == 5 then
+        targetProfession = "Cooking"
+        preferredRole = "Cook"
+    elseif subID == 6 then
+        targetProfession = "Alchemy"
+        preferredRole = "Alch"
+    elseif subID == 7 then
+        targetProfession = "First Aid"
+        preferredRole = "First Aid"
+    elseif subID == 8 then
+        targetProfession = "Enchanting"
+        preferredRole = "DE"
+    elseif subID == 9 then
+        targetProfession = "Fishing"
+        preferredRole = "Fish"
+    elseif subID == 10 then
+        targetProfession = "Jewelcrafting"
+        preferredRole = "JC"
+    elseif subID == 11 then
+        targetProfession = "Inscription"
+        preferredRole = "Scribe"
+    end
+
+    if not targetProfession and itemName then
+        local lower = itemName:lower()
+        if lower:find("^plans:") then
+            targetProfession = "Blacksmithing"
+            preferredRole = "Smith"
+        elseif lower:find("^schematic:") then
+            targetProfession = "Engineering"
+            preferredRole = "Eng"
+        elseif lower:find("^formula:") then
+            targetProfession = "Enchanting"
+            preferredRole = "DE"
+        elseif lower:find("^manual:") then
+            targetProfession = "First Aid"
+            preferredRole = "First Aid"
+        elseif lower:find("^pattern:") then
+            targetProfession = "Tailoring"
+            preferredRole = "Tailor"
+        elseif lower:find("^recipe:") then
+            targetProfession = "Cooking"
+            preferredRole = "Cook"
+        end
+    end
+
+    return targetProfession, preferredRole
+end
+
+function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, itemID)
+    local curChar = nil
+    if self.curPlayerKey and CLIAltsDB and CLIAltsDB.characters then
+        curChar = CLIAltsDB.characters[self.curPlayerKey]
+    end
+    if not curChar and self.curPlayerFullName and CLIAltsDB and CLIAltsDB.characters then
+        curChar = CLIAltsDB.characters[self.curPlayerFullName]
+    end
+    if not curChar and UnitName then
+        local pName = UnitName("player")
+        if pName and CLIAltsDB and CLIAltsDB.characters then
+            for _, c in pairs(CLIAltsDB.characters) do
+                if c.name == pName or c.primaryName == pName then
+                    curChar = c
+                    break
+                end
+            end
+        end
+    end
+
+    if not curChar or not curChar.professions or not targetProfession then
+        return false
+    end
+
+    local curHasProf = false
+    local tLower = targetProfession:lower()
+    if curChar.professions.primary then
+        for _, p in ipairs(curChar.professions.primary) do
+            if (p.name or ""):lower():find(tLower, 1, true) then
+                curHasProf = true
+                break
+            end
+        end
+    end
+    if not curHasProf and curChar.professions.secondary then
+        for _, s in ipairs(curChar.professions.secondary) do
+            if (s.name or ""):lower():find(tLower, 1, true) then
+                curHasProf = true
+                break
+            end
+        end
+    end
+
+    if not curHasProf then
+        return false
+    end
+
+    if craftName and curChar.knownRecipes and curChar.knownRecipes[craftName] then
+        return false
+    end
+
+    local isKnownOnTooltip = false
+    pcall(function()
+        if itemID and C_TooltipInfo and C_TooltipInfo.GetItemByID then
+            local data = C_TooltipInfo.GetItemByID(itemID)
+            if data and data.lines then
+                for _, line in ipairs(data.lines) do
+                    local t = (line.leftText or ""):lower()
+                    if t:find("already known") or t:find("bereits bekannt") or t:find("déjà connu") then
+                        isKnownOnTooltip = true
+                        break
+                    end
+                end
+            end
+        end
+    end)
+
+    if isKnownOnTooltip then
+        if craftName and curChar.knownRecipes then
+            curChar.knownRecipes[craftName] = true
+        end
+        return false
+    end
+
+    return true
+end
+
+function CLIAlts:FindBestRecipeLearner(targetProfession, preferredRole, craftName, itemName)
+    local chars = self:GetCharactersList("level", false)
+    local bestChar = nil
+    local bestScore = -1
+
+    for _, c in ipairs(chars) do
+        if not self:IsCurrentPlayer(c) then
+            local matches = false
+            local profRank = 0
+            local isOverride = false
+            local srole = (c.supply_role or ""):lower()
+
+            if srole ~= "none" and srole ~= "exclude" and srole ~= "excluded" then
+                if preferredRole and srole ~= "" then
+                    local pLower = preferredRole:lower()
+                    if srole:find(pLower, 1, true) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif pLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif pLower:find("alch", 1, true) and (srole:find("herb", 1, true) or srole:find("alch", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif (pLower:find("miner", 1, true) or pLower:find("smith", 1, true) or pLower:find("eng", 1, true)) and (srole:find("ore", 1, true) or srole:find("miner", 1, true) or srole:find("stone", 1, true) or srole:find("smith", 1, true) or srole:find("bs", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif (pLower:find("skin", 1, true) or pLower:find("leather", 1, true) or pLower:find("lw", 1, true)) and (srole:find("leather", 1, true) or srole:find("skin", 1, true) or srole:find("lw", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif pLower:find("cook", 1, true) and (srole:find("cook", 1, true) or srole:find("meat", 1, true) or srole:find("fish", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif (pLower:find("de", 1, true) or pLower:find("ench", 1, true)) and (srole:find("de", 1, true) or srole:find("ench", 1, true) or srole:find("disenchant", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    end
+                end
+
+                if not matches and c.professions and c.professions.primary then
+                    for _, p in ipairs(c.professions.primary) do
+                        local pName = (p.name or ""):lower()
+                        if targetProfession and pName:find(targetProfession:lower(), 1, true) then
+                            matches = true
+                            profRank = tonumber(p.rank) or 0
+                            break
+                        end
+                    end
+                end
+
+                if not matches and c.professions and c.professions.secondary then
+                    for _, s in ipairs(c.professions.secondary) do
+                        local sName = (s.name or ""):lower()
+                        if targetProfession and sName:find(targetProfession:lower(), 1, true) then
+                            matches = true
+                            profRank = tonumber(s.rank) or 0
+                            break
+                        end
+                    end
+                end
+
+                if matches then
+                    local alreadyKnown = false
+                    if craftName and c.knownRecipes and c.knownRecipes[craftName] then
+                        alreadyKnown = true
+                    elseif itemName and c.knownRecipes and c.knownRecipes[itemName] then
+                        alreadyKnown = true
+                    end
+
+                    local knownPenalty = alreadyKnown and -5000 or 0
+                    local overrideScore = isOverride and 2000 or 0
+                    local tierScore = (c.tier == "CORE" and 1000) or (c.tier == "RESERVE" and 500) or 100
+                    local skillScore = profRank * 2
+                    local score = overrideScore + tierScore + skillScore + knownPenalty
+
+                    if score > bestScore then
+                        bestScore = score
+                        bestChar = c
+                    end
+                end
+            end
+        end
+    end
+
+    if not bestChar or bestScore < 0 then
+        local mule = self:FindBankMule()
+        if mule and not self:IsCurrentPlayer(mule) then
+            return mule, "Bank Mule (Duplicate Recipe)"
+        end
+    end
+
+    return bestChar, targetProfession and (targetProfession .. " (Learn)") or "Recipe"
 end
 
 -- ============================================================================
@@ -4154,8 +4453,34 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     local targetReason = nil
     local category = nil
 
+    -- 0. Recipes, Patterns, Plans, Schematics & Formulas (Class 9 or Recipe)
+    local isRecipe = (classID == 9)
+    if not isRecipe and itemName then
+        local lName = itemName:lower()
+        if lName:find("^pattern:") or lName:find("^recipe:") or lName:find("^plans:") or lName:find("^schematic:") or lName:find("^formula:") or lName:find("^manual:") or lName:find("^design:") or lName:find("^technique:") then
+            isRecipe = true
+        end
+    end
+
+    if isRecipe then
+        category = "Recipe"
+        local targetProf, preferredRole = self:GetRecipeProfessionAndRole(itemID, subclassID, itemName)
+        local craftName = self:GetRecipeCraftName(itemName)
+
+        -- If current player has this profession and has NOT learned it yet, keep it in bags!
+        if targetProf and self:ShouldCurrentPlayerLearnRecipe(targetProf, craftName, itemID) then
+            return nil
+        end
+
+        local learner, reason = self:FindBestRecipeLearner(targetProf, preferredRole, craftName, itemName)
+        if learner then
+            destChar = learner
+            targetReason = reason or (targetProf and (targetProf .. " (Learn)")) or "Recipe"
+        end
+    end
+
     -- 1. Trade Goods (Class 7)
-    if classID == 7 then
+    if not destChar and classID == 7 then
         category = "Trade Goods"
         if subclassID == 5 then
             category = "Cloth"

@@ -126,6 +126,9 @@ globals = {
     "CRAFT_UPDATE",
     "C_TradeSkillUI",
     "C_CraftUI",
+    "GetNumCrafts",
+    "GetCraftInfo",
+    "C_TooltipInfo",
 
     -- WoW Instances & Raids
     "GetNumSavedInstances",

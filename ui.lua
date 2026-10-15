@@ -4168,19 +4168,10 @@ function CLIAlts:CreateModernMainFrame()
         subLine:SetText("")
         row.subLine = subLine
 
-        -- Level XP Progress Bar & Label (anchored with generous room at x=405)
-        local restLabel = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(restLabel, 13, "OUTLINE")
-        restLabel:SetPoint("BOTTOMLEFT", row, "LEFT", 405, 4)
-        restLabel:SetJustifyH("LEFT")
-        restLabel:SetWordWrap(false)
-        restLabel:SetText("")
-        row.restLabel = restLabel
-        row.restPercentText = restLabel
-
+        -- Level XP Progress Bar & Label (anchored cleanly to row and barBg)
         local restBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
         restBarBg:SetSize(180, 7)
-        restBarBg:SetPoint("TOPLEFT", restLabel, "BOTTOMLEFT", 0, -3)
+        restBarBg:SetPoint("LEFT", row, "LEFT", 405, -6)
         restBarBg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -4191,6 +4182,16 @@ function CLIAlts:CreateModernMainFrame()
         if restBarBg.SetBackdropBorderColor then restBarBg:SetBackdropBorderColor(0, 0, 0, 0) end
         row.restBarBg = restBarBg
         row.barBg = restBarBg
+
+        local restLabel = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(restLabel, 13, "OUTLINE")
+        restLabel:SetPoint("BOTTOMLEFT", restBarBg, "TOPLEFT", 0, 4)
+        restLabel:SetWidth(180)
+        restLabel:SetJustifyH("LEFT")
+        restLabel:SetWordWrap(false)
+        restLabel:SetText("")
+        row.restLabel = restLabel
+        row.restPercentText = restLabel
 
         local restBarFill = restBarBg:CreateTexture(nil, "ARTWORK")
         restBarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
@@ -4226,7 +4227,6 @@ function CLIAlts:CreateModernMainFrame()
         local statusPill = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
         statusPill:SetSize(120, 24)
         statusPill:SetPoint("LEFT", restBarBg, "RIGHT", 20, 6)
-        restLabel:SetPoint("RIGHT", statusPill, "LEFT", -10, 0)
         statusPill:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
