@@ -2499,6 +2499,24 @@ function CLIAlts:RunSelfTest()
         Assert(destKnown ~= nil and destKnown.destName == "Mule-Forever", "Mail: Duplicate/Known recipe routes to Bank Mule")
         self.GetItemInfo = oldGetItemInfo
         testMailDB.characters["Morvath-Forever"].knownRecipes = nil
+
+        -- Test live client path: global GetItemInfo only (self.GetItemInfo is nil)
+        local savedGlobal = GetItemInfo
+        GetItemInfo = function(id)
+            if id == 99992 then
+                return "Pattern: Spider Belt", nil, 2, nil, nil, nil, nil, nil, nil, nil, nil, 9, 2
+            end
+            return nil
+        end
+        local destLive = self:GetMaterialDestination(99992)
+        Assert(destLive ~= nil and destLive.destName == "Morvath-Forever", "Mail: Global GetItemInfo resolves recipe without self argument")
+        GetItemInfo = savedGlobal
+
+        -- Verify recipe routes to alt even if alt has low skill rank (rank 1 vs high-level recipe)
+        testMailDB.characters["Morvath-Forever"].professions.primary[1].rank = 1
+        local destLowRank = self:GetMaterialDestination(nil, nil, 9, 2, 2)
+        Assert(destLowRank ~= nil and destLowRank.destName == "Morvath-Forever", "Mail: Recipe routes to Tailor alt regardless of alt skill rank")
+        testMailDB.characters["Morvath-Forever"].professions.primary[1].rank = 150
     end
 
     -- 23h. PrintMailRouting execution

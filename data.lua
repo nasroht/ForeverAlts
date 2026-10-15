@@ -3949,24 +3949,43 @@ function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName)
 
     if not targetProfession and itemName then
         local lower = itemName:lower()
-        if lower:find("^plans:") then
+        if lower:find("^plans:") or lower:find("blacksmith") then
             targetProfession = "Blacksmithing"
             preferredRole = "Smith"
-        elseif lower:find("^schematic:") then
+        elseif lower:find("^schematic:") or lower:find("engineer") then
             targetProfession = "Engineering"
             preferredRole = "Eng"
-        elseif lower:find("^formula:") then
+        elseif lower:find("^formula:") or lower:find("enchant") then
             targetProfession = "Enchanting"
             preferredRole = "DE"
-        elseif lower:find("^manual:") then
+        elseif lower:find("^manual:") or lower:find("bandage") or lower:find("first aid") then
             targetProfession = "First Aid"
             preferredRole = "First Aid"
         elseif lower:find("^pattern:") then
-            targetProfession = "Tailoring"
-            preferredRole = "Tailor"
+            if lower:find("leather") or lower:find("hide") or lower:find("scale") or lower:find("armor kit") or lower:find("kodo") or lower:find("murloc") then
+                targetProfession = "Leatherworking"
+                preferredRole = "LW"
+            else
+                targetProfession = "Tailoring"
+                preferredRole = "Tailor"
+            end
         elseif lower:find("^recipe:") then
-            targetProfession = "Cooking"
-            preferredRole = "Cook"
+            if lower:find("elixir") or lower:find("potion") or lower:find("flask") or lower:find("transmute") or lower:find("oil") or lower:find("alch") then
+                targetProfession = "Alchemy"
+                preferredRole = "Alch"
+            elseif lower:find("cloth") or lower:find("silk") or lower:find("linen") or lower:find("wool") or lower:find("tailor") or lower:find("robe") or lower:find("boots") or lower:find("bag") then
+                targetProfession = "Tailoring"
+                preferredRole = "Tailor"
+            else
+                targetProfession = "Cooking"
+                preferredRole = "Cook"
+            end
+        elseif lower:find("^design:") or lower:find("jewel") then
+            targetProfession = "Jewelcrafting"
+            preferredRole = "JC"
+        elseif lower:find("^technique:") or lower:find("glyph") or lower:find("inscript") then
+            targetProfession = "Inscription"
+            preferredRole = "Scribe"
         end
     end
 
@@ -4417,36 +4436,70 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     local bindType = nil
 
     if not itemID and type(itemIdentifier) == "string" then
-        local idMatch = itemIdentifier:match("|Hitem:(%d+)")
+        local idMatch = itemIdentifier:match("item:(%d+)")
         if idMatch then itemID = tonumber(idMatch) end
     end
 
-    if itemID then
-        local getItemInfoFn = self.GetItemInfo or GetItemInfo
-        local getInstantFn = self.GetItemInfoInstant or GetItemInfoInstant
-        if getItemInfoFn then
-            local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = getItemInfoFn(self, itemID)
-            if not name and getItemInfoFn ~= GetItemInfo and GetItemInfo then
-                name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(itemID)
-            end
-            if name then
-                itemName = name
-                quality = quality or q
-                classID = classID or cID
-                subclassID = subclassID or scID
-                equipLoc = equipLoc or eqLoc
-                bindType = bindType or bType
+    local queryTarget = itemID or itemIdentifier
+    if queryTarget then
+        local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType
+        if self.GetItemInfo then
+            local ok, n, _, qu, _, _, _, _, _, el, _, _, c, sc, bt = pcall(self.GetItemInfo, self, queryTarget)
+            if ok and n then
+                name, q, eqLoc, cID, scID, bType = n, qu, el, c, sc, bt
+            else
+                local ok2, n2, _, qu2, _, _, _, _, _, el2, _, _, c2, sc2, bt2 = pcall(self.GetItemInfo, queryTarget)
+                if ok2 and n2 then
+                    name, q, eqLoc, cID, scID, bType = n2, qu2, el2, c2, sc2, bt2
+                end
             end
         end
-        if not classID and getInstantFn then
-            local _, _, _, eq, _, c, sc = getInstantFn(self, itemID)
-            if not c and getInstantFn ~= GetItemInfoInstant and C_Item and C_Item.GetItemInfoInstant then
-                _, _, _, eq, _, c, sc = C_Item.GetItemInfoInstant(itemID)
+        if not name and GetItemInfo then
+            pcall(function()
+                name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(queryTarget)
+            end)
+        end
+        if name then
+            itemName = name
+            quality = quality or q
+            classID = classID or cID
+            subclassID = subclassID or scID
+            equipLoc = equipLoc or eqLoc
+            bindType = bindType or bType
+        end
+
+        if not classID then
+            local _, _, _, eq, _, c, sc
+            if self.GetItemInfoInstant then
+                local ok, _, _, _, e, _, cl, s = pcall(self.GetItemInfoInstant, self, queryTarget)
+                if ok and cl then
+                    eq, c, sc = e, cl, s
+                else
+                    local ok2, _, _, _, e2, _, cl2, s2 = pcall(self.GetItemInfoInstant, queryTarget)
+                    if ok2 and cl2 then
+                        eq, c, sc = e2, cl2, s2
+                    end
+                end
+            end
+            if not c and C_Item and C_Item.GetItemInfoInstant then
+                pcall(function()
+                    _, _, _, eq, _, c, sc = C_Item.GetItemInfoInstant(queryTarget)
+                end)
+            end
+            if not c and GetItemInfoInstant then
+                pcall(function()
+                    _, _, _, eq, _, c, sc = GetItemInfoInstant(queryTarget)
+                end)
             end
             classID = classID or c
             subclassID = subclassID or sc
             equipLoc = equipLoc or eq
         end
+    end
+
+    -- Never auto-mail soulbound items (bindType == 1: Bind on Pickup)
+    if bindType == 1 then
+        return nil
     end
 
     -- User filter check: Ignore list
