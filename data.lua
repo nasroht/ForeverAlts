@@ -1838,7 +1838,7 @@ function CLIAlts:FormatMoney(copper, colorize)
     if colorize then
         local parts = {}
         if gold > 0 then
-            table.insert(parts, string.format("|cffffd700%dg|r", gold))
+            table.insert(parts, string.format("|cffffd700%sg|r", self:FormatNumber(gold)))
         end
         if silver > 0 or gold > 0 then
             table.insert(parts, string.format("|cffc7c7cf%ds|r", silver))
@@ -1846,7 +1846,7 @@ function CLIAlts:FormatMoney(copper, colorize)
         table.insert(parts, string.format("|cffeda55f%dc|r", copperRem))
         return table.concat(parts, " ")
     else
-        return string.format("%dg %ds %dc", gold, silver, copperRem)
+        return string.format("%sg %ds %dc", self:FormatNumber(gold), silver, copperRem)
     end
 end
 
@@ -4898,19 +4898,26 @@ function CLIAlts:RecordGoldSnapshot()
     CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
 
     local summary = self:GetAccountSummary()
-    local totalGold = math.floor((summary.totalGold or 0) / 10000)
+    local totalCopper = summary.totalGold or 0
+    local totalGold = math.floor(totalCopper / 10000)
     local today = date("%Y-%m-%d")
     local now = time()
+
+    if not self.sessionInitialCopper then
+        self.sessionInitialCopper = totalCopper
+    end
 
     local last = CLIAltsDB.goldHistory[#CLIAltsDB.goldHistory]
     if last and last.date == today then
         last.gold = totalGold
+        last.copper = totalCopper
         last.time = now
     else
         table.insert(CLIAltsDB.goldHistory, {
             date = today,
             time = now,
             gold = totalGold,
+            copper = totalCopper,
         })
         while #CLIAltsDB.goldHistory > 90 do
             table.remove(CLIAltsDB.goldHistory, 1)
@@ -4920,27 +4927,48 @@ end
 
 function CLIAlts:GetGoldHistoryDeltas()
     local summary = self:GetAccountSummary()
-    local curGold = math.floor((summary.totalGold or 0) / 10000)
+    local curCopper = summary.totalGold or 0
+    local curGold = math.floor(curCopper / 10000)
     local hist = (CLIAltsDB and CLIAltsDB.goldHistory) or {}
     local now = time()
 
     local g1d, g7d, g30d = curGold, curGold, curGold
+    local found1d, found7d, found30d = false, false, false
     for i = #hist, 1, -1 do
         local entry = hist[i]
-        local ageDays = (now - entry.time) / 86400
-        if ageDays >= 1 and g1d == curGold then
-            g1d = entry.gold
+        local ageDays = (now - (entry.time or now)) / 86400
+        if ageDays >= 1 and not found1d then
+            g1d = entry.gold or 0
+            found1d = true
         end
-        if ageDays >= 7 and g7d == curGold then
-            g7d = entry.gold
+        if ageDays >= 7 and not found7d then
+            g7d = entry.gold or 0
+            found7d = true
         end
-        if ageDays >= 30 and g30d == curGold then
-            g30d = entry.gold
+        if ageDays >= 30 and not found30d then
+            g30d = entry.gold or 0
+            found30d = true
             break
         end
     end
 
-    return (curGold - g1d), (curGold - g7d), (curGold - g30d)
+    local oldestGold = curGold
+    local hasHistory = false
+    local oldestDays = 0
+    if #hist > 0 then
+        local firstEntry = hist[1]
+        if firstEntry and firstEntry.time and (now - firstEntry.time) >= 3600 then
+            oldestGold = firstEntry.gold or 0
+            hasHistory = true
+            oldestDays = (now - firstEntry.time) / 86400
+        end
+    end
+
+    local d1 = curGold - g1d
+    local d7 = found7d and (curGold - g7d) or (hasHistory and (curGold - oldestGold) or 0)
+    local d30 = found30d and (curGold - g30d) or d7
+
+    return d1, d7, d30, (found7d or hasHistory), (found7d and 7 or oldestDays)
 end
 
 function CLIAlts:GenerateAsciiSparkline(numChars)

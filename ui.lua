@@ -2598,6 +2598,7 @@ function CLIAlts:CreateModernMainFrame()
     local wealthWidget = CreateFrame("Frame", "CLIAltsWealthWidget", sidebar)
     wealthWidget:SetSize(166, 68)
     wealthWidget:SetPoint("BOTTOMLEFT", sidebar, "BOTTOMLEFT", 14, 16)
+    wealthWidget:EnableMouse(true)
     frame.wealthWidget = wealthWidget
 
     local wealthTitle = wealthWidget:CreateFontString(nil, "OVERLAY")
@@ -2608,18 +2609,64 @@ function CLIAlts:CreateModernMainFrame()
     wealthWidget.title = wealthTitle
 
     local wealthTotal = wealthWidget:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(wealthTotal, 18, "OUTLINE")
+    self:SetWidgetFont(wealthTotal, 16, "OUTLINE")
     wealthTotal:SetPoint("TOPLEFT", wealthTitle, "BOTTOMLEFT", 0, -4)
-    wealthTotal:SetText("5,713g")
+    wealthTotal:SetText("0c")
     wealthTotal:SetTextColor(textR, textG, textB)
     wealthWidget.total = wealthTotal
 
     local wealthDelta = wealthWidget:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(wealthDelta, 11, "")
     wealthDelta:SetPoint("TOPLEFT", wealthTotal, "BOTTOMLEFT", 0, -2)
-    wealthDelta:SetText("+210g this week")
-    wealthDelta:SetTextColor(fillR, fillG, fillB)
+    wealthDelta:SetText("Calculating...")
+    wealthDelta:SetTextColor(mutedR, mutedG, mutedB)
     wealthWidget.delta = wealthDelta
+
+    wealthWidget:SetScript("OnEnter", function(wSelf)
+        if not GameTooltip then return end
+        GameTooltip:SetOwner(wSelf, "ANCHOR_RIGHT")
+        GameTooltip:ClearLines()
+        GameTooltip:AddLine("Account Wealth Summary", 1, 0.82, 0)
+        GameTooltip:AddLine("Sum of liquid currency (Gold, Silver, Copper) across all characters.", 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine("Does NOT include inventory or item valuation.", 0.45, 0.75, 1, true)
+        GameTooltip:AddLine(" ")
+
+        local chars = CLIAlts:GetCharactersList()
+        for _, c in ipairs(chars) do
+            local cMoney = c.money or 0
+            local cName = CLIAlts:ColorizePlayerName(c.name, c.classFile)
+            local moneyStr = CLIAlts:FormatMoney(cMoney, true)
+            local lvlInfo = c.level and string.format(" |cffa9a08c(L%d)|r", c.level) or ""
+            GameTooltip:AddDoubleLine(cName .. lvlInfo, moneyStr, 1, 1, 1, 1, 1, 1)
+        end
+
+        GameTooltip:AddLine(" ")
+        local summary = CLIAlts:GetAccountSummary()
+        GameTooltip:AddDoubleLine("Total Combined:", CLIAlts:FormatMoney(summary.totalGold or 0, true), 1, 0.82, 0, 1, 1, 1)
+
+        local d1, d7, d30 = CLIAlts:GetGoldHistoryDeltas()
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Gold Trend History:", 0.85, 0.85, 0.85)
+
+        local function formatDelta(val)
+            if val > 0 then
+                return string.format("|cff55e39a+%sg|r", CLIAlts:FormatNumber(val))
+            elseif val < 0 then
+                return string.format("|cffff4444-%sg|r", CLIAlts:FormatNumber(math.abs(val)))
+            else
+                return "|cffa9a08c±0g|r"
+            end
+        end
+
+        GameTooltip:AddDoubleLine("Past 24 Hours:", formatDelta(d1), 0.7, 0.7, 0.7, 1, 1, 1)
+        GameTooltip:AddDoubleLine("Past 7 Days:", formatDelta(d7), 0.7, 0.7, 0.7, 1, 1, 1)
+        GameTooltip:AddDoubleLine("Past 30 Days:", formatDelta(d30), 0.7, 0.7, 0.7, 1, 1, 1)
+
+        GameTooltip:Show()
+    end)
+    wealthWidget:SetScript("OnLeave", function()
+        if GameTooltip then GameTooltip:Hide() end
+    end)
 
     -- 3. Bottom Command Bar (34px)
     local cmdBar = CreateFrame("Frame", "CLIAltsCmdBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -3756,10 +3803,90 @@ function CLIAlts:Render()
             if mainFrame.kpiCards.gold and mainFrame.kpiCards.gold.val then
                 local g = math.floor((metrics.totalGold or 0) / 10000)
                 local s = math.floor(((metrics.totalGold or 0) % 10000) / 100)
-                local goldStr = (g > 0) and string.format("%dg", g) or string.format("%ds", s)
+                local goldStr = (g > 0) and string.format("%sg", self:FormatNumber(g)) or string.format("%ds", s)
                 mainFrame.kpiCards.gold.val:SetText(goldStr)
                 mainFrame.kpiCards.gold.val:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
             end
+        end
+    end
+
+    -- Pinned Sidebar Account Wealth Dynamic Update
+    if mainFrame.wealthWidget then
+        local copper = metrics.totalGold or 0
+        local g = math.floor(copper / 10000)
+        local s = math.floor((copper % 10000) / 100)
+        local c = math.floor(copper % 100)
+
+        local formattedWealth
+        if g > 0 then
+            if g >= 10000 then
+                formattedWealth = string.format("|cffffd700%sg|r |cffc7c7cf%ds|r", self:FormatNumber(g), s)
+            else
+                formattedWealth = string.format("|cffffd700%sg|r |cffc7c7cf%ds|r |cffeda55f%dc|r", self:FormatNumber(g), s, c)
+            end
+        elseif s > 0 then
+            formattedWealth = string.format("|cffc7c7cf%ds|r |cffeda55f%dc|r", s, c)
+        else
+            formattedWealth = string.format("|cffeda55f%dc|r", c)
+        end
+        if mainFrame.wealthWidget.total then
+            mainFrame.wealthWidget.total:SetText(formattedWealth)
+        end
+
+        local d1, d7, _, hasHistory, baselineDays = self:GetGoldHistoryDeltas()
+        local deltaText
+        local readyC = t.ready or { 0.33, 0.89, 0.60 }
+        local blockedC = t.blocked or { 1.0, 0.27, 0.27 }
+        local dimC = t.dim or t.muted or { 0.663, 0.627, 0.549 }
+        local deltaR, deltaG, deltaB = dimC[1], dimC[2], dimC[3]
+
+        if hasHistory then
+            local dVal = (baselineDays and baselineDays >= 7) and d7 or ((baselineDays and baselineDays >= 1) and d1 or d7)
+            local periodStr = (baselineDays and baselineDays >= 7) and "this week" or "recently"
+            if dVal > 0 then
+                deltaText = string.format("+%sg %s", self:FormatNumber(dVal), periodStr)
+                deltaR, deltaG, deltaB = readyC[1], readyC[2], readyC[3]
+            elseif dVal < 0 then
+                deltaText = string.format("-%sg %s", self:FormatNumber(math.abs(dVal)), periodStr)
+                deltaR, deltaG, deltaB = blockedC[1], blockedC[2], blockedC[3]
+            else
+                if d1 > 0 then
+                    deltaText = string.format("+%sg today", self:FormatNumber(d1))
+                    deltaR, deltaG, deltaB = readyC[1], readyC[2], readyC[3]
+                elseif d1 < 0 then
+                    deltaText = string.format("-%sg today", self:FormatNumber(math.abs(d1)))
+                    deltaR, deltaG, deltaB = blockedC[1], blockedC[2], blockedC[3]
+                else
+                    deltaText = string.format("±0g %s", periodStr)
+                end
+            end
+        else
+            local sessInit = self.sessionInitialCopper or copper
+            local sessDiff = copper - sessInit
+            local sessG = math.floor(math.abs(sessDiff) / 10000)
+            local sessS = math.floor((math.abs(sessDiff) % 10000) / 100)
+            if sessDiff > 0 then
+                deltaR, deltaG, deltaB = readyC[1], readyC[2], readyC[3]
+                if sessG > 0 then
+                    deltaText = string.format("+%sg today", self:FormatNumber(sessG))
+                else
+                    deltaText = string.format("+%ds today", sessS > 0 and sessS or 1)
+                end
+            elseif sessDiff < 0 then
+                deltaR, deltaG, deltaB = blockedC[1], blockedC[2], blockedC[3]
+                if sessG > 0 then
+                    deltaText = string.format("-%sg today", self:FormatNumber(sessG))
+                else
+                    deltaText = string.format("-%ds today", sessS > 0 and sessS or 1)
+                end
+            else
+                deltaText = "No change today"
+            end
+        end
+
+        if mainFrame.wealthWidget.delta then
+            mainFrame.wealthWidget.delta:SetText(deltaText)
+            mainFrame.wealthWidget.delta:SetTextColor(deltaR, deltaG, deltaB)
         end
     end
 

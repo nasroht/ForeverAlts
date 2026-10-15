@@ -260,6 +260,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             CLIAlts.isPlayerResting = true
         end
         CLIAlts:CollectCurrentCharacter(true)
+        CLIAlts:RecordGoldSnapshot()
 
     elseif event == "PLAYER_CAMPING" or event == "PLAYER_QUITING" then
         -- Camping / logout countdown initiated

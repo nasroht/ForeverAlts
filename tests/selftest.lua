@@ -2124,6 +2124,89 @@ function CLIAlts:RunSelfTest()
     local fillOk, fillErr = self:FillSendMailNextBatch("BankMule")
     Assert(fillOk == false and fillErr == "Recipient is current player", "SelfMailGuard: FillSendMailNextBatch rejects self-mailing explicitly")
 
+    -- ------------------------------------------------------------------------
+    -- 30. Account Liquid Wealth & Dynamic Trend Engine
+    -- ------------------------------------------------------------------------
+    -- 30a. FormatMoney with thousands separators and coin colors
+    Assert(self:FormatMoney(12345678, true) == "|cffffd7001,234g|r |cffc7c7cf56s|r |cffeda55f78c|r", "Wealth: FormatMoney formats gold with commas and coin colors")
+    Assert(self:FormatMoney(4567, false) == "0g 45s 67c", "Wealth: FormatMoney uncolored formats silver and copper")
+    Assert(self:FormatMoney(0, true) == "|cffeda55f0c|r", "Wealth: FormatMoney 0 returns 0c")
+
+    -- 30b. Account Summary is strictly character liquid copper (zero item valuation)
+    local testWealthDB = {
+        settings = {
+            activeTab = 1,
+            legacyUI = false,
+        },
+        characters = {
+            ["CharAlpha-Forever"] = {
+                name = "CharAlpha",
+                fullName = "CharAlpha-Forever",
+                class = "Mage",
+                classFile = "MAGE",
+                level = 30,
+                money = 250000, -- 25g
+            },
+            ["CharBeta-Forever"] = {
+                name = "CharBeta",
+                fullName = "CharBeta-Forever",
+                class = "Priest",
+                classFile = "PRIEST",
+                level = 20,
+                money = 754532, -- 75g 45s 32c
+            },
+        },
+        goldHistory = {},
+    }
+    CLIAltsDB = testWealthDB
+
+    local sum = self:GetAccountSummary()
+    Assert(sum.totalGold == 1004532, "Wealth: GetAccountSummary strictly sums char.money (liquid currency: 100g 45s 32c)")
+
+    -- 30c. Modern UI wealthWidget.total dynamically renders real liquid gold
+    local mFrame = self:RecreateMainFrame()
+    mFrame:Show()
+    self:Render()
+    Assert(mFrame.wealthWidget ~= nil, "Wealth: wealthWidget exists on mainFrame")
+    Assert(mFrame.wealthWidget.total:GetText():find("100g") ~= nil, "Wealth: wealthWidget.total dynamically displays formatted liquid wealth")
+    Assert(mFrame.wealthWidget.total:GetText():find("5,713g") == nil, "Wealth: wealthWidget.total does NOT show hardcoded placeholder")
+
+    -- 30d. Dynamic weekly gold history delta calculation
+    local now = time()
+    CLIAltsDB.goldHistory = {
+        { date = "2026-10-07", time = now - (8 * 86400), gold = 80, copper = 800000 },
+        { date = "2026-10-14", time = now - (1 * 86400), gold = 95, copper = 950000 },
+        { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
+    }
+    local d1, d7, _, hasHist = self:GetGoldHistoryDeltas()
+    Assert(hasHist == true, "Wealth: hasHist is true when prior snapshots exist")
+    Assert(d7 == 20, "Wealth: 7-day delta correctly computes +20g")
+    Assert(d1 == 5, "Wealth: 1-day delta correctly computes +5g")
+
+    self:Render()
+    Assert(mFrame.wealthWidget.delta:GetText():find("%+20g this week") ~= nil, "Wealth: wealthWidget.delta displays dynamic positive weekly delta")
+    Assert(mFrame.wealthWidget.delta:GetText():find("%+210g") == nil, "Wealth: wealthWidget.delta does NOT show hardcoded +210g")
+
+    -- 30e. Dynamic negative weekly delta
+    CLIAltsDB.goldHistory = {
+        { date = "2026-10-07", time = now - (8 * 86400), gold = 150, copper = 1500000 },
+        { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
+    }
+    self:Render()
+    Assert(mFrame.wealthWidget.delta:GetText():find("%-50g this week") ~= nil, "Wealth: wealthWidget.delta displays dynamic negative weekly delta")
+
+    -- 30f. Tooltip hover verification
+    local onEnterScript = mFrame.wealthWidget:GetScript("OnEnter")
+    Assert(onEnterScript ~= nil, "Wealth: wealthWidget has OnEnter tooltip script")
+    onEnterScript(mFrame.wealthWidget)
+    Assert(#GameTooltip.lines > 0, "Wealth: GameTooltip populated on wealthWidget hover")
+    local tipText = ""
+    for _, l in ipairs(GameTooltip.lines) do
+        tipText = tipText .. (l.left or "") .. " " .. (l.right or "") .. " "
+    end
+    Assert(tipText:find("Account Wealth Summary") ~= nil, "Wealth: Tooltip contains Account Wealth Summary header")
+    Assert(tipText:find("Does NOT include inventory") ~= nil, "Wealth: Tooltip explicitly states inventory is excluded")
+
     -- Restore state
     CLIAltsDB = oldDB
     self.curPlayerPrimary = savedPrimary
@@ -2131,7 +2214,7 @@ function CLIAlts:RunSelfTest()
     self.curPlayerKey = savedKey
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
