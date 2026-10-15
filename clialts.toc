@@ -1,6 +1,6 @@
-## Interface: 11506, 11507, 11508, 11509, 16001, 110007, 110100, 110200
-## Interface-Classic: 11506, 11507, 11508, 11509, 16001
-## Interface-Retail: 110007, 110100, 110200, 120100
+## Interface: 11506, 11507, 11508, 11509, 110007, 110100, 110200
+## Interface-Classic: 11506, 11507, 11508, 11509
+## Interface-Retail: 110007, 110100, 110200
 ## Title: |cff00ff66CLIAlts|r - WoW Forever & Classic Alt Manager
 ## Notes: Built primarily for World of Warcraft: Forever & Classic Era (with Retail support). Retro terminal alt dashboard, rested XP optimization, leveling cohorts & milestones, automated dungeon quest tracker, Legacy Point calculator, and inter-alt supply chain router.
 ## Author: CLIAlts
