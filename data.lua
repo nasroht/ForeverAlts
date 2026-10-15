@@ -4442,58 +4442,53 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
 
     local queryTarget = itemID or itemIdentifier
     if queryTarget then
-        local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType
+        local rawInfo = nil
         if self.GetItemInfo then
-            local ok, n, _, qu, _, _, _, _, _, el, _, _, c, sc, bt = pcall(self.GetItemInfo, self, queryTarget)
-            if ok and n then
-                name, q, eqLoc, cID, scID, bType = n, qu, el, c, sc, bt
-            else
-                local ok2, n2, _, qu2, _, _, _, _, _, el2, _, _, c2, sc2, bt2 = pcall(self.GetItemInfo, queryTarget)
-                if ok2 and n2 then
-                    name, q, eqLoc, cID, scID, bType = n2, qu2, el2, c2, sc2, bt2
-                end
+            local ok, res = pcall(function() return { self.GetItemInfo(queryTarget) } end)
+            if ok and type(res) == "table" and res[1] then
+                rawInfo = res
             end
         end
-        if not name and GetItemInfo then
-            pcall(function()
-                name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(queryTarget)
-            end)
+        if not rawInfo and GetItemInfo then
+            local ok, res = pcall(function() return { GetItemInfo(queryTarget) } end)
+            if ok and type(res) == "table" and res[1] then
+                rawInfo = res
+            end
         end
-        if name then
-            itemName = name
-            quality = quality or q
-            classID = classID or cID
-            subclassID = subclassID or scID
-            equipLoc = equipLoc or eqLoc
-            bindType = bindType or bType
+        if rawInfo and rawInfo[1] then
+            itemName = rawInfo[1]
+            quality = quality or rawInfo[3]
+            equipLoc = equipLoc or rawInfo[9]
+            classID = classID or rawInfo[12]
+            subclassID = subclassID or rawInfo[13]
+            bindType = bindType or rawInfo[14]
         end
 
         if not classID then
-            local _, _, _, eq, _, c, sc
+            local rawInstant = nil
             if self.GetItemInfoInstant then
-                local ok, _, _, _, e, _, cl, s = pcall(self.GetItemInfoInstant, self, queryTarget)
-                if ok and cl then
-                    eq, c, sc = e, cl, s
-                else
-                    local ok2, _, _, _, e2, _, cl2, s2 = pcall(self.GetItemInfoInstant, queryTarget)
-                    if ok2 and cl2 then
-                        eq, c, sc = e2, cl2, s2
-                    end
+                local ok, res = pcall(function() return { self.GetItemInfoInstant(queryTarget) } end)
+                if ok and type(res) == "table" and res[6] then
+                    rawInstant = res
                 end
             end
-            if not c and C_Item and C_Item.GetItemInfoInstant then
-                pcall(function()
-                    _, _, _, eq, _, c, sc = C_Item.GetItemInfoInstant(queryTarget)
-                end)
+            if not rawInstant and C_Item and C_Item.GetItemInfoInstant then
+                local ok, res = pcall(function() return { C_Item.GetItemInfoInstant(queryTarget) } end)
+                if ok and type(res) == "table" and res[6] then
+                    rawInstant = res
+                end
             end
-            if not c and GetItemInfoInstant then
-                pcall(function()
-                    _, _, _, eq, _, c, sc = GetItemInfoInstant(queryTarget)
-                end)
+            if not rawInstant and GetItemInfoInstant then
+                local ok, res = pcall(function() return { GetItemInfoInstant(queryTarget) } end)
+                if ok and type(res) == "table" and res[6] then
+                    rawInstant = res
+                end
             end
-            classID = classID or c
-            subclassID = subclassID or sc
-            equipLoc = equipLoc or eq
+            if rawInstant and rawInstant[6] then
+                equipLoc = equipLoc or rawInstant[4]
+                classID = classID or rawInstant[6]
+                subclassID = subclassID or rawInstant[7]
+            end
         end
     end
 
