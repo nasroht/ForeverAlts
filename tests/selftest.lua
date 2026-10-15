@@ -554,6 +554,86 @@ function CLIAlts:RunSelfTest()
         self.selectedCharKey = nil
     end
 
+    do -- 11e. Phase 2: Modern Row List & Pooled Components Tests
+        local mFrame = self:CreateModernMainFrame()
+        local rows = self:GetRowFrames()
+        Assert(rows ~= nil and #rows == 12, "RowList: rowFrames contains exactly 12 pooled row frames")
+
+        -- Check first row properties
+        local r1 = rows[1]
+        Assert(r1 ~= nil and r1:GetHeight() == 52, "RowList: Row 1 height is 52px")
+        Assert(r1.classRing ~= nil, "RowList: Row 1 has classRing")
+        Assert(r1.classRing:GetWidth() == 34 and r1.classRing:GetHeight() == 34, "RowList: classRing dimensions are 34x34px")
+        Assert(r1.classRingInitial ~= nil, "RowList: Row 1 has classRingInitial")
+        Assert(r1.nameLine ~= nil, "RowList: Row 1 has nameLine")
+        Assert(r1.subLine ~= nil, "RowList: Row 1 has subLine")
+        Assert(r1.restLabel ~= nil, "RowList: Row 1 has restLabel")
+        Assert(r1.restBarBg ~= nil, "RowList: Row 1 has restBarBg")
+        Assert(r1.restBarFill ~= nil, "RowList: Row 1 has restBarFill")
+        Assert(r1.statusPill ~= nil, "RowList: Row 1 has statusPill")
+        Assert(r1.statusPillText ~= nil, "RowList: Row 1 has statusPillText")
+        Assert(r1.goldText ~= nil, "RowList: Row 1 has goldText")
+        Assert(#r1.cells == 8, "RowList: Row 1 has 8 multi-column cells for other tabs")
+
+        -- Test UTF-8 Initial Extraction
+        Assert(self:GetFirstLetter("Åse") == "Å", "UTF8: GetFirstLetter extracts Å from Åse")
+        Assert(self:GetFirstLetter("Mjölnir") == "M", "UTF8: GetFirstLetter extracts M from Mjölnir")
+        Assert(self:GetFirstLetter("Thor") == "T", "UTF8: GetFirstLetter extracts T from Thor")
+
+        -- Test Status Pill Formatter
+        local sMax, styleMax = self:FmtStatus({ level = 60 })
+        Assert(sMax == "No rest XP" and styleMax == "muted_outline", "StatusPill: Max level returns 'No rest XP'")
+
+        local sCap, styleCap = self:FmtStatus({
+            level = 47,
+            curXP = 1000,
+            maxXP = 20000,
+            restedXP = 30000,
+            lastUpdate = time() - 3600,
+        })
+        Assert(sCap:find("Losing") ~= nil and styleCap == "warn_fill", "StatusPill: Capped alt returns 'Losing' with warn_fill")
+
+        -- Test Live Row Render with Mock Alt
+        local oldChars = CLIAltsDB and CLIAltsDB.characters
+        local oldTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
+        CLIAltsDB.characters = {
+            ["Thor-Pyrewood"] = {
+                name = "Thor",
+                fullName = "Thor-Pyrewood",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 47,
+                race = "Orc",
+                faction = "Horde",
+                money = 4120000, -- 412g
+                curXP = 1000,
+                maxXP = 20000,
+                restedXP = 30000,
+                lastUpdate = time() - 3600,
+            }
+        }
+        CLIAltsDB.settings.activeTab = 1
+        mFrame:Show()
+        self:Render()
+
+        Assert(r1.nameLine:GetText() == "Thor", "RowList: Row 1 displays name 'Thor'")
+        Assert(r1.subLine:GetText() == "47 Orc Warrior · Horde", "RowList: Row 1 displays subline '47 Orc Warrior · Horde'")
+        Assert(r1.classRingInitial:GetText() == "T", "RowList: Row 1 displays initial 'T'")
+        Assert(r1.goldText:GetText() == "412g", "RowList: Row 1 displays formatted gold '412g'")
+        Assert(r1.restLabel:GetText() == "150% rested (cap)", "RowList: Row 1 displays '150% rested (cap)'")
+        Assert(r1.statusPillText:GetText():find("Losing") ~= nil, "RowList: Row 1 displays 'Losing' in status pill")
+
+        -- Test Selection
+        self.selectedCharKey = "Thor-Pyrewood"
+        self:Render()
+        Assert(self.selectedCharKey == "Thor-Pyrewood", "RowList: Selection persists across render")
+
+        -- Restore DB
+        CLIAltsDB.characters = oldChars
+        CLIAltsDB.settings.activeTab = oldTab
+        self.selectedCharKey = nil
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()

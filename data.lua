@@ -51,6 +51,7 @@ local FALLBACK_CLASS_COLORS = {
     ["DEMONHUNTER"] = { r = 0.64, g = 0.19, b = 0.79, hex = "a330c9" },
     ["EVOKER"]      = { r = 0.20, g = 0.58, b = 0.50, hex = "33937f" },
 }
+CLIAlts.FALLBACK_CLASS_COLORS = FALLBACK_CLASS_COLORS
 
 -- ----------------------------------------------------------------------------
 -- Client Flavor & Retail Detection Helper

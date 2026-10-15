@@ -501,6 +501,88 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
 end
 
 -- ----------------------------------------------------------------------------
+-- UTF-8 Initial Extraction Helper
+-- Handles multi-byte characters such as Å in Åse, ö in östen
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetFirstLetter(name)
+    if not name or name == "" then return "?" end
+    local b = name:byte(1)
+    if not b then return "?" end
+    if b < 128 then
+        return name:sub(1, 1):upper()
+    elseif b >= 192 and b <= 223 then
+        return name:sub(1, 2)
+    elseif b >= 224 and b <= 239 then
+        return name:sub(1, 3)
+    elseif b >= 240 then
+        return name:sub(1, 4)
+    end
+    return name:sub(1, 1):upper()
+end
+
+-- ----------------------------------------------------------------------------
+-- Status Pill Formatter (Phase 2/3 Modern Rows)
+-- Returns text and style ("warn_fill", "info_outline", "muted_outline")
+-- ----------------------------------------------------------------------------
+function CLIAlts:FmtStatus(char, t)
+    if not char then return "---", "muted_outline" end
+    local maxLevel = self.GetMaxLevel and self:GetMaxLevel() or 60
+    local level = char.level or 1
+    if level >= maxLevel then
+        return "No rest XP", "muted_outline"
+    end
+
+    local now = time()
+    local lastSeen = char.lastUpdate or char.lastSeen or now
+    local unseenDays = math.floor((now - lastSeen) / 86400)
+    if unseenDays >= 30 and (not char.restedXP or char.restedXP == 0) then
+        return string.format("Unseen %dd", unseenDays), "muted_outline"
+    end
+
+    local wastedSec, _, _, timeStr = self:GetRestedWaste(char)
+    if wastedSec and wastedSec > 0 then
+        return "Losing " .. timeStr, "warn_fill"
+    end
+
+    local rested = self:GetRestedData(char)
+    if rested and rested.isFull then
+        return "Losing " .. (timeStr or "0m"), "warn_fill"
+    elseif rested and rested.timeLeftStr and rested.timeLeftStr ~= "---" then
+        local sec = rested.timeLeftSec or 0
+        local dur = rested.timeLeftStr
+        if sec > 0 and sec < 86400 then
+            return "Cap in " .. dur, "info_outline"
+        else
+            return "Cap in " .. dur, "muted_outline"
+        end
+    end
+
+    if unseenDays >= 30 then
+        return string.format("Unseen %dd", unseenDays), "muted_outline"
+    end
+
+    return "No rest XP", "muted_outline"
+end
+
+-- ----------------------------------------------------------------------------
+-- Rows Per Page Helper
+-- ----------------------------------------------------------------------------
+function CLIAlts:GetRowsPerPage()
+    if mainFrame and mainFrame.isLegacyUI then
+        return 8
+    end
+    local activeTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
+    if activeTab > 1 then
+        return 10
+    end
+    return 8
+end
+
+function CLIAlts:GetRowFrames()
+    return rowFrames
+end
+
+-- ----------------------------------------------------------------------------
 -- Window Position Persistence
 -- ----------------------------------------------------------------------------
 function CLIAlts:SaveWindowPosition(frame)
@@ -3164,11 +3246,25 @@ function CLIAlts:CreateModernMainFrame()
     end)
     frame.rowsContainer = rowsContainer
 
-    -- Initialize backward-compatible row frames for Phase 1
-    for i = 1, 8 do
-        local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    -- Hidden Button for Enter keyboard override (details on Enter)
+    local btnFocusEnter = _G["CLIAltsFocusEnterBtn"] or CreateFrame("Button", "CLIAltsFocusEnterBtn", frame)
+    btnFocusEnter:SetScript("OnClick", function()
+        if MouseIsOver and MouseIsOver(frame) then
+            if not (frame.searchBox and frame.searchBox:HasFocus()) and not (frame.promptBox and frame.promptBox:HasFocus()) then
+                local selChar = CLIAlts:GetSelectedOrCurChar()
+                if selChar then
+                    CLIAlts:ShowDossierPopup(selChar)
+                end
+            end
+        end
+    end)
+
+    -- Initialize 12 pooled row frames for Modern UI (Phase 2: Row List)
+    local MODERN_ROWS_COUNT = 12
+    for i = 1, MODERN_ROWS_COUNT do
+        local row = CreateFrame("Button", "CLIAltsModernRow" .. i, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
         row:SetHeight(52)
-        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 56))
+        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 60))
         row:SetPoint("RIGHT", rowsContainer, "RIGHT", 0, 0)
         row.rowIndex = i
         if row.SetClipsChildren then row:SetClipsChildren(true) end
@@ -3178,59 +3274,97 @@ function CLIAlts:CreateModernMainFrame()
             edgeSize = 1,
             insets = { left = 1, right = 1, top = 1, bottom = 1 }
         })
-        if row.SetBackdropColor then row:SetBackdropColor(panelR, panelG, panelB, 0.5) end
-        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(0, 0, 0, 0) end
+        if row.SetBackdropColor then row:SetBackdropColor(panelR, panelG, panelB, 0.65) end
+        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(lineR, lineG, lineB, 0.35) end
 
+        -- 34px Class-Coloured Ring with Alt Initial
+        local classRing = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        classRing:SetSize(34, 34)
+        classRing:SetPoint("LEFT", row, "LEFT", 12, 0)
+        classRing:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 2,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        row.classRing = classRing
+
+        local classRingInitial = classRing:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(classRingInitial, 15, "OUTLINE")
+        classRingInitial:SetPoint("CENTER", classRing, "CENTER", 0, 0)
+        row.classRingInitial = classRingInitial
+
+        -- Name & Subline (level race class · faction)
         local nameLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(nameLine, 14, "OUTLINE")
-        nameLine:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -6)
+        self:SetWidgetFont(nameLine, 15, "OUTLINE")
+        nameLine:SetPoint("TOPLEFT", classRing, "TOPRIGHT", 12, -7)
         nameLine:SetText("")
         row.nameLine = nameLine
 
         local subLine = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(subLine, 11, "")
-        subLine:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 14, 6)
+        subLine:SetPoint("BOTTOMLEFT", classRing, "BOTTOMRIGHT", 12, 7)
         subLine:SetText("")
         row.subLine = subLine
 
-        local levelText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(levelText, 14, "OUTLINE")
-        levelText:SetPoint("CENTER", row, "LEFT", 250, 0)
-        levelText:SetText("")
-        row.levelText = levelText
+        -- Rested XP Progress Bar & Label
+        local restLabel = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(restLabel, 12, "OUTLINE")
+        restLabel:SetPoint("BOTTOMLEFT", row, "LEFT", 250, 4)
+        restLabel:SetText("")
+        row.restLabel = restLabel
+        row.restPercentText = restLabel
 
-        local restPercentText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(restPercentText, 13, "OUTLINE")
-        restPercentText:SetPoint("LEFT", row, "LEFT", 300, 0)
-        restPercentText:SetText("")
-        row.restPercentText = restPercentText
+        local restBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        restBarBg:SetSize(160, 6)
+        restBarBg:SetPoint("TOPLEFT", restLabel, "BOTTOMLEFT", 0, -3)
+        restBarBg:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 0, right = 0, top = 0, bottom = 0 }
+        })
+        if restBarBg.SetBackdropColor then restBarBg:SetBackdropColor(lineR, lineG, lineB, 1.0) end
+        if restBarBg.SetBackdropBorderColor then restBarBg:SetBackdropBorderColor(0, 0, 0, 0) end
+        row.restBarBg = restBarBg
+        row.barBg = restBarBg
 
-        local barBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        barBg:SetSize(220, 8)
-        barBg:SetPoint("LEFT", restPercentText, "RIGHT", 10, 0)
-        barBg:SetBackdrop({
+        local restBarFill = restBarBg:CreateTexture(nil, "ARTWORK")
+        restBarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+        restBarFill:SetPoint("TOPLEFT", restBarBg, "TOPLEFT", 0, 0)
+        restBarFill:SetPoint("BOTTOMLEFT", restBarBg, "BOTTOMLEFT", 0, 0)
+        restBarFill:SetWidth(0)
+        row.restBarFill = restBarFill
+        row.barFill = restBarFill
+
+        -- Status Pill
+        local statusPill = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        statusPill:SetSize(104, 24)
+        statusPill:SetPoint("LEFT", restBarBg, "RIGHT", 24, 6)
+        statusPill:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
             edgeSize = 1,
             insets = { left = 1, right = 1, top = 1, bottom = 1 }
         })
-        if barBg.SetBackdropColor then barBg:SetBackdropColor(lineR, lineG, lineB, 0.8) end
-        if barBg.SetBackdropBorderColor then barBg:SetBackdropBorderColor(0, 0, 0, 0) end
-        row.barBg = barBg
+        row.statusPill = statusPill
 
-        local barFill = barBg:CreateTexture(nil, "ARTWORK")
-        barFill:SetTexture("Interface\\TargetingFrame\\UI-StatusBar")
-        barFill:SetPoint("TOPLEFT", barBg, "TOPLEFT", 0, 0)
-        barFill:SetPoint("BOTTOMLEFT", barBg, "BOTTOMLEFT", 0, 0)
-        barFill:SetWidth(0)
-        row.barFill = barFill
+        local statusPillText = statusPill:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(statusPillText, 11, "OUTLINE")
+        statusPillText:SetPoint("CENTER", statusPill, "CENTER", 0, 0)
+        statusPillText:SetText("")
+        row.statusPillText = statusPillText
+        row.etaText = statusPillText
 
-        local etaText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(etaText, 12, "")
-        etaText:SetPoint("RIGHT", row, "RIGHT", -16, 0)
-        etaText:SetText("")
-        row.etaText = etaText
+        -- Right-Aligned Gold Value
+        local goldText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(goldText, 14, "OUTLINE")
+        goldText:SetPoint("RIGHT", row, "RIGHT", -16, 0)
+        goldText:SetJustifyH("RIGHT")
+        goldText:SetText("")
+        row.goldText = goldText
 
+        -- Multi-column cells for Tabs 2 to 7
         row.cells = {}
         for j = 1, 8 do
             local cell = row:CreateFontString(nil, "OVERLAY")
@@ -3245,7 +3379,6 @@ function CLIAlts:CreateModernMainFrame()
         row:SetScript("OnClick", function(self, button)
             if self.charData then
                 CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
-                CLIAlts:Render()
                 local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
                 if button == "RightButton" then
                     CLIAlts:ShowRowContextMenu(self, self.charData)
@@ -3260,21 +3393,32 @@ function CLIAlts:CreateModernMainFrame()
                     CLIAlts:CycleCharacterTier(self.charData)
                     CLIAlts:RequestRender()
                 else
-                    CLIAlts:ShowDossierPopup(self.charData)
+                    local now = (GetTime and GetTime()) or time()
+                    if self.lastClickTime and (now - self.lastClickTime) < 0.35 then
+                        CLIAlts:ShowDossierPopup(self.charData)
+                    end
+                    self.lastClickTime = now
+                    CLIAlts:Render()
                 end
             end
         end)
+
         row:SetScript("OnEnter", function(self)
-            if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+            local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
+            if not isSelected then
+                if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
+                if self.SetBackdropBorderColor then self:SetBackdropBorderColor(lineR, lineG, lineB, 0.65) end
+            end
         end)
+
         row:SetScript("OnLeave", function(self)
             local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
             if isSelected then
-                if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.9) end
+                if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
                 if self.SetBackdropBorderColor then self:SetBackdropBorderColor(brandR, brandG, brandB, 1.0) end
             else
-                if self.SetBackdropColor then self:SetBackdropColor(panelR, panelG, panelB, 0.5) end
-                if self.SetBackdropBorderColor then self:SetBackdropBorderColor(0, 0, 0, 0) end
+                if self.SetBackdropColor then self:SetBackdropColor(panelR, panelG, panelB, 0.65) end
+                if self.SetBackdropBorderColor then self:SetBackdropBorderColor(lineR, lineG, lineB, 0.35) end
             end
         end)
 
@@ -3325,6 +3469,10 @@ function CLIAlts:RecreateMainFrame()
         mainFrame:Hide()
         mainFrame:ClearAllPoints()
     end
+    for _, r in ipairs(rowFrames) do
+        if r.Hide then r:Hide() end
+    end
+    rowFrames = {}
     mainFrame = nil
     self.mainFrame = nil
     _G["CLIAltsMainFrame"] = nil
@@ -4044,7 +4192,8 @@ function CLIAlts:Render()
         end
     end
     local chars = self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
-    totalPages = math.max(1, math.ceil(#chars / ROWS_COUNT))
+    local numRows = (self.GetRowsPerPage and self:GetRowsPerPage()) or ROWS_COUNT
+    totalPages = math.max(1, math.ceil(#chars / numRows))
     if currentPage > totalPages then currentPage = totalPages end
     if currentPage < 1 then currentPage = 1 end
 
@@ -4103,130 +4252,333 @@ function CLIAlts:Render()
         end
     end
 
-    -- Render 8 Modern 2-Line Rows (Overview) or Multi-Column Rows (Tabs 2-6)
-    for rowIndex = 1, ROWS_COUNT do
+    -- Render Rows (Overview Phase 2 Component or Multi-Column Rows across Tabs)
+    local raisedR, raisedG, raisedB = self:Hex("raised")
+    local lineR, lineG, lineB = self:Hex("line")
+    local panelR, panelG, panelB = self:Hex("panel")
+    local brandR, brandG, brandB = self:Hex("brand")
+    local warnR, warnG, warnB = self:Hex("warn")
+    local fillR, fillG, fillB = self:Hex("fill")
+    local textR, textG, textB = self:Hex("text")
+    local mutedR, mutedG, mutedB = self:Hex("muted")
+
+    for rowIndex = 1, #rowFrames do
         local row = rowFrames[rowIndex]
-        local charIndex = (currentPage - 1) * ROWS_COUNT + rowIndex
-        local char = chars[charIndex]
+        if rowIndex <= numRows then
+            local charIndex = (currentPage - 1) * numRows + rowIndex
+            local char = chars[charIndex]
 
-        if char then
-            row.charData = char
-            local isSelected = (CLIAlts.selectedCharKey and (char.fullName == CLIAlts.selectedCharKey or char.name == CLIAlts.selectedCharKey))
-            if isSelected then
-                local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-                if row.SetBackdropColor then
-                    row:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
-                end
-                if row.SetBackdropBorderColor then
-                    row:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
-                end
-                if row.borderL then
-                    row.borderL:SetText(string.format("|cff%s>|r", t.highlightHex or "ffd34e"))
-                end
-            else
-                local rowBg = (rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
-                if row.SetBackdropColor then
-                    row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
-                end
-                if row.SetBackdropBorderColor then
-                    row:SetBackdropBorderColor(0, 0, 0, 0)
-                end
-                if row.borderL then
-                    row.borderL:SetText("")
-                end
-            end
+            if char then
+                row.charData = char
+                local isSelected = (CLIAlts.selectedCharKey and (char.fullName == CLIAlts.selectedCharKey or char.name == CLIAlts.selectedCharKey))
 
-            if activeTab == 1 then
-                -- ------------------------------------------------------------
-                -- Tab 1: Executive 2-Line Cell with Graphical Progress Bar
-                -- ------------------------------------------------------------
-                local coloredName = self:ColorizePlayerName(char.fullName or char.name, char.classFile)
-                local isCur = (char.fullName and char.fullName == self.curPlayerFullName) or (char.name and char.name == self.curPlayerName)
-                local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
-
-                if row.nameLine then
-                    row.nameLine:SetText(curPrefix .. coloredName)
-                    row.nameLine:Show()
-                end
-
-                if row.subLine then
-                    local roleTag
-                    if char.tier == "CORE" then
-                        roleTag = string.format("|cff%sCORE|r", t.highlightHex or "ffd34e")
-                    elseif char.tier == "RESERVE" then
-                        roleTag = string.format("|cff%sALT|r", t.accentHex or "57d6e8")
-                    elseif char.tier == "BANK" then
-                        roleTag = string.format("|cff%sBANK|r", t.pendingHex or "ffb547")
+                if not mainFrame.isLegacyUI then
+                    -- Modern UI row styling
+                    if isSelected then
+                        if row.SetBackdropColor then row:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
+                        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(brandR, brandG, brandB, 1.0) end
                     else
-                        roleTag = string.format("|cff%sALT|r", t.mutedHex or "a9a08c")
+                        local rowBgR = (rowIndex % 2 == 0) and raisedR or panelR
+                        local rowBgG = (rowIndex % 2 == 0) and raisedG or panelG
+                        local rowBgB = (rowIndex % 2 == 0) and raisedB or panelB
+                        if row.SetBackdropColor then row:SetBackdropColor(rowBgR, rowBgG, rowBgB, 0.65) end
+                        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(lineR, lineG, lineB, 0.35) end
                     end
 
-                    local isTopNext = (topNext and topNext.char and ((topNext.char.fullName or topNext.char.name) == (char.fullName or char.name)))
-                    if isTopNext then
-                        roleTag = roleTag .. string.format(" · |cff%sNEXT|r", t.highlightHex or "ffd34e")
-                    end
+                    if activeTab == 1 then
+                        -- --------------------------------------------------------
+                        -- Tab 1 (Overview): Phase 2 Modern Row Component
+                        -- --------------------------------------------------------
+                        local classFile = char.classFile or "WARRIOR"
+                        local cr, cg, cb = self:GetClassColor(classFile)
 
-                    local statusDetail = ""
-                    if char.supply_role and char.supply_role ~= "" then
-                        statusDetail = " · " .. char.supply_role
-                    elseif char.level and char.level >= self:GetMaxLevel() then
-                        statusDetail = " · Target Level Reached"
-                    elseif char.tier == "BANK" then
-                        statusDetail = " · Storage Mule"
-                    end
-                    row.subLine:SetText(roleTag .. statusDetail)
-                    row.subLine:Show()
-                end
-
-                if row.levelText then
-                    row.levelText:SetText(string.format("|cffffffff%d|r", char.level or 1))
-                    row.levelText:Show()
-                end
-
-                local rested = self:GetRestedData(char)
-                if rested and not rested.isMaxLevel then
-                    local pct = rested.percent or 0
-                    local maxPct = rested.maxPercent or 150
-                    local est = rested.isEstimate and "~" or ""
-                    if row.restPercentText then
-                        row.restPercentText:SetText(string.format("|cff%s%s%d%%|r", t.highlightHex or "ffd34e", est, pct))
-                        row.restPercentText:Show()
-                    end
-
-                    local ratio = math.min(1.0, math.max(0, pct / maxPct))
-                    local maxBarW = isComp and 170 or 220
-                    local barW = math.floor(maxBarW * ratio)
-                    if row.barFill then
-                        row.barFill:SetWidth(math.max(1, barW))
-                        row.barFill:SetVertexColor(t.primary[1], t.primary[2], t.primary[3], 0.95)
-                    end
-                    if row.barBg then
-                        row.barBg:Show()
-                    end
-
-                    if row.etaText then
-                        if pct >= maxPct then
-                            row.etaText:SetText(string.format("|cff%sAt Cap|r", t.readyHex or "55e39a"))
-                        else
-                            row.etaText:SetText(string.format("|cff%s%s|r", t.dimHex or "a9a08c", rested.timeLeftStr or "---"))
+                        -- 1. 34px Class-Coloured Ring with Alt Initial
+                        if row.classRing then
+                            if row.classRing.SetBackdropBorderColor then
+                                row.classRing:SetBackdropBorderColor(cr, cg, cb, 0.95)
+                            end
+                            if row.classRing.SetBackdropColor then
+                                row.classRing:SetBackdropColor(cr * 0.15, cg * 0.15, cb * 0.15, 0.70)
+                            end
+                            if row.classRingInitial then
+                                local initial = self:GetFirstLetter(char.name or "?")
+                                row.classRingInitial:SetText(initial)
+                                row.classRingInitial:SetTextColor(cr, cg, cb)
+                            end
+                            row.classRing:Show()
                         end
-                        row.etaText:Show()
+
+                        -- 2. Name Line
+                        if row.nameLine then
+                            row.nameLine:SetText(char.name or "Unknown")
+                            row.nameLine:SetTextColor(cr, cg, cb)
+                            row.nameLine:Show()
+                        end
+
+                        -- 3. Subline (level race class · faction)
+                        if row.subLine then
+                            local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or "Unknown"
+                            local faction = char.faction or "Neutral"
+                            local class = char.class or char.className or classFile
+                            row.subLine:SetText(string.format("%d %s %s · %s", char.level or 1, race, class, faction))
+                            row.subLine:SetTextColor(mutedR, mutedG, mutedB)
+                            row.subLine:Show()
+                        end
+
+                        -- 4. Rested XP Status Bar & Label
+                        local rested = self:GetRestedData(char)
+                        if rested and not rested.isMaxLevel then
+                            local pct = rested.percent or 0
+                            local maxPct = rested.maxPercent or 150
+                            local ratio = math.min(1.0, math.max(0, pct / maxPct))
+                            local barW = math.floor(160 * ratio)
+                            if row.restBarFill then
+                                row.restBarFill:SetWidth(math.max(1, barW))
+                            end
+                            if row.restBarBg then
+                                row.restBarBg:Show()
+                            end
+
+                            if row.restLabel then
+                                if pct >= maxPct then
+                                    row.restLabel:SetText("150% rested (cap)")
+                                    row.restLabel:SetTextColor(warnR, warnG, warnB)
+                                    if row.restBarFill then row.restBarFill:SetVertexColor(warnR, warnG, warnB, 1.0) end
+                                else
+                                    row.restLabel:SetText(string.format("%d%%", pct))
+                                    row.restLabel:SetTextColor(textR, textG, textB)
+                                    if row.restBarFill then row.restBarFill:SetVertexColor(fillR, fillG, fillB, 1.0) end
+                                end
+                                row.restLabel:Show()
+                            end
+                        else
+                            if row.restLabel then
+                                row.restLabel:SetText("Max level")
+                                row.restLabel:SetTextColor(mutedR, mutedG, mutedB)
+                                row.restLabel:Show()
+                            end
+                            if row.restBarBg then
+                                row.restBarBg:Hide()
+                            end
+                        end
+
+                        -- 5. Status Pill
+                        local statusText, statusStyle = self:FmtStatus(char, t)
+                        if row.statusPill and row.statusPillText then
+                            row.statusPillText:SetText(statusText)
+                            if statusStyle == "warn_fill" then
+                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(warnR, warnG, warnB, 1.0) end
+                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(warnR, warnG, warnB, 1.0) end
+                                row.statusPillText:SetTextColor(0.05, 0.04, 0.02)
+                            elseif statusStyle == "info_outline" then
+                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(fillR, fillG, fillB, 0.12) end
+                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(fillR, fillG, fillB, 0.85) end
+                                row.statusPillText:SetTextColor(fillR, fillG, fillB)
+                            else -- muted_outline
+                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(panelR, panelG, panelB, 0.50) end
+                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(lineR, lineG, lineB, 0.75) end
+                                row.statusPillText:SetTextColor(mutedR, mutedG, mutedB)
+                            end
+                            row.statusPill:Show()
+                        end
+
+                        -- 6. Right-Aligned Gold Value
+                        if row.goldText then
+                            local copper = char.money or 0
+                            local gold = math.floor(copper / 10000)
+                            row.goldText:SetText(self:FormatNumber(gold) .. "g")
+                            row.goldText:SetTextColor(textR, textG, textB)
+                            row.goldText:Show()
+                        end
+
+                        -- Hide multi-column cells on Tab 1
+                        for idx = 1, 8 do
+                            local cell = row.cells and row.cells[idx]
+                            if cell then
+                                cell:SetText("")
+                                cell:Hide()
+                            end
+                        end
+                    else
+                        -- --------------------------------------------------------
+                        -- Tabs 2 to 7: Multi-Column Cells
+                        -- --------------------------------------------------------
+                        if row.classRing then row.classRing:Hide() end
+                        if row.nameLine then row.nameLine:Hide() end
+                        if row.subLine then row.subLine:Hide() end
+                        if row.restLabel then row.restLabel:Hide() end
+                        if row.restBarBg then row.restBarBg:Hide() end
+                        if row.statusPill then row.statusPill:Hide() end
+                        if row.goldText then row.goldText:Hide() end
+
+                        local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
+                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v6"
+                        local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
+                        if relayoutRow then
+                            row.lastLayoutKey = rowLayoutKey
+                        end
+
+                        local rowXOffset = 16
+                        for idx = 1, 8 do
+                            local cell = row.cells and row.cells[idx]
+                            local col = cols[idx]
+                            if cell then
+                                if col then
+                                    local colW = (mainFrame and not mainFrame.isLegacyUI and col.mpw) or (isComp and (col.cpw or col.pw)) or col.pw
+                                    local padR = (mainFrame and not mainFrame.isLegacyUI and col.mpadRight) or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
+                                    local cellW = math.max(1, colW - padR)
+                                    if relayoutRow then
+                                        cell:ClearAllPoints()
+                                        cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
+                                        cell:SetWidth(cellW)
+                                        cell:SetJustifyH(col.align or "LEFT")
+                                    end
+                                    cell:SetText(col.fmt(char, t) or "")
+                                    cell:Show()
+                                    rowXOffset = rowXOffset + colW
+                                else
+                                    cell:SetText("")
+                                    cell:Hide()
+                                end
+                            end
+                        end
                     end
                 else
-                    if row.restPercentText then
-                        row.restPercentText:SetText(string.format("|cff%s---|r", t.dimHex or "a9a08c"))
-                        row.restPercentText:Show()
+                    -- Legacy UI row rendering
+                    if isSelected then
+                        local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+                        if row.SetBackdropColor then row:SetBackdropColor(hov[1], hov[2], hov[3], 0.35) end
+                        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8) end
+                        if row.borderL then row.borderL:SetText(string.format("|cff%s>|r", t.highlightHex or "ffd34e")) end
+                    else
+                        local rowBg = (rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
+                        if row.SetBackdropColor then row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4]) end
+                        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(0, 0, 0, 0) end
+                        if row.borderL then row.borderL:SetText("") end
                     end
-                    if row.barBg then
-                        row.barBg:Hide()
-                    end
-                    if row.etaText then
-                        row.etaText:SetText(string.format("|cff%sMax Level|r", t.readyHex or "55e39a"))
-                        row.etaText:Show()
+
+                    if activeTab == 1 then
+                        local coloredName = self:ColorizePlayerName(char.fullName or char.name, char.classFile)
+                        local isCur = (char.fullName and char.fullName == self.curPlayerFullName) or (char.name and char.name == self.curPlayerName)
+                        local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
+                        if row.nameLine then
+                            row.nameLine:SetText(curPrefix .. coloredName)
+                            row.nameLine:Show()
+                        end
+                        if row.subLine then
+                            local roleTag = (char.tier == "CORE" and string.format("|cff%sCORE|r", t.highlightHex or "ffd34e"))
+                                or (char.tier == "RESERVE" and string.format("|cff%sALT|r", t.accentHex or "57d6e8"))
+                                or (char.tier == "BANK" and string.format("|cff%sBANK|r", t.pendingHex or "ffb547"))
+                                or string.format("|cff%sALT|r", t.mutedHex or "a9a08c")
+                            local isTopNext = (topNext and topNext.char and ((topNext.char.fullName or topNext.char.name) == (char.fullName or char.name)))
+                            if isTopNext then
+                                roleTag = roleTag .. string.format(" · |cff%sNEXT|r", t.highlightHex or "ffd34e")
+                            end
+                            local statusDetail = ""
+                            if char.supply_role and char.supply_role ~= "" then
+                                statusDetail = " · " .. char.supply_role
+                            elseif char.level and char.level >= self:GetMaxLevel() then
+                                statusDetail = " · Target Level Reached"
+                            elseif char.tier == "BANK" then
+                                statusDetail = " · Storage Mule"
+                            end
+                            row.subLine:SetText(roleTag .. statusDetail)
+                            row.subLine:Show()
+                        end
+                        if row.levelText then
+                            row.levelText:SetText(string.format("|cffffffff%d|r", char.level or 1))
+                            row.levelText:Show()
+                        end
+                        local rested = self:GetRestedData(char)
+                        if rested and not rested.isMaxLevel then
+                            local pct = rested.percent or 0
+                            local maxPct = rested.maxPercent or 150
+                            local est = rested.isEstimate and "~" or ""
+                            if row.restPercentText then
+                                row.restPercentText:SetText(string.format("|cff%s%s%d%%|r", t.highlightHex or "ffd34e", est, pct))
+                                row.restPercentText:Show()
+                            end
+                            local ratio = math.min(1.0, math.max(0, pct / maxPct))
+                            local maxBarW = isComp and 170 or 220
+                            local barW = math.floor(maxBarW * ratio)
+                            if row.barFill then
+                                row.barFill:SetWidth(math.max(1, barW))
+                                row.barFill:SetVertexColor(t.primary[1], t.primary[2], t.primary[3], 0.95)
+                            end
+                            if row.barBg then row.barBg:Show() end
+                            if row.etaText then
+                                if pct >= maxPct then
+                                    row.etaText:SetText(string.format("|cff%sAt Cap|r", t.readyHex or "55e39a"))
+                                else
+                                    row.etaText:SetText(string.format("|cff%s%s|r", t.dimHex or "a9a08c", rested.timeLeftStr or "---"))
+                                end
+                                row.etaText:Show()
+                            end
+                        else
+                            if row.restPercentText then
+                                row.restPercentText:SetText(string.format("|cff%s---|r", t.dimHex or "a9a08c"))
+                                row.restPercentText:Show()
+                            end
+                            if row.barBg then row.barBg:Hide() end
+                            if row.etaText then
+                                row.etaText:SetText(string.format("|cff%sMax Level|r", t.readyHex or "55e39a"))
+                                row.etaText:Show()
+                            end
+                        end
+                        for idx = 1, 8 do
+                            if row.cells and row.cells[idx] then
+                                row.cells[idx]:SetText("")
+                                row.cells[idx]:Hide()
+                            end
+                        end
+                    else
+                        if row.nameLine then row.nameLine:Hide() end
+                        if row.subLine then row.subLine:Hide() end
+                        if row.levelText then row.levelText:Hide() end
+                        if row.restPercentText then row.restPercentText:Hide() end
+                        if row.barBg then row.barBg:Hide() end
+                        if row.etaText then row.etaText:Hide() end
+
+                        local rowXOffset = 16
+                        for idx = 1, 8 do
+                            local cell = row.cells and row.cells[idx]
+                            local col = cols[idx]
+                            if cell then
+                                if col then
+                                    local colW = (isComp and (col.cpw or col.pw)) or col.pw
+                                    local padR = (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
+                                    local cellW = math.max(1, colW - padR)
+                                    cell:ClearAllPoints()
+                                    cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
+                                    cell:SetWidth(cellW)
+                                    cell:SetJustifyH(col.align or "LEFT")
+                                    cell:SetText(col.fmt(char, t) or "")
+                                    cell:Show()
+                                    rowXOffset = rowXOffset + colW
+                                else
+                                    cell:SetText("")
+                                    cell:Hide()
+                                end
+                            end
+                        end
                     end
                 end
 
-                -- Hide column cells on tab 1
+                row:Show()
+            else
+                row.charData = nil
+                if row.borderL then row.borderL:SetText("") end
+                if row.classRing then row.classRing:Hide() end
+                if row.nameLine then row.nameLine:Hide() end
+                if row.subLine then row.subLine:Hide() end
+                if row.restLabel then row.restLabel:Hide() end
+                if row.restBarBg then row.restBarBg:Hide() end
+                if row.statusPill then row.statusPill:Hide() end
+                if row.goldText then row.goldText:Hide() end
+                if row.levelText then row.levelText:Hide() end
+                if row.restPercentText then row.restPercentText:Hide() end
+                if row.barBg then row.barBg:Hide() end
+                if row.etaText then row.etaText:Hide() end
                 for idx = 1, 8 do
                     local cell = row.cells and row.cells[idx]
                     if cell then
@@ -4234,67 +4586,10 @@ function CLIAlts:Render()
                         cell:Hide()
                     end
                 end
-            else
-                -- ------------------------------------------------------------
-                -- Tabs 2 to 6: Multi-Column Cells
-                -- ------------------------------------------------------------
-                if row.nameLine then row.nameLine:Hide() end
-                if row.subLine then row.subLine:Hide() end
-                if row.levelText then row.levelText:Hide() end
-                if row.restPercentText then row.restPercentText:Hide() end
-                if row.barBg then row.barBg:Hide() end
-                if row.etaText then row.etaText:Hide() end
-
-                local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v6"
-                local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
-                if relayoutRow then
-                    row.lastLayoutKey = rowLayoutKey
-                end
-
-                local rowXOffset = 16
-                for idx = 1, 8 do
-                    local cell = row.cells and row.cells[idx]
-                    local col = cols[idx]
-                    if cell then
-                        if col then
-                            local colW = (mainFrame and not mainFrame.isLegacyUI and col.mpw) or (isComp and (col.cpw or col.pw)) or col.pw
-                            local padR = (mainFrame and not mainFrame.isLegacyUI and col.mpadRight) or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
-                            local cellW = math.max(1, colW - padR)
-                            if relayoutRow then
-                                cell:ClearAllPoints()
-                                cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
-                                cell:SetWidth(cellW)
-                                cell:SetJustifyH(col.align or "LEFT")
-                            end
-                            cell:SetText(col.fmt(char, t) or "")
-                            cell:Show()
-                            rowXOffset = rowXOffset + colW
-                        else
-                            cell:SetText("")
-                            cell:Hide()
-                        end
-                    end
-                end
+                row:Hide()
             end
-
-            row:Show()
         else
             row.charData = nil
-            if row.borderL then row.borderL:SetText("") end
-            if row.nameLine then row.nameLine:Hide() end
-            if row.subLine then row.subLine:Hide() end
-            if row.levelText then row.levelText:Hide() end
-            if row.restPercentText then row.restPercentText:Hide() end
-            if row.barBg then row.barBg:Hide() end
-            if row.etaText then row.etaText:Hide() end
-            for idx = 1, 8 do
-                local cell = row.cells and row.cells[idx]
-                if cell then
-                    cell:SetText("")
-                    cell:Hide()
-                end
-            end
             row:Hide()
         end
     end
