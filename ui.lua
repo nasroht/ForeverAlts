@@ -3308,7 +3308,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.detailPanel = detailPanel
 
     local detailAvatar = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    detailAvatar:SetSize(40, 40)
+    detailAvatar:SetSize(44, 44)
     detailAvatar:SetPoint("TOPLEFT", detailPanel, "TOPLEFT", 14, -14)
     detailAvatar:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -3319,7 +3319,7 @@ function CLIAlts:CreateModernMainFrame()
     if detailAvatar.SetBackdropColor then detailAvatar:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
     if detailAvatar.SetBackdropBorderColor then detailAvatar:SetBackdropBorderColor(brandR, brandG, brandB, 0.8) end
     local detailAvatarText = detailAvatar:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(detailAvatarText, 18, "OUTLINE")
+    self:SetWidgetFont(detailAvatarText, 20, "OUTLINE")
     detailAvatarText:SetPoint("CENTER", 0, 0)
     detailAvatarText:SetText("T")
     detailAvatarText:SetTextColor(brandR, brandG, brandB)
@@ -3327,15 +3327,15 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.avatar = detailAvatar
 
     local detailName = detailPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(detailName, 18, "OUTLINE")
+    self:SetWidgetFont(detailName, 20, "OUTLINE")
     detailName:SetPoint("TOPLEFT", detailAvatar, "TOPRIGHT", 10, -2)
     detailName:SetText("Thor")
     detailName:SetTextColor(textR, textG, textB)
     detailPanel.name = detailName
 
     local detailSub = detailPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(detailSub, 12, "")
-    detailSub:SetPoint("TOPLEFT", detailName, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(detailSub, 14, "")
+    detailSub:SetPoint("TOPLEFT", detailName, "BOTTOMLEFT", 0, -3)
     detailSub:SetText("47 Orc Warrior · Horde")
     detailSub:SetTextColor(mutedR, mutedG, mutedB)
     detailPanel.sub = detailSub
@@ -3343,7 +3343,7 @@ function CLIAlts:CreateModernMainFrame()
     local restedCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     restedCard:SetPoint("TOPLEFT", detailAvatar, "BOTTOMLEFT", 0, -14)
     restedCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    restedCard:SetHeight(82)
+    restedCard:SetHeight(96)
     restedCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3355,35 +3355,35 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.restedCard = restedCard
 
     local rcHeader = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcHeader, 10, "")
+    self:SetWidgetFont(rcHeader, 12, "")
     rcHeader:SetPoint("TOPLEFT", restedCard, "TOPLEFT", 10, -8)
     rcHeader:SetText("RESTED XP")
     rcHeader:SetTextColor(mutedR, mutedG, mutedB)
     restedCard.header = rcHeader
 
     local rcLP = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcLP, 10, "OUTLINE")
+    self:SetWidgetFont(rcLP, 12, "OUTLINE")
     rcLP:SetPoint("TOPRIGHT", restedCard, "TOPRIGHT", -10, -8)
     rcLP:SetText("")
     rcLP:SetTextColor(brandR, brandG, brandB)
     restedCard.lpText = rcLP
 
     local rcStatus = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcStatus, 13, "OUTLINE")
+    self:SetWidgetFont(rcStatus, 15, "OUTLINE")
     rcStatus:SetPoint("TOPLEFT", rcHeader, "BOTTOMLEFT", 0, -3)
     rcStatus:SetText("Capped 3d 4h, ~52k XP wasted")
     rcStatus:SetTextColor(warnR, warnG, warnB)
     restedCard.status = rcStatus
 
     local rcRate = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcRate, 11, "")
+    self:SetWidgetFont(rcRate, 13, "")
     rcRate:SetPoint("TOPLEFT", rcStatus, "BOTTOMLEFT", 0, -3)
     rcRate:SetText("Logging in now banks about 38k XP per hour played.")
     rcRate:SetTextColor(mutedR, mutedG, mutedB)
     restedCard.rate = rcRate
 
     local rcPerk = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcPerk, 10, "")
+    self:SetWidgetFont(rcPerk, 12, "")
     rcPerk:SetPoint("TOPLEFT", rcRate, "BOTTOMLEFT", 0, -3)
     rcPerk:SetText("")
     rcPerk:SetTextColor(mutedR, mutedG, mutedB)
@@ -3422,7 +3422,7 @@ function CLIAlts:CreateModernMainFrame()
     local infoCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     infoCard:SetPoint("TOPLEFT", restedCard, "BOTTOMLEFT", 0, -8)
     infoCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    infoCard:SetHeight(86)
+    infoCard:SetHeight(106)
     infoCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3434,15 +3434,15 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.infoCard = infoCard
 
     local icHeader = infoCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(icHeader, 10, "")
+    self:SetWidgetFont(icHeader, 12, "")
     icHeader:SetPoint("TOPLEFT", infoCard, "TOPLEFT", 10, -8)
     icHeader:SetText("LOCATION & STATUS")
     icHeader:SetTextColor(mutedR, mutedG, mutedB)
     infoCard.header = icHeader
 
     local icLoc = infoCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(icLoc, 11, "")
-    icLoc:SetPoint("TOPLEFT", icHeader, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(icLoc, 13, "")
+    icLoc:SetPoint("TOPLEFT", icHeader, "BOTTOMLEFT", 0, -3)
     icLoc:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
     icLoc:SetJustifyH("LEFT")
     icLoc:SetText("Location: Unknown")
@@ -3450,8 +3450,8 @@ function CLIAlts:CreateModernMainFrame()
     infoCard.loc = icLoc
 
     local icHearth = infoCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(icHearth, 11, "")
-    icHearth:SetPoint("TOPLEFT", icLoc, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(icHearth, 13, "")
+    icHearth:SetPoint("TOPLEFT", icLoc, "BOTTOMLEFT", 0, -3)
     icHearth:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
     icHearth:SetJustifyH("LEFT")
     icHearth:SetText("Hearth: Unknown")
@@ -3459,8 +3459,8 @@ function CLIAlts:CreateModernMainFrame()
     infoCard.hearth = icHearth
 
     local icSeen = infoCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(icSeen, 11, "")
-    icSeen:SetPoint("TOPLEFT", icHearth, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(icSeen, 13, "")
+    icSeen:SetPoint("TOPLEFT", icHearth, "BOTTOMLEFT", 0, -3)
     icSeen:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
     icSeen:SetJustifyH("LEFT")
     icSeen:SetText("Last seen: Unknown")
@@ -3468,8 +3468,8 @@ function CLIAlts:CreateModernMainFrame()
     infoCard.seen = icSeen
 
     local icNote = infoCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(icNote, 11, "")
-    icNote:SetPoint("TOPLEFT", icSeen, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(icNote, 13, "")
+    icNote:SetPoint("TOPLEFT", icSeen, "BOTTOMLEFT", 0, -3)
     icNote:SetPoint("RIGHT", infoCard, "RIGHT", -10, 0)
     icNote:SetJustifyH("LEFT")
     icNote:SetText("Note: None")
@@ -3480,7 +3480,7 @@ function CLIAlts:CreateModernMainFrame()
     local profCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     profCard:SetPoint("TOPLEFT", infoCard, "BOTTOMLEFT", 0, -8)
     profCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    profCard:SetHeight(84)
+    profCard:SetHeight(104)
     profCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3492,15 +3492,15 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.profCard = profCard
 
     local pcHeader = profCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(pcHeader, 10, "")
+    self:SetWidgetFont(pcHeader, 12, "")
     pcHeader:SetPoint("TOPLEFT", profCard, "TOPLEFT", 10, -8)
     pcHeader:SetText("PROFESSIONS & COOLDOWNS")
     pcHeader:SetTextColor(mutedR, mutedG, mutedB)
     profCard.header = pcHeader
 
     local pcPrimary = profCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(pcPrimary, 11, "")
-    pcPrimary:SetPoint("TOPLEFT", pcHeader, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(pcPrimary, 13, "")
+    pcPrimary:SetPoint("TOPLEFT", pcHeader, "BOTTOMLEFT", 0, -3)
     pcPrimary:SetPoint("RIGHT", profCard, "RIGHT", -10, 0)
     pcPrimary:SetJustifyH("LEFT")
     pcPrimary:SetText("Primary: None learned")
@@ -3508,8 +3508,8 @@ function CLIAlts:CreateModernMainFrame()
     profCard.primary = pcPrimary
 
     local pcSecondary = profCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(pcSecondary, 11, "")
-    pcSecondary:SetPoint("TOPLEFT", pcPrimary, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(pcSecondary, 13, "")
+    pcSecondary:SetPoint("TOPLEFT", pcPrimary, "BOTTOMLEFT", 0, -3)
     pcSecondary:SetPoint("RIGHT", profCard, "RIGHT", -10, 0)
     pcSecondary:SetJustifyH("LEFT")
     pcSecondary:SetText("Secondary: None learned")
@@ -3517,8 +3517,8 @@ function CLIAlts:CreateModernMainFrame()
     profCard.secondary = pcSecondary
 
     local pcCooldowns = profCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(pcCooldowns, 11, "")
-    pcCooldowns:SetPoint("TOPLEFT", pcSecondary, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(pcCooldowns, 13, "")
+    pcCooldowns:SetPoint("TOPLEFT", pcSecondary, "BOTTOMLEFT", 0, -3)
     pcCooldowns:SetPoint("RIGHT", profCard, "RIGHT", -10, 0)
     pcCooldowns:SetJustifyH("LEFT")
     pcCooldowns:SetText("Cooldowns: None ready")
@@ -3529,7 +3529,7 @@ function CLIAlts:CreateModernMainFrame()
     local lockCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     lockCard:SetPoint("TOPLEFT", profCard, "BOTTOMLEFT", 0, -8)
     lockCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    lockCard:SetHeight(52)
+    lockCard:SetHeight(64)
     lockCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3541,15 +3541,15 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.lockCard = lockCard
 
     local lcHeader = lockCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(lcHeader, 10, "")
+    self:SetWidgetFont(lcHeader, 12, "")
     lcHeader:SetPoint("TOPLEFT", lockCard, "TOPLEFT", 10, -8)
     lcHeader:SetText("SAVED INSTANCES & LOCKOUTS")
     lcHeader:SetTextColor(mutedR, mutedG, mutedB)
     lockCard.header = lcHeader
 
     local lcLocks = lockCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(lcLocks, 11, "")
-    lcLocks:SetPoint("TOPLEFT", lcHeader, "BOTTOMLEFT", 0, -2)
+    self:SetWidgetFont(lcLocks, 13, "")
+    lcLocks:SetPoint("TOPLEFT", lcHeader, "BOTTOMLEFT", 0, -3)
     lcLocks:SetPoint("RIGHT", lockCard, "RIGHT", -10, 0)
     lcLocks:SetJustifyH("LEFT")
     lcLocks:SetText("Lockouts: No active locks")
@@ -3560,7 +3560,7 @@ function CLIAlts:CreateModernMainFrame()
     local mailCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
     mailCard:SetPoint("TOPLEFT", lockCard, "BOTTOMLEFT", 0, -8)
     mailCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
-    mailCard:SetHeight(92)
+    mailCard:SetHeight(106)
     mailCard:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -3572,34 +3572,34 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.mailCard = mailCard
 
     local mcHeader = mailCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(mcHeader, 10, "")
+    self:SetWidgetFont(mcHeader, 12, "")
     mcHeader:SetPoint("TOPLEFT", mailCard, "TOPLEFT", 10, -8)
     mcHeader:SetText("MAIL & SUPPLY STREAM")
     mcHeader:SetTextColor(mutedR, mutedG, mutedB)
     mailCard.header = mcHeader
 
     local mcModeBadge = mailCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(mcModeBadge, 10, "OUTLINE")
+    self:SetWidgetFont(mcModeBadge, 12, "OUTLINE")
     mcModeBadge:SetPoint("TOPRIGHT", mailCard, "TOPRIGHT", -10, -8)
     mcModeBadge:SetText("[AUTO]")
     mcModeBadge:SetTextColor(fillR, fillG, fillB)
     mailCard.modeBadge = mcModeBadge
 
     local mcStream = mailCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(mcStream, 13, "OUTLINE")
+    self:SetWidgetFont(mcStream, 15, "OUTLINE")
     mcStream:SetPoint("TOPLEFT", mcHeader, "BOTTOMLEFT", 0, -3)
     mcStream:SetText("Cloth (Tailor)")
     mcStream:SetTextColor(brandR, brandG, brandB)
     mailCard.stream = mcStream
 
     local mcPending = mailCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(mcPending, 11, "")
+    self:SetWidgetFont(mcPending, 13, "")
     mcPending:SetPoint("TOPLEFT", mcStream, "BOTTOMLEFT", 0, -3)
     mcPending:SetText("No pending materials in bags")
     mcPending:SetTextColor(mutedR, mutedG, mutedB)
     mailCard.pending = mcPending
 
-    local btnConfigRoute = CreateRetroButton(mailCard, "Configure Stream", 118, 20, function()
+    local btnConfigRoute = CreateRetroButton(mailCard, "Configure Stream", 130, 22, function()
         local char = CLIAlts:GetSelectedOrCurChar()
         if char then
             CLIAlts:ShowMailRouteDialog(char)
@@ -3608,7 +3608,7 @@ function CLIAlts:CreateModernMainFrame()
     btnConfigRoute:SetPoint("BOTTOMLEFT", mailCard, "BOTTOMLEFT", 10, 8)
     mailCard.btnConfig = btnConfigRoute
 
-    local btnCycleRoute = CreateRetroButton(mailCard, "Cycle", 52, 20, function()
+    local btnCycleRoute = CreateRetroButton(mailCard, "Cycle", 56, 22, function()
         local char = CLIAlts:GetSelectedOrCurChar()
         if char then
             CLIAlts:CycleCharacterSupplyRole(char)
@@ -3618,7 +3618,7 @@ function CLIAlts:CreateModernMainFrame()
     btnCycleRoute:SetPoint("LEFT", btnConfigRoute, "RIGHT", 6, 0)
     mailCard.btnCycle = btnCycleRoute
 
-    local btnRemove = CreateRetroButton(detailPanel, "Remove", 68, 22, function()
+    local btnRemove = CreateRetroButton(detailPanel, "Remove", 76, 24, function()
         local char = CLIAlts:GetSelectedOrCurChar()
         if char then
             CLIAlts:ShowConfirmDelete(char)
@@ -3627,13 +3627,13 @@ function CLIAlts:CreateModernMainFrame()
     btnRemove:SetPoint("BOTTOMRIGHT", detailPanel, "BOTTOMRIGHT", -12, 12)
     detailPanel.btnRemove = btnRemove
 
-    local btnPlan = CreateRetroButton(detailPanel, "Plan session", 86, 22, function()
+    local btnPlan = CreateRetroButton(detailPanel, "Plan session", 98, 24, function()
         CLIAlts:ExecutePromptCommand("plan 2")
     end)
     btnPlan:SetPoint("RIGHT", btnRemove, "LEFT", -6, 0)
     detailPanel.btnPlan = btnPlan
 
-    local btnEditNote = CreateRetroButton(detailPanel, "Edit note", 72, 22, function()
+    local btnEditNote = CreateRetroButton(detailPanel, "Edit note", 80, 24, function()
         local char = CLIAlts:GetSelectedOrCurChar()
         if char and frame.promptBox then
             local name = char.name or char.fullName
