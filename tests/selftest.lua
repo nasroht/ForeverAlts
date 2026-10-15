@@ -3494,6 +3494,108 @@ function CLIAlts:RunSelfTest()
         sdChat:Hide()
     end
 
+    -- 36. Secondary Professions Opt-in Routing (Cooking & First Aid) & Classic Container Link Scanning Tests
+    do
+        -- 36a. Classic 6-argument GetContainerItemInfo + GetContainerItemLink fallback
+        local oldGetContainerInfo = GetContainerItemInfo
+        local oldGetContainerLink = GetContainerItemLink
+        local oldCContainer = C_Container
+
+        C_Container = nil
+        GetContainerItemInfo = function(bag, slot)
+            if bag == 0 and slot == 1 then
+                -- Classic 1.12 / WoW Forever / Classic client returning 6 values without hyperlink
+                return "Interface\\Icons\\INV_Scroll_03", 5, false, 1, false, false
+            end
+            return nil
+        end
+        GetContainerItemLink = function(bag, slot)
+            if bag == 0 and slot == 1 then
+                return "|cffffffff|Hitem:5773:0:0:0:0:0:0:0:0|h[Pattern: Robes of Arcana]|h|r"
+            end
+            return nil
+        end
+
+        local itemID, stackCount, itemLink = self:GetContainerItemData(0, 1)
+        Assert(itemID == 5773, "GetContainerItemData: parsed itemID 5773 from link fallback under classic 6-arg API")
+        Assert(stackCount == 5, "GetContainerItemData: parsed stackCount 5 from classic GetContainerItemInfo")
+        Assert(itemLink ~= nil and itemLink:find("item:5773") ~= nil, "GetContainerItemData: returned valid link from GetContainerItemLink fallback")
+
+        GetContainerItemInfo = oldGetContainerInfo
+        GetContainerItemLink = oldGetContainerLink
+        C_Container = oldCContainer
+
+        -- 36b. Instant recipe link parsing when GetItemInfo is uncached
+        local oldGetItemInfo = GetItemInfo
+        GetItemInfo = function(id) return nil end -- Simulate uncached item
+        local recipeLink = "|cffffffff|Hitem:5773:0:0:0:0:0:0:0:0|h[Pattern: Robes of Arcana]|h|r"
+        local mockLearner = {
+            name = "TailorLearner",
+            fullName = "TailorLearner-Forever",
+            faction = "Alliance",
+            classFile = "MAGE",
+            professions = { primary = { { name = "Tailoring", rank = 120 } } },
+            tier = "CORE",
+        }
+        CLIAltsDB.characters["TailorLearner-Forever"] = mockLearner
+        self.curPlayerFullName = "CurrentPlayer-Forever"
+        self.curPlayerPrimary = "CurrentPlayer"
+        self.curPlayerKey = "CurrentPlayer-Forever"
+        CLIAltsDB.characters["CurrentPlayer-Forever"] = {
+            name = "CurrentPlayer",
+            fullName = "CurrentPlayer-Forever",
+            faction = "Alliance",
+            classFile = "WARRIOR",
+            professions = { primary = {} },
+        }
+
+        local destRecipe = self:GetMaterialDestination(5773, nil, nil, nil, nil, recipeLink)
+        Assert(destRecipe ~= nil, "GetMaterialDestination: identifies recipe from itemLink name even when GetItemInfo is uncached")
+        Assert(destRecipe and destRecipe.destName:find("TailorLearner") ~= nil, "GetMaterialDestination: routes Pattern: Robes of Arcana to TailorLearner")
+        GetItemInfo = oldGetItemInfo
+
+        -- 36c. Cooking materials opt-in routing (ignored by default unless enabled)
+        local mockCookAlt = {
+            name = "ChefAlt",
+            fullName = "ChefAlt-Forever",
+            faction = "Alliance",
+            classFile = "HUNTER",
+            professions = { secondary = { { name = "Cooking", rank = 75 } } },
+            routeCooking = false,
+        }
+        CLIAltsDB.characters["ChefAlt-Forever"] = mockCookAlt
+
+        -- Raw Stringy Meat (Trade goods subclass 8)
+        local meatDestDefault = self:GetMaterialDestination(2679, nil, 7, 8, 1, nil)
+        Assert(meatDestDefault == nil, "GetMaterialDestination: cooking meat is safely IGNORED (kept in bags) when routeCooking is disabled")
+
+        -- Toggle Cooking ON
+        local cookToggled = self:ToggleCharacterCooking(mockCookAlt)
+        Assert(cookToggled == true, "ToggleCharacterCooking: toggles routeCooking to true")
+        Assert(mockCookAlt.routeCooking == true, "ToggleCharacterCooking: updates character routeCooking flag")
+
+        local meatDestEnabled = self:GetMaterialDestination(2679, nil, 7, 8, 1, nil)
+        Assert(meatDestEnabled ~= nil, "GetMaterialDestination: cooking meat routes to designated chef when routeCooking is enabled")
+        Assert(meatDestEnabled and meatDestEnabled.destName:find("ChefAlt") ~= nil, "GetMaterialDestination: routes meat to ChefAlt")
+
+        -- Toggle Cooking OFF
+        local cookToggledOff = self:ToggleCharacterCooking(mockCookAlt)
+        Assert(cookToggledOff == false, "ToggleCharacterCooking: toggles routeCooking to false")
+        local meatDestDisabled = self:GetMaterialDestination(2679, nil, 7, 8, 1, nil)
+        Assert(meatDestDisabled == nil, "GetMaterialDestination: cooking meat is ignored again when routeCooking is toggled off")
+
+        -- 36d. First Aid materials opt-in routing
+        local faToggled = self:ToggleCharacterFirstAid(mockCookAlt)
+        Assert(faToggled == true, "ToggleCharacterFirstAid: toggles routeFirstAid to true")
+        Assert(mockCookAlt.routeFirstAid == true, "ToggleCharacterFirstAid: updates character routeFirstAid flag")
+
+        -- 36e. Slash commands for cooking and first aid
+        SlashCmdList["CLIALTS"]("cook ChefAlt")
+        Assert(mockCookAlt.routeCooking == true, "SlashCommand: /clialts cook ChefAlt toggles cooking on")
+        SlashCmdList["CLIALTS"]("firstaid ChefAlt")
+        Assert(mockCookAlt.routeFirstAid == false, "SlashCommand: /clialts firstaid ChefAlt toggles first aid off")
+    end
+
     -- Restore master state
     if masterState.db then
         CLIAltsDB = masterState.db
@@ -3516,7 +3618,7 @@ function CLIAlts:RunSelfTest()
     end
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

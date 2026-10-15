@@ -1507,11 +1507,18 @@ CLIAlts.FmtMailProfessions = FmtMailProfessions
 local function FmtMailRoute(char, t)
     t = t or CLIAlts:GetTheme()
     local role, isOverride, autoRole = CLIAlts:GetCharacterEffectiveSupplyRole(char)
-    if isOverride then
-        return string.format("|cff%s%s|r", t.highlightHex or "ffd34e", role)
-    else
-        return string.format("|cff%s%s|r", t.textHex or "f4ead2", autoRole)
+    local base = isOverride and string.format("|cff%s%s|r", t.highlightHex or "ffd34e", role) or string.format("|cff%s%s|r", t.textHex or "f4ead2", autoRole)
+    local tags = {}
+    if char.routeCooking then
+        table.insert(tags, "|cff55e39a+Cook|r")
     end
+    if char.routeFirstAid then
+        table.insert(tags, "|cff55e39a+FA|r")
+    end
+    if #tags > 0 then
+        return base .. " " .. table.concat(tags, " ")
+    end
+    return base
 end
 CLIAlts.FmtMailRoute = FmtMailRoute
 
@@ -3660,7 +3667,7 @@ function CLIAlts:CreateModernMainFrame()
     mcPending:SetTextColor(mutedR, mutedG, mutedB)
     mailCard.pending = mcPending
 
-    local btnConfigRoute = CreateRetroButton(mailCard, "Configure Stream", 130, 22, function()
+    local btnConfigRoute = CreateRetroButton(mailCard, "Configure", 100, 22, function()
         local char = CLIAlts:GetSelectedOrCurChar()
         if char then
             CLIAlts:ShowMailRouteDialog(char)
@@ -3669,15 +3676,35 @@ function CLIAlts:CreateModernMainFrame()
     btnConfigRoute:SetPoint("BOTTOMLEFT", mailCard, "BOTTOMLEFT", 10, 8)
     mailCard.btnConfig = btnConfigRoute
 
-    local btnCycleRoute = CreateRetroButton(mailCard, "Cycle", 56, 22, function()
+    local btnCycleRoute = CreateRetroButton(mailCard, "Cycle", 46, 22, function()
         local char = CLIAlts:GetSelectedOrCurChar()
         if char then
             CLIAlts:CycleCharacterSupplyRole(char)
             CLIAlts:Render()
         end
     end)
-    btnCycleRoute:SetPoint("LEFT", btnConfigRoute, "RIGHT", 6, 0)
+    btnCycleRoute:SetPoint("LEFT", btnConfigRoute, "RIGHT", 5, 0)
     mailCard.btnCycle = btnCycleRoute
+
+    local btnCookRoute = CreateRetroButton(mailCard, "Cook: OFF", 74, 22, function()
+        local char = CLIAlts:GetSelectedOrCurChar()
+        if char then
+            CLIAlts:ToggleCharacterCooking(char)
+            CLIAlts:Render()
+        end
+    end)
+    btnCookRoute:SetPoint("LEFT", btnCycleRoute, "RIGHT", 5, 0)
+    mailCard.btnCook = btnCookRoute
+
+    local btnFARoute = CreateRetroButton(mailCard, "FA: OFF", 58, 22, function()
+        local char = CLIAlts:GetSelectedOrCurChar()
+        if char then
+            CLIAlts:ToggleCharacterFirstAid(char)
+            CLIAlts:Render()
+        end
+    end)
+    btnFARoute:SetPoint("LEFT", btnCookRoute, "RIGHT", 5, 0)
+    mailCard.btnFA = btnFARoute
 
     local btnRemove = CreateRetroButton(detailPanel, "Remove", 76, 24, function()
         local char = CLIAlts:GetSelectedOrCurChar()
@@ -4659,6 +4686,15 @@ function CLIAlts:UpdateDetailPanel()
         else
             dp.mailCard.pending:SetText("No pending materials in bags")
             dp.mailCard.pending:SetTextColor(mutedR, mutedG, mutedB)
+        end
+
+        if dp.mailCard.btnCook and dp.mailCard.btnCook.label then
+            local cookOn = (char.routeCooking == true)
+            dp.mailCard.btnCook.label:SetText(cookOn and "|cff55e39aCook: ON|r" or "|cffa9a08cCook: OFF|r")
+        end
+        if dp.mailCard.btnFA and dp.mailCard.btnFA.label then
+            local faOn = (char.routeFirstAid == true)
+            dp.mailCard.btnFA.label:SetText(faOn and "|cff55e39aFA: ON|r" or "|cffa9a08cFA: OFF|r")
         end
     end
 end
@@ -6536,6 +6572,16 @@ function CLIAlts:ExecutePromptCommand(input)
         local newState = self:ToggleAutoMailConsumables()
         self:SetPromptFeedback(string.format("Auto-mail consumables: %s", newState and "ENABLED" or "DISABLED"))
 
+    elseif cmd == "cook" or cmd == "cooking" then
+        local targetChar = (args ~= "") and args or self:GetSelectedOrCurChar()
+        local newState = self:ToggleCharacterCooking(targetChar)
+        self:SetPromptFeedback(string.format("Cooking routing: %s", newState and "ENABLED" or "DISABLED"))
+
+    elseif cmd == "firstaid" or cmd == "fa" then
+        local targetChar = (args ~= "") and args or self:GetSelectedOrCurChar()
+        local newState = self:ToggleCharacterFirstAid(targetChar)
+        self:SetPromptFeedback(string.format("First Aid routing: %s", newState and "ENABLED" or "DISABLED"))
+
     elseif cmd == "tour" or cmd == "onboarding" then
         self:StartTour()
         self:SetPromptFeedback("Onboarding tour started.")
@@ -7319,7 +7365,7 @@ function CLIAlts:ShowMailRouteDialog(charData)
     if not mailRouteDialog then
         local dlg = CreateFrame("Frame", "CLIAltsMailRouteDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         dlg:Hide()
-        dlg:SetSize(480, 360)
+        dlg:SetSize(480, 420)
         dlg:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dlg:SetFrameStrata("DIALOG")
         dlg:EnableMouse(true)
@@ -7459,6 +7505,33 @@ function CLIAlts:ShowMailRouteDialog(charData)
         btnSetCustom:SetPoint("LEFT", editBox, "RIGHT", 8, 0)
         dlg.btnSetCustom = btnSetCustom
 
+        -- Secondary Professions Section (Cooking & First Aid Opt-In)
+        local secProfHeader = dlg:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(secProfHeader, 10, "OUTLINE")
+        secProfHeader:SetPoint("TOPLEFT", dlg, "TOPLEFT", 16, -326)
+        secProfHeader:SetText("SECONDARY PROFESSIONS (OPT-IN ROUTING):")
+        dlg.secProfHeader = secProfHeader
+
+        local btnCooking = CreateRetroButton(dlg, "[ COOKING: DISABLED ]", 220, 20, function()
+            if dlg.targetChar then
+                CLIAlts:ToggleCharacterCooking(dlg.targetChar)
+                CLIAlts:ShowMailRouteDialog(dlg.targetChar)
+                CLIAlts:RequestRender()
+            end
+        end, 10)
+        btnCooking:SetPoint("TOPLEFT", dlg, "TOPLEFT", 16, -344)
+        dlg.btnCooking = btnCooking
+
+        local btnFirstAid = CreateRetroButton(dlg, "[ FIRST AID: DISABLED ]", 220, 20, function()
+            if dlg.targetChar then
+                CLIAlts:ToggleCharacterFirstAid(dlg.targetChar)
+                CLIAlts:ShowMailRouteDialog(dlg.targetChar)
+                CLIAlts:RequestRender()
+            end
+        end, 10)
+        btnFirstAid:SetPoint("TOPLEFT", dlg, "TOPLEFT", 244, -344)
+        dlg.btnFirstAid = btnFirstAid
+
         -- Ignored Items button
         local btnIgnored = CreateRetroButton(dlg, "[ IGNORED ITEMS ]", 140, 20, function()
             CLIAlts:ListIgnoredMailItems()
@@ -7568,6 +7641,15 @@ function CLIAlts:ShowMailRouteDialog(charData)
 
     if dlg.editBox then
         dlg.editBox:SetText(charData.supply_role or "")
+    end
+
+    if dlg.btnCooking and dlg.btnCooking.label then
+        local cookOn = (charData.routeCooking == true)
+        dlg.btnCooking.label:SetText(cookOn and "|cff55e39a[ COOKING: ACTIVE (Meat/Fish) ]|r" or "|cffa9a08c[ COOKING: DISABLED ]|r")
+    end
+    if dlg.btnFirstAid and dlg.btnFirstAid.label then
+        local faOn = (charData.routeFirstAid == true)
+        dlg.btnFirstAid.label:SetText(faOn and "|cff55e39a[ FIRST AID: ACTIVE (Cloth) ]|r" or "|cffa9a08c[ FIRST AID: DISABLED ]|r")
     end
 
     dlg:Show()

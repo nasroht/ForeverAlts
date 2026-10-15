@@ -150,6 +150,7 @@ globals = {
     "GetContainerNumSlots",
     "GetContainerItemInfo",
     "GetContainerItemLink",
+    "GetContainerItemID",
     "NUM_BAG_SLOTS",
     "NUM_BANKBAGSLOTS",
     "BANK_CONTAINER",

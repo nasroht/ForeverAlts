@@ -991,21 +991,37 @@ end
 -- Cross-Character Inventory Scanner & Query API (Feature 6)
 -- ----------------------------------------------------------------------------
 function CLIAlts:GetContainerItemData(bagID, slot)
+    local id = nil
+    local count = 1
+    local link = nil
+
     if C_Container and C_Container.GetContainerItemInfo then
         local info = C_Container.GetContainerItemInfo(bagID, slot)
         if info then
-            local id = info.itemID
-            if not id and info.hyperlink then
-                id = tonumber(info.hyperlink:match("item:(%d+)"))
-            end
-            return id, (info.stackCount or 1), info.hyperlink
+            id = info.itemID
+            count = info.stackCount or 1
+            link = info.hyperlink
         end
     elseif GetContainerItemInfo then
-        local _, count, _, _, _, _, link = GetContainerItemInfo(bagID, slot)
-        if link then
-            local id = tonumber(link:match("item:(%d+)"))
-            return id, (count or 1), link
-        end
+        local _, c, _, _, _, _, l = GetContainerItemInfo(bagID, slot)
+        if c then count = c end
+        if l then link = l end
+    end
+
+    if not link and GetContainerItemLink then
+        link = GetContainerItemLink(bagID, slot)
+    end
+    if not id and C_Container and C_Container.GetContainerItemID then
+        id = C_Container.GetContainerItemID(bagID, slot)
+    elseif not id and GetContainerItemID then
+        id = GetContainerItemID(bagID, slot)
+    end
+    if not id and link then
+        id = tonumber(link:match("item:(%d+)"))
+    end
+
+    if link or id then
+        return id, (count or 1), link
     end
     return nil, 0, nil
 end
@@ -1340,6 +1356,8 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         note = (existing and existing.note) or (cachedCurrentChar and cachedCurrentChar.note),
         tier = (existing and existing.tier) or (cachedCurrentChar and cachedCurrentChar.tier) or "UNASSIGNED",
         supply_role = (existing and existing.supply_role) or (cachedCurrentChar and cachedCurrentChar.supply_role),
+        routeCooking = (existing and existing.routeCooking) or (cachedCurrentChar and cachedCurrentChar.routeCooking),
+        routeFirstAid = (existing and existing.routeFirstAid) or (cachedCurrentChar and cachedCurrentChar.routeFirstAid),
         target_level = (existing and existing.target_level) or (cachedCurrentChar and cachedCurrentChar.target_level),
         inventory = self:CollectInventory(existing and existing.inventory),
         dungeonQuests = self:CollectDungeonQuests(existing and existing.dungeonQuests),
@@ -3791,74 +3809,201 @@ function CLIAlts:GetCharacterPendingMail(char)
     return total, detail
 end
 
+function CLIAlts:GetCanonicalProfession(name)
+    if not name or type(name) ~= "string" then return nil end
+    local lower = name:lower():gsub("^%s+", ""):gsub("%s+$", "")
+    if lower:find("tailor", 1, true) or lower:find("schneider", 1, true) or lower:find("coutur", 1, true) then
+        return "Tailoring"
+    elseif lower:find("leather", 1, true) or lower:find("leder", 1, true) or lower:find("cuir", 1, true) then
+        return "Leatherworking"
+    elseif lower:find("alch", 1, true) then
+        return "Alchemy"
+    elseif lower:find("blacksmith", 1, true) or lower:find("schmied", 1, true) or lower:find("forge", 1, true) then
+        return "Blacksmithing"
+    elseif lower:find("engin", 1, true) or lower:find("ingén", 1, true) or lower:find("ingen", 1, true) then
+        return "Engineering"
+    elseif lower:find("cook", 1, true) or lower:find("koch", 1, true) or lower:find("cuis", 1, true) then
+        return "Cooking"
+    elseif lower:find("first aid", 1, true) or lower:find("erste hilfe", 1, true) or lower:find("secour", 1, true) then
+        return "First Aid"
+    elseif lower:find("enchant", 1, true) or lower:find("verzaub", 1, true) then
+        return "Enchanting"
+    elseif lower:find("jewel", 1, true) or lower:find("juwel", 1, true) or lower:find("joail", 1, true) then
+        return "Jewelcrafting"
+    elseif lower:find("inscript", 1, true) or lower:find("schrift", 1, true) or lower:find("callig", 1, true) then
+        return "Inscription"
+    elseif lower:find("skin", 1, true) or lower:find("kürsch", 1, true) or lower:find("dépeç", 1, true) then
+        return "Skinning"
+    elseif lower:find("min", 1, true) or lower:find("bergbau", 1, true) then
+        return "Mining"
+    elseif lower:find("herb", 1, true) or lower:find("kräuter", 1, true) or lower:find("herbo", 1, true) then
+        return "Herbalism"
+    end
+    return name
+end
+
+function CLIAlts:ProfessionsMatch(p1, p2)
+    if not p1 or not p2 then return false end
+    local c1 = self:GetCanonicalProfession(p1)
+    local c2 = self:GetCanonicalProfession(p2)
+    if c1 and c2 and c1:lower() == c2:lower() then
+        return true
+    end
+    local l1 = tostring(p1):lower()
+    local l2 = tostring(p2):lower()
+    return l1 == l2 or l1:find(l2, 1, true) or l2:find(l1, 1, true)
+end
+
+function CLIAlts:IsMailCandidate(char)
+    if not char or self:IsCurrentPlayer(char) then
+        return false
+    end
+    local curChar = nil
+    if self.curPlayerKey and CLIAltsDB and CLIAltsDB.characters then
+        curChar = CLIAltsDB.characters[self.curPlayerKey]
+    end
+    if not curChar and self.curPlayerFullName and CLIAltsDB and CLIAltsDB.characters then
+        curChar = CLIAltsDB.characters[self.curPlayerFullName]
+    end
+    local curFaction = (curChar and curChar.faction) or (UnitFactionGroup and UnitFactionGroup("player"))
+    if curFaction and curFaction ~= "" and curFaction ~= "Neutral" and char.faction and char.faction ~= "" and char.faction ~= "Neutral" then
+        if curFaction ~= char.faction then
+            return false
+        end
+    end
+    return true
+end
+
+function CLIAlts:ResolveCharacter(charOrName)
+    if not charOrName then
+        return self:GetSelectedOrCurChar()
+    end
+    if type(charOrName) == "table" then
+        return charOrName
+    end
+    local clean = tostring(charOrName):lower():match("^%s*(.-)%s*$")
+    if clean == "" then
+        return self:GetSelectedOrCurChar()
+    end
+    local chars = self:GetCharactersList()
+    for _, c in ipairs(chars) do
+        local cFull = (c.fullName or ""):lower()
+        local cPrim = (c.name or c.primaryName or ""):lower()
+        if cFull == clean or cPrim == clean or cFull:find(clean, 1, true) or cPrim:find(clean, 1, true) then
+            return c
+        end
+    end
+    return nil
+end
+
+function CLIAlts:ToggleCharacterCooking(charOrName)
+    local char = self:ResolveCharacter(charOrName)
+    if not char then
+        self:Print("Character not found. Usage: |cff00ff66/clialts cook <name>|r")
+        return false
+    end
+    char.routeCooking = not (char.routeCooking == true)
+    local name = char.fullName or char.name
+    local stateStr = char.routeCooking and "|cff00ff66ENABLED (Will receive Meat & Fish)|r" or "|cffff4444DISABLED (Meat & Fish ignored/kept in bags)|r"
+    self:Print(string.format("|cff57d6e8[Mail Router]|r Cooking material routing for |cffffffff%s|r is now %s.", name, stateStr))
+    if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
+    if self.RequestRender then self:RequestRender() end
+    return char.routeCooking
+end
+
+function CLIAlts:ToggleCharacterFirstAid(charOrName)
+    local char = self:ResolveCharacter(charOrName)
+    if not char then
+        self:Print("Character not found. Usage: |cff00ff66/clialts firstaid <name>|r")
+        return false
+    end
+    char.routeFirstAid = not (char.routeFirstAid == true)
+    local name = char.fullName or char.name
+    local stateStr = char.routeFirstAid and "|cff00ff66ENABLED (Will receive First Aid / Cloth)|r" or "|cffff4444DISABLED (First Aid materials ignored)|r"
+    self:Print(string.format("|cff57d6e8[Mail Router]|r First Aid material routing for |cffffffff%s|r is now %s.", name, stateStr))
+    if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
+    if self.RequestRender then self:RequestRender() end
+    return char.routeFirstAid
+end
+
 function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
     local chars = self:GetCharactersList("level", false)
     local bestChar = nil
     local bestScore = -1
 
+    local isCooking = (targetProfession == "Cooking" or preferredRole == "Cook")
+    local isFirstAid = (targetProfession == "First Aid" or preferredRole == "First Aid")
+
     for _, c in ipairs(chars) do
-        -- Never route mail to the character currently logged in
-        if not self:IsCurrentPlayer(c) then
+        -- Check mail candidate (not current player, same faction)
+        if self:IsMailCandidate(c) then
             local matches = false
             local profRank = 0
             local isOverride = false
             local srole = (c.supply_role or ""):lower()
 
             if srole ~= "none" and srole ~= "exclude" and srole ~= "excluded" then
-                -- Check supply role override first
-                if preferredRole and srole ~= "" then
-                    local pLower = preferredRole:lower()
-                    if srole:find(pLower, 1, true) then
+                if isCooking then
+                    -- Secondary profession Cooking: ONLY route if alt has routeCooking enabled or an explicit cook/meat/fish role
+                    if c.routeCooking == true then
                         matches = true
                         isOverride = true
                         profRank = 150
-                    elseif pLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true)) then
-                        matches = true
-                        isOverride = true
-                        profRank = 150
-                    elseif pLower:find("alch", 1, true) and (srole:find("herb", 1, true) or srole:find("alch", 1, true)) then
-                        matches = true
-                        isOverride = true
-                        profRank = 150
-                    elseif (pLower:find("miner", 1, true) or pLower:find("smith", 1, true) or pLower:find("eng", 1, true)) and (srole:find("ore", 1, true) or srole:find("miner", 1, true) or srole:find("stone", 1, true) or srole:find("smith", 1, true) or srole:find("bs", 1, true)) then
-                        matches = true
-                        isOverride = true
-                        profRank = 150
-                    elseif (pLower:find("skin", 1, true) or pLower:find("leather", 1, true)) and (srole:find("leather", 1, true) or srole:find("skin", 1, true) or srole:find("lw", 1, true)) then
-                        matches = true
-                        isOverride = true
-                        profRank = 150
-                    elseif pLower:find("cook", 1, true) and (srole:find("cook", 1, true) or srole:find("meat", 1, true) or srole:find("fish", 1, true)) then
-                        matches = true
-                        isOverride = true
-                        profRank = 150
-                    elseif pLower:find("de", 1, true) and (srole:find("de", 1, true) or srole:find("ench", 1, true) or srole:find("disenchant", 1, true)) then
+                    elseif srole ~= "" and (srole:find("cook", 1, true) or srole:find("meat", 1, true) or srole:find("fish", 1, true)) then
                         matches = true
                         isOverride = true
                         profRank = 150
                     end
-                end
-
-                -- Check primary professions
-                if not matches and c.professions and c.professions.primary then
-                    for _, p in ipairs(c.professions.primary) do
-                        local pName = (p.name or ""):lower()
-                        if pName:find(targetProfession:lower(), 1, true) then
+                elseif isFirstAid then
+                    -- Secondary profession First Aid: ONLY route if alt has routeFirstAid enabled or an explicit first aid/bandage role
+                    if c.routeFirstAid == true then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    elseif srole ~= "" and (srole:find("first aid", 1, true) or srole:find("bandage", 1, true)) then
+                        matches = true
+                        isOverride = true
+                        profRank = 150
+                    end
+                else
+                    -- Standard Primary Profession Routing
+                    if preferredRole and srole ~= "" then
+                        local pLower = preferredRole:lower()
+                        if srole:find(pLower, 1, true) then
                             matches = true
-                            profRank = tonumber(p.rank) or 0
-                            break
+                            isOverride = true
+                            profRank = 150
+                        elseif pLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true)) then
+                            matches = true
+                            isOverride = true
+                            profRank = 150
+                        elseif pLower:find("alch", 1, true) and (srole:find("herb", 1, true) or srole:find("alch", 1, true)) then
+                            matches = true
+                            isOverride = true
+                            profRank = 150
+                        elseif (pLower:find("miner", 1, true) or pLower:find("smith", 1, true) or pLower:find("eng", 1, true)) and (srole:find("ore", 1, true) or srole:find("miner", 1, true) or srole:find("stone", 1, true) or srole:find("smith", 1, true) or srole:find("bs", 1, true)) then
+                            matches = true
+                            isOverride = true
+                            profRank = 150
+                        elseif (pLower:find("skin", 1, true) or pLower:find("leather", 1, true)) and (srole:find("leather", 1, true) or srole:find("skin", 1, true) or srole:find("lw", 1, true)) then
+                            matches = true
+                            isOverride = true
+                            profRank = 150
+                        elseif pLower:find("de", 1, true) and (srole:find("de", 1, true) or srole:find("ench", 1, true) or srole:find("disenchant", 1, true)) then
+                            matches = true
+                            isOverride = true
+                            profRank = 150
                         end
                     end
-                end
 
-                -- Check secondary professions (Cooking, First Aid, Fishing)
-                if not matches and c.professions and c.professions.secondary then
-                    for _, s in ipairs(c.professions.secondary) do
-                        local sName = (s.name or ""):lower()
-                        if sName:find(targetProfession:lower(), 1, true) then
-                            matches = true
-                            profRank = tonumber(s.rank) or 0
-                            break
+                    -- Check primary professions
+                    if not matches and c.professions and c.professions.primary then
+                        for _, p in ipairs(c.professions.primary) do
+                            if self:ProfessionsMatch(targetProfession, p.name) then
+                                matches = true
+                                profRank = tonumber(p.rank) or 0
+                                break
+                            end
                         end
                     end
                 end
@@ -4209,7 +4354,7 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
     local tLower = targetProfession:lower()
     if curChar.professions.primary then
         for _, p in ipairs(curChar.professions.primary) do
-            if (p.name or ""):lower():find(tLower, 1, true) then
+            if self:ProfessionsMatch(targetProfession, p.name) then
                 curHasProf = true
                 curRank = tonumber(p.rank) or 0
                 break
@@ -4218,7 +4363,7 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
     end
     if not curHasProf and curChar.professions.secondary then
         for _, s in ipairs(curChar.professions.secondary) do
-            if (s.name or ""):lower():find(tLower, 1, true) then
+            if self:ProfessionsMatch(targetProfession, s.name) then
                 curHasProf = true
                 curRank = tonumber(s.rank) or 0
                 break
@@ -4251,10 +4396,16 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
         if srole:find(tLower, 1, true) or (tLower:find("tailor", 1, true) and (srole:find("cloth", 1, true) or srole:find("tailor", 1, true))) then
             learnerHasSupplyRole = true
         end
+        if targetProfession == "Cooking" and learner.routeCooking == true then
+            learnerHasSupplyRole = true
+        end
+        if targetProfession == "First Aid" and learner.routeFirstAid == true then
+            learnerHasSupplyRole = true
+        end
 
         if learner.professions and learner.professions.primary then
             for _, p in ipairs(learner.professions.primary) do
-                if (p.name or ""):lower():find(tLower, 1, true) then
+                if self:ProfessionsMatch(targetProfession, p.name) then
                     learnerRank = tonumber(p.rank) or 0
                     break
                 end
@@ -4262,7 +4413,7 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
         end
         if learnerRank == 0 and learner.professions and learner.professions.secondary then
             for _, s in ipairs(learner.professions.secondary) do
-                if (s.name or ""):lower():find(tLower, 1, true) then
+                if self:ProfessionsMatch(targetProfession, s.name) then
                     learnerRank = tonumber(s.rank) or 0
                     break
                 end
@@ -4277,15 +4428,29 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
             end
         end
 
-        -- If alt is explicitly configured with a supply role and current player is not:
+        -- If alt is explicitly configured with a supply role or opt-in toggle and current player is not:
         local curRole = (curChar.supply_role or ""):lower()
         local curHasSupplyRole = curRole:find(tLower, 1, true) or (tLower:find("tailor", 1, true) and (curRole:find("cloth", 1, true) or curRole:find("tailor", 1, true)))
+        if targetProfession == "Cooking" and curChar.routeCooking and not learner.routeCooking then
+            curHasSupplyRole = true
+        elseif targetProfession == "Cooking" and learner.routeCooking and not curChar.routeCooking then
+            return false
+        end
+        if targetProfession == "First Aid" and curChar.routeFirstAid and not learner.routeFirstAid then
+            curHasSupplyRole = true
+        elseif targetProfession == "First Aid" and learner.routeFirstAid and not curChar.routeFirstAid then
+            return false
+        end
+
         if learnerHasSupplyRole and not curHasSupplyRole then
             return false
         end
 
         -- If alt has a higher profession rank than current character:
         if learnerRank > curRank then
+            return false
+        end
+        if learnerRank == curRank and not curHasSupplyRole and (learner.tier == "CORE" and curChar.tier ~= "CORE") then
             return false
         end
     end
@@ -4299,13 +4464,23 @@ function CLIAlts:FindBestRecipeLearner(targetProfession, preferredRole, craftNam
     local bestScore = -1
 
     for _, c in ipairs(chars) do
-        if not self:IsCurrentPlayer(c) then
+        if self:IsMailCandidate(c) then
             local matches = false
             local profRank = 0
             local isOverride = false
             local srole = (c.supply_role or ""):lower()
 
             if srole ~= "none" and srole ~= "exclude" and srole ~= "excluded" then
+                if targetProfession == "Cooking" and c.routeCooking == true then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
+                elseif targetProfession == "First Aid" and c.routeFirstAid == true then
+                    matches = true
+                    isOverride = true
+                    profRank = 150
+                end
+
                 if preferredRole and srole ~= "" then
                     local pLower = preferredRole:lower()
                     if srole:find(pLower, 1, true) then
@@ -4341,8 +4516,7 @@ function CLIAlts:FindBestRecipeLearner(targetProfession, preferredRole, craftNam
 
                 if not matches and c.professions and c.professions.primary then
                     for _, p in ipairs(c.professions.primary) do
-                        local pName = (p.name or ""):lower()
-                        if targetProfession and pName:find(targetProfession:lower(), 1, true) then
+                        if targetProfession and self:ProfessionsMatch(targetProfession, p.name) then
                             matches = true
                             profRank = tonumber(p.rank) or 0
                             break
@@ -4352,8 +4526,7 @@ function CLIAlts:FindBestRecipeLearner(targetProfession, preferredRole, craftNam
 
                 if not matches and c.professions and c.professions.secondary then
                     for _, s in ipairs(c.professions.secondary) do
-                        local sName = (s.name or ""):lower()
-                        if targetProfession and sName:find(targetProfession:lower(), 1, true) then
+                        if targetProfession and self:ProfessionsMatch(targetProfession, s.name) then
                             matches = true
                             profRank = tonumber(s.rank) or 0
                             break
@@ -4386,7 +4559,7 @@ function CLIAlts:FindBestRecipeLearner(targetProfession, preferredRole, craftNam
 
     if not bestChar or bestScore < 0 then
         local mule = self:FindBankMule()
-        if mule and not self:IsCurrentPlayer(mule) then
+        if mule and self:IsMailCandidate(mule) then
             return mule, "Bank Mule (Duplicate Recipe)"
         end
     end
@@ -4720,6 +4893,11 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
         end
     end
 
+    -- Immediate link name fallback if GetItemInfo was not yet cached
+    if not itemName and itemLink and type(itemLink) == "string" then
+        itemName = itemLink:match("%[(.-)%]")
+    end
+
     -- Never auto-mail soulbound items (bindType == 1: Bind on Pickup)
     if bindType == 1 then
         return nil
@@ -4780,7 +4958,15 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
         if subclassID == 5 then
             category = "Cloth"
             destChar = self:FindBestCrafterForTrade("Tailoring", "Tailor")
-            targetReason = "Tailoring"
+            if destChar then
+                targetReason = "Tailoring"
+            else
+                -- Check if an alt has First Aid explicitly enabled to receive cloth
+                destChar = self:FindBestCrafterForTrade("First Aid", "First Aid")
+                if destChar then
+                    targetReason = "First Aid"
+                end
+            end
         elseif subclassID == 9 then
             category = "Herb"
             destChar = self:FindBestCrafterForTrade("Alchemy", "Alch")
@@ -4797,10 +4983,29 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
             category = "Meat"
             destChar = self:FindBestCrafterForTrade("Cooking", "Cook")
             targetReason = "Cooking"
+            if not destChar then
+                -- Cooking materials are strictly ignored if no character has routeCooking enabled
+                return nil
+            end
         elseif subclassID == 12 then
             category = "Enchanting Reagents"
             destChar = self:FindBestCrafterForTrade("Enchanting", "DE")
             targetReason = "Enchanting"
+        end
+    end
+
+    -- Secondary check for Meat/Fish by item name if trade subclass wasn't 8
+    if not destChar and itemName and not isRecipe then
+        local lName = itemName:lower()
+        if lName:find("raw ", 1, true) or lName:find(" meat", 1, true) or lName:find("fish", 1, true) or lName:find("clam", 1, true) or lName:find("squid", 1, true) or lName:find("salmon", 1, true) or lName:find("trout", 1, true) then
+            destChar = self:FindBestCrafterForTrade("Cooking", "Cook")
+            if destChar then
+                category = "Meat"
+                targetReason = "Cooking"
+            else
+                -- Safe ignore: meat/fish kept in bags if no alt designated
+                return nil
+            end
         end
     end
 
@@ -4824,7 +5029,7 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     if not destChar and isLockbox then
         local chars = self:GetCharactersList("level", false)
         for _, c in ipairs(chars) do
-            if c.classFile == "ROGUE" and not self:IsCurrentPlayer(c) then
+            if c.classFile == "ROGUE" and self:IsMailCandidate(c) then
                 destChar = c
                 targetReason = "Lockpicking"
                 category = "Lockbox"
@@ -4833,16 +5038,18 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
         end
     end
 
-    -- 4. Fallback to Bank Mule
-    if not destChar and category then
+    -- 4. Fallback to Bank Mule (Cooking materials are excluded from bank mule fallback)
+    if not destChar and category and category ~= "Meat" and category ~= "Cooking" then
         destChar = self:FindBankMule()
-        if destChar then
+        if destChar and self:IsMailCandidate(destChar) then
             targetReason = "Bank Mule (Storage)"
+        else
+            destChar = nil
         end
     end
 
-    -- Absolute Rule: Never route mail to the character currently logged in!
-    if not destChar or self:IsCurrentPlayer(destChar) then return nil end
+    -- Absolute Rule: Never route mail to self or cross-faction!
+    if not destChar or not self:IsMailCandidate(destChar) then return nil end
 
     return {
         destChar = destChar,

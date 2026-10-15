@@ -888,6 +888,12 @@ local function SlashHandler(msg)
     elseif cmd == "mailconsumables" then
         CLIAlts:ToggleAutoMailConsumables()
 
+    elseif cmd == "cook" or cmd == "cooking" then
+        CLIAlts:ToggleCharacterCooking(arg)
+
+    elseif cmd == "firstaid" or cmd == "fa" then
+        CLIAlts:ToggleCharacterFirstAid(arg)
+
     elseif cmd == "lp" or cmd == "legacypoints" or cmd == "legacypoint" then
         CLIAlts:PrintLegacyPointStatus(arg)
 
