@@ -1162,6 +1162,10 @@ end
 -- ----------------------------------------------------------------------------
 function CLIAlts:ApplyLayoutSize()
     if not mainFrame then return end
+    if not mainFrame.isLegacyUI then
+        mainFrame:SetSize(1260, 800)
+        return
+    end
     local isComp = self:IsCompact()
     local targetWidth = isComp and 900 or 1150
     mainFrame:SetWidth(targetWidth)
@@ -1292,9 +1296,9 @@ function CLIAlts:ApplyLayoutSize()
 end
 
 -- ----------------------------------------------------------------------------
--- Main Frame Construction
+-- Legacy Main Frame Construction (ASCII Table UI)
 -- ----------------------------------------------------------------------------
-function CLIAlts:CreateMainFrame()
+function CLIAlts:CreateLegacyMainFrame()
     if mainFrame then return mainFrame end
     if _G["CLIAltsMainFrame"] then
         mainFrame = _G["CLIAltsMainFrame"]
@@ -1303,6 +1307,7 @@ function CLIAlts:CreateMainFrame()
     end
 
     local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    frame.isLegacyUI = true
     frame:Hide()
     frame:SetSize(1150, 600)
     frame:SetMovable(true)
@@ -2279,6 +2284,725 @@ function CLIAlts:CreateMainFrame()
     return frame
 end
 
+-- ============================================================================
+-- Modern v2 Main Frame Construction (Design System v2: 1260x800)
+-- ============================================================================
+function CLIAlts:CreateModernMainFrame()
+    if mainFrame then return mainFrame end
+    if _G["CLIAltsMainFrame"] then
+        mainFrame = _G["CLIAltsMainFrame"]
+        self.mainFrame = mainFrame
+        return mainFrame
+    end
+
+    local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    frame.isLegacyUI = false
+    frame:Hide()
+    frame:SetSize(1260, 800)
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetClampedToScreen(true)
+    frame:SetFrameStrata("HIGH")
+    tinsert(UISpecialFrames, "CLIAltsMainFrame")
+
+    -- Restore saved window scale & position
+    local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+    frame:SetScale(s)
+    self:RestoreWindowPosition(frame)
+
+    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        CLIAlts:SaveWindowPosition(self)
+    end)
+
+    frame:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    local bgR, bgG, bgB, bgA = self:Hex("bg")
+    local lineR, lineG, lineB, lineA = self:Hex("line")
+    local panelR, panelG, panelB, panelA = self:Hex("panel")
+    local raisedR, raisedG, raisedB, raisedA = self:Hex("raised")
+    local brandR, brandG, brandB = self:Hex("brand")
+    local warnR, warnG, warnB = self:Hex("warn")
+    local fillR, fillG, fillB = self:Hex("fill")
+    local textR, textG, textB = self:Hex("text")
+    local mutedR, mutedG, mutedB = self:Hex("muted")
+
+    if frame.SetBackdropColor then frame:SetBackdropColor(bgR, bgG, bgB, bgA) end
+    if frame.SetBackdropBorderColor then frame:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+
+    mainFrame = frame
+    self.mainFrame = frame
+    _G["CLIAltsMainFrame"] = frame
+
+    -- 1. Top Bar (48px)
+    local topBar = CreateFrame("Frame", "CLIAltsTopBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    topBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    topBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+    topBar:SetHeight(48)
+    topBar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if topBar.SetBackdropColor then topBar:SetBackdropColor(panelR, panelG, panelB, panelA) end
+    if topBar.SetBackdropBorderColor then topBar:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    frame.topBar = topBar
+
+    -- Logo text
+    local logoText = topBar:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(logoText, 19, "OUTLINE")
+    logoText:SetPoint("LEFT", topBar, "LEFT", 18, 0)
+    logoText:SetText("CLIAlts")
+    logoText:SetTextColor(brandR, brandG, brandB)
+    frame.logoText = logoText
+    frame.titleText = logoText
+
+    -- Search EditBox
+    local searchBox = CreateFrame("EditBox", "CLIAltsSearchEditBox", topBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    searchBox:SetSize(340, 28)
+    searchBox:SetPoint("LEFT", logoText, "RIGHT", 24, 0)
+    searchBox:SetAutoFocus(false)
+    searchBox:EnableMouse(true)
+    searchBox:SetTextInsets(8, 8, 2, 2)
+    self:SetWidgetFont(searchBox, 13)
+    searchBox:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if searchBox.SetBackdropColor then searchBox:SetBackdropColor(raisedR, raisedG, raisedB, raisedA) end
+    if searchBox.SetBackdropBorderColor then searchBox:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+
+    local searchPlaceholder = searchBox:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(searchPlaceholder, 13, "")
+    searchPlaceholder:SetPoint("LEFT", searchBox, "LEFT", 8, 0)
+    searchPlaceholder:SetText("Search name, class, profession...")
+    searchPlaceholder:SetTextColor(mutedR, mutedG, mutedB)
+    searchBox.placeholder = searchPlaceholder
+
+    searchBox:SetScript("OnTextChanged", function(self)
+        local text = self:GetText() or ""
+        if #text > 0 then
+            self.placeholder:Hide()
+        else
+            self.placeholder:Show()
+        end
+        if CLIAlts.SetFilter then
+            CLIAlts:SetFilter(text)
+            CLIAlts:Render()
+        end
+    end)
+    searchBox:SetScript("OnEscapePressed", function(self)
+        self:SetText("")
+        self:ClearFocus()
+        if CLIAlts.SetFilter then
+            CLIAlts:SetFilter("")
+            CLIAlts:Render()
+        end
+    end)
+    searchBox:SetScript("OnEnterPressed", function(self)
+        self:ClearFocus()
+    end)
+    frame.searchBox = searchBox
+
+    -- Top Bar Action Buttons
+    local btnClose = CreateRetroButton(topBar, "[ X ]", 28, 22, function()
+        CLIAlts:Toggle(false)
+    end)
+    btnClose:SetPoint("RIGHT", topBar, "RIGHT", -14, 0)
+    frame.btnClose = btnClose
+
+    local btnHelp = CreateRetroButton(topBar, "Help", 50, 22, function()
+        CLIAlts:ShowHelpPopup()
+    end)
+    btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -8, 0)
+    frame.btnHelp = btnHelp
+
+    local btnSettings = CreateRetroButton(topBar, "Settings", 66, 22, function()
+        CLIAlts:CycleTheme()
+    end)
+    btnSettings:SetPoint("RIGHT", btnHelp, "LEFT", -8, 0)
+    frame.btnSettings = btnSettings
+
+    local btnSample = CreateRetroButton(topBar, "Sample data", 86, 22, function()
+        CLIAlts:Print("Sample data display.")
+    end)
+    btnSample:SetPoint("RIGHT", btnSettings, "LEFT", -8, 0)
+    frame.btnSample = btnSample
+
+    -- 2. Left Sidebar (190px)
+    local sidebar = CreateFrame("Frame", "CLIAltsSidebar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    sidebar:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -48)
+    sidebar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 34)
+    sidebar:SetWidth(190)
+    sidebar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if sidebar.SetBackdropColor then sidebar:SetBackdropColor(panelR, panelG, panelB, panelA) end
+    if sidebar.SetBackdropBorderColor then sidebar:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    frame.sidebar = sidebar
+
+    local navDefs = {
+        { id = 1, text = "Overview", badge = "7", isOverview = true },
+        { id = 3, text = "Rested XP", badge = "2", isWarn = true },
+        { id = 4, text = "Professions", badge = nil },
+        { id = 5, text = "Economy", badge = nil },
+        { id = 6, text = "Cooldowns & Locks", badge = "3", isWarn = true },
+    }
+    frame.tabButtons = {}
+    frame.sidebarNavButtons = {}
+    local prevNavBtn = nil
+    for _, def in ipairs(navDefs) do
+        local thisTabId = def.id
+        local navBtn = CreateFrame("Button", nil, sidebar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        navBtn:SetSize(170, 34)
+        if not prevNavBtn then
+            navBtn:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 10, -14)
+        else
+            navBtn:SetPoint("TOPLEFT", prevNavBtn, "BOTTOMLEFT", 0, -6)
+        end
+        navBtn:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+
+        local label = navBtn:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(label, 14, "")
+        label:SetPoint("LEFT", navBtn, "LEFT", 12, 0)
+        label:SetText(def.text)
+        navBtn.label = label
+        navBtn.tabId = thisTabId
+        navBtn.baseText = def.text
+
+        if def.badge then
+            local badge = CreateFrame("Frame", nil, navBtn, BackdropTemplateMixin and "BackdropTemplate" or nil)
+            badge:SetSize(22, 18)
+            badge:SetPoint("RIGHT", navBtn, "RIGHT", -10, 0)
+            badge:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8X8",
+                edgeFile = "Interface\\Buttons\\WHITE8X8",
+                edgeSize = 1,
+                insets = { left = 1, right = 1, top = 1, bottom = 1 }
+            })
+            if badge.SetBackdropColor then
+                if def.isOverview then
+                    badge:SetBackdropColor(fillR, fillG, fillB, 0.25)
+                    badge:SetBackdropBorderColor(fillR, fillG, fillB, 0.6)
+                else
+                    badge:SetBackdropColor(warnR, warnG, warnB, 0.9)
+                    badge:SetBackdropBorderColor(warnR, warnG, warnB, 1.0)
+                end
+            end
+            local badgeText = badge:CreateFontString(nil, "OVERLAY")
+            self:SetWidgetFont(badgeText, 11, "OUTLINE")
+            badgeText:SetPoint("CENTER", 0, 0)
+            badgeText:SetText(def.badge)
+            if def.isOverview then
+                badgeText:SetTextColor(fillR, fillG, fillB)
+            else
+                badgeText:SetTextColor(0.1, 0.08, 0.02)
+            end
+            badge.text = badgeText
+            navBtn.badge = badge
+        end
+
+        navBtn:SetScript("OnClick", function()
+            CLIAlts:SwitchTab(thisTabId)
+        end)
+        navBtn:SetScript("OnEnter", function(self)
+            if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.6) end
+            self.label:SetTextColor(1, 1, 1)
+        end)
+        navBtn:SetScript("OnLeave", function(self)
+            local curTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
+            local active = (curTab == self.tabId)
+            if self.SetBackdropColor then
+                self:SetBackdropColor(active and raisedR or 0, active and raisedG or 0, active and raisedB or 0, active and 0.85 or 0)
+            end
+            if self.SetBackdropBorderColor then
+                self:SetBackdropBorderColor(active and lineR or 0, active and lineG or 0, active and lineB or 0, active and 0.8 or 0)
+            end
+            self.label:SetTextColor(active and 1 or mutedR, active and 1 or mutedG, active and 1 or mutedB)
+        end)
+
+        table.insert(frame.tabButtons, navBtn)
+        table.insert(frame.sidebarNavButtons, navBtn)
+        prevNavBtn = navBtn
+    end
+
+    -- Pinned Account Wealth Widget at bottom of sidebar
+    local wealthWidget = CreateFrame("Frame", "CLIAltsWealthWidget", sidebar)
+    wealthWidget:SetSize(166, 68)
+    wealthWidget:SetPoint("BOTTOMLEFT", sidebar, "BOTTOMLEFT", 14, 16)
+    frame.wealthWidget = wealthWidget
+
+    local wealthTitle = wealthWidget:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(wealthTitle, 11, "")
+    wealthTitle:SetPoint("TOPLEFT", wealthWidget, "TOPLEFT", 0, 0)
+    wealthTitle:SetText("Account wealth")
+    wealthTitle:SetTextColor(mutedR, mutedG, mutedB)
+    wealthWidget.title = wealthTitle
+
+    local wealthTotal = wealthWidget:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(wealthTotal, 18, "OUTLINE")
+    wealthTotal:SetPoint("TOPLEFT", wealthTitle, "BOTTOMLEFT", 0, -4)
+    wealthTotal:SetText("5,713g")
+    wealthTotal:SetTextColor(textR, textG, textB)
+    wealthWidget.total = wealthTotal
+
+    local wealthDelta = wealthWidget:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(wealthDelta, 11, "")
+    wealthDelta:SetPoint("TOPLEFT", wealthTotal, "BOTTOMLEFT", 0, -2)
+    wealthDelta:SetText("+210g this week")
+    wealthDelta:SetTextColor(fillR, fillG, fillB)
+    wealthWidget.delta = wealthDelta
+
+    -- 3. Bottom Command Bar (34px)
+    local cmdBar = CreateFrame("Frame", "CLIAltsCmdBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    cmdBar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+    cmdBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    cmdBar:SetHeight(34)
+    cmdBar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if cmdBar.SetBackdropColor then cmdBar:SetBackdropColor(panelR, panelG, panelB, panelA) end
+    if cmdBar.SetBackdropBorderColor then cmdBar:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    frame.cmdBar = cmdBar
+
+    local cmdPromptIndicator = cmdBar:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(cmdPromptIndicator, 12, "")
+    cmdPromptIndicator:SetPoint("LEFT", cmdBar, "LEFT", 14, 0)
+    cmdPromptIndicator:SetText("> Type a command, or try:")
+    cmdPromptIndicator:SetTextColor(mutedR, mutedG, mutedB)
+    frame.cmdPromptIndicator = cmdPromptIndicator
+
+    local hintChips = {
+        { text = "next", cmd = "next" },
+        { text = "plan 2", cmd = "plan 2" },
+        { text = "unlocked mc", cmd = "unlocked mc" },
+    }
+    local prevChip = nil
+    frame.hintChips = {}
+    for _, hc in ipairs(hintChips) do
+        local chip = CreateRetroButton(cmdBar, hc.text, #hc.text * 8 + 14, 20, function()
+            CLIAlts:ExecutePromptCommand(hc.cmd)
+        end)
+        if not prevChip then
+            chip:SetPoint("LEFT", cmdPromptIndicator, "RIGHT", 8, 0)
+        else
+            chip:SetPoint("LEFT", prevChip, "RIGHT", 6, 0)
+        end
+        table.insert(frame.hintChips, chip)
+        prevChip = chip
+    end
+
+    local promptBox = CreateFrame("EditBox", "CLIAltsPromptEditBox", cmdBar)
+    self:SetWidgetFont(promptBox, 13)
+    promptBox:SetPoint("LEFT", prevChip, "RIGHT", 10, 0)
+    promptBox:SetPoint("RIGHT", cmdBar, "RIGHT", -420, 0)
+    promptBox:SetHeight(20)
+    promptBox:SetAutoFocus(false)
+    promptBox:EnableMouse(true)
+    promptBox:SetTextInsets(2, 2, 2, 2)
+    frame.promptBox = promptBox
+
+    local historyIndex = 0
+    promptBox:SetScript("OnEnterPressed", function(self)
+        local text = self:GetText() or ""
+        self:SetText("")
+        historyIndex = 0
+        self:ClearFocus()
+        CLIAlts:ExecutePromptCommand(text)
+    end)
+    promptBox:SetScript("OnEscapePressed", function(self)
+        self:SetText("")
+        self:ClearFocus()
+    end)
+    promptBox:SetScript("OnTabPressed", function(self)
+        CLIAlts:AutoCompletePrompt(self)
+    end)
+    promptBox:SetScript("OnArrowPressed", function(self, key)
+        local hist = (CLIAltsDB and CLIAltsDB.commandHistory) or {}
+        if #hist == 0 then return end
+        if key == "UP" then
+            if historyIndex == 0 then
+                historyIndex = #hist
+            elseif historyIndex > 1 then
+                historyIndex = historyIndex - 1
+            end
+            self:SetText(hist[historyIndex] or "")
+            self:SetCursorPosition(#self:GetText())
+        elseif key == "DOWN" then
+            if historyIndex > 0 and historyIndex < #hist then
+                historyIndex = historyIndex + 1
+                self:SetText(hist[historyIndex] or "")
+                self:SetCursorPosition(#self:GetText())
+            elseif historyIndex == #hist then
+                historyIndex = 0
+                self:SetText("")
+            end
+        end
+    end)
+
+    local legendText = cmdBar:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(legendText, 11, "")
+    legendText:SetPoint("RIGHT", cmdBar, "RIGHT", -14, 0)
+    legendText:SetText("Capped means at the XP cap. Losing means XP is being wasted.")
+    legendText:SetTextColor(mutedR, mutedG, mutedB)
+    frame.legendText = legendText
+
+    -- 4. Right Detail Panel (320px)
+    local detailPanel = CreateFrame("Frame", "CLIAltsDetailPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    detailPanel:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -56)
+    detailPanel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 42)
+    detailPanel:SetWidth(320)
+    detailPanel:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if detailPanel.SetBackdropColor then detailPanel:SetBackdropColor(panelR, panelG, panelB, panelA) end
+    if detailPanel.SetBackdropBorderColor then detailPanel:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    frame.detailPanel = detailPanel
+
+    local detailAvatar = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    detailAvatar:SetSize(40, 40)
+    detailAvatar:SetPoint("TOPLEFT", detailPanel, "TOPLEFT", 14, -14)
+    detailAvatar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if detailAvatar.SetBackdropColor then detailAvatar:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+    if detailAvatar.SetBackdropBorderColor then detailAvatar:SetBackdropBorderColor(brandR, brandG, brandB, 0.8) end
+    local detailAvatarText = detailAvatar:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(detailAvatarText, 18, "OUTLINE")
+    detailAvatarText:SetPoint("CENTER", 0, 0)
+    detailAvatarText:SetText("T")
+    detailAvatarText:SetTextColor(brandR, brandG, brandB)
+    detailAvatar.text = detailAvatarText
+    detailPanel.avatar = detailAvatar
+
+    local detailName = detailPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(detailName, 18, "OUTLINE")
+    detailName:SetPoint("TOPLEFT", detailAvatar, "TOPRIGHT", 10, -2)
+    detailName:SetText("Thor")
+    detailName:SetTextColor(textR, textG, textB)
+    detailPanel.name = detailName
+
+    local detailSub = detailPanel:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(detailSub, 12, "")
+    detailSub:SetPoint("TOPLEFT", detailName, "BOTTOMLEFT", 0, -2)
+    detailSub:SetText("47 Orc Warrior · Horde")
+    detailSub:SetTextColor(mutedR, mutedG, mutedB)
+    detailPanel.sub = detailSub
+
+    local restedCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    restedCard:SetPoint("TOPLEFT", detailAvatar, "BOTTOMLEFT", 0, -14)
+    restedCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
+    restedCard:SetHeight(74)
+    restedCard:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if restedCard.SetBackdropColor then restedCard:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+    if restedCard.SetBackdropBorderColor then restedCard:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    detailPanel.restedCard = restedCard
+
+    local rcHeader = restedCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(rcHeader, 10, "")
+    rcHeader:SetPoint("TOPLEFT", restedCard, "TOPLEFT", 10, -8)
+    rcHeader:SetText("RESTED XP")
+    rcHeader:SetTextColor(mutedR, mutedG, mutedB)
+
+    local rcStatus = restedCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(rcStatus, 13, "OUTLINE")
+    rcStatus:SetPoint("TOPLEFT", rcHeader, "BOTTOMLEFT", 0, -3)
+    rcStatus:SetText("Capped 3d 4h, ~52k XP wasted")
+    rcStatus:SetTextColor(warnR, warnG, warnB)
+    restedCard.status = rcStatus
+
+    local rcRate = restedCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(rcRate, 11, "")
+    rcRate:SetPoint("TOPLEFT", rcStatus, "BOTTOMLEFT", 0, -3)
+    rcRate:SetText("Logging in now banks about 38k XP per hour played.")
+    rcRate:SetTextColor(mutedR, mutedG, mutedB)
+    restedCard.rate = rcRate
+
+    local btnRemove = CreateRetroButton(detailPanel, "Remove", 68, 22, function()
+        if CLIAlts.selectedCharKey then
+            CLIAlts:ShowRemoveAltDialog(CLIAlts.selectedCharKey)
+        end
+    end)
+    btnRemove:SetPoint("BOTTOMRIGHT", detailPanel, "BOTTOMRIGHT", -12, 12)
+    detailPanel.btnRemove = btnRemove
+
+    local btnPlan = CreateRetroButton(detailPanel, "Plan session", 86, 22, function()
+        CLIAlts:ExecutePromptCommand("plan 2")
+    end)
+    btnPlan:SetPoint("RIGHT", btnRemove, "LEFT", -6, 0)
+    detailPanel.btnPlan = btnPlan
+
+    local btnEditNote = CreateRetroButton(detailPanel, "Edit note", 72, 22, function()
+        if CLIAlts.selectedCharKey then
+            CLIAlts:PromptEditNote(CLIAlts.selectedCharKey)
+        end
+    end)
+    btnEditNote:SetPoint("RIGHT", btnPlan, "LEFT", -6, 0)
+    detailPanel.btnEditNote = btnEditNote
+
+    -- 5. Center Main Column
+    local mainCol = CreateFrame("Frame", "CLIAltsMainCol", frame)
+    mainCol:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 12, -8)
+    mainCol:SetPoint("BOTTOMRIGHT", detailPanel, "BOTTOMLEFT", -12, 0)
+    frame.mainCol = mainCol
+
+    -- Play Next Banner (Phase 4 placeholder)
+    local nextBanner = CreateFrame("Frame", "CLIAltsPlayNextBanner", mainCol, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    nextBanner:SetPoint("TOPLEFT", mainCol, "TOPLEFT", 0, 0)
+    nextBanner:SetPoint("TOPRIGHT", mainCol, "TOPRIGHT", 0, 0)
+    nextBanner:SetHeight(110)
+    nextBanner:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if nextBanner.SetBackdropColor then nextBanner:SetBackdropColor(panelR, panelG, panelB, panelA) end
+    if nextBanner.SetBackdropBorderColor then nextBanner:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    frame.nextBanner = nextBanner
+    frame.recPanel = nextBanner
+
+    local recHeroTitle = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recHeroTitle, 15, "OUTLINE")
+    recHeroTitle:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -12)
+    recHeroTitle:SetText("Play next")
+    recHeroTitle:SetTextColor(brandR, brandG, brandB)
+    frame.recHeroTitle = recHeroTitle
+
+    local recProfLine = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recProfLine, 11, "")
+    recProfLine:SetPoint("TOPLEFT", recHeroTitle, "BOTTOMLEFT", 0, -4)
+    recProfLine:SetText("")
+    recProfLine:SetTextColor(mutedR, mutedG, mutedB)
+    frame.recProfLine = recProfLine
+
+    local recRestLine = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recRestLine, 11, "")
+    recRestLine:SetPoint("TOPLEFT", recProfLine, "BOTTOMLEFT", 0, -4)
+    recRestLine:SetText("")
+    frame.recRestLine = recRestLine
+
+    local recReasonLine = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recReasonLine, 10, "")
+    recReasonLine:SetPoint("BOTTOMLEFT", nextBanner, "BOTTOMLEFT", 12, 10)
+    recReasonLine:SetText("2 alts are losing rested XP right now")
+    recReasonLine:SetTextColor(warnR, warnG, warnB)
+    frame.recReasonLine = recReasonLine
+
+    -- Filter Bar (Phase 5 placeholder)
+    local filterBar = CreateFrame("Frame", "CLIAltsFilterBar", mainCol)
+    filterBar:SetPoint("TOPLEFT", nextBanner, "BOTTOMLEFT", 0, -8)
+    filterBar:SetPoint("TOPRIGHT", nextBanner, "BOTTOMRIGHT", 0, -8)
+    filterBar:SetHeight(28)
+    frame.filterBar = filterBar
+
+    -- Rows List Container
+    local rowsContainer = CreateFrame("Frame", "CLIAltsRowsContainer", mainCol)
+    rowsContainer:SetPoint("TOPLEFT", filterBar, "BOTTOMLEFT", 0, -6)
+    rowsContainer:SetPoint("BOTTOMRIGHT", mainCol, "BOTTOMRIGHT", 0, 0)
+    rowsContainer:EnableMouseWheel(true)
+    rowsContainer:SetScript("OnMouseWheel", function(self, delta)
+        if delta > 0 then
+            if currentPage > 1 then
+                currentPage = currentPage - 1
+                PlayRetroSound()
+                CLIAlts:Render()
+            end
+        else
+            if currentPage < totalPages then
+                currentPage = currentPage + 1
+                PlayRetroSound()
+                CLIAlts:Render()
+            end
+        end
+    end)
+    frame.rowsContainer = rowsContainer
+
+    -- Initialize backward-compatible row frames for Phase 1
+    for i = 1, 8 do
+        local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        row:SetSize(700, 52)
+        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 56))
+        row.rowIndex = i
+        row:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if row.SetBackdropColor then row:SetBackdropColor(panelR, panelG, panelB, 0.5) end
+        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(0, 0, 0, 0) end
+
+        local nameLine = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(nameLine, 14, "OUTLINE")
+        nameLine:SetPoint("TOPLEFT", row, "TOPLEFT", 14, -6)
+        nameLine:SetText("")
+        row.nameLine = nameLine
+
+        local subLine = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(subLine, 11, "")
+        subLine:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 14, 6)
+        subLine:SetText("")
+        row.subLine = subLine
+
+        local levelText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(levelText, 14, "OUTLINE")
+        levelText:SetPoint("CENTER", row, "LEFT", 250, 0)
+        levelText:SetText("")
+        row.levelText = levelText
+
+        local restPercentText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(restPercentText, 13, "OUTLINE")
+        restPercentText:SetPoint("LEFT", row, "LEFT", 300, 0)
+        restPercentText:SetText("")
+        row.restPercentText = restPercentText
+
+        local barBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        barBg:SetSize(180, 8)
+        barBg:SetPoint("LEFT", restPercentText, "RIGHT", 10, 0)
+        barBg:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if barBg.SetBackdropColor then barBg:SetBackdropColor(lineR, lineG, lineB, 0.8) end
+        if barBg.SetBackdropBorderColor then barBg:SetBackdropBorderColor(0, 0, 0, 0) end
+        row.barBg = barBg
+
+        local barFill = barBg:CreateTexture(nil, "ARTWORK")
+        barFill:SetTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        barFill:SetPoint("TOPLEFT", barBg, "TOPLEFT", 0, 0)
+        barFill:SetPoint("BOTTOMLEFT", barBg, "BOTTOMLEFT", 0, 0)
+        barFill:SetWidth(0)
+        row.barFill = barFill
+
+        local etaText = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(etaText, 12, "")
+        etaText:SetPoint("RIGHT", row, "RIGHT", -16, 0)
+        etaText:SetText("")
+        row.etaText = etaText
+
+        row.cells = {}
+        for j = 1, 8 do
+            local cell = row:CreateFontString(nil, "OVERLAY")
+            self:SetWidgetFont(cell, 12)
+            cell:SetWordWrap(false)
+            cell:SetHeight(18)
+            cell:SetText("")
+            row.cells[j] = cell
+        end
+
+        row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        row:SetScript("OnClick", function(self, button)
+            if self.charData then
+                CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
+                CLIAlts:Render()
+                if button == "RightButton" then
+                    CLIAlts:ShowRowContextMenu(self, self.charData)
+                else
+                    CLIAlts:ShowDossierPopup(self.charData)
+                end
+            end
+        end)
+        row:SetScript("OnEnter", function(self)
+            if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+        end)
+        row:SetScript("OnLeave", function(self)
+            local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
+            if isSelected then
+                if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.9) end
+                if self.SetBackdropBorderColor then self:SetBackdropBorderColor(brandR, brandG, brandB, 1.0) end
+            else
+                if self.SetBackdropColor then self:SetBackdropColor(panelR, panelG, panelB, 0.5) end
+                if self.SetBackdropBorderColor then self:SetBackdropBorderColor(0, 0, 0, 0) end
+            end
+        end)
+
+        rowFrames[i] = row
+    end
+
+    frame:SetScript("OnShow", function(self)
+        pcall(function()
+            if SetOverrideBindingClick then
+                SetOverrideBindingClick(self, false, "ENTER", "CLIAltsFocusEnterBtn")
+                SetOverrideBindingClick(self, false, "/", "CLIAltsFocusSlashBtn")
+            end
+        end)
+        CLIAlts:ApplyLayoutSize()
+        CLIAlts:Render()
+    end)
+    frame:SetScript("OnHide", function(self)
+        pcall(function()
+            if ClearOverrideBindings then
+                ClearOverrideBindings(self)
+            end
+        end)
+        if frame.promptBox then
+            frame.promptBox:ClearFocus()
+        end
+    end)
+
+    return frame
+end
+
+function CLIAlts:CreateMainFrame()
+    if mainFrame then return mainFrame end
+    if _G["CLIAltsMainFrame"] then
+        mainFrame = _G["CLIAltsMainFrame"]
+        self.mainFrame = mainFrame
+        return mainFrame
+    end
+
+    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI then
+        return self:CreateLegacyMainFrame()
+    end
+
+    return self:CreateModernMainFrame()
+end
+
+function CLIAlts:RecreateMainFrame()
+    if mainFrame then
+        mainFrame:Hide()
+        mainFrame:ClearAllPoints()
+    end
+    mainFrame = nil
+    self.mainFrame = nil
+    _G["CLIAltsMainFrame"] = nil
+    return self:CreateMainFrame()
+end
+
 -- ----------------------------------------------------------------------------
 -- Terminal Render Engine (Coalesced with Dirty Flag)
 -- ----------------------------------------------------------------------------
@@ -2760,34 +3484,36 @@ function CLIAlts:Render()
     if currentPage < 1 then currentPage = 1 end
 
     local filterSuffix = self.activeFilter and " FILTERED" or ""
-    if totalPages > 1 then
-        mainFrame.btnPrev:Show()
-        mainFrame.btnNext:Show()
-        mainFrame.btnPrev:SetEnabled(currentPage > 1)
-        mainFrame.btnNext:SetEnabled(currentPage < totalPages)
-        if mainFrame.btnPrev.label then
-            if currentPage > 1 then
-                mainFrame.btnPrev.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-            else
-                mainFrame.btnPrev.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3], 0.5)
+    if mainFrame.btnPrev and mainFrame.btnNext and mainFrame.pageText then
+        if totalPages > 1 then
+            mainFrame.btnPrev:Show()
+            mainFrame.btnNext:Show()
+            mainFrame.btnPrev:SetEnabled(currentPage > 1)
+            mainFrame.btnNext:SetEnabled(currentPage < totalPages)
+            if mainFrame.btnPrev.label then
+                if currentPage > 1 then
+                    mainFrame.btnPrev.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+                else
+                    mainFrame.btnPrev.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3], 0.5)
+                end
             end
-        end
-        if mainFrame.btnNext.label then
-            if currentPage < totalPages then
-                mainFrame.btnNext.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
-            else
-                mainFrame.btnNext.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3], 0.5)
+            if mainFrame.btnNext.label then
+                if currentPage < totalPages then
+                    mainFrame.btnNext.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+                else
+                    mainFrame.btnNext.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3], 0.5)
+                end
             end
+            mainFrame.pageText:ClearAllPoints()
+            mainFrame.pageText:SetPoint("LEFT", mainFrame.btnNext, "RIGHT", 10, 0)
+            mainFrame.pageText:SetText(string.format("PAGE %d OF %d (%d ALTS%s)", currentPage, totalPages, #chars, filterSuffix))
+        else
+            mainFrame.btnPrev:Hide()
+            mainFrame.btnNext:Hide()
+            mainFrame.pageText:ClearAllPoints()
+            mainFrame.pageText:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 18, 12)
+            mainFrame.pageText:SetText(string.format("TRACKED: %d ALTS%s", #chars, filterSuffix))
         end
-        mainFrame.pageText:ClearAllPoints()
-        mainFrame.pageText:SetPoint("LEFT", mainFrame.btnNext, "RIGHT", 10, 0)
-        mainFrame.pageText:SetText(string.format("PAGE %d OF %d (%d ALTS%s)", currentPage, totalPages, #chars, filterSuffix))
-    else
-        mainFrame.btnPrev:Hide()
-        mainFrame.btnNext:Hide()
-        mainFrame.pageText:ClearAllPoints()
-        mainFrame.pageText:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 18, 12)
-        mainFrame.pageText:SetText(string.format("TRACKED: %d ALTS%s", #chars, filterSuffix))
     end
 
     if mainFrame.statusTip then
@@ -3006,6 +3732,51 @@ end
 function CLIAlts:ApplyTheme()
     if not mainFrame then return end
     local t = self:GetTheme()
+
+    if not mainFrame.isLegacyUI then
+        local bgR, bgG, bgB, bgA = self:Hex("bg")
+        local lineR, lineG, lineB, lineA = self:Hex("line")
+        local panelR, panelG, panelB, panelA = self:Hex("panel")
+        local raisedR, raisedG, raisedB, raisedA = self:Hex("raised")
+        local brandR, brandG, brandB = self:Hex("brand")
+        local textR, textG, textB = self:Hex("text")
+        local mutedR, mutedG, mutedB = self:Hex("muted")
+        local fillR, fillG, fillB = self:Hex("fill")
+
+        if mainFrame.SetBackdropColor then mainFrame:SetBackdropColor(bgR, bgG, bgB, bgA) end
+        if mainFrame.SetBackdropBorderColor then mainFrame:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+
+        if mainFrame.topBar then
+            if mainFrame.topBar.SetBackdropColor then mainFrame.topBar:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if mainFrame.topBar.SetBackdropBorderColor then mainFrame.topBar:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+        end
+        if mainFrame.logoText then mainFrame.logoText:SetTextColor(brandR, brandG, brandB) end
+        if mainFrame.searchBox then
+            if mainFrame.searchBox.SetBackdropColor then mainFrame.searchBox:SetBackdropColor(raisedR, raisedG, raisedB, raisedA) end
+            if mainFrame.searchBox.SetBackdropBorderColor then mainFrame.searchBox:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+            if mainFrame.searchBox.placeholder then mainFrame.searchBox.placeholder:SetTextColor(mutedR, mutedG, mutedB) end
+            if mainFrame.searchBox.SetTextColor then mainFrame.searchBox:SetTextColor(textR, textG, textB) end
+        end
+        if mainFrame.sidebar then
+            if mainFrame.sidebar.SetBackdropColor then mainFrame.sidebar:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if mainFrame.sidebar.SetBackdropBorderColor then mainFrame.sidebar:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+        end
+        if mainFrame.wealthWidget then
+            if mainFrame.wealthWidget.title then mainFrame.wealthWidget.title:SetTextColor(mutedR, mutedG, mutedB) end
+            if mainFrame.wealthWidget.total then mainFrame.wealthWidget.total:SetTextColor(textR, textG, textB) end
+            if mainFrame.wealthWidget.delta then mainFrame.wealthWidget.delta:SetTextColor(fillR, fillG, fillB) end
+        end
+        if mainFrame.detailPanel then
+            if mainFrame.detailPanel.SetBackdropColor then mainFrame.detailPanel:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if mainFrame.detailPanel.SetBackdropBorderColor then mainFrame.detailPanel:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+        end
+        if mainFrame.cmdBar then
+            if mainFrame.cmdBar.SetBackdropColor then mainFrame.cmdBar:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if mainFrame.cmdBar.SetBackdropBorderColor then mainFrame.cmdBar:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+        end
+        if mainFrame.cmdPromptIndicator then mainFrame.cmdPromptIndicator:SetTextColor(mutedR, mutedG, mutedB) end
+        if mainFrame.legendText then mainFrame.legendText:SetTextColor(mutedR, mutedG, mutedB) end
+    end
 
     if mainFrame.SetBackdropColor then
         mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
@@ -3365,6 +4136,19 @@ function CLIAlts:ExecutePromptCommand(input)
         self:ToggleCompact()
         local isComp = self:IsCompact()
         self:SetPromptFeedback(string.format("Compact mode: %s (XP bars %s)", isComp and "ENABLED" or "DISABLED", isComp and "hidden" or "shown"))
+
+    elseif cmd == "legacy" or cmd == "legacyui" then
+        CLIAltsDB.settings.legacyUI = not CLIAltsDB.settings.legacyUI
+        local state = CLIAltsDB.settings.legacyUI and "ENABLED (ASCII Table UI)" or "DISABLED (Modern v2 UI)"
+        self:SetPromptFeedback(string.format("Legacy UI: %s", state))
+        if self.RecreateMainFrame then
+            local wasShown = mainFrame and mainFrame:IsShown()
+            self:RecreateMainFrame()
+            if wasShown and mainFrame then
+                mainFrame:Show()
+                self:Render()
+            end
+        end
 
     elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
         CLIAltsDB.settings.showInventoryTooltips = (CLIAltsDB.settings.showInventoryTooltips == false)

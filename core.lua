@@ -558,6 +558,21 @@ local function SlashHandler(msg)
         end
         CLIAlts:Print("Window position reset to center.")
 
+    elseif cmd == "legacy" or cmd == "legacyui" then
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.legacyUI = not CLIAltsDB.settings.legacyUI
+            local state = CLIAltsDB.settings.legacyUI and "ENABLED (ASCII Table UI)" or "DISABLED (Modern v2 UI)"
+            CLIAlts:Print(string.format("Legacy UI is now %s.", state))
+            if CLIAlts.RecreateMainFrame then
+                local wasShown = CLIAltsMainFrame and CLIAltsMainFrame:IsShown()
+                CLIAlts:RecreateMainFrame()
+                if wasShown and CLIAltsMainFrame then
+                    CLIAltsMainFrame:Show()
+                    CLIAlts:Render()
+                end
+            end
+        end
+
     elseif cmd == "scale" then
         if arg and arg ~= "" then
             local clean = arg:gsub("%%", "")

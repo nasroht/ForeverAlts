@@ -23,11 +23,11 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:RegisterEvent(event) end
     function frame:UnregisterEvent(event) end
     function frame:SetPoint(...) end
-    function frame:SetSize(...) end
-    function frame:SetWidth(...) end
-    function frame:SetHeight(...) end
-    function frame:GetWidth() return 140 end
-    function frame:GetHeight() return 140 end
+    function frame:SetSize(w, h) self.width = w; self.height = h end
+    function frame:SetWidth(w) self.width = w end
+    function frame:SetHeight(h) self.height = h end
+    function frame:GetWidth() return self.width or 140 end
+    function frame:GetHeight() return self.height or 140 end
     function frame:GetCenter() return 100, 100 end
     function frame:GetEffectiveScale() return 1 end
     function frame:Show() self.shown = true end
@@ -227,7 +227,7 @@ C_Timer = C_Timer or {
 
 -- 4. Load CLIAlts Addon Files in TOC order
 local addon = {}
-local files = { "data.lua", "minimap.lua", "ui.lua", "core.lua", "tests/selftest.lua" }
+local files = { "data.lua", "theme.lua", "minimap.lua", "ui.lua", "core.lua", "tests/selftest.lua" }
 
 print("============================================================")
 print("CLIAlts CI Test Runner: Loading files under plain Lua 5.1...")

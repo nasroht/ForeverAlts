@@ -409,6 +409,56 @@ function CLIAlts:RunSelfTest()
 
     CLIAltsDB.settings.compactMode = oldCompact
 
+    do -- 11c. Phase 1: Design Tokens & Modern Frame Shell
+        local oldTheme = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.theme = "DARK"
+        end
+
+        Assert(self.TOKENS ~= nil and type(self.TOKENS) == "table", "Tokens: CLIAlts.TOKENS table defined")
+        Assert(self.TOKENS.bg == "0F131A", "Tokens: default bg token is '0F131A'")
+        Assert(self.TOKENS.brand == "E8B64A", "Tokens: default brand token is 'E8B64A'")
+        Assert(self.TOKENS.panel == "171C26", "Tokens: default panel token is '171C26'")
+        Assert(self.TOKENS.line == "2B3445", "Tokens: default line token is '2B3445'")
+        Assert(self.TOKENS.warn == "F2B84B", "Tokens: default warn token is 'F2B84B'")
+        Assert(self.TOKENS.fill == "4CC2D6", "Tokens: default fill token is '4CC2D6'")
+
+        local r, g, b, a = self:Hex("bg")
+        Assert(math.abs(r - (15 / 255)) < 0.01 and math.abs(g - (19 / 255)) < 0.01 and a == 1,
+            "Hex: CLIAlts:Hex('bg') converts '0F131A' to correct RGBA floats")
+
+        -- Modern Main Frame Construction
+        CLIAltsDB.settings.legacyUI = false
+        local modernFrame = self:RecreateMainFrame()
+        Assert(modernFrame ~= nil, "ModernUI: RecreateMainFrame creates modern frame")
+        Assert(modernFrame.isLegacyUI == false, "ModernUI: isLegacyUI flag is false")
+        Assert(modernFrame:GetWidth() == 1260 and modernFrame:GetHeight() == 800,
+            "ModernUI: base dimensions are 1260x800")
+        Assert(modernFrame.topBar ~= nil, "ModernUI: 48px top bar created")
+        Assert(modernFrame.sidebar ~= nil, "ModernUI: 190px sidebar created")
+        Assert(modernFrame.detailPanel ~= nil, "ModernUI: 320px right detail panel created")
+        Assert(modernFrame.cmdBar ~= nil, "ModernUI: 34px bottom command bar created")
+        Assert(modernFrame.searchBox ~= nil, "ModernUI: search EditBox created in top bar")
+        Assert(modernFrame.wealthWidget ~= nil, "ModernUI: wealth widget created in sidebar")
+
+        -- Legacy UI Toggle Flag Verification
+        CLIAltsDB.settings.legacyUI = true
+        local legacyFrame = self:RecreateMainFrame()
+        Assert(legacyFrame ~= nil, "LegacyUI: RecreateMainFrame creates legacy frame")
+        Assert(legacyFrame.isLegacyUI == true, "LegacyUI: isLegacyUI flag is true")
+        Assert(legacyFrame:GetWidth() == 1150 and legacyFrame:GetHeight() == 600,
+            "LegacyUI: base dimensions are 1150x600")
+
+        -- Restore to Modern UI
+        CLIAltsDB.settings.legacyUI = false
+        local restoredModern = self:RecreateMainFrame()
+        Assert(restoredModern.isLegacyUI == false, "ModernUI: restoring legacyUI=false brings back modern frame")
+
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.theme = oldTheme
+        end
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()
