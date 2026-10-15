@@ -102,5 +102,5 @@ When restoring window coordinates from `CLIAltsDB.settings.windowPos`:
 * **CurseForge Tag Guard**: NEVER push `v*` git release tags. Always push to branch `main`. Releases are triggered through tagged releases only when explicitly approved.
 * **Exact UI Wording**: The UI status label for reaching cohort targets must be **"Target Level Reached"** (never "Parked").
 * **Client Synchronization**: Whenever committing changes to repository files, synchronize modified files to the local WoW client test folder:
-  `D:\World of Warcraft\_classic_beta_\Interface\AddOns\clialts\`
+  `D:\World of Warcraft\_classic_beta_\Interface\AddOns\ForeverAlts\`
 * **CI Quality Gate**: All commits to `main` must pass both `Luacheck` (0 errors, 0 warnings) and `Self-Test (Lua 5.1)` in GitHub Actions.

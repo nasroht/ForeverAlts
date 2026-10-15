@@ -386,7 +386,7 @@ for _, file in ipairs(files) do
         io.stderr:write(string.format("FATAL: Failed to parse %s: %s\n", file, tostring(err)))
         os.exit(1)
     end
-    local ok, runErr = pcall(chunk, "CLIAlts", addon)
+    local ok, runErr = pcall(chunk, "ForeverAlts", addon)
     if not ok then
         io.stderr:write(string.format("FATAL: Runtime error loading %s: %s\n", file, tostring(runErr)))
         os.exit(1)

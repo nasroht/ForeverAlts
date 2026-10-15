@@ -27,10 +27,11 @@ end
 -- ----------------------------------------------------------------------------
 -- Constants & Reference Tables
 -- ----------------------------------------------------------------------------
-local addonVersion = (C_AddOns and C_AddOns.GetAddOnMetadata and (C_AddOns.GetAddOnMetadata("clialts", "Version") or C_AddOns.GetAddOnMetadata(addonName or "clialts", "Version")))
-    or (GetAddOnMetadata and (GetAddOnMetadata("clialts", "Version") or GetAddOnMetadata(addonName or "clialts", "Version")))
+local addonVersion = (C_AddOns and C_AddOns.GetAddOnMetadata and (C_AddOns.GetAddOnMetadata("ForeverAlts", "Version") or C_AddOns.GetAddOnMetadata("clialts", "Version") or C_AddOns.GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
+    or (GetAddOnMetadata and (GetAddOnMetadata("ForeverAlts", "Version") or GetAddOnMetadata("clialts", "Version") or GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
     or "1.2.0"
 CLIAlts.VERSION = addonVersion
+ForeverAlts = CLIAlts
 CLIAlts.DB_VERSION = 3
 local CURRENT_DB_VERSION = 3
 local cachedCurrentChar = nil
@@ -364,13 +365,17 @@ function CLIAlts:InitDB()
         return
     end
 
-    local oldDB = rawget(_G, "NasaltsDB")
+    local oldDB = rawget(_G, "ForeverAltsDB") or rawget(_G, "CLIAltsDB") or rawget(_G, "NasaltsDB")
     if not CLIAltsDB and oldDB then
         CLIAltsDB = oldDB
     end
     if not CLIAltsDB then
         CLIAltsDB = {}
     end
+    ForeverAltsDB = CLIAltsDB
+    _G["ForeverAltsDB"] = ForeverAltsDB
+    _G["CLIAltsDB"] = CLIAltsDB
+    _G["ForeverAlts"] = CLIAlts
     CLIAltsDB.settings = CLIAltsDB.settings or {}
     if not CLIAltsDB.settings.theme or (CLIAltsDB.settings.theme == "AMBER" and not CLIAltsDB.settings.themeExplicit) then
         CLIAltsDB.settings.theme = "BLIZZARD"

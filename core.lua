@@ -175,7 +175,7 @@ end
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "ADDON_LOADED" then
         local loaded = (arg1 or ""):lower()
-        if not arg1 or loaded == (addonName or ""):lower() or loaded == "clialts" then
+        if not arg1 or loaded == (addonName or ""):lower() or loaded == "foreveralts" or loaded == "clialts" then
             CLIAlts:InitDB()
             CLIAlts:CacheCurrentPlayer()
             CLIAlts:CreateMinimapButton()
@@ -936,6 +936,11 @@ local function SlashHandler(msg)
         CLIAlts:Print("Unknown command. Type |cff00ff66/clialts help|r for available options.")
     end
 end
+
+SLASH_FOREVERALTS1 = "/foreveralts"
+SLASH_FOREVERALTS2 = "/fa"
+SLASH_FOREVERALTS3 = "/forever"
+SlashCmdList["FOREVERALTS"] = SlashHandler
 
 SLASH_CLIALTS1 = "/clialts"
 SLASH_CLIALTS2 = "/cli"

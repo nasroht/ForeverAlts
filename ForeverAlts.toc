@@ -1,0 +1,19 @@
+## Interface: 11506, 11507, 11508, 11509
+## Interface-Classic: 11506, 11507, 11508, 11509
+## Title: |cff00ff66ForeverAlts|r - WoW Forever Alt Manager
+## Notes: Purpose-built for World of Warcraft: Forever. Retro terminal alt dashboard, Well Rested perk optimization, leveling cohorts & milestones, automated dungeon quest tracker, Legacy Point calculator, and inter-alt supply chain router.
+## Author: ForeverAlts
+## Version: 1.2.0
+## SavedVariables: ForeverAltsDB, CLIAltsDB
+## OptionalDeps: LibDataBroker-1.1
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+## Category: Character, Leveling
+## X-License: MIT
+## X-Curse-Project-ID: 1747176
+
+data.lua
+theme.lua
+minimap.lua
+ui.lua
+core.lua
+tests/selftest.lua

@@ -34,11 +34,16 @@ ignore = {
 -- Global environment: WoW API Globals & Addon Global Variables
 globals = {
     -- Addon Globals & SavedVariables
+    "ForeverAlts",
+    "ForeverAltsDB",
     "CLIAltsDB",
     "CLIAltsMainFrame",
     "CLIAltsSettingsDialog",
     "CLIAltsFocusEnterBtn",
     "CLIAltsFocusSlashBtn",
+    "SLASH_FOREVERALTS1",
+    "SLASH_FOREVERALTS2",
+    "SLASH_FOREVERALTS3",
     "SLASH_CLIALTS1",
     "SLASH_CLIALTS2",
     "SLASH_CLIALTS3",

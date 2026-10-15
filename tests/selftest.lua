@@ -1722,6 +1722,16 @@ function CLIAlts:RunSelfTest()
         end
     end
 
+    if SlashCmdList and SlashCmdList["FOREVERALTS"] then
+        local faOk, faErr = pcall(function()
+            SlashCmdList["FOREVERALTS"]("")
+        end)
+        Assert(faOk == true, "SlashCommand: /fa (/foreveralts) toggles main window without error: " .. tostring(faErr))
+        Assert(SLASH_FOREVERALTS1 == "/foreveralts", "SlashCommand: SLASH_FOREVERALTS1 is /foreveralts")
+        Assert(SLASH_FOREVERALTS2 == "/fa", "SlashCommand: SLASH_FOREVERALTS2 is /fa")
+        Assert(SLASH_FOREVERALTS3 == "/forever", "SlashCommand: SLASH_FOREVERALTS3 is /forever")
+    end
+
     -- 14c. Minimap button click handlers
     local btn = self.CreateMinimapButton and self:CreateMinimapButton()
     if btn and btn.GetScript then
