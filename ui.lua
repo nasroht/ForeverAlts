@@ -8220,8 +8220,8 @@ function CLIAlts:InitMailAutoFillButton()
         end
     end)
 
-    if parent.HookScript then
-        parent:HookScript("OnShow", function()
+    if parent and parent.HookScript then
+        pcall(parent.HookScript, parent, "OnShow", function()
             if CLIAlts.UpdateMailAutoFillButton then
                 CLIAlts:UpdateMailAutoFillButton()
             end
