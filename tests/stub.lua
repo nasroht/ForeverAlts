@@ -159,6 +159,15 @@ ContainerFrame1CloseButton = ContainerFrame1CloseButton or CreateDummyFrame("But
 ContainerFrameCombinedBags = ContainerFrameCombinedBags or CreateDummyFrame("Frame", "ContainerFrameCombinedBags")
 ContainerFrameCombinedBagsCloseButton = ContainerFrameCombinedBagsCloseButton or CreateDummyFrame("Button", "ContainerFrameCombinedBagsCloseButton", ContainerFrameCombinedBags)
 
+ATTACHMENTS_MAX_SEND = ATTACHMENTS_MAX_SEND or 12
+SendMailFrame = SendMailFrame or CreateDummyFrame("Frame", "SendMailFrame")
+SendMailNameEditBox = SendMailNameEditBox or CreateDummyFrame("EditBox", "SendMailNameEditBox", SendMailFrame)
+SendMailSubjectEditBox = SendMailSubjectEditBox or CreateDummyFrame("EditBox", "SendMailSubjectEditBox", SendMailFrame)
+SendMailMailButton = SendMailMailButton or CreateDummyFrame("Button", "SendMailMailButton", SendMailFrame)
+ClickSendMailItemButton = ClickSendMailItemButton or function(index, clear) end
+GetSendMailItem = GetSendMailItem or function(index) return nil end
+UseContainerItem = UseContainerItem or function(bag, slot) end
+
 C_Container = C_Container or {
     GetContainerNumSlots = function(bagID) return 0 end,
     GetContainerItemInfo = function(bagID, slot) return nil end,

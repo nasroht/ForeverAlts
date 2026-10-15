@@ -3122,6 +3122,9 @@ function CLIAlts:ApplyTheme()
     if self.ApplyThemeToBagButton then
         self:ApplyThemeToBagButton()
     end
+    if self.UpdateMailAutoFillButton then
+        self:UpdateMailAutoFillButton()
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -3594,6 +3597,18 @@ function CLIAlts:ExecutePromptCommand(input)
         local newState = self:ToggleBagSortButton()
         self:SetPromptFeedback(string.format("Bag auto-sort button: %s", newState and "ENABLED" or "DISABLED"))
 
+    elseif cmd == "fillmail" or cmd == "mailfill" or cmd == "autofillmail" then
+        local ok, who, cnt = self:FillSendMailNextBatch()
+        if ok then
+            self:SetPromptFeedback(string.format("Loaded mail for %s (%d items)", who, cnt))
+        else
+            self:SetPromptFeedback(who or "Could not fill mail.", true)
+        end
+
+    elseif cmd == "mailbtn" or cmd == "mailbutton" then
+        local newState = self:ToggleMailAutoFillButton()
+        self:SetPromptFeedback(string.format("Mail auto-fill button: %s", newState and "ENABLED" or "DISABLED"))
+
     elseif cmd == "help" then
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
@@ -3613,7 +3628,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
 
     local commands = {
         "1", "2", "3", "4", "5", "6", "7",
-        "tab", "mail",
+        "tab", "mail", "fillmail", "mailbtn",
         "sort", "sortbags", "sortbtn", "filter", "find", "clear",
         "goto", "page", "next", "export", "compact",
         "watch", "unwatch", "watchlist",
@@ -4752,6 +4767,8 @@ function CLIAlts:ShowHelpPopup()
         "  /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)",
         "  /clialts sortbags   - Auto-sort inventory & stack items (/sortbags)",
         "  /clialts sortbtn    - Toggle [S] bag sort button on backpack",
+        "  /clialts fillmail   - Auto-fill next alt mail & attach items (/fillmail)",
+        "  /clialts mailbtn    - Toggle auto-fill button on Send Mail frame",
         "  /clialts forever    - Toggle WoW Forever Cohort mode (auto-active)",
         "  /clialts core <who> - Set Core cohort (Target Level 35)",
         "  /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)",
@@ -4773,6 +4790,8 @@ function CLIAlts:ShowHelpPopup()
         "  > tooltips / inv    - Toggle item hover tooltips (bags/bank alts)",
         "  > sortbags          - Auto-sort inventory & consolidate stacks",
         "  > sortbtn           - Toggle [S] button on backpack window",
+        "  > fillmail          - Auto-fill next alt mail package & attach items",
+        "  > mailbtn           - Toggle mail auto-fill button on mailbox",
         "  > core <who> [tgt]  - Set Core cohort (Target 35)",
         "  > alt <who> [tgt]   - Set Alt/Reserve cohort (Target 25)",
         "  > bank <who>        - Set Bank mule (Target 1)",
@@ -5203,6 +5222,154 @@ function CLIAlts:ToggleBagSortButton(enable)
     else
         if self.bagSortButton then
             self.bagSortButton:Hide()
+        end
+    end
+    return enable
+end
+
+-- ----------------------------------------------------------------------------
+-- Send Mail Auto-Fill Button Integration (SendMailFrame)
+-- ----------------------------------------------------------------------------
+function CLIAlts:UpdateMailAutoFillButton()
+    local btn = self.mailAutoFillButton
+    if not btn then return end
+    local t = self:GetTheme()
+
+    local summary = self:GetMailReadySummary()
+    local count = summary and summary.totalPackages or 0
+
+    if count > 0 then
+        if btn.label then
+            btn.label:SetText(string.format("|cff%s[ AUTO-FILL (%d) ]|r", t.highlightHex or "ffd34e", count))
+        end
+        if btn.SetBackdropBorderColor then
+            btn:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.9)
+        end
+    else
+        if btn.label then
+            btn.label:SetText(string.format("|cff%s[ NO ROUTED MAIL ]|r", t.mutedHex or "a9a08c"))
+        end
+        if btn.SetBackdropBorderColor then
+            btn:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.4)
+        end
+    end
+end
+
+function CLIAlts:InitMailAutoFillButton()
+    if self.mailAutoFillButton then return self.mailAutoFillButton end
+    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showMailAutoFillButton == false then
+        return nil
+    end
+
+    local parent = SendMailFrame
+    if not parent then return nil end
+
+    local btn = CreateFrame("Button", "CLIAltsMailAutoFillBtn", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    btn:SetSize(115, 20)
+
+    if SendMailNameEditBox then
+        btn:SetPoint("LEFT", SendMailNameEditBox, "RIGHT", 6, 0)
+    else
+        btn:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -40, -34)
+    end
+    btn:SetFrameStrata("HIGH")
+
+    if btn.SetBackdrop then
+        btn:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            tile = false, tileSize = 0, edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 }
+        })
+        if btn.SetBackdropColor then
+            btn:SetBackdropColor(0.08, 0.08, 0.08, 0.9)
+        end
+        if btn.SetBackdropBorderColor then
+            btn:SetBackdropBorderColor(0.95, 0.79, 0.30, 0.9)
+        end
+    end
+
+    local label = btn:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(label, 12, "OUTLINE")
+    label:SetPoint("CENTER", btn, "CENTER", 0, 0)
+    label:SetText("|cfff2c94c[ AUTO-FILL ]|r")
+    btn.label = label
+
+    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+
+    btn:SetScript("OnEnter", function(s)
+        if GameTooltip then
+            GameTooltip:SetOwner(s, "ANCHOR_TOPRIGHT")
+            GameTooltip:ClearLines()
+            GameTooltip:AddLine("|cfff2c94cCLIAlts: Mail Auto-Fill|r")
+            GameTooltip:AddLine("|cff55e39aLeft-Click|r: Fill next alt recipient & attach items", 0.9, 0.9, 0.9)
+            local autoSend = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoFillMailOnSend
+            GameTooltip:AddLine(string.format("|cff57d6e8Right-Click|r: Auto-load next on Send (|cffffd700%s|r)", autoSend and "ENABLED" or "DISABLED"), 0.9, 0.9, 0.9)
+            GameTooltip:AddLine("|cffa9a08cYou review items and manually click Send Mail.|r", 0.7, 0.7, 0.7)
+            GameTooltip:Show()
+        end
+        if s.SetBackdropColor then
+            s:SetBackdropColor(0.2, 0.2, 0.1, 0.95)
+        end
+    end)
+
+    btn:SetScript("OnLeave", function(s)
+        if GameTooltip then GameTooltip:Hide() end
+        if s.SetBackdropColor then
+            s:SetBackdropColor(0.08, 0.08, 0.08, 0.9)
+        end
+    end)
+
+    btn:SetScript("OnClick", function(_, button)
+        if button == "RightButton" then
+            if CLIAltsDB and CLIAltsDB.settings then
+                CLIAltsDB.settings.autoFillMailOnSend = not CLIAltsDB.settings.autoFillMailOnSend
+                local state = CLIAltsDB.settings.autoFillMailOnSend and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+                CLIAlts:Print(string.format("Auto-load next package on Send: %s.", state))
+                CLIAlts:UpdateMailAutoFillButton()
+            end
+        else
+            CLIAlts:FillSendMailNextBatch()
+        end
+    end)
+
+    if parent.HookScript then
+        parent:HookScript("OnShow", function()
+            if CLIAlts.UpdateMailAutoFillButton then
+                CLIAlts:UpdateMailAutoFillButton()
+            end
+        end)
+    end
+
+    self.mailAutoFillButton = btn
+    self:UpdateMailAutoFillButton()
+    return btn
+end
+
+function CLIAlts:ToggleMailAutoFillButton(enable)
+    if enable == nil then
+        if CLIAltsDB and CLIAltsDB.settings then
+            enable = not CLIAltsDB.settings.showMailAutoFillButton
+        else
+            enable = true
+        end
+    end
+
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.showMailAutoFillButton = enable
+    end
+
+    if enable then
+        if not self.mailAutoFillButton then
+            self:InitMailAutoFillButton()
+        end
+        if self.mailAutoFillButton then
+            self.mailAutoFillButton:Show()
+            self:UpdateMailAutoFillButton()
+        end
+    else
+        if self.mailAutoFillButton then
+            self.mailAutoFillButton:Hide()
         end
     end
     return enable

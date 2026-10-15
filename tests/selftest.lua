@@ -1585,8 +1585,108 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = oldSortDB
     end
 
+    do -- 26. Mail Supply Chain Auto-Fill Engine Tests
+    local oldMailDB = CLIAltsDB
+    local testMailDB = {
+        settings = {
+            showMailAutoFillButton = true,
+            autoFillMailOnSend = true,
+        },
+        characters = {
+            ["Sender-Forever"] = {
+                name = "Sender-Forever",
+                class = "Warrior",
+                classFile = "WARRIOR",
+                level = 30,
+            },
+            ["TailorAlt-Forever"] = {
+                name = "TailorAlt-Forever",
+                class = "Mage",
+                classFile = "MAGE",
+                level = 35,
+                tier = "CORE",
+                professions = {
+                    primary = {
+                        { name = "Tailoring", rank = 150, maxRank = 150 },
+                    },
+                },
+            },
+        },
+    }
+    CLIAltsDB = testMailDB
+    self.curPlayerFullName = "Sender-Forever"
+
+    -- Mock items in bags: Wool Cloth (itemID 2592) in bag 0 slot 1
+    local mockBagItems = {
+        [0] = {
+            [1] = { itemID = 2592, count = 20, link = "|cffffffff[Wool Cloth]|r" },
+        },
+    }
+    local oldGetItemData = self.GetContainerItemData
+    local oldGetNumSlots = self.GetNumContainerSlots
+    self.GetContainerItemData = function(_, bag, slot)
+        if mockBagItems[bag] and mockBagItems[bag][slot] then
+            local itm = mockBagItems[bag][slot]
+            return itm.itemID, itm.count, itm.link
+        end
+        return nil
+    end
+    self.GetNumContainerSlots = function(_, bag)
+        if bag == 0 then return 1 end
+        return 0
+    end
+
+    -- 26a. GetMailReadySummary includes bag and slot information
+    local summary = self:GetMailReadySummary()
+    Assert(summary.totalPackages > 0, "MailAutoFill: Detected packages ready for alts")
+    local tailorPkg = summary.byRecipient["TailorAlt-Forever"]
+    Assert(tailorPkg ~= nil, "MailAutoFill: Wool Cloth routed to TailorAlt-Forever")
+    Assert(tailorPkg.items[1].bag == 0 and tailorPkg.items[1].slot == 1, "MailAutoFill: Item entry contains bag 0 slot 1")
+
+    -- 26b. FillSendMailNextBatch execution and UI setup
+    local mailItemsAttached = 0
+    local oldClickSendMail = ClickSendMailItemButton
+    local oldGetSendMailItem = GetSendMailItem
+    ClickSendMailItemButton = function(slot, clear)
+        mailItemsAttached = mailItemsAttached + 1
+    end
+    GetSendMailItem = function(slot)
+        if slot <= mailItemsAttached then return "Item" end
+        return nil
+    end
+
+    SendMailFrame:Show()
+    local fillOk, fillWho, fillCount = self:FillSendMailNextBatch()
+    Assert(fillOk == true, "MailAutoFill: FillSendMailNextBatch succeeds")
+    Assert(fillWho == "TailorAlt-Forever", "MailAutoFill: Filled recipient TailorAlt-Forever")
+    Assert(fillCount == 1, "MailAutoFill: Attached 1 item")
+    Assert(SendMailNameEditBox:GetText() == "TailorAlt-Forever", "MailAutoFill: SendMailNameEditBox contains TailorAlt-Forever")
+    Assert(SendMailSubjectEditBox:GetText():find("CLIAlts:") ~= nil, "MailAutoFill: SendMailSubjectEditBox set with CLIAlts prefix")
+
+    -- 26c. AutoFill Mail Button creation and toggle
+    local mailBtn = self:InitMailAutoFillButton()
+    Assert(mailBtn ~= nil, "InitMailAutoFillButton: Button created on SendMailFrame")
+    Assert(mailBtn.label ~= nil, "InitMailAutoFillButton: Button has label fontstring")
+
+    local toggleOff = self:ToggleMailAutoFillButton(false)
+    Assert(toggleOff == false and CLIAltsDB.settings.showMailAutoFillButton == false, "ToggleMailAutoFillButton(false) disables setting")
+    Assert(mailBtn:IsShown() == false, "ToggleMailAutoFillButton(false) hides button")
+
+    local toggleOn = self:ToggleMailAutoFillButton(true)
+    Assert(toggleOn == true and CLIAltsDB.settings.showMailAutoFillButton == true, "ToggleMailAutoFillButton(true) enables setting")
+    Assert(mailBtn:IsShown() == true, "ToggleMailAutoFillButton(true) shows button")
+
+    -- Clean up mocks
+    self.GetContainerItemData = oldGetItemData
+    self.GetNumContainerSlots = oldGetNumSlots
+    ClickSendMailItemButton = oldClickSendMail
+    GetSendMailItem = oldGetSendMailItem
+    SendMailFrame:Hide()
+    CLIAltsDB = oldMailDB
+    end
+
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

@@ -127,6 +127,8 @@ local safeEvents = {
     "MAIL_INBOX_UPDATE",
     "MAIL_SHOW",
     "MAIL_CLOSED",
+    "MAIL_SEND_SUCCESS",
+    "MAIL_SUCCESS",
     "HEARTHSTONE_BOUND",
     "QUEST_TURNED_IN",
     "QUEST_LOG_UPDATE",
@@ -324,6 +326,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     elseif event == "MAIL_SHOW" then
         CLIAlts:ScanMailInbox()
         CLIAlts:RequestRender()
+        if CLIAlts.InitMailAutoFillButton then CLIAlts:InitMailAutoFillButton() end
+        if CLIAlts.UpdateMailAutoFillButton then CLIAlts:UpdateMailAutoFillButton() end
         if CLIAlts.GetMailReadySummary and not CLIAlts.hasAnnouncedMailThisSession then
             local mailSum = CLIAlts:GetMailReadySummary()
             if mailSum and mailSum.totalPackages > 0 then
@@ -335,6 +339,29 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     elseif event == "MAIL_INBOX_UPDATE" then
         CLIAlts:ScanMailInbox()
         CLIAlts:RequestRender()
+
+    elseif event == "MAIL_SEND_SUCCESS" or event == "MAIL_SUCCESS" then
+        if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoFillMailOnSend then
+            SafeAfter(0.35, function()
+                if SendMailFrame and SendMailFrame:IsVisible() then
+                    local summary = CLIAlts:GetMailReadySummary()
+                    if summary and summary.totalPackages > 0 then
+                        CLIAlts:FillSendMailNextBatch()
+                    else
+                        CLIAlts:Print("|cff00ff66[Mail Router]|r All routed alt mail packages sent!")
+                        if CLIAlts.UpdateMailAutoFillButton then
+                            CLIAlts:UpdateMailAutoFillButton()
+                        end
+                    end
+                end
+            end)
+        else
+            if CLIAlts.UpdateMailAutoFillButton then
+                SafeAfter(0.35, function()
+                    CLIAlts:UpdateMailAutoFillButton()
+                end)
+            end
+        end
 
     elseif event == "MAIL_CLOSED" then
         CLIAlts.hasAnnouncedMailThisSession = nil
@@ -387,6 +414,14 @@ local function SlashHandler(msg)
         local newState = CLIAlts:ToggleBagSortButton()
         local stateStr = newState and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
         CLIAlts:Print(string.format("Bag auto-sort button is now %s.", stateStr))
+
+    elseif cmd == "fillmail" or cmd == "autofillmail" or cmd == "mailfill" then
+        CLIAlts:FillSendMailNextBatch()
+
+    elseif cmd == "mailbtn" or cmd == "mailbutton" then
+        local newState = CLIAlts:ToggleMailAutoFillButton()
+        local stateStr = newState and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+        CLIAlts:Print(string.format("Mail auto-fill button is now %s.", stateStr))
 
     elseif cmd == "sort" then
         if arg and (arg:lower() == "bags" or arg:lower() == "bag") then
@@ -792,4 +827,9 @@ SlashCmdList["CLIALTS"] = SlashHandler
 SLASH_CLIALTS_SORT1 = "/sortbags"
 SlashCmdList["CLIALTS_SORT"] = function()
     CLIAlts:SortBags()
+end
+
+SLASH_CLIALTS_FILLMAIL1 = "/fillmail"
+SlashCmdList["CLIALTS_FILLMAIL"] = function()
+    CLIAlts:FillSendMailNextBatch()
 end

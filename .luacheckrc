@@ -42,6 +42,7 @@ globals = {
     "SLASH_CLIALTS2",
     "SLASH_CLIALTS3",
     "SLASH_CLIALTS_SORT1",
+    "SLASH_CLIALTS_FILLMAIL1",
     "SlashCmdList",
 
     -- WoW Frame & UI APIs
@@ -157,6 +158,14 @@ globals = {
     "ContainerFrameCombinedBags",
     "ContainerFrameCombinedBagsCloseButton",
     "BagItemAutoSortButton",
+    "SendMailFrame",
+    "SendMailNameEditBox",
+    "SendMailSubjectEditBox",
+    "SendMailMailButton",
+    "ClickSendMailItemButton",
+    "GetSendMailItem",
+    "ATTACHMENTS_MAX_SEND",
+    "UseContainerItem",
 
     -- WoW Hooking, Libraries & Profiling
     "hooksecurefunc",

@@ -385,6 +385,8 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode == true)
     if CLIAltsDB.settings.showInventoryTooltips == nil then CLIAltsDB.settings.showInventoryTooltips = true end
     if CLIAltsDB.settings.showBagSortButton == nil then CLIAltsDB.settings.showBagSortButton = true end
+    if CLIAltsDB.settings.showMailAutoFillButton == nil then CLIAltsDB.settings.showMailAutoFillButton = true end
+    if CLIAltsDB.settings.autoFillMailOnSend == nil then CLIAltsDB.settings.autoFillMailOnSend = true end
     if CLIAltsDB.settings.foreverMode == false and self:IsForeverClient() then
         CLIAltsDB.settings.foreverMode = nil
     end
@@ -3922,6 +3924,8 @@ function CLIAlts:GetMailReadySummary()
                         count = count,
                         reason = dest.reason,
                         category = dest.category,
+                        bag = bagID,
+                        slot = slot,
                     })
                     summary.totalItems = summary.totalItems + count
                 end
@@ -3970,6 +3974,156 @@ function CLIAlts:PrintMailRouting()
     local fb = string.format("Mail Router: %d packages (%d items) ready across %d alts.", summary.totalPackages, summary.totalItems, summary.totalPackages)
     self:Print(string.format("|cff%s%s|r", t.readyHex or "55e39a", fb))
     return fb, true
+end
+
+function CLIAlts:FillSendMailNextBatch(targetRecipient)
+    if InCombatLockdown and InCombatLockdown() then
+        self:Print("|cffff4444Cannot auto-fill mail while in combat.|r")
+        return false, "In combat"
+    end
+
+    if not SendMailFrame or not SendMailFrame:IsVisible() then
+        -- Attempt to switch to Send Mail tab if MailFrame is open
+        local mft2 = rawget(_G, "MailFrameTab2")
+        local mf = rawget(_G, "MailFrame")
+        if mf and mf.IsVisible and mf:IsVisible() and mft2 then
+            if mft2.Click then
+                mft2:Click()
+            elseif mft2.GetScript and mft2:GetScript("OnClick") then
+                mft2:GetScript("OnClick")(mft2)
+            end
+        end
+    end
+
+    if not SendMailFrame or not SendMailFrame:IsVisible() then
+        self:Print("|cffff4444Mailbox Send Mail window is not open.|r")
+        return false, "SendMailFrame not visible"
+    end
+
+    local summary = self:GetMailReadySummary()
+    if not summary or summary.totalPackages == 0 or not next(summary.byRecipient) then
+        self:Print("No items in your bags match routing rules for other alts.")
+        if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
+        return false, "No mail-ready items"
+    end
+
+    -- Determine recipient group
+    local chosenGroup = nil
+    if targetRecipient and summary.byRecipient[targetRecipient] then
+        chosenGroup = summary.byRecipient[targetRecipient]
+    else
+        local sortedRecipients = {}
+        for _, group in pairs(summary.byRecipient) do
+            table.insert(sortedRecipients, group)
+        end
+        table.sort(sortedRecipients, function(a, b) return a.destName < b.destName end)
+        chosenGroup = sortedRecipients[1]
+    end
+
+    if not chosenGroup or not chosenGroup.items or #chosenGroup.items == 0 then
+        self:Print("No routed items found for this recipient.")
+        return false, "No items for recipient"
+    end
+
+    -- 1. Fill Recipient "To:"
+    if SendMailNameEditBox then
+        SendMailNameEditBox:SetText(chosenGroup.destName)
+        if SendMailNameEditBox.HighlightText then
+            SendMailNameEditBox:HighlightText(0, 0)
+        end
+        if SendMailNameEditBox.ClearFocus then
+            SendMailNameEditBox:ClearFocus()
+        end
+    end
+
+    -- 2. Fill Subject
+    if SendMailSubjectEditBox then
+        local primaryReason = chosenGroup.items[1] and chosenGroup.items[1].reason or "Supplies"
+        local primaryCat = chosenGroup.items[1] and chosenGroup.items[1].category or "Materials"
+        local subj = string.format("CLIAlts: %s", (primaryReason and primaryReason ~= "") and primaryReason or primaryCat)
+        SendMailSubjectEditBox:SetText(subj)
+    end
+
+    -- 3. Determine available mail attachment slots
+    local maxAttach = ATTACHMENTS_MAX_SEND or 12
+    local freeAttachSlots = {}
+    for i = 1, maxAttach do
+        local hasItem = false
+        if GetSendMailItem then
+            local itmName = GetSendMailItem(i)
+            if itmName then hasItem = true end
+        end
+        if not hasItem then
+            table.insert(freeAttachSlots, i)
+        end
+    end
+
+    if #freeAttachSlots == 0 then
+        self:Print("|cffffb547All mail attachment slots are currently full.|r Click Send Mail first.")
+        return false, "Attachment slots full"
+    end
+
+    -- 4. Attach items destined for this recipient
+    local attachedCount = 0
+    for _, itm in ipairs(chosenGroup.items) do
+        if #freeAttachSlots == 0 then break end
+
+        -- Check if item is locked
+        local isLocked = false
+        if C_Container and C_Container.GetContainerItemInfo then
+            local info = C_Container.GetContainerItemInfo(itm.bag, itm.slot)
+            isLocked = info and info.isLocked
+        elseif GetContainerItemInfo then
+            local raw = { GetContainerItemInfo(itm.bag, itm.slot) }
+            isLocked = raw[3]
+        end
+
+        if not isLocked then
+            local targetSlot = table.remove(freeAttachSlots, 1)
+            local okAttach = false
+
+            if PickupContainerItem and ClickSendMailItemButton then
+                if ClearCursor then ClearCursor() end
+                PickupContainerItem(itm.bag, itm.slot)
+                ClickSendMailItemButton(targetSlot)
+                if ClearCursor then ClearCursor() end
+                okAttach = true
+            elseif C_Container and C_Container.PickupContainerItem and ClickSendMailItemButton then
+                if ClearCursor then ClearCursor() end
+                C_Container.PickupContainerItem(itm.bag, itm.slot)
+                ClickSendMailItemButton(targetSlot)
+                if ClearCursor then ClearCursor() end
+                okAttach = true
+            elseif UseContainerItem then
+                UseContainerItem(itm.bag, itm.slot)
+                okAttach = true
+            elseif C_Container and C_Container.UseContainerItem then
+                C_Container.UseContainerItem(itm.bag, itm.slot)
+                okAttach = true
+            end
+
+            if okAttach then
+                attachedCount = attachedCount + 1
+            end
+        end
+    end
+
+    if attachedCount > 0 then
+        local coloredName = self:ColorizePlayerName(chosenGroup.destName, chosenGroup.classFile)
+        self:Print(string.format("|cff57d6e8[Mail Router]|r Loaded package for %s (%d items attached). Review and click |cff00ff66Send Mail|r.",
+            coloredName, attachedCount))
+        if PlaySound and SOUNDKIT and SOUNDKIT.IG_BACKPACK_OPEN then
+            pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN)
+        end
+    else
+        self:Print(string.format("Could not attach items for %s (items may be locked).", chosenGroup.destName))
+    end
+
+    if self.UpdateMailAutoFillButton then
+        self:UpdateMailAutoFillButton()
+    end
+
+    return true, chosenGroup.destName, attachedCount
 end
 
 -- ----------------------------------------------------------------------------
