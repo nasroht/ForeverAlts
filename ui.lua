@@ -1050,78 +1050,87 @@ CLIAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
     [1] = { -- 1: OVERVIEW
-        { key = "name",      title = "CHARACTER",         w = 26, pw = 360, cpw = 300, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 70,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "rested",    title = "RESTED XP",         w = 32, pw = 450, cpw = 380, align = "LEFT",   sort = "rested",   fmt = FmtRested },
-        { key = "eta",       title = "ETA",               w = 14, pw = 200, cpw = 0,   align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "name",      title = "CHARACTER",         w = 26, pw = 360, cpw = 300, mpw = 240, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 70,  mpw = 60,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "rested",    title = "RESTED XP",         w = 32, pw = 450, cpw = 380, mpw = 270, align = "LEFT",   sort = "rested",   fmt = FmtRested },
+        { key = "eta",       title = "ETA",               w = 14, pw = 200, cpw = 0,   mpw = 110, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [2] = { -- 2: FOREVER ROUTE
-        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
-        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
-        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
-        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
-        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
-        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
+        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, mpw = 110, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  mpw = 48,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
+        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  mpw = 50,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
+        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  mpw = 80,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
+        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  mpw = 65,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
+        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 290, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
     },
     [3] = { -- 3: RESTED XP MONITOR
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, padRight = 14, cpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  align = "RIGHT",  fmt = FmtRate },
-        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 150, cpw = 120, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, mpw = 115, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   mpw = 0,   align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
+        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 115, padRight = 14, cpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 175, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 85,  align = "RIGHT",  fmt = FmtRate },
+        { key = "eta",       title = "ETA TO CAP",        w = 12, pw = 150, cpw = 120, mpw = 125, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 300, cpw = 220, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
-        { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 295, cpw = 220, align = "LEFT",   fmt = FmtProf2 },
-        { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 250, cpw = 180, align = "LEFT",   fmt = FmtSecProf },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 300, cpw = 220, mpw = 170, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
+        { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 295, cpw = 220, mpw = 170, align = "LEFT",   fmt = FmtProf2 },
+        { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 250, cpw = 180, mpw = 150, align = "LEFT",   fmt = FmtSecProf },
     },
     [5] = { -- 5: ECONOMY & WEALTH
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD & SILVER",     w = 14, pw = 200, cpw = 160, padRight = 32, cpadRight = 20, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
-        { key = "location",  title = "LAST ZONE",         w = 18, pw = 310, cpw = 220, align = "LEFT",   sort = "location", fmt = FmtLocation },
-        { key = "hearth",    title = "HEARTHSTONE",       w = 18, pw = 330, cpw = 230, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "gold",      title = "GOLD & SILVER",     w = 14, pw = 200, cpw = 160, mpw = 145, padRight = 32, cpadRight = 20, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "location",  title = "LAST ZONE",         w = 18, pw = 310, cpw = 220, mpw = 170, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",       w = 18, pw = 330, cpw = 230, mpw = 175, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [6] = { -- 6: COOLDOWNS & INSTANCE LOCKS
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
-        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
+        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 125, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 36,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, mpw = 245, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
+        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, mpw = 245, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
     },
     [7] = { -- 7: MAIL ROUTING & SUPPLY CHAIN
-        { key = "fac",       title = "FAC",                 w = 3,  pw = 40,  cpw = 36,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",           w = 16, pw = 160, cpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "tier",      title = "ROLE",                w = 8,  pw = 65,  cpw = 55,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
-        { key = "profs",     title = "PROFESSIONS",         w = 20, pw = 240, cpw = 175, align = "LEFT",   sort = "prof",     fmt = FmtMailProfessions },
-        { key = "route",     title = "ASSIGNED MATERIALS",  w = 24, pw = 280, cpw = 210, align = "LEFT",   sort = "supply",   fmt = FmtMailRoute },
-        { key = "mode",      title = "MODE",                w = 8,  pw = 110, cpw = 90,  align = "CENTER", fmt = FmtMailMode },
-        { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, align = "RIGHT",  fmt = FmtMailPending },
+        { key = "fac",       title = "FAC",                 w = 3,  pw = 40,  cpw = 36,  mpw = 28,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",           w = 16, pw = 160, cpw = 130, mpw = 120, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "tier",      title = "ROLE",                w = 8,  pw = 65,  cpw = 55,  mpw = 48,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
+        { key = "profs",     title = "PROFESSIONS",         w = 20, pw = 240, cpw = 175, mpw = 135, align = "LEFT",   sort = "prof",     fmt = FmtMailProfessions },
+        { key = "route",     title = "ASSIGNED MATERIALS",  w = 24, pw = 280, cpw = 210, mpw = 165, align = "LEFT",   sort = "supply",   fmt = FmtMailRoute },
+        { key = "mode",      title = "MODE",                w = 8,  pw = 110, cpw = 90,  mpw = 75,  align = "CENTER", fmt = FmtMailMode },
+        { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 115, align = "RIGHT",  fmt = FmtMailPending },
     },
 }
 
 function CLIAlts:GetColumns(activeTab)
     activeTab = tonumber(activeTab) or 1
     local tabCols = COLS[activeTab] or COLS[1]
-    if not self:IsCompact() then
+    local isModern = (mainFrame and not mainFrame.isLegacyUI)
+    if not self:IsCompact() and not isModern then
         return tabCols
     end
 
     local filtered = {}
     for _, col in ipairs(tabCols) do
-        if col.cpw and col.cpw > 0 then
-            table.insert(filtered, col)
-        elseif col.cpw == nil and col.key ~= "xp" and col.key ~= "curXP" and col.key ~= "eta" then
-            table.insert(filtered, col)
+        if isModern then
+            if col.mpw and col.mpw > 0 then
+                table.insert(filtered, col)
+            elseif col.mpw == nil and (col.cpw == nil or col.cpw > 0) then
+                table.insert(filtered, col)
+            end
+        elseif self:IsCompact() then
+            if col.cpw and col.cpw > 0 then
+                table.insert(filtered, col)
+            elseif col.cpw == nil and col.key ~= "xp" and col.key ~= "curXP" and col.key ~= "eta" then
+                table.insert(filtered, col)
+            end
         end
     end
     return filtered
@@ -2459,6 +2468,7 @@ function CLIAlts:CreateModernMainFrame()
         { id = 4, text = "Professions", badge = nil },
         { id = 5, text = "Economy", badge = nil },
         { id = 6, text = "Cooldowns & Locks", badge = "3", isWarn = true },
+        { id = 7, text = "Mail Routing", badge = "0", isMail = true },
     }
     frame.tabButtons = {}
     frame.sidebarNavButtons = {}
@@ -2487,7 +2497,7 @@ function CLIAlts:CreateModernMainFrame()
         navBtn.tabId = thisTabId
         navBtn.baseText = def.text
 
-        if def.badge then
+        if def.badge or def.isMail then
             local badge = CreateFrame("Frame", nil, navBtn, BackdropTemplateMixin and "BackdropTemplate" or nil)
             badge:SetSize(22, 18)
             badge:SetPoint("RIGHT", navBtn, "RIGHT", -10, 0)
@@ -2498,7 +2508,7 @@ function CLIAlts:CreateModernMainFrame()
                 insets = { left = 1, right = 1, top = 1, bottom = 1 }
             })
             if badge.SetBackdropColor then
-                if def.isOverview then
+                if def.isOverview or def.isMail then
                     badge:SetBackdropColor(fillR, fillG, fillB, 0.25)
                     badge:SetBackdropBorderColor(fillR, fillG, fillB, 0.6)
                 else
@@ -2509,8 +2519,8 @@ function CLIAlts:CreateModernMainFrame()
             local badgeText = badge:CreateFontString(nil, "OVERLAY")
             self:SetWidgetFont(badgeText, 11, "OUTLINE")
             badgeText:SetPoint("CENTER", 0, 0)
-            badgeText:SetText(def.badge)
-            if def.isOverview then
+            badgeText:SetText(def.badge or "0")
+            if def.isOverview or def.isMail then
                 badgeText:SetTextColor(fillR, fillG, fillB)
             else
                 badgeText:SetTextColor(0.1, 0.08, 0.02)
@@ -2749,9 +2759,72 @@ function CLIAlts:CreateModernMainFrame()
     rcRate:SetTextColor(mutedR, mutedG, mutedB)
     restedCard.rate = rcRate
 
+    -- Mail & Supply Stream Card
+    local mailCard = CreateFrame("Frame", nil, detailPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    mailCard:SetPoint("TOPLEFT", restedCard, "BOTTOMLEFT", 0, -12)
+    mailCard:SetPoint("RIGHT", detailPanel, "RIGHT", -14, 0)
+    mailCard:SetHeight(102)
+    mailCard:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if mailCard.SetBackdropColor then mailCard:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
+    if mailCard.SetBackdropBorderColor then mailCard:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+    detailPanel.mailCard = mailCard
+
+    local mcHeader = mailCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(mcHeader, 10, "")
+    mcHeader:SetPoint("TOPLEFT", mailCard, "TOPLEFT", 10, -8)
+    mcHeader:SetText("MAIL & SUPPLY STREAM")
+    mcHeader:SetTextColor(mutedR, mutedG, mutedB)
+    mailCard.header = mcHeader
+
+    local mcModeBadge = mailCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(mcModeBadge, 10, "OUTLINE")
+    mcModeBadge:SetPoint("TOPRIGHT", mailCard, "TOPRIGHT", -10, -8)
+    mcModeBadge:SetText("[AUTO]")
+    mcModeBadge:SetTextColor(fillR, fillG, fillB)
+    mailCard.modeBadge = mcModeBadge
+
+    local mcStream = mailCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(mcStream, 13, "OUTLINE")
+    mcStream:SetPoint("TOPLEFT", mcHeader, "BOTTOMLEFT", 0, -3)
+    mcStream:SetText("Cloth (Tailor)")
+    mcStream:SetTextColor(brandR, brandG, brandB)
+    mailCard.stream = mcStream
+
+    local mcPending = mailCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(mcPending, 11, "")
+    mcPending:SetPoint("TOPLEFT", mcStream, "BOTTOMLEFT", 0, -3)
+    mcPending:SetText("No pending materials in bags")
+    mcPending:SetTextColor(mutedR, mutedG, mutedB)
+    mailCard.pending = mcPending
+
+    local btnConfigRoute = CreateRetroButton(mailCard, "Configure Stream", 118, 20, function()
+        local char = CLIAlts:GetSelectedOrCurChar()
+        if char then
+            CLIAlts:ShowMailRouteDialog(char)
+        end
+    end)
+    btnConfigRoute:SetPoint("BOTTOMLEFT", mailCard, "BOTTOMLEFT", 10, 8)
+    mailCard.btnConfig = btnConfigRoute
+
+    local btnCycleRoute = CreateRetroButton(mailCard, "Cycle", 52, 20, function()
+        local char = CLIAlts:GetSelectedOrCurChar()
+        if char then
+            CLIAlts:CycleCharacterSupplyRole(char)
+            CLIAlts:Render()
+        end
+    end)
+    btnCycleRoute:SetPoint("LEFT", btnConfigRoute, "RIGHT", 6, 0)
+    mailCard.btnCycle = btnCycleRoute
+
     local btnRemove = CreateRetroButton(detailPanel, "Remove", 68, 22, function()
-        if CLIAlts.selectedCharKey then
-            CLIAlts:ShowRemoveAltDialog(CLIAlts.selectedCharKey)
+        local char = CLIAlts:GetSelectedOrCurChar()
+        if char then
+            CLIAlts:ShowConfirmDelete(char)
         end
     end)
     btnRemove:SetPoint("BOTTOMRIGHT", detailPanel, "BOTTOMRIGHT", -12, 12)
@@ -2764,8 +2837,12 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.btnPlan = btnPlan
 
     local btnEditNote = CreateRetroButton(detailPanel, "Edit note", 72, 22, function()
-        if CLIAlts.selectedCharKey then
-            CLIAlts:PromptEditNote(CLIAlts.selectedCharKey)
+        local char = CLIAlts:GetSelectedOrCurChar()
+        if char and frame.promptBox then
+            local name = char.name or char.fullName
+            frame.promptBox:SetText("note " .. name .. " ")
+            frame.promptBox:SetFocus()
+            frame.promptBox:SetCursorPosition(#frame.promptBox:GetText())
         end
     end)
     btnEditNote:SetPoint("RIGHT", btnPlan, "LEFT", -6, 0)
@@ -2793,12 +2870,26 @@ function CLIAlts:CreateModernMainFrame()
     frame.nextBanner = nextBanner
     frame.recPanel = nextBanner
 
+    local recBadge = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(recBadge, 10, "OUTLINE")
+    recBadge:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -8)
+    recBadge:SetText("PLAY NEXT")
+    recBadge:SetTextColor(brandR, brandG, brandB)
+    frame.recBadge = recBadge
+
     local recHeroTitle = nextBanner:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(recHeroTitle, 15, "OUTLINE")
-    recHeroTitle:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -12)
+    recHeroTitle:SetPoint("TOPLEFT", recBadge, "BOTTOMLEFT", 0, -4)
     recHeroTitle:SetText("Play next")
     recHeroTitle:SetTextColor(brandR, brandG, brandB)
     frame.recHeroTitle = recHeroTitle
+
+    local recBtnSetup = CreateRetroButton(nextBanner, "[ GUIDE ]", 80, 20, function()
+        CLIAlts:ShowHelpPopup()
+    end)
+    recBtnSetup:SetPoint("TOPRIGHT", nextBanner, "TOPRIGHT", -12, -8)
+    recBtnSetup:Hide()
+    frame.recBtnSetup = recBtnSetup
 
     local recProfLine = nextBanner:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(recProfLine, 11, "")
@@ -2827,9 +2918,79 @@ function CLIAlts:CreateModernMainFrame()
     filterBar:SetHeight(28)
     frame.filterBar = filterBar
 
+    local mailActionBar = CreateFrame("Frame", "CLIAltsMailActionBar", filterBar)
+    mailActionBar:SetAllPoints(filterBar)
+    mailActionBar:Hide()
+    frame.mailActionBar = mailActionBar
+
+    local btnConsumables = CreateRetroButton(mailActionBar, "Auto-Mail Consumables: ON", 185, 22, function()
+        CLIAlts:ToggleAutoMailConsumables()
+        CLIAlts:Render()
+    end)
+    btnConsumables:SetPoint("LEFT", mailActionBar, "LEFT", 0, 3)
+    mailActionBar.btnConsumables = btnConsumables
+
+    local btnIgnored = CreateRetroButton(mailActionBar, "Ignored Items", 105, 22, function()
+        CLIAlts:ListIgnoredMailItems()
+    end)
+    btnIgnored:SetPoint("LEFT", btnConsumables, "RIGHT", 6, 0)
+    mailActionBar.btnIgnored = btnIgnored
+
+    local btnPrintRoute = CreateRetroButton(mailActionBar, "Print in Chat", 95, 22, function()
+        CLIAlts:PrintMailRouting()
+    end)
+    btnPrintRoute:SetPoint("LEFT", btnIgnored, "RIGHT", 6, 0)
+    mailActionBar.btnPrintRoute = btnPrintRoute
+
+    local mailHintText = mailActionBar:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(mailHintText, 11, "")
+    mailHintText:SetPoint("RIGHT", mailActionBar, "RIGHT", -6, 3)
+    mailHintText:SetText("Click an alt to configure · Shift-click to cycle")
+    mailHintText:SetTextColor(mutedR, mutedG, mutedB)
+    mailActionBar.hint = mailHintText
+
+    -- Modern Table Column Headers (Tabs 2-7)
+    local headerFrame = CreateFrame("Frame", "CLIAltsModernHeaderFrame", mainCol)
+    headerFrame:SetPoint("TOPLEFT", filterBar, "BOTTOMLEFT", 0, -4)
+    headerFrame:SetPoint("RIGHT", mainCol, "RIGHT", 0, 0)
+    headerFrame:SetHeight(20)
+    headerFrame:Hide()
+    frame.headerFrame = headerFrame
+
+    frame.headerCells = {}
+    for i = 1, 8 do
+        local hCell = headerFrame:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(hCell, 11, "OUTLINE")
+        hCell:SetWordWrap(false)
+        hCell:SetHeight(18)
+        frame.headerCells[i] = hCell
+
+        local btn = CreateFrame("Button", nil, headerFrame)
+        btn:SetHeight(18)
+        btn:EnableMouse(true)
+        btn:SetScript("OnClick", function(self)
+            if self.sortKey then
+                CLIAlts:ToggleSortKey(self.sortKey)
+            end
+        end)
+        btn:SetScript("OnEnter", function(self)
+            if self.colTitle then
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:AddLine(string.format("Sort by %s", self.colTitle), 1, 1, 1)
+                GameTooltip:AddLine("Click to toggle ascending / descending.", 0.8, 0.8, 0.8)
+                GameTooltip:Show()
+            end
+        end)
+        btn:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+        btn:Hide()
+        headerButtons[i] = btn
+    end
+
     -- Rows List Container
     local rowsContainer = CreateFrame("Frame", "CLIAltsRowsContainer", mainCol)
-    rowsContainer:SetPoint("TOPLEFT", filterBar, "BOTTOMLEFT", 0, -6)
+    rowsContainer:SetPoint("TOPLEFT", headerFrame, "BOTTOMLEFT", 0, -4)
     rowsContainer:SetPoint("BOTTOMRIGHT", mainCol, "BOTTOMRIGHT", 0, 0)
     rowsContainer:EnableMouseWheel(true)
     rowsContainer:SetScript("OnMouseWheel", function(self, delta)
@@ -2929,8 +3090,19 @@ function CLIAlts:CreateModernMainFrame()
             if self.charData then
                 CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
                 CLIAlts:Render()
+                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
                 if button == "RightButton" then
                     CLIAlts:ShowRowContextMenu(self, self.charData)
+                elseif curTab == 7 then
+                    if IsShiftKeyDown and IsShiftKeyDown() then
+                        CLIAlts:CycleCharacterSupplyRole(self.charData)
+                        CLIAlts:RequestRender()
+                    else
+                        CLIAlts:ShowMailRouteDialog(self.charData)
+                    end
+                elseif IsShiftKeyDown and IsShiftKeyDown() and CLIAlts:IsForeverMode() then
+                    CLIAlts:CycleCharacterTier(self.charData)
+                    CLIAlts:RequestRender()
                 else
                     CLIAlts:ShowDossierPopup(self.charData)
                 end
@@ -3001,6 +3173,128 @@ function CLIAlts:RecreateMainFrame()
     self.mainFrame = nil
     _G["CLIAltsMainFrame"] = nil
     return self:CreateMainFrame()
+end
+
+function CLIAlts:GetSelectedOrCurChar()
+    local selectedKey = self.selectedCharKey
+    local charList = self:GetCharactersList()
+    if selectedKey then
+        for _, c in ipairs(charList) do
+            if (c.fullName and c.fullName == selectedKey) or (c.name and c.name == selectedKey) then
+                return c
+            end
+        end
+    end
+    for _, c in ipairs(charList) do
+        if (c.fullName and c.fullName == self.curPlayerFullName) or (c.name and c.name == self.curPlayerName) then
+            return c
+        end
+    end
+    return charList[1]
+end
+
+function CLIAlts:UpdateDetailPanel()
+    if not mainFrame or not mainFrame.detailPanel then return end
+    local dp = mainFrame.detailPanel
+    local char = self:GetSelectedOrCurChar()
+    if not char then
+        dp:Hide()
+        return
+    end
+    dp:Show()
+
+    local brandR, brandG, brandB = self:Hex("brand")
+    local textR, textG, textB = self:Hex("text")
+    local mutedR, mutedG, mutedB = self:Hex("muted")
+    local warnR, warnG, warnB = self:Hex("warn")
+    local fillR, fillG, fillB = self:Hex("fill")
+
+    -- 1. Avatar & Identity
+    local rawName = char.name or char.fullName or "Unknown"
+    local initial = rawName:sub(1, 1):upper()
+    if dp.avatar and dp.avatar.text then
+        dp.avatar.text:SetText(initial)
+        dp.avatar.text:SetTextColor(brandR, brandG, brandB)
+    end
+
+    if dp.name then
+        local coloredName = self:ColorizePlayerName(rawName, char.classFile)
+        dp.name:SetText(coloredName)
+    end
+
+    if dp.sub then
+        local raceStr = char.race or ""
+        local classStr = char.class or ""
+        local facStr = char.faction or ""
+        local tierStr = (char.tier == "CORE" and "Core") or (char.tier == "RESERVE" and "Alt") or (char.tier == "BANK" and "Bank Mule") or "Alt"
+        dp.sub:SetText(string.format("%d %s %s · %s (%s)", char.level or 1, raceStr, classStr, facStr, tierStr))
+        dp.sub:SetTextColor(mutedR, mutedG, mutedB)
+    end
+
+    -- 2. Rested XP Card
+    if dp.restedCard then
+        local rested = self:GetRestedData(char)
+        if rested and not rested.isMaxLevel then
+            local pct = rested.percent or 0
+            local maxPct = rested.maxPercent or 150
+            local poolXP = rested.currentRested or rested.usableXP or 0
+            local est = rested.isEstimate and "~" or ""
+            if pct >= maxPct then
+                if rested.wastedXP and rested.wastedXP > 0 then
+                    dp.restedCard.status:SetText(string.format("Capped %s (%s wasted)", rested.timeLeftStr or "", self:FormatNumber(rested.wastedXP)))
+                    dp.restedCard.status:SetTextColor(warnR, warnG, warnB)
+                else
+                    dp.restedCard.status:SetText(string.format("At Rested Cap (%d%%)", maxPct))
+                    dp.restedCard.status:SetTextColor(fillR, fillG, fillB)
+                end
+            else
+                dp.restedCard.status:SetText(string.format("%s%d%% Rested (%s XP pool)", est, pct, self:FormatNumber(poolXP)))
+                dp.restedCard.status:SetTextColor(brandR, brandG, brandB)
+            end
+            if dp.restedCard.rate then
+                if pct >= maxPct then
+                    dp.restedCard.rate:SetText("Logging in now leverages full 200% rested XP.")
+                else
+                    dp.restedCard.rate:SetText(string.format("ETA to cap: %s (%s/hr in sanctuary)", rested.timeLeftStr or "---", rested.rateStr or "1 bubble"))
+                end
+                dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
+            end
+        else
+            if dp.restedCard.status then
+                dp.restedCard.status:SetText("Target Level Reached")
+                dp.restedCard.status:SetTextColor(fillR, fillG, fillB)
+            end
+            if dp.restedCard.rate then
+                dp.restedCard.rate:SetText("Level cap reached - Rested XP no longer accumulates.")
+                dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
+            end
+        end
+    end
+
+    -- 3. Mail & Supply Stream Card
+    if dp.mailCard then
+        local curRole, isOverride, autoRole = self:GetCharacterEffectiveSupplyRole(char)
+        if isOverride then
+            dp.mailCard.modeBadge:SetText("[OVERRIDE]")
+            dp.mailCard.modeBadge:SetTextColor(warnR, warnG, warnB)
+            dp.mailCard.stream:SetText(curRole)
+            dp.mailCard.stream:SetTextColor(brandR, brandG, brandB)
+        else
+            dp.mailCard.modeBadge:SetText("[AUTO]")
+            dp.mailCard.modeBadge:SetTextColor(fillR, fillG, fillB)
+            dp.mailCard.stream:SetText(autoRole or curRole or "General Mule")
+            dp.mailCard.stream:SetTextColor(textR, textG, textB)
+        end
+
+        local pCount, pDetail = self:GetCharacterPendingMail(char)
+        if pCount > 0 then
+            dp.mailCard.pending:SetText(string.format("%d items pending (%s)", pCount, pDetail))
+            dp.mailCard.pending:SetTextColor(fillR, fillG, fillB)
+        else
+            dp.mailCard.pending:SetText("No pending materials in bags")
+            dp.mailCard.pending:SetTextColor(mutedR, mutedG, mutedB)
+        end
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -3084,26 +3378,60 @@ function CLIAlts:Render()
     -- Highlight active tab button with clear amber pill outline
     for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
         local base = isComp and tabBtn.compactText or tabBtn.baseText
-        if tabBtn.tabId == activeTab then
-            tabBtn.label:SetText(base)
-            tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-            local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+        local isActive = (tabBtn.tabId == activeTab)
+        tabBtn.label:SetText(base)
+        if not mainFrame.isLegacyUI then
+            local raisedR, raisedG, raisedB = self:Hex("raised")
+            local lineR, lineG, lineB, lineA = self:Hex("line")
+            local mutedR, mutedG, mutedB = self:Hex("muted")
+            local brandR, brandG, brandB = self:Hex("brand")
             if tabBtn.SetBackdropColor then
-                tabBtn:SetBackdropColor(hov[1], hov[2], hov[3], 0.22)
+                tabBtn:SetBackdropColor(isActive and raisedR or 0, isActive and raisedG or 0, isActive and raisedB or 0, isActive and 0.85 or 0)
             end
             if tabBtn.SetBackdropBorderColor then
-                tabBtn:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.9)
+                tabBtn:SetBackdropBorderColor(isActive and lineR or 0, isActive and lineG or 0, isActive and lineB or 0, isActive and lineA or 0)
+            end
+            tabBtn.label:SetTextColor(isActive and brandR or mutedR, isActive and brandG or mutedG, isActive and brandB or mutedB)
+        else
+            if isActive then
+                tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+                local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
+                if tabBtn.SetBackdropColor then
+                    tabBtn:SetBackdropColor(hov[1], hov[2], hov[3], 0.22)
+                end
+                if tabBtn.SetBackdropBorderColor then
+                    tabBtn:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.9)
+                end
+            else
+                local m = t.muted or t.dim or { 0.663, 0.627, 0.549 }
+                tabBtn.label:SetTextColor(m[1], m[2], m[3])
+                if tabBtn.SetBackdropColor then
+                    tabBtn:SetBackdropColor(0, 0, 0, 0)
+                end
+                if tabBtn.SetBackdropBorderColor then
+                    tabBtn:SetBackdropBorderColor(0, 0, 0, 0)
+                end
+            end
+        end
+    end
+
+    if mainFrame.mailActionBar then
+        if activeTab == 7 then
+            mainFrame.mailActionBar:Show()
+            local isCons = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoMailConsumables
+            if mainFrame.mailActionBar.btnConsumables and mainFrame.mailActionBar.btnConsumables.label then
+                mainFrame.mailActionBar.btnConsumables.label:SetText(isCons and "Auto-Mail Consumables: ON" or "Auto-Mail Consumables: OFF")
             end
         else
-            tabBtn.label:SetText(base)
-            local m = t.muted or t.dim or { 0.663, 0.627, 0.549 }
-            tabBtn.label:SetTextColor(m[1], m[2], m[3])
-            if tabBtn.SetBackdropColor then
-                tabBtn:SetBackdropColor(0, 0, 0, 0)
-            end
-            if tabBtn.SetBackdropBorderColor then
-                tabBtn:SetBackdropBorderColor(0, 0, 0, 0)
-            end
+            mainFrame.mailActionBar:Hide()
+        end
+    end
+
+    if mainFrame.headerFrame then
+        if activeTab == 1 then
+            mainFrame.headerFrame:Hide()
+        else
+            mainFrame.headerFrame:Show()
         end
     end
 
@@ -3397,7 +3725,8 @@ function CLIAlts:Render()
     local xOffset = 16
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
-    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":v4"
+    local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v5"
     local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
     if relayoutHeaders and mainFrame.headerFrame then
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
@@ -3409,8 +3738,8 @@ function CLIAlts:Render()
         local col = cols[idx]
 
         if col then
-            local colW = isComp and (col.cpw or col.pw) or col.pw
-            local padR = isComp and (col.cpadRight or col.padRight or 0) or (col.padRight or 0)
+            local colW = (mainFrame and not mainFrame.isLegacyUI and col.mpw) or (isComp and (col.cpw or col.pw)) or col.pw
+            local padR = (mainFrame and not mainFrame.isLegacyUI and col.mpadRight) or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
             local cellW = math.max(1, colW - padR)
             if hCell then
                 if relayoutHeaders then
@@ -3518,6 +3847,24 @@ function CLIAlts:Render()
 
     if mainFrame.statusTip then
         mainFrame.statusTip:SetText("|cff888888Select a character for details · Right-click for management|r")
+    end
+
+    if mainFrame.sidebarNavButtons then
+        local mailSummary = self._cachedMailReadySummary or self:GetMailReadySummary()
+        for _, navBtn in ipairs(mainFrame.sidebarNavButtons) do
+            if navBtn.tabId == 7 and navBtn.badge then
+                local pkgCount = (mailSummary and mailSummary.totalPackages) or 0
+                if pkgCount > 0 then
+                    navBtn.badge.text:SetText(tostring(pkgCount))
+                    navBtn.badge:Show()
+                else
+                    navBtn.badge:Hide()
+                end
+            elseif navBtn.tabId == 1 and navBtn.badge then
+                navBtn.badge.text:SetText(tostring(#chars))
+                navBtn.badge:Show()
+            end
+        end
     end
 
     -- Render 8 Modern 2-Line Rows (Overview) or Multi-Column Rows (Tabs 2-6)
@@ -3662,7 +4009,8 @@ function CLIAlts:Render()
                 if row.barBg then row.barBg:Hide() end
                 if row.etaText then row.etaText:Hide() end
 
-                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":v4"
+                local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
+                local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v5"
                 local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                 if relayoutRow then
                     row.lastLayoutKey = rowLayoutKey
@@ -3674,8 +4022,8 @@ function CLIAlts:Render()
                     local col = cols[idx]
                     if cell then
                         if col then
-                            local colW = isComp and (col.cpw or col.pw) or col.pw
-                            local padR = isComp and (col.cpadRight or col.padRight or 0) or (col.padRight or 0)
+                            local colW = (mainFrame and not mainFrame.isLegacyUI and col.mpw) or (isComp and (col.cpw or col.pw)) or col.pw
+                            local padR = (mainFrame and not mainFrame.isLegacyUI and col.mpadRight) or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
                             local cellW = math.max(1, colW - padR)
                             if relayoutRow then
                                 cell:ClearAllPoints()
@@ -3714,6 +4062,9 @@ function CLIAlts:Render()
             row:Hide()
         end
     end
+        if not mainFrame.isLegacyUI then
+            self:UpdateDetailPanel()
+        end
         self._cachedPriorityList = nil
         self._cachedMailReadySummary = nil
     end)
@@ -5335,32 +5686,55 @@ function CLIAlts:ShowMailRouteDialog(charData)
     local dlg = mailRouteDialog
     dlg.targetChar = charData
     local t = self:GetTheme()
+    local isLegacy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI
 
-    if dlg.SetBackdropColor then
-        dlg:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
-    end
-    if dlg.SetBackdropBorderColor then
-        dlg:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.9)
-    end
+    if not isLegacy then
+        local bgR, bgG, bgB, bgA = self:Hex("bg")
+        local lineR, lineG, lineB, lineA = self:Hex("line")
+        local panelR, panelG, panelB, panelA = self:Hex("panel")
+        local raisedR, raisedG, raisedB, raisedA = self:Hex("raised")
+        local textR, textG, textB = self:Hex("text")
 
-    if dlg.statusBox then
-        local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        if dlg.statusBox.SetBackdropColor then
-            dlg.statusBox:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.85)
-        end
-        if dlg.statusBox.SetBackdropBorderColor then
-            dlg.statusBox:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.4)
-        end
-    end
+        if dlg.SetBackdropColor then dlg:SetBackdropColor(bgR, bgG, bgB, bgA) end
+        if dlg.SetBackdropBorderColor then dlg:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
 
-    if dlg.editBox then
-        if dlg.editBox.SetBackdropColor then
-            dlg.editBox:SetBackdropColor(0.04, 0.03, 0.02, 0.9)
+        if dlg.statusBox then
+            if dlg.statusBox.SetBackdropColor then dlg.statusBox:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if dlg.statusBox.SetBackdropBorderColor then dlg.statusBox:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
         end
-        if dlg.editBox.SetBackdropBorderColor then
-            dlg.editBox:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.6)
+
+        if dlg.editBox then
+            if dlg.editBox.SetBackdropColor then dlg.editBox:SetBackdropColor(raisedR, raisedG, raisedB, raisedA) end
+            if dlg.editBox.SetBackdropBorderColor then dlg.editBox:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+            dlg.editBox:SetTextColor(textR, textG, textB)
         end
-        dlg.editBox:SetTextColor(t.text[1], t.text[2], t.text[3])
+    else
+        if dlg.SetBackdropColor then
+            dlg:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+        end
+        if dlg.SetBackdropBorderColor then
+            dlg:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.9)
+        end
+
+        if dlg.statusBox then
+            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+            if dlg.statusBox.SetBackdropColor then
+                dlg.statusBox:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.85)
+            end
+            if dlg.statusBox.SetBackdropBorderColor then
+                dlg.statusBox:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.4)
+            end
+        end
+
+        if dlg.editBox then
+            if dlg.editBox.SetBackdropColor then
+                dlg.editBox:SetBackdropColor(0.04, 0.03, 0.02, 0.9)
+            end
+            if dlg.editBox.SetBackdropBorderColor then
+                dlg.editBox:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.6)
+            end
+            dlg.editBox:SetTextColor(t.text[1], t.text[2], t.text[3])
+        end
     end
 
     local cName = charData.fullName or charData.name or "Character"

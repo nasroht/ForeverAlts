@@ -459,6 +459,90 @@ function CLIAlts:RunSelfTest()
         end
     end
 
+    do -- 11d. Modern UI Mail Routing Management & Detail Panel
+        local oldChars = CLIAltsDB and CLIAltsDB.characters
+        CLIAltsDB.characters = CLIAltsDB.characters or {}
+        local mockMule = {
+            name = "ModernMule",
+            fullName = "ModernMule-Forever",
+            class = "Priest",
+            classFile = "PRIEST",
+            race = "Undead",
+            faction = "Horde",
+            level = 20,
+            tier = "BANK",
+            supply_role = "Cloth (Tailor)",
+            professions = { primary = { { name = "Tailoring", rank = 150 } } },
+        }
+        CLIAltsDB.characters["ModernMule-Forever"] = mockMule
+        self.selectedCharKey = "ModernMule-Forever"
+
+        local mFrame = self:CreateMainFrame()
+        Assert(mFrame ~= nil, "ModernMailUI: mainFrame exists")
+        Assert(mFrame.detailPanel ~= nil and mFrame.detailPanel.mailCard ~= nil,
+            "ModernMailUI: detailPanel contains mailCard")
+        Assert(mFrame.mailActionBar ~= nil, "ModernMailUI: mailActionBar exists")
+        Assert(mFrame.mailActionBar.btnConsumables ~= nil, "ModernMailUI: btnConsumables chip exists")
+        Assert(mFrame.mailActionBar.btnIgnored ~= nil, "ModernMailUI: btnIgnored chip exists")
+        Assert(mFrame.mailActionBar.btnPrintRoute ~= nil, "ModernMailUI: btnPrintRoute chip exists")
+        Assert(mFrame.headerFrame ~= nil, "ModernMailUI: headerFrame exists for multi-column tabs")
+
+        -- Check Tab 7 in sidebarNavButtons
+        local tab7Btn = nil
+        for _, btn in ipairs(mFrame.sidebarNavButtons or {}) do
+            if btn.tabId == 7 then
+                tab7Btn = btn
+                break
+            end
+        end
+        Assert(tab7Btn ~= nil, "ModernMailUI: Tab 7 found in sidebarNavButtons")
+        Assert(tab7Btn.baseText == "Mail Routing", "ModernMailUI: Tab 7 label is 'Mail Routing'")
+        Assert(tab7Btn.badge ~= nil, "ModernMailUI: Tab 7 has badge frame")
+
+        -- Test GetSelectedOrCurChar
+        local selChar = self:GetSelectedOrCurChar()
+        Assert(selChar ~= nil and (selChar.name == "ModernMule" or selChar.fullName == "ModernMule-Forever"),
+            "ModernMailUI: GetSelectedOrCurChar returns valid character")
+
+        -- Test UpdateDetailPanel
+        self:UpdateDetailPanel()
+        Assert(mFrame.detailPanel.mailCard.stream ~= nil, "ModernMailUI: mailCard has stream fontstring")
+        Assert(mFrame.detailPanel.mailCard.modeBadge ~= nil, "ModernMailUI: mailCard has modeBadge fontstring")
+
+        -- Test Tab 7 Switch & Header/Action Bar visibility
+        local oldTab = CLIAltsDB.settings.activeTab
+        CLIAltsDB.settings.activeTab = 7
+        mFrame:Show()
+        self:Render()
+
+        Assert(mFrame.mailActionBar:IsShown(), "ModernMailUI: mailActionBar is shown on Tab 7")
+        Assert(mFrame.headerFrame:IsShown(), "ModernMailUI: headerFrame is shown on Tab 7")
+
+        local cols7 = self:GetColumns(7)
+        Assert(#cols7 == 7, "ModernMailUI: Tab 7 GetColumns returns 7 columns")
+        local totalMpw = 0
+        for _, col in ipairs(cols7) do
+            totalMpw = totalMpw + (col.mpw or 0)
+        end
+        Assert(totalMpw <= 700, "ModernMailUI: Tab 7 columns total mpw fits in 700px container")
+
+        -- Test switching back to Tab 1
+        CLIAltsDB.settings.activeTab = 1
+        self:Render()
+        Assert(not mFrame.mailActionBar:IsShown(), "ModernMailUI: mailActionBar is hidden on Tab 1")
+        Assert(not mFrame.headerFrame:IsShown(), "ModernMailUI: headerFrame is hidden on Tab 1")
+
+        -- Test ShowMailRouteDialog
+        self:ShowMailRouteDialog(mockMule)
+        local dlg = _G["CLIAltsMailRouteDialog"]
+        Assert(dlg ~= nil and dlg:IsShown(), "ModernMailUI: ShowMailRouteDialog displays dialog")
+        dlg:Hide()
+
+        CLIAltsDB.settings.activeTab = oldTab
+        CLIAltsDB.characters = oldChars
+        self.selectedCharKey = nil
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()

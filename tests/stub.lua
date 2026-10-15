@@ -17,6 +17,9 @@ local function CreateDummyFrame(frameType, name, parent)
         scale = 1,
         shown = true,
     }
+    if name then
+        _G[name] = frame
+    end
     function frame:SetScript(handler, fn) self.scripts[handler] = fn end
     function frame:GetScript(handler) return self.scripts[handler] end
     function frame:HookScript(handler, fn) end
