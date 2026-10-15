@@ -43,53 +43,6 @@ ForeverAlts is designed around the custom progression systems and mechanics of *
 
 ---
 
-## Modern High-Density UI Architecture (1440px Display)
-
-The main dashboard is organized into three streamlined visual regions designed to eliminate horizontal scrollbars and maximize vertical scanability:
-
-```text
-+-----------------------------------------------------------------------------------------------------------------------------------------+
-| [#] FOREVERALTS :: ALT MONITOR    [OVERVIEW] [ROUTE] [RESTED] [PROFS] [GOLD] [CDS] [MAIL]    [COMPACT] [THEME] [CONFIG] [TOUR] [?] [X]   |
-+-----------------------------------------------------------------------------------------------------------------------------------------+
-| PLAY NEXT: ▶ Morvath [CORE] Lvl 20/35 | Tailor 150/150 [TRAIN EXPERT]     [ 12 ALTS ] [ 2 CAPPED ] [ 1 CD RDY ] [ 4,520g ] [ LP: 15.5 ] |
-| Rested: 180% Capped (+3,400 XP waste) — Play now to prevent waste!        [ OPEN DOSSIER ]                          [ PERK: R5 ]        |
-+-----------------------------------------------------------------------------------------------------------------------------------------+
-| [ ALL ] [ CORE (4) ] [ RESERVE (5) ] [ MAX (2) ] [ CAPPED (2) ] [ HORDE (8) ] [ ALLY (4) ]                  [ Search: tailor________ ] |
-| --------------------------------------------------------------------------------------------------------------------------------------- |
-| > [O] Morvath   [WARL]  20/35  [==== 65% ====]  Tailor 150/150  142g 50s  !2h WST  [ CAPPED (Waste) ]   |  DOSSIER: Morvath-Forever  |
-|   [O] Vane      [ROGU]  22/25  [======== 82% ]  Skin/LW 140      85g 20s  Caps 8h  [ CORE PRIORITY  ]   |  Level 20/35 | Rested: 180%|
-|   [O] Thorne    [MAGE]  18/25  [=== 45% =====]  Herb/Alch 125    45g 10s  Caps 1d  [ RESERVE ALT    ]   |  Tailor 150/150 [TRAIN]    |
-|   [O] Maxcraft  [WARR]  35/35  [=============]  Mining/BS 150   120g 00s  ---      [ TARGET REACHED ]   |  Mail Stream: Cloth [AUTO] |
-|   [O] Goldmule  [PRIE]   1/1   [-------------]  ---              58g 40s  ---      [ BANK MULE      ]   |  0 items pending in bags   |
-+-----------------------------------------------------------------------------------------------------------------------------------------+
-| < Prev  Page 1/1  Next >   [Up/Down: Select | Enter: Toggle Dossier | Shift-Click: Role | Right-Click: Menu]   (1440x880 | Scale: 100%) |
-| > sort level |                                                                                                                          |
-+-----------------------------------------------------------------------------------------------------------------------------------------+
-```
-
-### 1. Unified Navigation & Control Bar
-- **7 Dedicated Views**: `[OVERVIEW]`, `[ROUTE]`, `[RESTED]`, `[PROFS]`, `[GOLD]`, `[CDS]`, and `[MAIL]`.
-- **Docked Action Pills**: `[COMPACT]` (slim 680px mode), `[THEME]` (CRT Phosphor palette), `[CONFIG]` (Settings dialog), `[TOUR]` (Interactive walkthrough), `[?]` (Help manual), and `[X]` (Close).
-
-### 2. Play Next Mission Briefing Card
-- **Optimal Character Recommendation**: Evaluates cohort rank, cap proximity, available rested XP, and waste penalty to recommend the next character to log into.
-- **Level & Rested Diagnostics**: Displays exact level progress, milestone training alerts (`[TRAIN EXPERT]`), and time spent capped at maximum rested XP.
-- **Live Account Telemetry**: Docked badges for Total Alts, Capped Alts, Ready Cooldowns, Total Liquid Gold, and Account Legacy Points.
-
-### 3. Split Character Roster & Right Detail Panel
-- **Left Roster**:
-  - Class-colored avatar rings and graphic XP progress bars.
-  - High-contrast status pills (`TARGET LEVEL REACHED`, `CORE PRIORITY`, `RESERVE ALT`, `CAPPED`, `ACCRUING`).
-  - Active selection cursor (`>`) with smooth zebra row highlights.
-- **Interactive Right Detail Panel**:
-  - **Leveling & Rested Card**: Rested XP pool bar, accrual rate, time to cap, and estimated leveling session duration.
-  - **Professions & Lockouts Card**: Primary/secondary ranks, training milestones, and dungeon/raid lockout timers.
-  - **Mail & Supply Stream Card**: Active supply role, pending materials in bags, and quick toggle buttons for Cooking and First Aid opt-in routing.
-- **Filter Chips & Instant Search**: 1-click filter pills (`All`, `Core`, `Reserve`, `Max Level`, `Capped`, `Horde`, `Alliance`) with instant text filtering.
-- **Full Keyboard Navigation**: Arrow keys (`Up`/`Down`), `Page Up`/`Page Down`, `Home`/`End`, `Enter` to inspect dossier, and `Escape` to dismiss.
-
----
-
 ## Inter-Alt Mail & Supply Chain Router
 
 Keep your crafting alts fueled without manual inventory sorting:
