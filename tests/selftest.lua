@@ -1756,13 +1756,13 @@ function CLIAlts:RunSelfTest()
 
     local oldGetItemInfo = GetItemInfo
     GetItemInfo = function(id)
-        if id == 4540 then
+        if id == 4540 or id == "Tough Hunk of Bread" then
             -- Tough Hunk of Bread (Consumable: classID 0, subclassID 5)
             return "Tough Hunk of Bread", "item:4540", 1, 1, 1, "Consumable", "Food & Drink", 20, "", "", 10, 0, 5, 0
-        elseif id == 4636 then
+        elseif id == 4636 or id == "Heavy Lockbox" then
             -- Heavy Lockbox (Junk/Misc: classID 15, subclassID 0)
             return "Heavy Lockbox", "item:4636", 1, 1, 1, "Miscellaneous", "Junk", 1, "", "", 0, 15, 0, 0
-        elseif id == 2592 then
+        elseif id == 2592 or id == "Wool Cloth" then
             -- Wool Cloth (Trade Goods: classID 7, subclassID 5)
             return "Wool Cloth", "item:2592", 1, 1, 1, "Trade Goods", "Cloth", 20, "", "", 10, 7, 5, 0
         end

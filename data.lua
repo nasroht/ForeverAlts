@@ -3771,6 +3771,10 @@ function CLIAlts:IsItemMailIgnored(itemID, itemName)
             return true
         end
     end
+    if not itemName and itemID and GetItemInfo then
+        local name = GetItemInfo(itemID)
+        if name then itemName = name end
+    end
     if itemName and itemName ~= "" then
         local lowerName = itemName:lower()
         if list[lowerName] then
@@ -3829,6 +3833,19 @@ function CLIAlts:IgnoreMailItem(itemIdentifier)
         itemName = itemIdentifier:gsub("^%s+", ""):gsub("%s+$", "")
     end
 
+    -- Attempt bidirectional ID resolution if only name was provided
+    if not itemID and itemName and GetItemInfo then
+        local _, link = GetItemInfo(itemName)
+        if link then
+            local idMatch = link:match("|Hitem:(%d+)")
+            if idMatch then itemID = tonumber(idMatch) end
+        end
+    end
+    if not itemID and itemName and GetItemInfoInstant then
+        local instantID = GetItemInfoInstant(itemName)
+        if instantID then itemID = instantID end
+    end
+
     local cleanName = itemName or (itemID and ("Item #" .. tostring(itemID))) or "Unknown Item"
     if itemID then
         CLIAltsDB.settings.ignoredMailItems[itemID] = cleanName
@@ -3874,6 +3891,19 @@ function CLIAlts:UnignoreMailItem(itemIdentifier)
 
     if not itemName and type(itemIdentifier) == "string" then
         itemName = itemIdentifier:gsub("^%s+", ""):gsub("%s+$", "")
+    end
+
+    -- Attempt bidirectional ID resolution if only name was provided
+    if not itemID and itemName and GetItemInfo then
+        local _, link = GetItemInfo(itemName)
+        if link then
+            local idMatch = link:match("|Hitem:(%d+)")
+            if idMatch then itemID = tonumber(idMatch) end
+        end
+    end
+    if not itemID and itemName and GetItemInfoInstant then
+        local instantID = GetItemInfoInstant(itemName)
+        if instantID then itemID = instantID end
     end
 
     local list = CLIAltsDB.settings.ignoredMailItems
