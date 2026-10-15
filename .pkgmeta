@@ -1,5 +1,6 @@
 package-as: clialts
 curse-project-id: 1742004
+enable-toc-creation: yes
 
 manual-changelog:
   filename: CHANGELOG.md

@@ -1,12 +1,14 @@
-## Interface: 11509,16001,20506,38002,50504,110007,110100,120100
-## Title: |cff00ff66CLIAlts|r [Retro Alt Tracker]
-## Notes: Retro ASCII TUI-styled character and alt tracker. Tracks Faction, Race, Level, Rested XP with ETA, Professions, and Gold.
+## Interface: 11506, 11507, 11508, 11509, 16001, 110007, 110100, 110200
+## Interface-Classic: 11506, 11507, 11508, 11509, 16001
+## Interface-Retail: 110007, 110100, 110200, 120100
+## Title: |cff00ff66CLIAlts|r - WoW Forever & Classic Alt Manager
+## Notes: Built primarily for World of Warcraft: Forever & Classic Era (with Retail support). Retro terminal alt dashboard, rested XP optimization, leveling cohorts & milestones, automated dungeon quest tracker, Legacy Point calculator, and inter-alt supply chain router.
 ## Author: CLIAlts
 ## Version: 1.1.0
 ## SavedVariables: CLIAltsDB
 ## OptionalDeps: LibDataBroker-1.1
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
-## Category: Character
+## Category: Character, Leveling
 ## X-License: MIT
 ## X-Curse-Project-ID: 1742004
 
