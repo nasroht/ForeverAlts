@@ -8767,11 +8767,11 @@ function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
         return
     end
 
-    local combinedFrame = testCombinedFrame or rawget(_G, "ContainerFrameCombinedBags")
-    local singleFrame = testSingleFrame or rawget(_G, "ContainerFrame1")
+    local combinedFrame = testCombinedFrame or rawget(_G, "ContainerFrameCombinedBags") or ContainerFrameCombinedBags
+    local singleFrame = testSingleFrame or rawget(_G, "ContainerFrame1") or ContainerFrame1
 
-    local combinedShown = combinedFrame and ((combinedFrame.IsVisible and combinedFrame:IsVisible()) or (combinedFrame.IsShown and combinedFrame:IsShown()))
-    local singleShown = singleFrame and ((singleFrame.IsVisible and singleFrame:IsVisible()) or (singleFrame.IsShown and singleFrame:IsShown()))
+    local combinedShown = (combinedFrame and ((combinedFrame.IsVisible and combinedFrame:IsVisible()) or (combinedFrame.IsShown and combinedFrame:IsShown())) and true) or false
+    local singleShown = (singleFrame and ((singleFrame.IsVisible and singleFrame:IsVisible()) or (singleFrame.IsShown and singleFrame:IsShown())) and true) or false
 
     local targetParent
     local isCombined
@@ -8801,18 +8801,16 @@ function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
         closeBtn = combinedFrame.CloseButton
             or (combinedFrame.TitleContainer and combinedFrame.TitleContainer.CloseButton)
             or rawget(_G, "ContainerFrameCombinedBagsCloseButton")
+            or ContainerFrameCombinedBagsCloseButton
     elseif singleFrame then
         closeBtn = singleFrame.CloseButton
             or (singleFrame.TitleContainer and singleFrame.TitleContainer.CloseButton)
             or rawget(_G, "ContainerFrame1CloseButton")
+            or ContainerFrame1CloseButton
     end
 
     btn.anchorTarget = targetParent
-    if testCombinedFrame or testSingleFrame then
-        btn:SetParent(targetParent)
-    else
-        btn:SetParent(UIParent)
-    end
+    btn:SetParent(targetParent)
 
     btn:ClearAllPoints()
     if closeBtn then
@@ -8827,7 +8825,7 @@ function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
     if closeBtn and closeBtn.GetFrameLevel then
         fl = math.max(fl, closeBtn:GetFrameLevel() or 10)
     end
-    if btn.SetFrameLevel then btn:SetFrameLevel(fl + 5) end
+    if btn.SetFrameLevel then btn:SetFrameLevel(fl + 10) end
 
     if combinedShown or singleShown then
         btn:Show()
@@ -8846,7 +8844,11 @@ function CLIAlts:InitBagSortButton()
         return nil
     end
 
-    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local combinedFrame = rawget(_G, "ContainerFrameCombinedBags") or ContainerFrameCombinedBags
+    local singleFrame = rawget(_G, "ContainerFrame1") or ContainerFrame1
+    local defaultParent = combinedFrame or singleFrame or UIParent
+
+    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", defaultParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btn:SetSize(18, 18)
     if btn.SetFrameStrata then btn:SetFrameStrata("HIGH") end
 
@@ -8928,15 +8930,25 @@ function CLIAlts:InitBagSortButton()
             CLIAlts:UpdateBagSortButtonAnchor()
         end)
 
-        local lastShown = nil
+        local lastShown = false
+        local lastTarget = nil
         watcher:SetScript("OnUpdate", function(_, dt)
             if InCombatLockdown and InCombatLockdown() then return end
-            local cf = rawget(_G, "ContainerFrameCombinedBags")
-            local sf = rawget(_G, "ContainerFrame1")
-            local isShown = (cf and ((cf.IsVisible and cf:IsVisible()) or (cf.IsShown and cf:IsShown())))
-                         or (sf and ((sf.IsVisible and sf:IsVisible()) or (sf.IsShown and sf:IsShown())))
-            if isShown ~= lastShown then
+            local cf = rawget(_G, "ContainerFrameCombinedBags") or ContainerFrameCombinedBags
+            local sf = rawget(_G, "ContainerFrame1") or ContainerFrame1
+            local cfShown = (cf and ((cf.IsVisible and cf:IsVisible()) or (cf.IsShown and cf:IsShown())) and true) or false
+            local sfShown = (sf and ((sf.IsVisible and sf:IsVisible()) or (sf.IsShown and sf:IsShown())) and true) or false
+            local isShown = cfShown or sfShown
+            local curTarget = cfShown and cf or (sfShown and sf or nil)
+
+            local btnRef = CLIAlts.bagSortButton
+            local needsReanchor = (isShown ~= lastShown)
+                               or (curTarget ~= lastTarget)
+                               or (isShown and btnRef and (not btnRef:IsShown() or (btnRef.GetParent and btnRef:GetParent() ~= curTarget)))
+
+            if needsReanchor then
                 lastShown = isShown
+                lastTarget = curTarget
                 CLIAlts:UpdateBagSortButtonAnchor()
             end
         end)

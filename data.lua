@@ -3902,7 +3902,7 @@ function CLIAlts:ToggleCharacterCooking(charOrName)
         self:Print("Character not found. Usage: |cff00ff66/clialts cook <name>|r")
         return false
     end
-    char.routeCooking = not (char.routeCooking == true)
+    char.routeCooking = not char.routeCooking
     local name = char.fullName or char.name
     local stateStr = char.routeCooking and "|cff00ff66ENABLED (Will receive Meat & Fish)|r" or "|cffff4444DISABLED (Meat & Fish ignored/kept in bags)|r"
     self:Print(string.format("|cff57d6e8[Mail Router]|r Cooking material routing for |cffffffff%s|r is now %s.", name, stateStr))
@@ -3917,7 +3917,7 @@ function CLIAlts:ToggleCharacterFirstAid(charOrName)
         self:Print("Character not found. Usage: |cff00ff66/clialts firstaid <name>|r")
         return false
     end
-    char.routeFirstAid = not (char.routeFirstAid == true)
+    char.routeFirstAid = not char.routeFirstAid
     local name = char.fullName or char.name
     local stateStr = char.routeFirstAid and "|cff00ff66ENABLED (Will receive First Aid / Cloth)|r" or "|cffff4444DISABLED (First Aid materials ignored)|r"
     self:Print(string.format("|cff57d6e8[Mail Router]|r First Aid material routing for |cffffffff%s|r is now %s.", name, stateStr))
