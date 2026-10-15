@@ -24,6 +24,10 @@ function CLIAlts:RunSelfTest()
 
     local T0 = 1000000
 
+    -- 0. Version verification (dynamically read from TOC metadata)
+    Assert(self.VERSION ~= nil and type(self.VERSION) == "string" and #self.VERSION > 0,
+        "Version: CLIAlts.VERSION dynamically populated via GetAddOnMetadata: " .. tostring(self.VERSION))
+
     -- 1. ProjectRested tests
     -- 1a. Rest zone accrual at rank 0 (5% of maxXP per 8 hours = 1000 XP on 20k maxXP)
     local charInn = { maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true }
@@ -367,6 +371,21 @@ function CLIAlts:RunSelfTest()
         local draTheme = self.THEMES["DRACULA"]
         Assert(draTheme ~= nil, "Theme: DRACULA theme exists in THEMES")
         Assert(draTheme and draTheme.tag == "DRA", "Theme: DRACULA tag is 'DRA'")
+
+        -- Phase 0: verify that every theme name accepted by the command parser maps to a valid theme in THEMES
+        local themeMap = self.THEME_MAP or {
+            green = "GREEN", grn = "GREEN",
+            amber = "AMBER", amb = "AMBER",
+            cyan = "CYAN", cyn = "CYAN",
+            mono = "MONO",
+            safe = "COLORBLIND", colorblind = "COLORBLIND", cb = "COLORBLIND",
+            synthwave = "SYNTHWAVE", syn = "SYNTHWAVE",
+            dracula = "DRACULA", dra = "DRACULA",
+        }
+        for alias, themeKey in pairs(themeMap) do
+            Assert(self.THEMES[themeKey] ~= nil,
+                string.format("Theme parser alias '%s' maps to valid theme '%s'", alias, tostring(themeKey)))
+        end
     end
 
     -- 11b. Compact Mode Toggle & Column Filtering
@@ -522,6 +541,18 @@ function CLIAlts:RunSelfTest()
             SlashCmdList["CLIALTS"]("help")
         end)
         Assert(helpOk == true, "SlashCommand: /clialts help opens help popup without error")
+
+        -- 14c. Slash command with 'theme synthwave' sets theme cleanly
+        local oldTheme = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme
+        local synOk, synErr = pcall(function()
+            SlashCmdList["CLIALTS"]("theme synthwave")
+        end)
+        Assert(synOk == true, "SlashCommand: /clialts theme synthwave executes cleanly: " .. tostring(synErr))
+        Assert(CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme == "SYNTHWAVE", "SlashCommand: /clialts theme synthwave sets theme to SYNTHWAVE")
+        if oldTheme and CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.theme = oldTheme
+            if self.ApplyTheme then self:ApplyTheme() end
+        end
     end
 
     -- 14c. Minimap button click handlers

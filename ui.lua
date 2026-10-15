@@ -239,6 +239,23 @@ CLIAlts.THEMES = {
     },
 }
 
+CLIAlts.THEME_MAP = {
+    amber = "AMBER",
+    amb = "AMBER",
+    green = "GREEN",
+    grn = "GREEN",
+    cyan = "CYAN",
+    cyn = "CYAN",
+    mono = "MONO",
+    safe = "COLORBLIND",
+    colorblind = "COLORBLIND",
+    cb = "COLORBLIND",
+    synthwave = "SYNTHWAVE",
+    syn = "SYNTHWAVE",
+    dracula = "DRACULA",
+    dra = "DRACULA",
+}
+
 local THEME_ORDER = { "AMBER", "GREEN", "CYAN", "MONO", "COLORBLIND", "SYNTHWAVE", "DRACULA" }
 local SCALES = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
 
@@ -3356,24 +3373,9 @@ function CLIAlts:ExecutePromptCommand(input)
 
     elseif cmd == "theme" then
         if args and args ~= "" then
-            local map = {
-                green = "GREEN",
-                grn = "GREEN",
-                amber = "AMBER",
-                amb = "AMBER",
-                cyan = "CYAN",
-                cyn = "CYAN",
-                mono = "MONO",
-                safe = "COLORBLIND",
-                colorblind = "COLORBLIND",
-                cb = "COLORBLIND",
-                synthwave = "SYNTHWAVE",
-                syn = "SYNTHWAVE",
-                dracula = "DRACULA",
-                dra = "DRACULA",
-            }
-            local choice = map[args:lower()]
-            if choice then
+            local map = self.THEME_MAP or CLIAlts.THEME_MAP
+            local choice = map and map[args:lower()]
+            if choice and self.THEMES and self.THEMES[choice] then
                 CLIAltsDB.settings.theme = choice
                 self:ApplyTheme()
                 self:Render()
@@ -3714,7 +3716,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
                 end
             end
         elseif cmd == "theme" then
-            local themes = { "green", "amber", "cyan", "mono", "safe", "colorblind", "synthwave", "dracula" }
+            local themes = { "amber", "green", "cyan", "mono", "safe", "colorblind", "synthwave", "dracula" }
             for _, th in ipairs(themes) do
                 if th:sub(1, #arg) == arg:lower() and th ~= arg:lower() then
                     editBox:SetText("theme " .. th)

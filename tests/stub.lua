@@ -213,6 +213,13 @@ C_AddOns = C_AddOns or {
     GetAddOnMemoryUsage = function(name) return 150.5 end,
     UpdateAddOnMemoryUsage = function() end,
 }
+GetAddOnMetadata = GetAddOnMetadata or function(addon, field)
+    if field == "Version" then return "1.1.0" end
+    return nil
+end
+if C_AddOns and not C_AddOns.GetAddOnMetadata then
+    C_AddOns.GetAddOnMetadata = GetAddOnMetadata
+end
 C_Timer = C_Timer or {
     After = function(sec, cb) if cb then cb() end end,
     NewTicker = function(sec, cb) return { Cancel = function() end } end,

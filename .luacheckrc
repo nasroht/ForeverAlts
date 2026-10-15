@@ -101,6 +101,7 @@ globals = {
     "WOW_PROJECT_CLASSIC",
     "GetBuildInfo",
     "C_AddOns",
+    "GetAddOnMetadata",
     "GetCVar",
     "GetCVarBool",
     "SetCVar",

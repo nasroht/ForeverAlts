@@ -575,11 +575,11 @@ local function SlashHandler(msg)
 
     elseif cmd == "theme" then
         if arg and arg ~= "" then
-            local map = {
-                green = "GREEN",
-                grn = "GREEN",
+            local map = CLIAlts.THEME_MAP or {
                 amber = "AMBER",
                 amb = "AMBER",
+                green = "GREEN",
+                grn = "GREEN",
                 cyan = "CYAN",
                 cyn = "CYAN",
                 mono = "MONO",
