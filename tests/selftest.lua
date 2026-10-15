@@ -1330,6 +1330,165 @@ function CLIAlts:RunSelfTest()
         self.selectedCharKey = oldSelected
     end
 
+    -- 11j. Phase 7: Command Bar & Onboarding Tour Engine Tests
+    do
+        local oldSettings = CLIAltsDB.settings
+        local oldChars = CLIAltsDB.characters
+        CLIAltsDB.settings = {
+            theme = "BLIZZARD",
+            tourDone = nil,
+            activeTab = 1,
+            sortAsc = true,
+        }
+        CLIAltsDB.characters = {
+            ["TestAlt"] = {
+                name = "TestAlt",
+                realm = "Realm",
+                level = 30,
+                class = "Warrior",
+                classFile = "WARRIOR",
+                race = "Orc",
+                faction = "Horde",
+                money = 10000,
+                lastUpdate = time(),
+                restedXP = 20000,
+                maxXP = 40000,
+                isResting = true,
+            }
+        }
+        self:InvalidateRestedCache()
+
+        local mFrame = self:RecreateMainFrame()
+        mFrame:Show()
+        self:Render()
+
+        -- 1. Command Bar hintChips verification
+        Assert(mFrame.cmdBar ~= nil, "Phase 7: mainFrame has cmdBar")
+        Assert(mFrame.cmdBar:GetHeight() == 34, "Phase 7: cmdBar height is exactly 34px")
+        Assert(mFrame.hintChips ~= nil and #mFrame.hintChips == 4, "Phase 7: hintChips contains 4 clickable chips")
+        Assert(mFrame.hintChips[1].text == "next" and mFrame.hintChips[1].cmd == "next", "Phase 7: Chip 1 is 'next'")
+        Assert(mFrame.hintChips[2].text == "plan 2" and mFrame.hintChips[2].cmd == "plan 2", "Phase 7: Chip 2 is 'plan 2'")
+        Assert(mFrame.hintChips[3].text == "unlocked mc" and mFrame.hintChips[3].cmd == "unlocked mc", "Phase 7: Chip 3 is 'unlocked mc'")
+        Assert(mFrame.hintChips[4].text == "digest" and mFrame.hintChips[4].cmd == "digest", "Phase 7: Chip 4 is 'digest'")
+
+        -- Click chip 4 ('digest') and chip 1 ('next')
+        mFrame.hintChips[4]:GetScript("OnClick")(mFrame.hintChips[4])
+        Assert(self.lastFeedbackText == "Login digest printed to chat.", "Phase 7: Clicking digest chip triggers login digest feedback")
+        mFrame.hintChips[1]:GetScript("OnClick")(mFrame.hintChips[1])
+        Assert(self.lastFeedbackText == "Next recommended alts printed to chat.", "Phase 7: Clicking next chip triggers next recommended feedback")
+
+        -- 2. Command Bar promptBox verification
+        Assert(mFrame.promptBox ~= nil, "Phase 7: promptBox exists on mainFrame")
+        Assert(mFrame.promptBox:GetHeight() == 22, "Phase 7: promptBox height is 22px")
+        Assert(mFrame.legendText ~= nil, "Phase 7: legendText exists")
+        Assert(mFrame.legendText:GetText() == "Capped means at the XP cap. Losing means XP is being wasted.", "Phase 7: legendText matches exact wording")
+
+        -- Focus script handlers
+        local onFocusGained = mFrame.promptBox:GetScript("OnEditFocusGained")
+        local onFocusLost = mFrame.promptBox:GetScript("OnEditFocusLost")
+        Assert(type(onFocusGained) == "function", "Phase 7: promptBox has OnEditFocusGained handler")
+        Assert(type(onFocusLost) == "function", "Phase 7: promptBox has OnEditFocusLost handler")
+        onFocusGained(mFrame.promptBox)
+        onFocusLost(mFrame.promptBox)
+
+        -- History UP/DOWN arrows in promptBox
+        CLIAltsDB.commandHistory = { "first_cmd", "second_cmd", "third_cmd" }
+        local onArrowScript = mFrame.promptBox:GetScript("OnArrowPressed")
+        Assert(type(onArrowScript) == "function", "Phase 7: promptBox has OnArrowPressed handler")
+        onArrowScript(mFrame.promptBox, "UP")
+        Assert(mFrame.promptBox:GetText() == "third_cmd", "Phase 7: Arrow UP recalls last command from history")
+        onArrowScript(mFrame.promptBox, "UP")
+        Assert(mFrame.promptBox:GetText() == "second_cmd", "Phase 7: Arrow UP recalls previous command from history")
+        onArrowScript(mFrame.promptBox, "DOWN")
+        Assert(mFrame.promptBox:GetText() == "third_cmd", "Phase 7: Arrow DOWN moves forward in history")
+
+        -- Tab Auto-completion
+        mFrame.promptBox:SetText("to")
+        self:AutoCompletePrompt(mFrame.promptBox)
+        Assert(mFrame.promptBox:GetText() == "tour ", "Phase 7: AutoCompletePrompt autocompletes 'to' to 'tour '")
+
+        mFrame.promptBox:SetText("dig")
+        self:AutoCompletePrompt(mFrame.promptBox)
+        Assert(mFrame.promptBox:GetText() == "digest ", "Phase 7: AutoCompletePrompt autocompletes 'dig' to 'digest '")
+
+        -- 3. Onboarding Tour Engine: StartTour and Stepping
+        CLIAltsDB.settings.tourDone = nil
+        self:StartTour()
+        Assert(self.currentTourStep == 1, "Phase 7: StartTour initializes at step 1")
+        Assert(CLIAltsDB.settings.tourDone == true, "Phase 7: StartTour flags CLIAltsDB.settings.tourDone = true")
+
+        local hl = self:GetTourHighlight()
+        local card = self:GetTourCard()
+        Assert(hl ~= nil and hl:IsShown() == true, "Phase 7: Tour highlight is visible on step 1")
+        Assert(card ~= nil and card:IsShown() == true, "Phase 7: Tour card is visible on step 1")
+        Assert(card.stepBadge:GetText():find("STEP 1 OF 3") ~= nil, "Phase 7: Step 1 badge displays STEP 1 OF 3")
+        Assert(card.titleText:GetText() == "Play Next Priority", "Phase 7: Step 1 title is 'Play Next Priority'")
+        Assert(card.btnBack:IsEnabled() == false or card.btnBack:GetAlpha() < 0.5, "Phase 7: Step 1 Back button is disabled")
+        Assert(card.btnNext.label:GetText() == "Next >", "Phase 7: Step 1 Next button label is 'Next >'")
+
+        -- Step 2
+        card.btnNext:GetScript("OnClick")(card.btnNext)
+        Assert(self.currentTourStep == 2, "Phase 7: Next button advances tour to step 2")
+        Assert(card.stepBadge:GetText():find("STEP 2 OF 3") ~= nil, "Phase 7: Step 2 badge displays STEP 2 OF 3")
+        Assert(card.titleText:GetText() == "Real-Time Status Pills", "Phase 7: Step 2 title is 'Real-Time Status Pills'")
+        Assert(card.btnBack:IsEnabled() == true and card.btnBack:GetAlpha() == 1.0, "Phase 7: Step 2 Back button is enabled")
+        Assert(card.btnNext.label:GetText() == "Next >", "Phase 7: Step 2 Next button label is 'Next >'")
+
+        -- Step 3
+        card.btnNext:GetScript("OnClick")(card.btnNext)
+        Assert(self.currentTourStep == 3, "Phase 7: Next button advances tour to step 3")
+        Assert(card.stepBadge:GetText():find("STEP 3 OF 3") ~= nil, "Phase 7: Step 3 badge displays STEP 3 OF 3")
+        Assert(card.titleText:GetText() == "Command Bar & Quick Chips", "Phase 7: Step 3 title is 'Command Bar & Quick Chips'")
+        Assert(card.btnNext.label:GetText() == "Finish", "Phase 7: Step 3 Next button label changes to 'Finish'")
+
+        -- Test Back button navigation
+        card.btnBack:GetScript("OnClick")(card.btnBack)
+        Assert(self.currentTourStep == 2, "Phase 7: Back button moves tour from step 3 back to step 2")
+        card.btnBack:GetScript("OnClick")(card.btnBack)
+        Assert(self.currentTourStep == 1, "Phase 7: Back button moves tour from step 2 back to step 1")
+
+        -- Move back to Step 3 and Finish
+        self:ShowTourStep(3)
+        Assert(self.currentTourStep == 3, "Phase 7: ShowTourStep(3) jumps to step 3")
+        card.btnNext:GetScript("OnClick")(card.btnNext)
+        Assert(self.currentTourStep == nil, "Phase 7: Clicking Finish on step 3 completes tour and clears currentTourStep")
+        Assert(hl:IsShown() == false, "Phase 7: Tour highlight hides upon finishing")
+        Assert(card:IsShown() == false, "Phase 7: Tour card hides upon finishing")
+        Assert(CLIAltsDB.settings.tourDone == true, "Phase 7: tourDone remains true after finish")
+
+        -- 4. Tour Replay via /ca tour slash command
+        SlashCmdList["CLIALTS"]("tour")
+        Assert(self.currentTourStep == 1, "Phase 7: /ca tour replays tour from step 1 even if tourDone is true")
+        Assert(card:IsShown() == true, "Phase 7: /ca tour displays tour card")
+
+        -- Close button [X]
+        card.btnClose:GetScript("OnClick")(card.btnClose)
+        Assert(self.currentTourStep == nil, "Phase 7: Clicking tour close button [X] ends tour")
+        Assert(card:IsShown() == false, "Phase 7: Tour card hidden after clicking [X]")
+
+        -- 5. Tour Replay via prompt command: tour
+        self:ExecutePromptCommand("tour")
+        Assert(self.currentTourStep == 1, "Phase 7: Prompt command 'tour' starts tour")
+        Assert(card:IsShown() == true, "Phase 7: Prompt command 'tour' shows card")
+
+        -- Skip button
+        card.btnSkip:GetScript("OnClick")(card.btnSkip)
+        Assert(self.currentTourStep == nil, "Phase 7: Clicking Skip Tour ends tour")
+        Assert(card:IsShown() == false, "Phase 7: Tour card hidden after clicking Skip")
+
+        -- 6. Main frame hide cleanly dismisses active tour
+        self:StartTour()
+        Assert(self.currentTourStep == 1, "Phase 7: Tour active before frame hide")
+        mFrame:Hide()
+        Assert(self.currentTourStep == nil, "Phase 7: Hiding mainFrame automatically dismisses active tour")
+        Assert(card:IsShown() == false, "Phase 7: Tour card hidden when mainFrame hides")
+        mFrame:Show()
+
+        -- Restore State
+        CLIAltsDB.settings = oldSettings
+        CLIAltsDB.characters = oldChars
+    end
+
     -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
     local backupDB = CLIAltsDB
     local liveTestOk, liveTestErr = pcall(function()
@@ -3004,7 +3163,7 @@ function CLIAlts:RunSelfTest()
     self.curPlayerKey = savedKey
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

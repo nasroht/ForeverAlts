@@ -229,6 +229,17 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             end)
         end
 
+        -- Check onboarding tour for first login
+        if CLIAltsDB and CLIAltsDB.settings and not CLIAltsDB.settings.tourDone then
+            SafeAfter(2.5, function()
+                if not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.tourDone) then
+                    if CLIAlts.StartTour then
+                        CLIAlts:StartTour()
+                    end
+                end
+            end)
+        end
+
         -- Delayed sync after 1.5s, 3.0s, and 5.0s to ensure server-synced money, XP, and resting state
         SafeAfter(1.5, function()
             CLIAlts.isPlayerResting = (IsResting and IsResting() and true or false)
@@ -873,6 +884,11 @@ local function SlashHandler(msg)
 
     elseif cmd == "lp" or cmd == "legacypoints" or cmd == "legacypoint" then
         CLIAlts:PrintLegacyPointStatus(arg)
+
+    elseif cmd == "tour" or cmd == "onboarding" then
+        if CLIAlts.StartTour then
+            CLIAlts:StartTour()
+        end
 
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()

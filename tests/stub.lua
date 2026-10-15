@@ -33,8 +33,20 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:GetHeight() return self.height or 140 end
     function frame:GetCenter() return 100, 100 end
     function frame:GetEffectiveScale() return 1 end
-    function frame:Show() self.shown = true end
-    function frame:Hide() self.shown = false end
+    function frame:Show()
+        local wasShown = (self.shown == true)
+        self.shown = true
+        if not wasShown and self.scripts["OnShow"] then
+            self.scripts["OnShow"](self)
+        end
+    end
+    function frame:Hide()
+        local wasShown = (self.shown == true)
+        self.shown = false
+        if wasShown and self.scripts["OnHide"] then
+            self.scripts["OnHide"](self)
+        end
+    end
     function frame:IsShown() return self.shown == true end
     function frame:IsVisible() return self.shown == true end
     function frame:SetText(txt)
@@ -98,7 +110,10 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:SetAutoFocus(...) end
     function frame:SetTextInsets(...) end
     function frame:SetMultiLine(...) end
-    function frame:SetEnabled(...) end
+    function frame:SetEnabled(val) self.enabled = (val ~= false) end
+    function frame:Enable() self:SetEnabled(true) end
+    function frame:Disable() self:SetEnabled(false) end
+    function frame:IsEnabled() return self.enabled ~= false end
     function frame:SetFocus(...) self.focused = true end
     function frame:ClearFocus(...) self.focused = false end
     function frame:HasFocus(...) return self.focused == true end
