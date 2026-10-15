@@ -3822,6 +3822,30 @@ function CLIAlts:FindBankMule()
     return nil
 end
 
+-- ============================================================================
+-- Safe External API Wrappers (Permits clean unit testing without tainting globals)
+-- ============================================================================
+function CLIAlts.GetItemInfo(selfOrID, itemID)
+    local id = (type(selfOrID) == "table" and itemID) or selfOrID
+    if GetItemInfo then return GetItemInfo(id) end
+    return nil
+end
+
+function CLIAlts.GetItemInfoInstant(selfOrID, itemID)
+    local id = (type(selfOrID) == "table" and itemID) or selfOrID
+    if C_Item and C_Item.GetItemInfoInstant then
+        return C_Item.GetItemInfoInstant(id)
+    elseif GetItemInfoInstant then
+        return GetItemInfoInstant(id)
+    end
+    return nil
+end
+
+function CLIAlts.GetCursorInfo()
+    if GetCursorInfo then return GetCursorInfo() end
+    return nil
+end
+
 function CLIAlts:IsItemMailIgnored(itemID, itemName)
     if not CLIAltsDB or not CLIAltsDB.settings or not CLIAltsDB.settings.ignoredMailItems then
         return false
@@ -3832,9 +3856,12 @@ function CLIAlts:IsItemMailIgnored(itemID, itemName)
             return true
         end
     end
-    if not itemName and itemID and GetItemInfo then
-        local name = GetItemInfo(itemID)
-        if name then itemName = name end
+    if not itemName and itemID then
+        local getItemInfoFn = self.GetItemInfo or GetItemInfo
+        if getItemInfoFn then
+            local name = getItemInfoFn(self, itemID)
+            if name then itemName = name end
+        end
     end
     if itemName and itemName ~= "" then
         local lowerName = itemName:lower()
@@ -3854,8 +3881,9 @@ function CLIAlts:IgnoreMailItem(itemIdentifier)
 
     if not itemIdentifier or itemIdentifier == "" then
         -- Check if player is holding an item on the cursor
-        if GetCursorInfo then
-            local infoType, curItemID, curLink = GetCursorInfo()
+        local cursorFn = self.GetCursorInfo or GetCursorInfo
+        if cursorFn then
+            local infoType, curItemID, curLink = cursorFn()
             if infoType == "item" then
                 itemID = curItemID
                 itemIdentifier = curLink or curItemID
@@ -3885,8 +3913,11 @@ function CLIAlts:IgnoreMailItem(itemIdentifier)
         itemID = tonumber(itemIdentifier)
     end
 
-    if itemID and GetItemInfo then
-        local name = GetItemInfo(itemID)
+    local getItemInfoFn = self.GetItemInfo or GetItemInfo
+    local getInstantFn = self.GetItemInfoInstant or GetItemInfoInstant
+
+    if itemID and getItemInfoFn then
+        local name = getItemInfoFn(self, itemID)
         if name then itemName = name end
     end
 
@@ -3895,15 +3926,15 @@ function CLIAlts:IgnoreMailItem(itemIdentifier)
     end
 
     -- Attempt bidirectional ID resolution if only name was provided
-    if not itemID and itemName and GetItemInfo then
-        local _, link = GetItemInfo(itemName)
+    if not itemID and itemName and getItemInfoFn then
+        local _, link = getItemInfoFn(self, itemName)
         if link then
             local idMatch = link:match("|Hitem:(%d+)")
             if idMatch then itemID = tonumber(idMatch) end
         end
     end
-    if not itemID and itemName and GetItemInfoInstant then
-        local instantID = GetItemInfoInstant(itemName)
+    if not itemID and itemName and getInstantFn then
+        local instantID = getInstantFn(self, itemName)
         if instantID then itemID = instantID end
     end
 
@@ -3945,8 +3976,11 @@ function CLIAlts:UnignoreMailItem(itemIdentifier)
         end
     end
 
-    if itemID and GetItemInfo then
-        local name = GetItemInfo(itemID)
+    local getItemInfoFn = self.GetItemInfo or GetItemInfo
+    local getInstantFn = self.GetItemInfoInstant or GetItemInfoInstant
+
+    if itemID and getItemInfoFn then
+        local name = getItemInfoFn(self, itemID)
         if name then itemName = name end
     end
 
@@ -3955,15 +3989,15 @@ function CLIAlts:UnignoreMailItem(itemIdentifier)
     end
 
     -- Attempt bidirectional ID resolution if only name was provided
-    if not itemID and itemName and GetItemInfo then
-        local _, link = GetItemInfo(itemName)
+    if not itemID and itemName and getItemInfoFn then
+        local _, link = getItemInfoFn(self, itemName)
         if link then
             local idMatch = link:match("|Hitem:(%d+)")
             if idMatch then itemID = tonumber(idMatch) end
         end
     end
-    if not itemID and itemName and GetItemInfoInstant then
-        local instantID = GetItemInfoInstant(itemName)
+    if not itemID and itemName and getInstantFn then
+        local instantID = getInstantFn(self, itemName)
         if instantID then itemID = instantID end
     end
 
@@ -4059,8 +4093,13 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     end
 
     if itemID then
-        if GetItemInfo then
-            local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(itemID)
+        local getItemInfoFn = self.GetItemInfo or GetItemInfo
+        local getInstantFn = self.GetItemInfoInstant or GetItemInfoInstant
+        if getItemInfoFn then
+            local name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = getItemInfoFn(self, itemID)
+            if not name and getItemInfoFn ~= GetItemInfo and GetItemInfo then
+                name, _, q, _, _, _, _, _, eqLoc, _, _, cID, scID, bType = GetItemInfo(itemID)
+            end
             if name then
                 itemName = name
                 quality = quality or q
@@ -4070,13 +4109,11 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
                 bindType = bindType or bType
             end
         end
-        if not classID and C_Item and C_Item.GetItemInfoInstant then
-            local _, _, _, eq, _, c, sc = C_Item.GetItemInfoInstant(itemID)
-            classID = classID or c
-            subclassID = subclassID or sc
-            equipLoc = equipLoc or eq
-        elseif not classID and GetItemInfoInstant then
-            local _, _, _, eq, _, c, sc = GetItemInfoInstant(itemID)
+        if not classID and getInstantFn then
+            local _, _, _, eq, _, c, sc = getInstantFn(self, itemID)
+            if not c and getInstantFn ~= GetItemInfoInstant and C_Item and C_Item.GetItemInfoInstant then
+                _, _, _, eq, _, c, sc = C_Item.GetItemInfoInstant(itemID)
+            end
             classID = classID or c
             subclassID = subclassID or sc
             equipLoc = equipLoc or eq
@@ -4271,7 +4308,7 @@ function CLIAlts:PrintMailRouting()
     return fb, true
 end
 
-function CLIAlts:FillSendMailNextBatch(targetRecipient)
+function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
     if InCombatLockdown and InCombatLockdown() then
         self:Print("|cffff4444Cannot auto-fill mail while in combat.|r")
         return false, "In combat"
@@ -4381,42 +4418,47 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient)
     for _, itm in ipairs(chosenGroup.items) do
         if #freeAttachSlots == 0 then break end
 
-        -- Check if item is locked
-        local isLocked = false
-        if C_Container and C_Container.GetContainerItemInfo then
-            local info = C_Container.GetContainerItemInfo(itm.bag, itm.slot)
-            isLocked = info and info.isLocked
-        elseif GetContainerItemInfo then
-            local raw = { GetContainerItemInfo(itm.bag, itm.slot) }
-            isLocked = raw[3]
-        end
-
-        if not isLocked then
-            local targetSlot = table.remove(freeAttachSlots, 1)
-            local okAttach = false
-
-            if PickupContainerItem and ClickSendMailItemButton then
-                if ClearCursor then ClearCursor() end
-                PickupContainerItem(itm.bag, itm.slot)
-                ClickSendMailItemButton(targetSlot)
-                if ClearCursor then ClearCursor() end
-                okAttach = true
-            elseif C_Container and C_Container.PickupContainerItem and ClickSendMailItemButton then
-                if ClearCursor then ClearCursor() end
-                C_Container.PickupContainerItem(itm.bag, itm.slot)
-                ClickSendMailItemButton(targetSlot)
-                if ClearCursor then ClearCursor() end
-                okAttach = true
-            elseif UseContainerItem then
-                UseContainerItem(itm.bag, itm.slot)
-                okAttach = true
-            elseif C_Container and C_Container.UseContainerItem then
-                C_Container.UseContainerItem(itm.bag, itm.slot)
-                okAttach = true
+        if isSimulated then
+            table.remove(freeAttachSlots, 1)
+            attachedCount = attachedCount + 1
+        else
+            -- Check if item is locked
+            local isLocked = false
+            if C_Container and C_Container.GetContainerItemInfo then
+                local info = C_Container.GetContainerItemInfo(itm.bag, itm.slot)
+                isLocked = info and info.isLocked
+            elseif GetContainerItemInfo then
+                local raw = { GetContainerItemInfo(itm.bag, itm.slot) }
+                isLocked = raw[3]
             end
 
-            if okAttach then
-                attachedCount = attachedCount + 1
+            if not isLocked then
+                local targetSlot = table.remove(freeAttachSlots, 1)
+                local okAttach = false
+
+                if PickupContainerItem and ClickSendMailItemButton then
+                    if ClearCursor then ClearCursor() end
+                    PickupContainerItem(itm.bag, itm.slot)
+                    ClickSendMailItemButton(targetSlot)
+                    if ClearCursor then ClearCursor() end
+                    okAttach = true
+                elseif C_Container and C_Container.PickupContainerItem and ClickSendMailItemButton then
+                    if ClearCursor then ClearCursor() end
+                    C_Container.PickupContainerItem(itm.bag, itm.slot)
+                    ClickSendMailItemButton(targetSlot)
+                    if ClearCursor then ClearCursor() end
+                    okAttach = true
+                elseif UseContainerItem then
+                    UseContainerItem(itm.bag, itm.slot)
+                    okAttach = true
+                elseif C_Container and C_Container.UseContainerItem then
+                    C_Container.UseContainerItem(itm.bag, itm.slot)
+                    okAttach = true
+                end
+
+                if okAttach then
+                    attachedCount = attachedCount + 1
+                end
             end
         end
     end
@@ -5841,8 +5883,13 @@ function CLIAlts:GetItemSortScore(itemID, count)
     end
 
     local itemName, quality, itemType, classID, subclassID
-    if GetItemInfo then
-        local raw = { GetItemInfo(itemID) }
+    local getItemInfoFn = self.GetItemInfo or GetItemInfo
+    local getInstantFn = self.GetItemInfoInstant or GetItemInfoInstant
+    if getItemInfoFn then
+        local raw = { getItemInfoFn(self, itemID) }
+        if not raw[1] and getItemInfoFn ~= GetItemInfo and GetItemInfo then
+            raw = { GetItemInfo(itemID) }
+        end
         if raw[1] then
             itemName = raw[1]
             quality = raw[3]
@@ -5851,12 +5898,13 @@ function CLIAlts:GetItemSortScore(itemID, count)
             subclassID = raw[13]
         end
     end
-    if not classID and C_Item and C_Item.GetItemInfoInstant then
-        local raw = { C_Item.GetItemInfoInstant(itemID) }
-        classID = raw[6]
-        subclassID = raw[7]
-    elseif not classID and GetItemInfoInstant then
-        local raw = { GetItemInfoInstant(itemID) }
+    if not classID and getInstantFn then
+        local raw = { getInstantFn(self, itemID) }
+        if not raw[6] and getInstantFn ~= GetItemInfoInstant and C_Item and C_Item.GetItemInfoInstant then
+            raw = { C_Item.GetItemInfoInstant(itemID) }
+        elseif not raw[6] and getInstantFn ~= GetItemInfoInstant and GetItemInfoInstant then
+            raw = { GetItemInfoInstant(itemID) }
+        end
         classID = raw[6]
         subclassID = raw[7]
     end
@@ -5972,8 +6020,8 @@ function CLIAlts:ConsolidateBagStacks()
     return didMerge
 end
 
-function CLIAlts:SortBags()
-    if InCombatLockdown and InCombatLockdown() then
+function CLIAlts:SortBags(forceInCombat)
+    if forceInCombat or (InCombatLockdown and InCombatLockdown()) then
         self:Print("|cffff4444Cannot sort bags while in combat.|r")
         return false
     end

@@ -1485,34 +1485,35 @@ function CLIAlts:RunSelfTest()
     testMailDB.characters["Mule-Forever"].supply_role = nil
     testMailDB.characters["Morvath-Forever"].supply_role = nil
 
-    local oldGetItemInfo = GetItemInfo
-    local oldNumSlots = C_Container and C_Container.GetContainerNumSlots
-    local oldItemInfo = C_Container and C_Container.GetContainerItemInfo
+    local mockBags = {
+        [0] = {
+            [1] = { itemID = 2589, count = 20, link = "|cffffffff|Hitem:2589:0:0:0:0:0:0:0:80:0:0:0:0|h[Linen Cloth]|h|r" },
+            [2] = { itemID = 2447, count = 15, link = "|cffffffff|Hitem:2447:0:0:0:0:0:0:0:80:0:0:0:0|h[Peacebloom]|h|r" },
+        },
+    }
+    local oldGetItemData = self.GetContainerItemData
+    local oldGetNumSlots = self.GetNumContainerSlots
 
-    GetItemInfo = function(id)
+    self.GetContainerItemData = function(_, bag, slot)
+        if mockBags[bag] and mockBags[bag][slot] then
+            local itm = mockBags[bag][slot]
+            return itm.itemID, itm.count, itm.link
+        end
+        return nil
+    end
+
+    self.GetNumContainerSlots = function(_, bag)
+        return bag == 0 and 2 or 0
+    end
+
+    self.GetItemInfo = function(selfOrID, itemID)
+        local id = (type(selfOrID) == "table" and itemID) or selfOrID
         if id == 2589 then
             return "Linen Cloth", "item:2589", 1, 0, 0, "Trade Goods", "Cloth", 20, "", "", 10, 7, 5, 0
         elseif id == 2447 then
             return "Peacebloom", "item:2447", 1, 0, 0, "Trade Goods", "Herb", 20, "", "", 10, 7, 9, 0
         end
         return nil
-    end
-
-    if C_Container then
-        C_Container.GetContainerNumSlots = function(bagID)
-            return bagID == 0 and 2 or 0
-        end
-
-        C_Container.GetContainerItemInfo = function(bagID, slot)
-            if bagID == 0 then
-                if slot == 1 then
-                    return { itemID = 2589, stackCount = 20, hyperlink = "|cffffffff|Hitem:2589:0:0:0:0:0:0:0:80:0:0:0:0|h[Linen Cloth]|h|r" }
-                elseif slot == 2 then
-                    return { itemID = 2447, stackCount = 15, hyperlink = "|cffffffff|Hitem:2447:0:0:0:0:0:0:0:80:0:0:0:0|h[Peacebloom]|h|r" }
-                end
-            end
-            return nil
-        end
     end
 
     local bagSummary = self:GetMailReadySummary()
@@ -1531,11 +1532,9 @@ function CLIAlts:RunSelfTest()
         Assert(renderOk == true, "MailUI: Tab 7 Render completes without error when bags have items: " .. tostring(renderErr))
     end
 
-    GetItemInfo = oldGetItemInfo
-    if C_Container then
-        C_Container.GetContainerNumSlots = oldNumSlots
-        C_Container.GetContainerItemInfo = oldItemInfo
-    end
+    self.GetContainerItemData = oldGetItemData
+    self.GetNumContainerSlots = oldGetNumSlots
+    self.GetItemInfo = nil
 
     CLIAltsDB = oldMailDB
     end
@@ -1675,17 +1674,17 @@ function CLIAlts:RunSelfTest()
             [1008] = { name = "Ruined Pelt", itemClass = 15, itemSubClass = 0, quality = 0 }, -- Poor (Junk)
         }
 
-        local oldGetItemInfoInstant = GetItemInfoInstant
-        local oldGetItemInfo = GetItemInfo
-        GetItemInfoInstant = function(id)
-            local d = mockItemData[id]
+        self.GetItemInfoInstant = function(selfOrID, id)
+            local target = (type(selfOrID) == "table" and id) or selfOrID
+            local d = mockItemData[target]
             if d then
-                return id, d.name, nil, nil, d.quality, d.itemClass, d.itemSubClass
+                return target, d.name, nil, nil, d.quality, d.itemClass, d.itemSubClass
             end
             return nil
         end
-        GetItemInfo = function(id)
-            local d = mockItemData[id]
+        self.GetItemInfo = function(selfOrID, id)
+            local target = (type(selfOrID) == "table" and id) or selfOrID
+            local d = mockItemData[target]
             if d then
                 return d.name, nil, d.quality, nil, nil, nil, nil, nil, nil, nil, nil, d.itemClass, d.itemSubClass
             end
@@ -1709,8 +1708,8 @@ function CLIAlts:RunSelfTest()
         local _, _, jnkScore = self:GetItemSortScore(1008, 1)
         Assert(jnkScore == 90, "SortBags: Junk item receives score 90")
 
-        GetItemInfoInstant = oldGetItemInfoInstant
-        GetItemInfo = oldGetItemInfo
+        self.GetItemInfoInstant = nil
+        self.GetItemInfo = nil
     end
 
     -- 25b. Stack consolidation execution
@@ -1725,11 +1724,8 @@ function CLIAlts:RunSelfTest()
     self.ConsolidateBagStacks = oldConsolidate
 
     -- 25c. SortBags execution and combat guard
-    local oldCombat = InCombatLockdown
-    InCombatLockdown = function() return true end
-    local combatSort = self:SortBags()
+    local combatSort = self:SortBags(true)
     Assert(combatSort == false, "SortBags: Refuses to sort in combat")
-    InCombatLockdown = function() return false end
 
     -- Mock sort API so selftest does not trigger live item locks or moving real player items in-game
     local sortCalled = false
@@ -1763,43 +1759,33 @@ function CLIAlts:RunSelfTest()
 
     -- 25e. Bag Sort Button anchor switching between Combined Bags and Separate Bags
     do
-        local oldCombined = rawget(_G, "ContainerFrameCombinedBags")
-        local oldSingle = rawget(_G, "ContainerFrame1")
-
         local mockCombined = CreateFrame("Frame", "CLIAltsMockCombinedBags", UIParent)
         local mockSingle = CreateFrame("Frame", "CLIAltsMockSingleBag", UIParent)
-        _G["ContainerFrameCombinedBags"] = mockCombined
-        _G["ContainerFrame1"] = mockSingle
 
         mockCombined:Show()
         mockSingle:Hide()
-        self:UpdateBagSortButtonAnchor()
+        self:UpdateBagSortButtonAnchor(mockCombined, mockSingle)
         local p1 = sortBtn.GetParent and sortBtn:GetParent() or sortBtn.parent
         Assert(p1 == mockCombined, "UpdateBagSortButtonAnchor: Anchors to ContainerFrameCombinedBags when combined bags shown")
         Assert(sortBtn:IsShown() == true, "UpdateBagSortButtonAnchor: Button visible on ContainerFrameCombinedBags")
 
         mockCombined:Hide()
         mockSingle:Show()
-        self:UpdateBagSortButtonAnchor()
+        self:UpdateBagSortButtonAnchor(mockCombined, mockSingle)
         local p2 = sortBtn.GetParent and sortBtn:GetParent() or sortBtn.parent
         Assert(p2 == mockSingle, "UpdateBagSortButtonAnchor: Anchors to ContainerFrame1 when separate bags shown")
         Assert(sortBtn:IsShown() == true, "UpdateBagSortButtonAnchor: Button visible on ContainerFrame1")
 
         mockCombined:Hide()
         mockSingle:Hide()
-        self:UpdateBagSortButtonAnchor()
+        self:UpdateBagSortButtonAnchor(mockCombined, mockSingle)
         Assert(sortBtn:IsShown() == false, "UpdateBagSortButtonAnchor: Hides when all bag frames hidden")
 
-        -- Restore real Blizzard global container references
-        _G["ContainerFrameCombinedBags"] = oldCombined
-        _G["ContainerFrame1"] = oldSingle
+        -- Re-anchor cleanly
         self:UpdateBagSortButtonAnchor()
     end
 
     -- Clean up mocks
-    GetItemInfoInstant = oldGetItemInfoInstant
-    GetItemInfo = oldGetItemInfo
-    InCombatLockdown = oldCombat
     CLIAltsDB = oldSortDB
     end
 
@@ -1842,9 +1828,9 @@ function CLIAlts:RunSelfTest()
     }
     local oldGetItemData = self.GetContainerItemData
     local oldGetNumSlots = self.GetNumContainerSlots
-    local oldGetItemInfo = GetItemInfo
-    GetItemInfo = function(id)
-        if id == 2592 then
+    self.GetItemInfo = function(selfOrID, id)
+        local target = (type(selfOrID) == "table" and id) or selfOrID
+        if target == 2592 then
             return "Wool Cloth", "item:2592", 1, 0, 0, "Trade Goods", "Cloth", 20, "", "", 10, 7, 5, 0
         end
         return nil
@@ -1869,19 +1855,8 @@ function CLIAlts:RunSelfTest()
     Assert(tailorPkg.items[1].bag == 0 and tailorPkg.items[1].slot == 1, "MailAutoFill: Item entry contains bag 0 slot 1")
 
     -- 26b. FillSendMailNextBatch execution and UI setup
-    local mailItemsAttached = 0
-    local oldClickSendMail = ClickSendMailItemButton
-    local oldGetSendMailItem = GetSendMailItem
-    ClickSendMailItemButton = function(slot, clear)
-        mailItemsAttached = mailItemsAttached + 1
-    end
-    GetSendMailItem = function(slot)
-        if slot <= mailItemsAttached then return "Item" end
-        return nil
-    end
-
     SendMailFrame:Show()
-    local fillOk, fillWho, fillCount = self:FillSendMailNextBatch()
+    local fillOk, fillWho, fillCount = self:FillSendMailNextBatch(nil, true)
     Assert(fillOk == true, "MailAutoFill: FillSendMailNextBatch succeeds")
     Assert(fillWho == "TailorAlt-Forever", "MailAutoFill: Filled recipient TailorAlt-Forever")
     Assert(fillCount == 1, "MailAutoFill: Attached 1 item")
@@ -1904,9 +1879,7 @@ function CLIAlts:RunSelfTest()
     -- Clean up mocks
     self.GetContainerItemData = oldGetItemData
     self.GetNumContainerSlots = oldGetNumSlots
-    ClickSendMailItemButton = oldClickSendMail
-    GetSendMailItem = oldGetSendMailItem
-    GetItemInfo = oldGetItemInfo
+    self.GetItemInfo = nil
     SendMailFrame:Hide()
     CLIAltsDB = oldMailDB
     end
@@ -1949,15 +1922,15 @@ function CLIAlts:RunSelfTest()
     CLIAltsDB = testIgnoreDB
     self.curPlayerFullName = "SenderMain"
 
-    local oldGetItemInfo = GetItemInfo
-    GetItemInfo = function(id)
-        if id == 4540 or id == "Tough Hunk of Bread" then
+    self.GetItemInfo = function(selfOrID, id)
+        local target = (type(selfOrID) == "table" and id) or selfOrID
+        if target == 4540 or target == "Tough Hunk of Bread" then
             -- Tough Hunk of Bread (Consumable: classID 0, subclassID 5)
             return "Tough Hunk of Bread", "item:4540", 1, 1, 1, "Consumable", "Food & Drink", 20, "", "", 10, 0, 5, 0
-        elseif id == 4636 or id == "Heavy Lockbox" then
+        elseif target == 4636 or target == "Heavy Lockbox" then
             -- Heavy Lockbox (Junk/Misc: classID 15, subclassID 0)
             return "Heavy Lockbox", "item:4636", 1, 1, 1, "Miscellaneous", "Junk", 1, "", "", 0, 15, 0, 0
-        elseif id == 2592 or id == "Wool Cloth" then
+        elseif target == 2592 or target == "Wool Cloth" then
             -- Wool Cloth (Trade Goods: classID 7, subclassID 5)
             return "Wool Cloth", "item:2592", 1, 1, 1, "Trade Goods", "Cloth", 20, "", "", 10, 7, 5, 0
         end
@@ -1998,15 +1971,14 @@ function CLIAlts:RunSelfTest()
     Assert(clothDestRestored ~= nil and clothDestRestored.destName == "TailorAlt", "MailIgnore: Routing restored to TailorAlt")
 
     -- 27g. Cursor pickup support in IgnoreMailItem
-    local oldGetCursorInfo = GetCursorInfo
-    GetCursorInfo = function()
+    self.GetCursorInfo = function()
         return "item", 2592, "|cffffffff[Wool Cloth]|r"
     end
     local cursorOk, _ = self:IgnoreMailItem()
     Assert(cursorOk == true, "MailIgnore: IgnoreMailItem without arguments grabs item from cursor")
     Assert(self:IsItemMailIgnored(2592) == true, "MailIgnore: Cursor-picked item is marked as ignored")
     self:UnignoreMailItem(2592)
-    GetCursorInfo = oldGetCursorInfo
+    self.GetCursorInfo = nil
 
     -- 27h. ToggleAutoMailConsumables
     local enabled = self:ToggleAutoMailConsumables(true)
@@ -2015,7 +1987,7 @@ function CLIAlts:RunSelfTest()
     Assert(disabled == false and CLIAltsDB.settings.autoMailConsumables == false, "ToggleAutoMailConsumables(false) disables setting")
 
     -- Clean up mocks
-    GetItemInfo = oldGetItemInfo
+    self.GetItemInfo = nil
     CLIAltsDB = oldIgnoreDB
     end
 

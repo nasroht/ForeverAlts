@@ -2224,6 +2224,7 @@ function CLIAlts:CreateLegacyMainFrame()
     -- Hook ChatEdit_InsertLink so Shift-clicking items into prompt works
     if hooksecurefunc then
         pcall(hooksecurefunc, "ChatEdit_InsertLink", function(text)
+            if InCombatLockdown and InCombatLockdown() then return end
             if text and promptBox:HasFocus() then
                 promptBox:Insert(text)
             end
@@ -2269,6 +2270,7 @@ function CLIAlts:CreateLegacyMainFrame()
 
     promptBox:SetScript("OnEditFocusGained", function()
         pcall(function()
+            if InCombatLockdown and InCombatLockdown() then return end
             if ClearOverrideBindings then
                 ClearOverrideBindings(frame)
             end
@@ -2276,6 +2278,7 @@ function CLIAlts:CreateLegacyMainFrame()
     end)
     promptBox:SetScript("OnEditFocusLost", function(self)
         pcall(function()
+            if InCombatLockdown and InCombatLockdown() then return end
             if frame:IsShown() and SetOverrideBindingClick then
                 SetOverrideBindingClick(frame, false, "ENTER", "CLIAltsFocusEnterBtn")
                 SetOverrideBindingClick(frame, false, "/", "CLIAltsFocusSlashBtn")
@@ -2305,6 +2308,7 @@ function CLIAlts:CreateLegacyMainFrame()
     frame:SetScript("OnShow", function(self)
         tickerElapsed = 0
         pcall(function()
+            if InCombatLockdown and InCombatLockdown() then return end
             if SetOverrideBindingClick then
                 SetOverrideBindingClick(self, false, "ENTER", "CLIAltsFocusEnterBtn")
                 SetOverrideBindingClick(self, false, "/", "CLIAltsFocusSlashBtn")
@@ -2317,6 +2321,7 @@ function CLIAlts:CreateLegacyMainFrame()
     end)
     frame:SetScript("OnHide", function(self)
         pcall(function()
+            if InCombatLockdown and InCombatLockdown() then return end
             if ClearOverrideBindings then
                 ClearOverrideBindings(self)
             end
@@ -6206,12 +6211,14 @@ end
 -- ----------------------------------------------------------------------------
 function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
     if not tooltip or not itemID then return end
+    if InCombatLockdown and InCombatLockdown() then return end
     if not CLIAltsDB or not CLIAltsDB.settings or CLIAltsDB.settings.showInventoryTooltips == false then
         return
     end
 
     -- Guard against duplicate additions within the same tooltip rendering pass
-    if tooltip._clialtsProcessed == itemID then
+    self.processedTooltips = self.processedTooltips or setmetatable({}, { __mode = "k" })
+    if self.processedTooltips[tooltip] == itemID or tooltip._clialtsProcessed == itemID then
         return
     end
 
@@ -6224,7 +6231,7 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
                 local line = _G[tipName .. "TextLeft" .. i]
                 local text = line and line:GetText()
                 if text and text:find("%[CLIAlts%]") then
-                    tooltip._clialtsProcessed = itemID
+                    self.processedTooltips[tooltip] = itemID
                     return
                 end
             end
@@ -6277,7 +6284,10 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
     end
 
     if didAdd then
-        tooltip._clialtsProcessed = itemID
+        self.processedTooltips[tooltip] = itemID
+        if type(tooltip) == "table" and not tooltip.GetName then
+            tooltip._clialtsProcessed = itemID
+        end
     end
 end
 
@@ -6287,7 +6297,12 @@ function CLIAlts:InitTooltipHooks()
 
     local function ResetTooltipFlag(tooltip)
         if tooltip then
-            tooltip._clialtsProcessed = nil
+            if self.processedTooltips then
+                self.processedTooltips[tooltip] = nil
+            end
+            if type(tooltip) == "table" and not tooltip.GetName then
+                tooltip._clialtsProcessed = nil
+            end
         end
     end
 
@@ -6300,6 +6315,7 @@ function CLIAlts:InitTooltipHooks()
 
     if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
         TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
+            if InCombatLockdown and InCombatLockdown() then return end
             if not tooltip or not data then return end
             local itemID = data.id
             if not itemID and tooltip.GetItem then
@@ -6307,26 +6323,27 @@ function CLIAlts:InitTooltipHooks()
                 if link then itemID = tonumber(link:match("item:(%d+)")) end
             end
             if itemID then
-                CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
+                pcall(function() CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID) end)
             end
         end)
     else
         local function OnTooltipSetItem(tooltip)
+            if InCombatLockdown and InCombatLockdown() then return end
             if not tooltip or not tooltip.GetItem then return end
             local _, link = tooltip:GetItem()
             if link then
                 local itemID = tonumber(link:match("item:(%d+)"))
                 if itemID then
-                    CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
+                    pcall(function() CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID) end)
                 end
             end
         end
 
         if GameTooltip and GameTooltip.HookScript then
-            GameTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
+            pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetItem", OnTooltipSetItem)
         end
         if ItemRefTooltip and ItemRefTooltip.HookScript then
-            ItemRefTooltip:HookScript("OnTooltipSetItem", OnTooltipSetItem)
+            pcall(ItemRefTooltip.HookScript, ItemRefTooltip, "OnTooltipSetItem", OnTooltipSetItem)
         end
     end
 end
@@ -6346,7 +6363,8 @@ function CLIAlts:ApplyThemeToBagButton()
     end
 end
 
-function CLIAlts:UpdateBagSortButtonAnchor()
+function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
+    if InCombatLockdown and InCombatLockdown() then return end
     local btn = self.bagSortButton
     if not btn then return end
     if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false then
@@ -6354,8 +6372,8 @@ function CLIAlts:UpdateBagSortButtonAnchor()
         return
     end
 
-    local combinedFrame = rawget(_G, "ContainerFrameCombinedBags")
-    local singleFrame = rawget(_G, "ContainerFrame1")
+    local combinedFrame = testCombinedFrame or rawget(_G, "ContainerFrameCombinedBags")
+    local singleFrame = testSingleFrame or rawget(_G, "ContainerFrame1")
 
     local combinedShown = combinedFrame and ((combinedFrame.IsVisible and combinedFrame:IsVisible()) or (combinedFrame.IsShown and combinedFrame:IsShown()))
     local singleShown = singleFrame and ((singleFrame.IsVisible and singleFrame:IsVisible()) or (singleFrame.IsShown and singleFrame:IsShown()))
@@ -6414,6 +6432,7 @@ function CLIAlts:UpdateBagSortButtonAnchor()
 end
 
 function CLIAlts:InitBagSortButton()
+    if InCombatLockdown and InCombatLockdown() then return nil end
     if self.bagSortButton then
         self:UpdateBagSortButtonAnchor()
         return self.bagSortButton
@@ -6487,14 +6506,17 @@ function CLIAlts:InitBagSortButton()
     self.bagSortButton = btn
     self:ApplyThemeToBagButton()
 
-    -- Hook show/hide on both container frames
+    -- Hook show/hide on both container frames using addon table tracking
+    self.hookedBagFrames = self.hookedBagFrames or {}
     local hookFrame = function(frame)
-        if frame and frame.HookScript and not frame.__clialtsHooked then
-            frame.__clialtsHooked = true
+        if frame and frame.HookScript and not self.hookedBagFrames[frame] then
+            self.hookedBagFrames[frame] = true
             frame:HookScript("OnShow", function()
+                if InCombatLockdown and InCombatLockdown() then return end
                 CLIAlts:UpdateBagSortButtonAnchor()
             end)
             frame:HookScript("OnHide", function()
+                if InCombatLockdown and InCombatLockdown() then return end
                 CLIAlts:UpdateBagSortButtonAnchor()
             end)
         end
@@ -6506,20 +6528,24 @@ function CLIAlts:InitBagSortButton()
     -- Hook standard Blizzard bag toggle functions if available
     if not self.hasHookedBagFunctions and hooksecurefunc then
         self.hasHookedBagFunctions = true
+        local safeUpdate = function()
+            if InCombatLockdown and InCombatLockdown() then return end
+            CLIAlts:UpdateBagSortButtonAnchor()
+        end
         if rawget(_G, "ToggleAllBags") then
-            pcall(hooksecurefunc, "ToggleAllBags", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+            pcall(hooksecurefunc, "ToggleAllBags", safeUpdate)
         end
         if rawget(_G, "OpenAllBags") then
-            pcall(hooksecurefunc, "OpenAllBags", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+            pcall(hooksecurefunc, "OpenAllBags", safeUpdate)
         end
         if rawget(_G, "CloseAllBags") then
-            pcall(hooksecurefunc, "CloseAllBags", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+            pcall(hooksecurefunc, "CloseAllBags", safeUpdate)
         end
         if rawget(_G, "OpenBag") then
-            pcall(hooksecurefunc, "OpenBag", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+            pcall(hooksecurefunc, "OpenBag", safeUpdate)
         end
         if rawget(_G, "CloseBag") then
-            pcall(hooksecurefunc, "CloseBag", function() CLIAlts:UpdateBagSortButtonAnchor() end)
+            pcall(hooksecurefunc, "CloseBag", safeUpdate)
         end
     end
 

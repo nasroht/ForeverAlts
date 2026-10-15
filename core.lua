@@ -135,6 +135,8 @@ local safeEvents = {
     "QUEST_TURNED_IN",
     "QUEST_LOG_UPDATE",
     "QUEST_FINISHED",
+    "PLAYER_REGEN_DISABLED",
+    "PLAYER_REGEN_ENABLED",
 }
 for _, ev in ipairs(safeEvents) do
     pcall(function() eventFrame:RegisterEvent(ev) end)
@@ -324,11 +326,23 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
 
     elseif event == "BAG_UPDATE_DELAYED" or event == "BAG_UPDATE" then
         CLIAlts:ScheduleInventoryScan(CLIAlts.isBankOpen == true)
-        if CLIAlts.UpdateBagSortButtonAnchor then
+        if CLIAlts.UpdateBagSortButtonAnchor and not (InCombatLockdown and InCombatLockdown()) then
             CLIAlts:UpdateBagSortButtonAnchor()
         end
 
     elseif event == "BAG_OPEN" or event == "BAG_CLOSED" then
+        if CLIAlts.UpdateBagSortButtonAnchor and not (InCombatLockdown and InCombatLockdown()) then
+            CLIAlts:UpdateBagSortButtonAnchor()
+        end
+
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        -- Entering combat: immediately clear override bindings on ASCII legacy frame if open
+        if ClearOverrideBindings and CLIAlts.mainFrame then
+            pcall(ClearOverrideBindings, CLIAlts.mainFrame)
+        end
+
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        -- Exiting combat: refresh anchors once safe
         if CLIAlts.UpdateBagSortButtonAnchor then
             CLIAlts:UpdateBagSortButtonAnchor()
         end
@@ -683,6 +697,10 @@ local function SlashHandler(msg)
         CLIAlts:PrintPerf()
 
     elseif cmd == "selftest" or cmd == "test" then
+        if InCombatLockdown and InCombatLockdown() then
+            CLIAlts:Print("|cffff4444Cannot run selftest while in combat.|r")
+            return
+        end
         CLIAlts:RunSelfTest()
 
     elseif cmd == "alerts" or cmd == "alert" then
