@@ -3236,7 +3236,7 @@ function CLIAlts:CreateModernMainFrame()
         edgeSize = 1,
         insets = { left = 1, right = 1, top = 1, bottom = 1 }
     })
-    if promptBox.SetBackdropColor then promptBox:SetBackdropColor(surfaceR, surfaceG, surfaceB, 0.7) end
+    if promptBox.SetBackdropColor then promptBox:SetBackdropColor(raisedR, raisedG, raisedB, 0.75) end
     if promptBox.SetBackdropBorderColor then promptBox:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
     promptBox:SetTextColor(textR, textG, textB)
     frame.promptBox = promptBox
@@ -5654,7 +5654,7 @@ function CLIAlts:ApplyTheme()
             if mainFrame.cmdBar.SetBackdropBorderColor then mainFrame.cmdBar:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
         end
         if mainFrame.promptBox then
-            if mainFrame.promptBox.SetBackdropColor then mainFrame.promptBox:SetBackdropColor(surfaceR, surfaceG, surfaceB, 0.7) end
+            if mainFrame.promptBox.SetBackdropColor then mainFrame.promptBox:SetBackdropColor(raisedR, raisedG, raisedB, 0.75) end
             if mainFrame.promptBox.SetBackdropBorderColor then mainFrame.promptBox:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
             if mainFrame.promptBox.SetTextColor then mainFrame.promptBox:SetTextColor(textR, textG, textB) end
         end
