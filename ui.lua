@@ -4340,8 +4340,8 @@ function CLIAlts:CreateMainFrame()
         return mainFrame
     end
 
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI then
-        return self:CreateLegacyMainFrame()
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.legacyUI = nil
     end
 
     return self:CreateModernMainFrame()
@@ -4359,7 +4359,12 @@ function CLIAlts:RecreateMainFrame()
     mainFrame = nil
     self.mainFrame = nil
     _G["CLIAltsMainFrame"] = nil
-    return self:CreateMainFrame()
+
+    if CLIAltsDB and CLIAltsDB.settings then
+        CLIAltsDB.settings.legacyUI = nil
+    end
+
+    return self:CreateModernMainFrame()
 end
 
 function CLIAlts:GetVisibleCharactersList()
@@ -6204,9 +6209,10 @@ function CLIAlts:ExecutePromptCommand(input)
         self:SetPromptFeedback(string.format("Compact mode: %s (XP bars %s)", isComp and "ENABLED" or "DISABLED", isComp and "hidden" or "shown"))
 
     elseif cmd == "legacy" or cmd == "legacyui" then
-        CLIAltsDB.settings.legacyUI = not CLIAltsDB.settings.legacyUI
-        local state = CLIAltsDB.settings.legacyUI and "ENABLED (ASCII Table UI)" or "DISABLED (Modern v2 UI)"
-        self:SetPromptFeedback(string.format("Legacy UI: %s", state))
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.legacyUI = nil
+        end
+        self:SetPromptFeedback("Modern v2 is the standard UI layout. Legacy ASCII UI has been deprecated.")
         if self.RecreateMainFrame then
             local wasShown = mainFrame and mainFrame:IsShown()
             self:RecreateMainFrame()
@@ -8135,21 +8141,13 @@ function CLIAlts:ShowSettingsDialog()
         btnCons:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -338)
         sd.btnCons = btnCons
 
-        local btnMode = CreateRetroButton(sd, "UI Style: Modern v2", 310, 26, function()
+        local btnAutoSend = CreateRetroButton(sd, "Auto-Fill On Mail Open: ENABLED", 310, 26, function()
             CLIAltsDB.settings = CLIAltsDB.settings or {}
-            CLIAltsDB.settings.legacyUI = not CLIAltsDB.settings.legacyUI
-            if CLIAlts.RecreateMainFrame then
-                local wasShown = mainFrame and mainFrame:IsShown()
-                CLIAlts:RecreateMainFrame()
-                if wasShown and mainFrame then
-                    mainFrame:Show()
-                    CLIAlts:Render()
-                end
-            end
+            CLIAltsDB.settings.autoFillMailOnSend = (CLIAltsDB.settings.autoFillMailOnSend == false)
             CLIAlts:UpdateSettingsDialog()
         end, 11)
-        btnMode:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -368)
-        sd.btnMode = btnMode
+        btnAutoSend:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -368)
+        sd.btnAutoSend = btnAutoSend
 
         -- Section 5: Chat Layout Cloner
         local secChat = sd:CreateFontString(nil, "OVERLAY")
@@ -8362,9 +8360,9 @@ function CLIAlts:UpdateSettingsDialog()
         settingsDialog.btnCons.label:SetText(string.format("Route Consumables: %s", consOn and "|cff00ff66ON (Active)|r" or "|cffffb033OFF (Protected)|r"))
     end
 
-    local isLegacy = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI == true)
-    if settingsDialog.btnMode then
-        settingsDialog.btnMode.label:SetText(string.format("UI Style: %s", isLegacy and "|cffffd100Classic Retro Table|r" or "|cff33d9ffModern v2 (Cards)|r"))
+    local autoSendOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoFillMailOnSend == false)
+    if settingsDialog.btnAutoSend and settingsDialog.btnAutoSend.label then
+        settingsDialog.btnAutoSend.label:SetText(string.format("Auto-Fill On Mail Open: %s", autoSendOn and "|cff00ff66ENABLED|r" or "|cffffb033DISABLED|r"))
     end
 
     -- Section 5: Chat Layout Cloner Controls

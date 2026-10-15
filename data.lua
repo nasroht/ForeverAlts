@@ -396,6 +396,7 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.ignoredMailItems = CLIAltsDB.settings.ignoredMailItems or {}
     if CLIAltsDB.settings.autoMailConsumables == nil then CLIAltsDB.settings.autoMailConsumables = false end
     if CLIAltsDB.settings.fontSize == nil or CLIAltsDB.settings.fontSize == 15 then CLIAltsDB.settings.fontSize = 18 end
+    CLIAltsDB.settings.legacyUI = nil
     if CLIAltsDB.settings.foreverMode == false and self:IsForeverClient() then
         CLIAltsDB.settings.foreverMode = nil
     end

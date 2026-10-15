@@ -588,16 +588,15 @@ local function SlashHandler(msg)
 
     elseif cmd == "legacy" or cmd == "legacyui" then
         if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.legacyUI = not CLIAltsDB.settings.legacyUI
-            local state = CLIAltsDB.settings.legacyUI and "ENABLED (ASCII Table UI)" or "DISABLED (Modern v2 UI)"
-            CLIAlts:Print(string.format("Legacy UI is now %s.", state))
-            if CLIAlts.RecreateMainFrame then
-                local wasShown = CLIAltsMainFrame and CLIAltsMainFrame:IsShown()
-                CLIAlts:RecreateMainFrame()
-                if wasShown and CLIAltsMainFrame then
-                    CLIAltsMainFrame:Show()
-                    CLIAlts:Render()
-                end
+            CLIAltsDB.settings.legacyUI = nil
+        end
+        CLIAlts:Print("CLIAlts now uses Modern v2 exclusively. The legacy ASCII UI has been deprecated.")
+        if CLIAlts.RecreateMainFrame then
+            local wasShown = CLIAltsMainFrame and CLIAltsMainFrame:IsShown()
+            CLIAlts:RecreateMainFrame()
+            if wasShown and CLIAltsMainFrame then
+                CLIAltsMainFrame:Show()
+                CLIAlts:Render()
             end
         end
 

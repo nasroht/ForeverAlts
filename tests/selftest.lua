@@ -439,7 +439,6 @@ function CLIAlts:RunSelfTest()
             "Hex: CLIAlts:Hex('bg') converts '0F131A' to correct RGBA floats")
 
         -- Modern Main Frame Construction
-        CLIAltsDB.settings.legacyUI = false
         local modernFrame = self:RecreateMainFrame()
         Assert(modernFrame ~= nil, "ModernUI: RecreateMainFrame creates modern frame")
         Assert(modernFrame.isLegacyUI == false, "ModernUI: isLegacyUI flag is false")
@@ -452,18 +451,13 @@ function CLIAlts:RunSelfTest()
         Assert(modernFrame.searchBox ~= nil, "ModernUI: search EditBox created in top bar")
         Assert(modernFrame.wealthWidget ~= nil, "ModernUI: wealth widget created in sidebar")
 
-        -- Legacy UI Toggle Flag Verification
+        -- Legacy UI Deprecation Verification: RecreateMainFrame always enforces Modern v2
         CLIAltsDB.settings.legacyUI = true
-        local legacyFrame = self:RecreateMainFrame()
-        Assert(legacyFrame ~= nil, "LegacyUI: RecreateMainFrame creates legacy frame")
-        Assert(legacyFrame.isLegacyUI == true, "LegacyUI: isLegacyUI flag is true")
-        Assert(legacyFrame:GetWidth() == 1150 and legacyFrame:GetHeight() == 600,
-            "LegacyUI: base dimensions are 1150x600")
-
-        -- Restore to Modern UI
-        CLIAltsDB.settings.legacyUI = false
         local restoredModern = self:RecreateMainFrame()
-        Assert(restoredModern.isLegacyUI == false, "ModernUI: restoring legacyUI=false brings back modern frame")
+        Assert(restoredModern ~= nil and restoredModern.isLegacyUI == false, "ModernUI: legacyUI setting deprecated; always creates modern frame")
+        Assert(restoredModern:GetWidth() == 1440 and restoredModern:GetHeight() == 800,
+            "ModernUI: base dimensions remain 1440x800")
+        Assert(CLIAltsDB.settings.legacyUI == nil, "ModernUI: legacyUI setting purged from CLIAltsDB")
 
         if CLIAltsDB and CLIAltsDB.settings then
             CLIAltsDB.settings.theme = oldTheme
@@ -1518,7 +1512,7 @@ function CLIAlts:RunSelfTest()
         Assert(sd.btnTip ~= nil, "SettingsUI: Has Cross-Alt Tooltip toggle")
         Assert(sd.btnMail ~= nil, "SettingsUI: Has Mail Auto-Fill toggle")
         Assert(sd.btnCons ~= nil, "SettingsUI: Has Auto-Mail Consumables toggle")
-        Assert(sd.btnMode ~= nil, "SettingsUI: Has UI Style Mode toggle")
+        Assert(sd.btnAutoSend ~= nil, "SettingsUI: Has Auto-Fill On Mail Open toggle")
         Assert(sd.btnCenter ~= nil, "SettingsUI: Has Center Window action button")
         Assert(sd.btnReset ~= nil, "SettingsUI: Has Reset Defaults action button")
         Assert(sd.btnClose ~= nil, "SettingsUI: Has Close button")
