@@ -192,6 +192,25 @@ globals = {
     "debugprofilestart",
     "C_Timer",
 
+    -- WoW Chat APIs & FrameXML
+    "NUM_CHAT_WINDOWS",
+    "GetChatWindowInfo",
+    "GetChatWindowMessages",
+    "GetChatWindowChannels",
+    "SetChatWindowName",
+    "SetChatWindowSize",
+    "SetChatWindowColor",
+    "SetChatWindowAlpha",
+    "SetChatWindowShown",
+    "SetChatWindowLocked",
+    "SetChatWindowUninteractable",
+    "ChatFrame_RemoveAllMessageGroups",
+    "ChatFrame_AddMessageGroup",
+    "ChatFrame_RemoveAllChannels",
+    "ChatFrame_AddChannel",
+    "FCF_SavePositionAndDimensions",
+    "FCF_DockUpdate",
+
     -- WoW-exposed standard Lua extensions / globals
     "time",
     "date",
@@ -202,3 +221,4 @@ globals = {
     "strlenutf8",
     "wipe",
 }
+

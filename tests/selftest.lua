@@ -1522,6 +1522,12 @@ function CLIAlts:RunSelfTest()
         Assert(sd.btnCenter ~= nil, "SettingsUI: Has Center Window action button")
         Assert(sd.btnReset ~= nil, "SettingsUI: Has Reset Defaults action button")
         Assert(sd.btnClose ~= nil, "SettingsUI: Has Close button")
+        Assert(sd.secChat ~= nil, "SettingsUI: Has Chat Layout Cloner section header")
+        Assert(sd.chatDesc ~= nil, "SettingsUI: Has Chat Layout Cloner description")
+        Assert(sd.btnChatSource ~= nil, "SettingsUI: Has Chat Source dropdown button")
+        Assert(sd.btnChatCopy ~= nil, "SettingsUI: Has Copy Chat Layout button")
+        Assert(sd.btnChatSave ~= nil, "SettingsUI: Has Save Current Chat button")
+        Assert(sd.chatStatus ~= nil, "SettingsUI: Has Chat Status label")
 
         -- Test clicking theme button (e.g. Amber)
         local btnAmber = sd.themeButtons[2]
@@ -3148,85 +3154,203 @@ function CLIAlts:RunSelfTest()
     -- ------------------------------------------------------------------------
     -- 30. Account Liquid Wealth & Dynamic Trend Engine
     -- ------------------------------------------------------------------------
-    -- 30a. FormatMoney with thousands separators and coin colors
-    Assert(self:FormatMoney(12345678, true) == "|cffffd7001,234g|r |cffc7c7cf56s|r |cffeda55f78c|r", "Wealth: FormatMoney formats gold with commas and coin colors")
-    Assert(self:FormatMoney(4567, false) == "0g 45s 67c", "Wealth: FormatMoney uncolored formats silver and copper")
-    Assert(self:FormatMoney(0, true) == "|cffeda55f0c|r", "Wealth: FormatMoney 0 returns 0c")
+    do
+        -- 30a. FormatMoney with thousands separators and coin colors
+        Assert(self:FormatMoney(12345678, true) == "|cffffd7001,234g|r |cffc7c7cf56s|r |cffeda55f78c|r", "Wealth: FormatMoney formats gold with commas and coin colors")
+        Assert(self:FormatMoney(4567, false) == "0g 45s 67c", "Wealth: FormatMoney uncolored formats silver and copper")
+        Assert(self:FormatMoney(0, true) == "|cffeda55f0c|r", "Wealth: FormatMoney 0 returns 0c")
 
-    -- 30b. Account Summary is strictly character liquid copper (zero item valuation)
-    local testWealthDB = {
-        settings = {
-            activeTab = 1,
-            legacyUI = false,
-        },
-        characters = {
-            ["CharAlpha-Forever"] = {
-                name = "CharAlpha",
-                fullName = "CharAlpha-Forever",
-                class = "Mage",
-                classFile = "MAGE",
-                level = 30,
-                money = 250000, -- 25g
+        -- 30b. Account Summary is strictly character liquid copper (zero item valuation)
+        local testWealthDB = {
+            settings = {
+                activeTab = 1,
+                legacyUI = false,
             },
-            ["CharBeta-Forever"] = {
-                name = "CharBeta",
-                fullName = "CharBeta-Forever",
-                class = "Priest",
-                classFile = "PRIEST",
-                level = 20,
-                money = 754532, -- 75g 45s 32c
+            characters = {
+                ["CharAlpha-Forever"] = {
+                    name = "CharAlpha",
+                    fullName = "CharAlpha-Forever",
+                    class = "Mage",
+                    classFile = "MAGE",
+                    level = 30,
+                    money = 250000, -- 25g
+                },
+                ["CharBeta-Forever"] = {
+                    name = "CharBeta",
+                    fullName = "CharBeta-Forever",
+                    class = "Priest",
+                    classFile = "PRIEST",
+                    level = 20,
+                    money = 754532, -- 75g 45s 32c
+                },
             },
-        },
-        goldHistory = {},
-    }
-    CLIAltsDB = testWealthDB
+            goldHistory = {},
+        }
+        CLIAltsDB = testWealthDB
 
-    local sum = self:GetAccountSummary()
-    Assert(sum.totalGold == 1004532, "Wealth: GetAccountSummary strictly sums char.money (liquid currency: 100g 45s 32c)")
+        local sum = self:GetAccountSummary()
+        Assert(sum.totalGold == 1004532, "Wealth: GetAccountSummary strictly sums char.money (liquid currency: 100g 45s 32c)")
 
-    -- 30c. Modern UI wealthWidget.total dynamically renders real liquid gold
-    local mFrame = self:RecreateMainFrame()
-    mFrame:Show()
-    self:Render()
-    Assert(mFrame.wealthWidget ~= nil, "Wealth: wealthWidget exists on mainFrame")
-    Assert(mFrame.wealthWidget.total:GetText():find("100g") ~= nil, "Wealth: wealthWidget.total dynamically displays formatted liquid wealth")
-    Assert(mFrame.wealthWidget.total:GetText():find("5,713g") == nil, "Wealth: wealthWidget.total does NOT show hardcoded placeholder")
+        -- 30c. Modern UI wealthWidget.total dynamically renders real liquid gold
+        local mFrame = self:RecreateMainFrame()
+        mFrame:Show()
+        self:Render()
+        Assert(mFrame.wealthWidget ~= nil, "Wealth: wealthWidget exists on mainFrame")
+        Assert(mFrame.wealthWidget.total:GetText():find("100g") ~= nil, "Wealth: wealthWidget.total dynamically displays formatted liquid wealth")
+        Assert(mFrame.wealthWidget.total:GetText():find("5,713g") == nil, "Wealth: wealthWidget.total does NOT show hardcoded placeholder")
 
-    -- 30d. Dynamic weekly gold history delta calculation
-    local now = time()
-    CLIAltsDB.goldHistory = {
-        { date = "2026-10-07", time = now - (8 * 86400), gold = 80, copper = 800000 },
-        { date = "2026-10-14", time = now - (1 * 86400), gold = 95, copper = 950000 },
-        { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
-    }
-    local d1, d7, _, hasHist = self:GetGoldHistoryDeltas()
-    Assert(hasHist == true, "Wealth: hasHist is true when prior snapshots exist")
-    Assert(d7 == 20, "Wealth: 7-day delta correctly computes +20g")
-    Assert(d1 == 5, "Wealth: 1-day delta correctly computes +5g")
+        -- 30d. Dynamic weekly gold history delta calculation
+        local now = time()
+        CLIAltsDB.goldHistory = {
+            { date = "2026-10-07", time = now - (8 * 86400), gold = 80, copper = 800000 },
+            { date = "2026-10-14", time = now - (1 * 86400), gold = 95, copper = 950000 },
+            { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
+        }
+        local d1, d7, _, hasHist = self:GetGoldHistoryDeltas()
+        Assert(hasHist == true, "Wealth: hasHist is true when prior snapshots exist")
+        Assert(d7 == 20, "Wealth: 7-day delta correctly computes +20g")
+        Assert(d1 == 5, "Wealth: 1-day delta correctly computes +5g")
 
-    self:Render()
-    Assert(mFrame.wealthWidget.delta:GetText():find("%+20g this week") ~= nil, "Wealth: wealthWidget.delta displays dynamic positive weekly delta")
-    Assert(mFrame.wealthWidget.delta:GetText():find("%+210g") == nil, "Wealth: wealthWidget.delta does NOT show hardcoded +210g")
+        self:Render()
+        Assert(mFrame.wealthWidget.delta:GetText():find("%+20g this week") ~= nil, "Wealth: wealthWidget.delta displays dynamic positive weekly delta")
+        Assert(mFrame.wealthWidget.delta:GetText():find("%+210g") == nil, "Wealth: wealthWidget.delta does NOT show hardcoded +210g")
 
-    -- 30e. Dynamic negative weekly delta
-    CLIAltsDB.goldHistory = {
-        { date = "2026-10-07", time = now - (8 * 86400), gold = 150, copper = 1500000 },
-        { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
-    }
-    self:Render()
-    Assert(mFrame.wealthWidget.delta:GetText():find("%-50g this week") ~= nil, "Wealth: wealthWidget.delta displays dynamic negative weekly delta")
+        -- 30e. Dynamic negative weekly delta
+        CLIAltsDB.goldHistory = {
+            { date = "2026-10-07", time = now - (8 * 86400), gold = 150, copper = 1500000 },
+            { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
+        }
+        self:Render()
+        Assert(mFrame.wealthWidget.delta:GetText():find("%-50g this week") ~= nil, "Wealth: wealthWidget.delta displays dynamic negative weekly delta")
 
-    -- 30f. Tooltip hover verification
-    local onEnterScript = mFrame.wealthWidget:GetScript("OnEnter")
-    Assert(onEnterScript ~= nil, "Wealth: wealthWidget has OnEnter tooltip script")
-    onEnterScript(mFrame.wealthWidget)
-    Assert(#GameTooltip.lines > 0, "Wealth: GameTooltip populated on wealthWidget hover")
-    local tipText = ""
-    for _, l in ipairs(GameTooltip.lines) do
-        tipText = tipText .. (l.left or "") .. " " .. (l.right or "") .. " "
+        -- 30f. Tooltip hover verification
+        local onEnterScript = mFrame.wealthWidget:GetScript("OnEnter")
+        Assert(onEnterScript ~= nil, "Wealth: wealthWidget has OnEnter tooltip script")
+        onEnterScript(mFrame.wealthWidget)
+        Assert(#GameTooltip.lines > 0, "Wealth: GameTooltip populated on wealthWidget hover")
+        local tipText = ""
+        for _, l in ipairs(GameTooltip.lines) do
+            tipText = tipText .. (l.left or "") .. " " .. (l.right or "") .. " "
+        end
+        Assert(tipText:find("Account Wealth Summary") ~= nil, "Wealth: Tooltip contains Account Wealth Summary header")
+        Assert(tipText:find("Does NOT include inventory") ~= nil, "Wealth: Tooltip explicitly states inventory is excluded")
     end
-    Assert(tipText:find("Account Wealth Summary") ~= nil, "Wealth: Tooltip contains Account Wealth Summary header")
-    Assert(tipText:find("Does NOT include inventory") ~= nil, "Wealth: Tooltip explicitly states inventory is excluded")
+
+    -- ------------------------------------------------------------------------
+    -- 31. Chat Layout Cloner Engine (Feature 16)
+    -- ------------------------------------------------------------------------
+    do
+        -- 31a. CaptureChatSettings captures current chat frames into DB
+        local testCharKey = self:GetCharacterKey()
+        CLIAltsDB.characters[testCharKey] = CLIAltsDB.characters[testCharKey] or {
+            name = "SelftestHero",
+            fullName = "SelftestHero-Forever",
+            class = "Warrior",
+            classFile = "WARRIOR",
+            level = 60,
+        }
+        local capOk, capWins = self:CaptureChatSettings(testCharKey)
+        Assert(capOk == true, "ChatCloner: CaptureChatSettings succeeds for valid character")
+        Assert(capWins >= 2, "ChatCloner: CaptureChatSettings captures at least 2 default mock chat windows")
+        local capturedChar = CLIAltsDB.characters[testCharKey]
+        Assert(capturedChar.chatSettings ~= nil, "ChatCloner: chatSettings table created on character")
+        Assert(capturedChar.chatSettings.windows ~= nil, "ChatCloner: windows table populated")
+        Assert(capturedChar.chatSettings.windows[1] ~= nil, "ChatCloner: Window 1 (General) exists in snapshot")
+        Assert(capturedChar.chatSettings.windows[1].name == "General", "ChatCloner: Window 1 name is 'General'")
+        Assert(#capturedChar.chatSettings.windows[1].messages > 0, "ChatCloner: Window 1 has registered messages")
+        Assert(#capturedChar.chatSettings.windows[1].channels > 0, "ChatCloner: Window 1 has registered channels")
+
+        -- 31b. GetChatProfilesList returns sorted snapshots with other alts prioritized
+        local altKey = "MageAlt-Forever"
+        CLIAltsDB.characters[altKey] = {
+            name = "MageAlt",
+            fullName = altKey,
+            class = "Mage",
+            classFile = "MAGE",
+            level = 45,
+            chatSettings = {
+                timestamp = time() - 100,
+                numWindows = 3,
+                windows = {
+                    [1] = {
+                        index = 1,
+                        name = "MageMain",
+                        fontSize = 18,
+                        r = 1, g = 1, b = 1, alpha = 0.9,
+                        shown = true, locked = true, docked = true,
+                        messages = { "SAY", "WHISPER", "GUILD" },
+                        channels = { "General - Zone", "Trade - City" },
+                        point = "BOTTOMLEFT", relativeTo = "UIParent", relativePoint = "BOTTOMLEFT",
+                        x = 40, y = 60, width = 450, height = 220,
+                    },
+                    [2] = {
+                        index = 2,
+                        name = "Combat",
+                        fontSize = 12,
+                        shown = true, locked = true, docked = true,
+                        messages = { "COMBAT" }, channels = {},
+                        point = "BOTTOMLEFT", relativeTo = "UIParent", relativePoint = "BOTTOMLEFT",
+                        x = 40, y = 60, width = 450, height = 220,
+                    },
+                    [3] = {
+                        index = 3,
+                        name = "Loot & Spam",
+                        fontSize = 14,
+                        shown = true, locked = true, docked = false,
+                        messages = { "LOOT", "MONEY" }, channels = {},
+                        point = "BOTTOMRIGHT", relativeTo = "UIParent", relativePoint = "BOTTOMRIGHT",
+                        x = -40, y = 60, width = 350, height = 180,
+                    },
+                },
+            },
+        }
+
+        local profiles = self:GetChatProfilesList()
+        Assert(#profiles >= 2, "ChatCloner: GetChatProfilesList returns all characters with chat snapshots")
+        Assert(profiles[1].key == altKey, "ChatCloner: Other alts are prioritized at top of profiles list")
+        Assert(profiles[1].numWindows == 3, "ChatCloner: Alt profile reports 3 windows")
+
+        -- 31c. CopyChatSettings applies settings to mock chat frames and persists
+        local copyOk, copyMsg = self:CopyChatSettings(altKey, testCharKey)
+        Assert(copyOk == true, "ChatCloner: CopyChatSettings succeeds")
+        Assert(copyMsg:find("Copied chat layout") ~= nil, "ChatCloner: Returns descriptive success message")
+        Assert(mockChatState[1].name == "MageMain", "ChatCloner: Window 1 renamed to MageMain")
+        Assert(mockChatState[1].fontSize == 18, "ChatCloner: Window 1 fontSize updated to 18")
+        Assert(#mockChatState[1].messages == 3, "ChatCloner: Window 1 messages updated")
+        Assert(mockChatState[3].name == "Loot & Spam", "ChatCloner: Window 3 name set to Loot & Spam")
+
+        -- 31d. Settings Dialog Chat UI Interaction
+        self:ShowSettingsDialog()
+        local sdChat = _G["CLIAltsSettingsDialog"]
+        Assert(sdChat ~= nil and sdChat:IsShown() == true, "ChatCloner: Settings dialog is open")
+        Assert(sdChat.selectedChatSource ~= nil, "ChatCloner: Dialog selectedChatSource is initialized")
+        Assert(sdChat.btnChatSource.label:GetText():find("MageAlt") ~= nil, "ChatCloner: btnChatSource shows selected alt name")
+
+        -- Toggle dropdown
+        self:ToggleChatSourceDropdown()
+        local ddChat = _G["CLIAltsChatDropdown"]
+        Assert(ddChat ~= nil and ddChat:IsShown() == true, "ChatCloner: CLIAltsChatDropdown opens on toggle")
+        Assert(#ddChat.buttons >= 2, "ChatCloner: Dropdown contains profile buttons")
+
+        -- Select an item from dropdown
+        ddChat.buttons[1]:GetScript("OnClick")(ddChat.buttons[1])
+        Assert(ddChat:IsShown() == false, "ChatCloner: Clicking dropdown item closes dropdown")
+
+        -- Click Copy button
+        sdChat.btnChatCopy:GetScript("OnClick")(sdChat.btnChatCopy)
+        Assert(sdChat.chatStatus:GetText():find("Copied chat layout") ~= nil, "ChatCloner: Clicking Copy button updates chatStatus text with success")
+
+        -- Click Save Current button
+        sdChat.btnChatSave:GetScript("OnClick")(sdChat.btnChatSave)
+        Assert(sdChat.chatStatus:GetText():find("Snapshot saved") ~= nil, "ChatCloner: Clicking Save Current button updates chatStatus text")
+
+        -- Slash commands
+        SlashCmdList["CLIALTS"]("copychat")
+        SlashCmdList["CLIALTS"]("copychat MageAlt")
+        SlashCmdList["CLIALTS"]("savechat")
+
+        sdChat:Hide()
+    end
 
     -- Restore state
     CLIAltsDB = oldDB
@@ -3235,7 +3359,7 @@ function CLIAlts:RunSelfTest()
     self.curPlayerKey = savedKey
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

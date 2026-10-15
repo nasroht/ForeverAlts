@@ -6,6 +6,7 @@
 -- 1. Standard Lua / WoW Global Aliases
 time = time or os.time
 date = date or os.date
+unpack = unpack or (table and table.unpack)
 
 -- 2. Mock WoW Frame & Widget Hierarchy
 local function CreateDummyFrame(frameType, name, parent)
@@ -156,6 +157,87 @@ DEFAULT_CHAT_FRAME = DEFAULT_CHAT_FRAME or {
     end
 }
 ChatFrame_OpenChat = ChatFrame_OpenChat or function() end
+NUM_CHAT_WINDOWS = NUM_CHAT_WINDOWS or 10
+mockChatState = mockChatState or {}
+for i = 1, NUM_CHAT_WINDOWS do
+    local cf = _G["ChatFrame" .. i] or CreateDummyFrame("Frame", "ChatFrame" .. i, UIParent)
+    cf.width = 420
+    cf.height = 200
+    mockChatState[i] = mockChatState[i] or {
+        name = (i == 1 and "General") or (i == 2 and "Combat Log") or (i == 3 and "Voice") or "",
+        fontSize = 14,
+        r = 1, g = 1, b = 1, alpha = 1,
+        shown = (i <= 2),
+        locked = true,
+        docked = (i == 1),
+        uninteractable = false,
+        messages = (i == 1 and { "SAY", "EMOTE", "YELL", "GUILD", "PARTY" }) or (i == 2 and { "COMBAT" }) or {},
+        channels = (i == 1 and { "General - Zone", "Trade - City", "LocalDefense" }) or {},
+    }
+end
+
+GetChatWindowInfo = GetChatWindowInfo or function(i)
+    local s = mockChatState[i]
+    if not s or s.name == "" then return nil end
+    return s.name, s.fontSize, s.r, s.g, s.b, s.alpha, s.shown, s.locked, s.docked, s.uninteractable
+end
+
+GetChatWindowMessages = GetChatWindowMessages or function(i)
+    local s = mockChatState[i]
+    if not s or not s.messages then return end
+    return unpack(s.messages)
+end
+
+GetChatWindowChannels = GetChatWindowChannels or function(i)
+    local s = mockChatState[i]
+    if not s or not s.channels then return end
+    local res = {}
+    for _, ch in ipairs(s.channels) do
+        table.insert(res, ch)
+        table.insert(res, 0)
+    end
+    return unpack(res)
+end
+
+SetChatWindowName = SetChatWindowName or function(i, name)
+    if mockChatState[i] then mockChatState[i].name = name end
+end
+SetChatWindowSize = SetChatWindowSize or function(i, sz)
+    if mockChatState[i] then mockChatState[i].fontSize = sz end
+end
+SetChatWindowColor = SetChatWindowColor or function(i, r, g, b)
+    if mockChatState[i] then mockChatState[i].r = r; mockChatState[i].g = g; mockChatState[i].b = b end
+end
+SetChatWindowAlpha = SetChatWindowAlpha or function(i, a)
+    if mockChatState[i] then mockChatState[i].alpha = a end
+end
+SetChatWindowShown = SetChatWindowShown or function(i, shown)
+    if mockChatState[i] then mockChatState[i].shown = (shown == 1 or shown == true) end
+end
+SetChatWindowLocked = SetChatWindowLocked or function(i, locked)
+    if mockChatState[i] then mockChatState[i].locked = (locked == 1 or locked == true) end
+end
+SetChatWindowUninteractable = SetChatWindowUninteractable or function(i, u)
+    if mockChatState[i] then mockChatState[i].uninteractable = (u == 1 or u == true) end
+end
+ChatFrame_RemoveAllMessageGroups = ChatFrame_RemoveAllMessageGroups or function(cf)
+    local idx = tonumber(cf and cf.name and cf.name:match("ChatFrame(%d+)"))
+    if idx and mockChatState[idx] then mockChatState[idx].messages = {} end
+end
+ChatFrame_AddMessageGroup = ChatFrame_AddMessageGroup or function(cf, grp)
+    local idx = tonumber(cf and cf.name and cf.name:match("ChatFrame(%d+)"))
+    if idx and mockChatState[idx] then table.insert(mockChatState[idx].messages, grp) end
+end
+ChatFrame_RemoveAllChannels = ChatFrame_RemoveAllChannels or function(cf)
+    local idx = tonumber(cf and cf.name and cf.name:match("ChatFrame(%d+)"))
+    if idx and mockChatState[idx] then mockChatState[idx].channels = {} end
+end
+ChatFrame_AddChannel = ChatFrame_AddChannel or function(cf, ch)
+    local idx = tonumber(cf and cf.name and cf.name:match("ChatFrame(%d+)"))
+    if idx and mockChatState[idx] then table.insert(mockChatState[idx].channels, ch) end
+end
+FCF_SavePositionAndDimensions = FCF_SavePositionAndDimensions or function(cf) end
+FCF_DockUpdate = FCF_DockUpdate or function() end
 STANDARD_TEXT_FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 SlashCmdList = SlashCmdList or {}
 UISpecialFrames = UISpecialFrames or {}

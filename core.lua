@@ -246,6 +246,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             CLIAlts:UpdateWatchCounts()
             if CLIAlts.ScanCurrentInventory then CLIAlts:ScanCurrentInventory(false) end
             CLIAlts:CollectCurrentCharacter()
+            if CLIAlts.CaptureChatSettings then CLIAlts:CaptureChatSettings() end
             CLIAlts:RequestRender()
         end)
 
@@ -271,6 +272,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             CLIAlts.isPlayerResting = true
         end
         CLIAlts:CollectCurrentCharacter(true)
+        if CLIAlts.CaptureChatSettings then CLIAlts:CaptureChatSettings() end
         CLIAlts:RecordGoldSnapshot()
 
     elseif event == "PLAYER_CAMPING" or event == "PLAYER_QUITING" then
@@ -889,6 +891,32 @@ local function SlashHandler(msg)
 
     elseif cmd == "lp" or cmd == "legacypoints" or cmd == "legacypoint" then
         CLIAlts:PrintLegacyPointStatus(arg)
+
+    elseif cmd == "copychat" or cmd == "chatcopy" or cmd == "clonechat" then
+        if not arg or arg == "" then
+            CLIAlts:Print("Usage: |cff00ff66/clialts copychat <character_name>|r (or configure in Settings Dialog)")
+            local profiles = CLIAlts:GetChatProfilesList()
+            if #profiles > 0 then
+                local names = {}
+                for _, p in ipairs(profiles) do
+                    table.insert(names, p.name)
+                end
+                CLIAlts:Print("Available chat snapshots: " .. table.concat(names, ", "))
+            else
+                CLIAlts:Print("No chat profiles saved yet. Log in to an alt to snapshot their chat layout.")
+            end
+        else
+            local ok, msg = CLIAlts:CopyChatSettings(arg)
+            CLIAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
+        end
+
+    elseif cmd == "savechat" then
+        local ok, count = CLIAlts:CaptureChatSettings()
+        if ok then
+            CLIAlts:Print(string.format("|cff00ff66Chat layout saved (%d windows captured).|r", count))
+        else
+            CLIAlts:Print("|cffff4444" .. tostring(count or "Failed to capture chat.") .. "|r")
+        end
 
     elseif cmd == "tour" or cmd == "onboarding" then
         if CLIAlts.StartTour then

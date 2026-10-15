@@ -7857,6 +7857,109 @@ end
 -- ----------------------------------------------------------------------------
 -- Interactive Settings & Preferences Modal Dialog
 -- ----------------------------------------------------------------------------
+
+local function CreateChatDropdown(sd)
+    local dd = CreateFrame("Frame", "CLIAltsChatDropdown", sd, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    dd:Hide()
+    dd:SetFrameStrata("TOOLTIP")
+    dd:EnableMouse(true)
+    tinsert(UISpecialFrames, "CLIAltsChatDropdown")
+    dd:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    dd.buttons = {}
+    sd.chatDropdown = dd
+    return dd
+end
+
+function CLIAlts:ToggleChatSourceDropdown()
+    local sd = settingsDialog
+    if not sd then return end
+    local dd = sd.chatDropdown or CreateChatDropdown(sd)
+    if dd:IsShown() then
+        dd:Hide()
+        return
+    end
+
+    local t = self:GetTheme()
+    if dd.SetBackdropColor then
+        dd:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+    end
+    if dd.SetBackdropBorderColor then
+        dd:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+    end
+
+    local profiles = self:GetChatProfilesList()
+    dd:ClearAllPoints()
+    dd:SetPoint("TOPLEFT", sd.btnChatSource, "BOTTOMLEFT", 0, -2)
+    dd:SetWidth(260)
+
+    for _, b in ipairs(dd.buttons) do b:Hide() end
+
+    if #profiles == 0 then
+        local btn = dd.buttons[1]
+        if not btn then
+            btn = CreateRetroButton(dd, "No saved chat snapshots", 252, 22, nil, 10)
+            table.insert(dd.buttons, btn)
+        end
+        btn:ClearAllPoints()
+        btn:SetPoint("TOPLEFT", dd, "TOPLEFT", 4, -4)
+        btn.label:SetText("(No chat snapshots saved yet)")
+        btn.label:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        btn:SetScript("OnClick", function() dd:Hide() end)
+        btn:Show()
+        dd:SetHeight(30)
+    else
+        local itemH = 22
+        local spacing = 2
+        local totalH = 8 + (#profiles * (itemH + spacing))
+        dd:SetHeight(totalH)
+
+        for i, p in ipairs(profiles) do
+            local btn = dd.buttons[i]
+            if not btn then
+                btn = CreateRetroButton(dd, "", 252, itemH, nil, 10)
+                table.insert(dd.buttons, btn)
+            end
+            btn:ClearAllPoints()
+            btn:SetPoint("TOPLEFT", dd, "TOPLEFT", 4, -4 - ((i - 1) * (itemH + spacing)))
+
+            local isSelected = (sd.selectedChatSource == p.key)
+            local tag = p.isCurrent and " (Current)" or ""
+            local labelTxt = string.format("%s%s (%d tabs)%s", isSelected and "● " or "  ", p.name, p.numWindows, tag)
+            btn.label:SetText(labelTxt)
+            btn.label:SetJustifyH("LEFT")
+            btn.label:ClearAllPoints()
+            btn.label:SetPoint("LEFT", btn, "LEFT", 8, 0)
+
+            local classColor = (CLIAlts.FALLBACK_CLASS_COLORS and CLIAlts.FALLBACK_CLASS_COLORS[p.class]) or t.primary
+            if isSelected then
+                btn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+                if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 1) end
+            else
+                btn.label:SetTextColor(classColor.r or t.primary[1], classColor.g or t.primary[2], classColor.b or t.primary[3])
+                if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.3) end
+            end
+
+            btn:SetScript("OnClick", function()
+                sd.selectedChatSource = p.key
+                sd.btnChatSource.label:SetText(string.format("Source: %s (%d tabs) ▼", p.name, p.numWindows))
+                if sd.chatStatus then
+                    sd.chatStatus:SetText(string.format("Selected source: |cffffd700%s|r (%d windows). Click [ Copy Chat Layout ] to apply.", p.name, p.numWindows))
+                end
+                dd:Hide()
+                if PlayRetroSound then PlayRetroSound() end
+            end)
+            btn:Show()
+        end
+    end
+
+    dd:Show()
+end
+
 function CLIAlts:GetSettingsDialog()
     return settingsDialog
 end
@@ -7865,7 +7968,7 @@ function CLIAlts:ShowSettingsDialog()
     if not settingsDialog then
         local sd = CreateFrame("Frame", "CLIAltsSettingsDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         sd:Hide()
-        sd:SetSize(680, 520)
+        sd:SetSize(680, 590)
         sd:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         sd:SetFrameStrata("DIALOG")
         sd:EnableMouse(true)
@@ -7873,6 +7976,11 @@ function CLIAlts:ShowSettingsDialog()
         sd:RegisterForDrag("LeftButton")
         sd:SetScript("OnDragStart", function(self) self:StartMoving() end)
         sd:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+        sd:SetScript("OnHide", function(self)
+            if self.chatDropdown then
+                self.chatDropdown:Hide()
+            end
+        end)
         tinsert(UISpecialFrames, "CLIAltsSettingsDialog")
 
         sd:SetBackdrop({
@@ -8043,11 +8151,72 @@ function CLIAlts:ShowSettingsDialog()
         btnMode:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -368)
         sd.btnMode = btnMode
 
+        -- Section 5: Chat Layout Cloner
+        local secChat = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(secChat, 13, "OUTLINE")
+        secChat:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -406)
+        secChat:SetText("[ CHAT LAYOUT CLONER ]")
+        sd.secChat = secChat
+
+        local chatDesc = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(chatDesc, 11, "")
+        chatDesc:SetPoint("TOPLEFT", secChat, "BOTTOMLEFT", 0, -4)
+        chatDesc:SetText("Clone chat windows, tabs, font sizes, message groups, channels, and positions from an alt to this character.")
+        sd.chatDesc = chatDesc
+
+        local btnChatSource = CreateRetroButton(sd, "Source: [Select Alt] ▼", 260, 26, function()
+            CLIAlts:ToggleChatSourceDropdown()
+        end, 11)
+        btnChatSource:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -446)
+        sd.btnChatSource = btnChatSource
+
+        local btnChatCopy = CreateRetroButton(sd, "[ Copy Chat Layout ]", 160, 26, function()
+            if not sd.selectedChatSource then
+                if sd.chatStatus then
+                    sd.chatStatus:SetText("|cffff4444Please select a source alt from the dropdown first.|r")
+                end
+                return
+            end
+            local ok, msg = CLIAlts:CopyChatSettings(sd.selectedChatSource)
+            if sd.chatStatus then
+                sd.chatStatus:SetText(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
+            end
+            CLIAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
+        end, 11)
+        btnChatCopy:SetPoint("LEFT", btnChatSource, "RIGHT", 10, 0)
+        sd.btnChatCopy = btnChatCopy
+
+        local btnChatSave = CreateRetroButton(sd, "[ Save Current ]", 140, 26, function()
+            local ok, count = CLIAlts:CaptureChatSettings()
+            if ok then
+                local msg = string.format("Snapshot saved (%d chat windows captured).", count)
+                if sd.chatStatus then
+                    sd.chatStatus:SetText("|cff00ff66" .. msg .. "|r")
+                end
+                CLIAlts:Print("|cff00ff66" .. msg .. "|r")
+                CLIAlts:UpdateSettingsDialog()
+            else
+                local msg = tostring(count or "Failed to capture chat.")
+                if sd.chatStatus then
+                    sd.chatStatus:SetText("|cffff4444" .. msg .. "|r")
+                end
+                CLIAlts:Print("|cffff4444" .. msg .. "|r")
+            end
+        end, 11)
+        btnChatSave:SetPoint("LEFT", btnChatCopy, "RIGHT", 10, 0)
+        sd.btnChatSave = btnChatSave
+
+        local chatStatus = sd:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(chatStatus, 11, "")
+        chatStatus:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -480)
+        chatStatus:SetText("Select a source alt above and click [ Copy Chat Layout ].")
+        sd.chatStatus = chatStatus
+
         -- Tip Note
         local tip = sd:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(tip, 11, "")
-        tip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -408)
-        tip:SetText("Tip: Chat commands /clialts theme <name>, /clialts font <12-24>, /clialts scale <val> also work.")
+        tip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -508)
+        tip:SetText("Tip: Chat commands /clialts copychat <alt>, /clialts theme <name>, /clialts font <12-24> also work.")
         sd.tip = tip
 
         -- Bottom utility buttons
@@ -8196,6 +8365,60 @@ function CLIAlts:UpdateSettingsDialog()
     local isLegacy = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI == true)
     if settingsDialog.btnMode then
         settingsDialog.btnMode.label:SetText(string.format("UI Style: %s", isLegacy and "|cffffd100Classic Retro Table|r" or "|cff33d9ffModern v2 (Cards)|r"))
+    end
+
+    -- Section 5: Chat Layout Cloner Controls
+    if settingsDialog.secChat then settingsDialog.secChat:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
+    if settingsDialog.chatDesc then settingsDialog.chatDesc:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
+    if settingsDialog.chatStatus then
+        local curStatus = settingsDialog.chatStatus:GetText() or ""
+        if not curStatus:find("|c") then
+            settingsDialog.chatStatus:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
+        end
+    end
+
+    local profiles = self:GetChatProfilesList()
+    if not settingsDialog.selectedChatSource and #profiles > 0 then
+        settingsDialog.selectedChatSource = profiles[1].key
+    end
+
+    if settingsDialog.btnChatSource then
+        local srcKey = settingsDialog.selectedChatSource
+        local selProfile = nil
+        for _, p in ipairs(profiles) do
+            if p.key == srcKey then
+                selProfile = p
+                break
+            end
+        end
+
+        if selProfile then
+            settingsDialog.btnChatSource.label:SetText(string.format("Source: %s (%d tabs) ▼", selProfile.name, selProfile.numWindows))
+        elseif #profiles > 0 then
+            settingsDialog.btnChatSource.label:SetText(string.format("Source: %s (%d tabs) ▼", profiles[1].name, profiles[1].numWindows))
+            settingsDialog.selectedChatSource = profiles[1].key
+        else
+            settingsDialog.btnChatSource.label:SetText("Source: [No Alts Saved] ▼")
+        end
+
+        settingsDialog.btnChatSource.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        if settingsDialog.btnChatSource.SetBackdropBorderColor then
+            settingsDialog.btnChatSource:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 0.8)
+        end
+    end
+
+    if settingsDialog.btnChatCopy then
+        settingsDialog.btnChatCopy.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
+        if settingsDialog.btnChatCopy.SetBackdropBorderColor then
+            settingsDialog.btnChatCopy:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 0.8)
+        end
+    end
+
+    if settingsDialog.btnChatSave then
+        settingsDialog.btnChatSave.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
+        if settingsDialog.btnChatSave.SetBackdropBorderColor then
+            settingsDialog.btnChatSave:SetBackdropBorderColor(t.dim[1], t.dim[2], t.dim[3], 0.6)
+        end
     end
 end
 
