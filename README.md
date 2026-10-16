@@ -93,20 +93,19 @@ Configure your chat layout once on your main character, then replicate it across
 
 ---
 
-## Dedicated Settings & 9 Integrated Tabs
+## Dedicated Settings & 8 Integrated Tabs
 
 Access settings via `[CONFIG]`, the sidebar/header tab, `/fa config`, or `/fa settings`:
 
-- **9 Dashboard Navigation Views**:
-  1. **Overview** (`/fa 1`): Roster summary with class, level in initial square, rest progress bar, status pill, and gold.
+- **8 Dashboard Navigation Views**:
+  1. **Overview** (`/fa 1`): Consolidated dashboard featuring the "Play next" recommendation banner, dual circular gauges (Level XP % of level and Rested XP % of cap), character level in class-colored square, details subline (rest pool & accrual rate), urgency row highlighting, and coin wealth.
   2. **Forever Route** (`/fa 2`): Smart rotation recommendations, usable rested ranking, cohort tiers (`CORE`, `RESERVE`, `BANK`).
-  3. **Rested XP** (`/fa 3`): Real-time offline rest accrual calibrated for Well Rested perks (Ranks 0–5, up to 180% cap), time-to-cap, and waste tracking.
+  3. **Rested XP** (`/fa 3`): Real-time offline rest accrual analysis table with 9 sortable columns, including Inn/Wild location (`loc`), XP/h rate (`xph`), and time-to-cap/waste status.
   4. **Professions** (`/fa 4`): Phase profession milestones (75/150/225/300) and recipes.
   5. **Economy** (`/fa 5`): Total account wealth, liquid gold across alts, and transaction delta tracker.
   6. **Cooldowns & Locks** (`/fa 6`): Trade cooldowns (Transmutes, Mooncloth) and raid/dungeon instance reset timers.
   7. **Mail Routing** (`/fa 7`): Supply chain auto-routing for crafting trades with 1-click mailbox auto-fill and cross-faction isolation.
-  8. **Beta Tab** (`/fa 8`): Consolidated dashboard featuring dual 44px circular gauges (Level XP & Rested XP) and coin wealth.
-  9. **Settings & Preferences** (`/fa 9`): Full integrated configuration panel.
+  8. **Settings & Preferences** (`/fa 8`): Full integrated configuration panel embedded directly in the main dashboard view.
 - **Theme Palette**: Choose between 7 CRT phosphor themes (`Amber`, `Green`, `Cyan`, `Monochrome`, `Colorblind Safe`, `Synthwave`, `Dracula`).
 - **Display Scaling & Font Size**: Adjust UI scale (80%–145%) and monospace font size (12px–24px) with live previews.
 - **Audio & Visual Preferences**: Toggle sound effects, login alert digests, minimap button, and bag sort button.
@@ -135,8 +134,8 @@ Type into the dashboard terminal prompt (`> `) or in standard chat (`/fa` or `/f
 | Command | Action |
 | :--- | :--- |
 | `/fa` | Toggle the main alt monitor dashboard |
-| `/fa [1-9]` | Switch directly to a specific tab (Overview, Route, Rested, Profs, Economy, CDs, Mail, Beta, Settings) |
-| `/fa config` | Open the integrated Settings & Preferences view (Tab 9) |
+| `/fa [1-8]` | Switch directly to a specific tab (Overview, Route, Rested, Profs, Economy, CDs, Mail, Settings) |
+| `/fa config` | Open the integrated Settings & Preferences view (Tab 8) |
 | `/fa tour` | Launch the interactive first-run onboarding tour |
 | `/fa compact` | Toggle 680px compact mode |
 | `/fa theme [name]` | Cycle or set phosphor theme |

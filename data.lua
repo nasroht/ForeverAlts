@@ -2509,6 +2509,15 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         for _, char in ipairs(list) do
             sortValues[char] = (char.location or ""):lower()
         end
+    elseif sortBy == "xph" or sortBy == "rate" then
+        for _, char in ipairs(list) do
+            local r = self:GetRestedData(char)
+            sortValues[char] = (r and not r.isMaxLevel and r.ratePerSec and math.floor(r.ratePerSec * 3600 + 0.5)) or 0
+        end
+    elseif sortBy == "resting" or sortBy == "loc" then
+        for _, char in ipairs(list) do
+            sortValues[char] = char.loggedOutInRestZone and 2 or 1
+        end
     elseif sortBy == "supply" then
         for _, char in ipairs(list) do
             local role = self:GetCharacterEffectiveSupplyRole(char)
@@ -2572,7 +2581,14 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 if sortAsc then return sA < sB else return sA > sB end
             end
             return (a.name or "") < (b.name or "")
-        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" or sortBy == "rotation" or sortBy == "next" then
+        elseif sortBy == "resting" or sortBy == "loc" then
+            local rA = sortValues[a] or 0
+            local rB = sortValues[b] or 0
+            if rA ~= rB then
+                if sortAsc then return rA < rB else return rA > rB end
+            end
+            return (a.name or "") < (b.name or "")
+        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" or sortBy == "rotation" or sortBy == "next" or sortBy == "xph" or sortBy == "rate" then
             local valA = sortValues[a] or 0
             local valB = sortValues[b] or 0
             if valA == valB then

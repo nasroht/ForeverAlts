@@ -491,21 +491,36 @@ local function SlashHandler(msg)
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:Toggle()
 
-    elseif cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" or cmd == "7" or cmd == "tab" then
+    elseif cmd == "beta" or (cmd == "8" and not (cmd == "tab" and arg == "8")) then
+        CLIAlts:Print("Beta dashboard has been integrated into Overview (Tab 1). Redirecting to Overview... (Settings is now Tab 8, use /fa settings)")
+        CLIAlts:CollectCurrentCharacter()
+        CLIAlts:Toggle(true)
+        if CLIAlts.SwitchTab then
+            CLIAlts:SwitchTab(1)
+        end
+
+    elseif cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" or cmd == "7" or cmd == "8" or cmd == "9" or cmd == "tab" then
         local tabId = tonumber(cmd)
         if cmd == "tab" and arg and arg ~= "" then
             tabId = tonumber(arg)
         end
-        if tabId and tabId >= 1 and tabId <= 7 then
-            if CLIAltsDB and CLIAltsDB.settings then
-                CLIAltsDB.settings.activeTab = tabId
-            end
+        if tabId == 9 then
+            tabId = 8
+        end
+        if tabId and tabId >= 1 and tabId <= 8 then
             CLIAlts:CollectCurrentCharacter()
             CLIAlts:Toggle(true)
-            if CLIAlts.SetPage then CLIAlts:SetPage(1) end
-            CLIAlts:Render()
+            if CLIAlts.SwitchTab then
+                CLIAlts:SwitchTab(tabId)
+            else
+                if CLIAltsDB and CLIAltsDB.settings then
+                    CLIAltsDB.settings.activeTab = tabId
+                end
+                if CLIAlts.SetPage then CLIAlts:SetPage(1) end
+                CLIAlts:Render()
+            end
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts [1-7]|r (Switches to specified tab)")
+            CLIAlts:Print("Usage: |cff00ff66/clialts [1-8]|r (Switches to specified tab)")
         end
 
     elseif cmd == "next" then

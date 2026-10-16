@@ -657,14 +657,18 @@ function CLIAlts:FmtStatus(char, t)
         return string.format("Unseen %dd", math.max(unseenDays, 1)), "dashed_muted"
     end
 
-    local wastedSec, _, _, timeStr = self:GetRestedWaste(char, now)
+    local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char, now)
     local rested = self:GetRestedData(char, false, now)
 
     if (wastedSec and wastedSec > 0) or (rested and rested.isFull) then
         local dur = timeStr or "0m"
         dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
         if dur == "Just capped" then dur = "0m" end
-        return "Losing " .. dur, "warn_fill"
+        if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+            return string.format("Capped %s ago (≈%s wasted)", dur, self:FormatNumber(wastedXP)), "warn_fill"
+        else
+            return string.format("Capped %s ago", dur), "warn_fill"
+        end
     end
 
     if rested and not rested.isMaxLevel then
@@ -1348,6 +1352,35 @@ local function FmtRate(char, t)
     local s = rested.isResting and "+5.0%/8h" or "+1.25%/8h"
     return string.format("|cff%s%s|r", t.dimHex, s)
 end
+CLIAlts.FmtRate = FmtRate
+
+local function FmtRestLoc(char, t)
+    t = t or CLIAlts:GetTheme()
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+    end
+    if char.loggedOutInRestZone then
+        return string.format("|cff%sInn|r", t.readyHex or "55e39a")
+    else
+        return string.format("|cff%sWild|r", t.mutedHex or "a9a08c")
+    end
+end
+CLIAlts.FmtRestLoc = FmtRestLoc
+
+local function FmtXPHour(char, t)
+    t = t or CLIAlts:GetTheme()
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+    end
+    local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
+    if xpPerHour <= 0 then
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+    end
+    return string.format("|cff%s+%s/h|r", t.dimHex or "ffd34e", CLIAlts:FormatNumber(xpPerHour))
+end
+CLIAlts.FmtXPHour = FmtXPHour
 
 -- Tab 4 Profession Formatters
 local function FmtProf1(char, t)
@@ -1653,11 +1686,12 @@ end
 CLIAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
-    [1] = { -- 1: OVERVIEW
-        { key = "name",      title = "CHARACTER",         w = 26, pw = 360, cpw = 300, mpw = 310, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LEVEL",             w = 8,  pw = 80,  cpw = 70,  mpw = 70,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "rested",    title = "RESTED XP",         w = 32, pw = 450, cpw = 380, mpw = 305, align = "LEFT",   sort = "rested",   fmt = FmtRested },
-        { key = "eta",       title = "STATUS",            w = 14, pw = 200, cpw = 0,   mpw = 130, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+    [1] = { -- 1: OVERVIEW (Consolidated Dashboard with Dual Circular Gauges)
+        { key = "name",       title = "CHARACTER",         w = 30, pw = 300, cpw = 260, mpw = 300, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "xp",       fmt = FmtCurXP },
+        { key = "circleRest", title = "RESTED",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "rested",   fmt = FmtRested },
+        { key = "details",    title = "RESTED DETAILS",    w = 25, pw = 250, cpw = 220, mpw = 250, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
+        { key = "gold",       title = "WEALTH",            w = 15, pw = 150, cpw = 140, mpw = 150, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
     },
     [2] = { -- 2: FOREVER ROUTE
         { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 38,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
@@ -1669,15 +1703,16 @@ local COLS = {
         { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
         { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 370, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
     },
-    [3] = { -- 3: RESTED XP MONITOR
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 160, cpw = 135, mpw = 145, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   mpw = 135, padRight = 10, mpadRight = 10, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 140, padRight = 14, cpadRight = 10, mpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 160, mpadRight = 10, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 80,  padRight = 8, mpadRight = 8, align = "RIGHT",  fmt = FmtRate },
-        { key = "eta",       title = "STATUS",            w = 12, pw = 150, cpw = 120, mpw = 85,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+    [3] = { -- 3: RESTED XP MONITOR (Analysis Table)
+        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 32,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 145, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "curXP",     title = "CURRENT XP",        w = 12, pw = 125, cpw = 0,   mpw = 95,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
+        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 145, cpw = 125, mpw = 120, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "restBar",   title = "RESTED PROGRESS",   w = 15, pw = 150, cpw = 120, mpw = 120, mpadRight = 8, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "loc",       title = "REST LOC",          w = 7,  pw = 70,  cpw = 55,  mpw = 65,  align = "CENTER", sort = "resting",  fmt = FmtRestLoc },
+        { key = "xph",       title = "XP/H",              w = 8,  pw = 85,  cpw = 70,  mpw = 75,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xph",      fmt = FmtXPHour },
+        { key = "eta",       title = "STATUS",            w = 15, pw = 150, cpw = 120, mpw = 150, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
@@ -1711,14 +1746,7 @@ local COLS = {
         { key = "mode",      title = "MODE",                w = 8,  pw = 110, cpw = 90,  mpw = 85,  align = "CENTER", fmt = FmtMailMode },
         { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 140, align = "RIGHT",  fmt = FmtMailPending },
     },
-    [8] = { -- 8: BETA: CONSOLIDATED DASHBOARD
-        { key = "name",       title = "CHARACTER",         w = 30, pw = 300, cpw = 260, mpw = 300, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "xp",       fmt = FmtCurXP },
-        { key = "circleRest", title = "RESTED",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "rested",   fmt = FmtRested },
-        { key = "details",    title = "RESTED DETAILS",    w = 25, pw = 250, cpw = 220, mpw = 250, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
-        { key = "gold",       title = "WEALTH",            w = 15, pw = 150, cpw = 140, mpw = 150, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
-    },
-    [9] = {}, -- 9: SETTINGS & PREFERENCES (Embedded Panel)
+    [8] = {}, -- 8: SETTINGS & PREFERENCES (Embedded Panel)
 }
 
 function CLIAlts:GetColumns(activeTab)
@@ -2066,8 +2094,7 @@ function CLIAlts:CreateLegacyMainFrame()
         { id = 5, text = "Economy",     compact = "Econ",     viewTitle = "ECONOMY & WEALTH",        stdWidth = 76 },
         { id = 6, text = "Cooldowns",   compact = "CDs",      viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 86 },
         { id = 7, text = "Mail Routes", compact = "Mail",     viewTitle = "MAIL ROUTING & SUPPLY CHAIN", stdWidth = 96 },
-        { id = 8, text = "Beta Tab",    compact = "Beta",     viewTitle = "BETA: CONSOLIDATED METERS",   stdWidth = 84 },
-        { id = 9, text = "Settings",    compact = "Config",   viewTitle = "SETTINGS & PREFERENCES",     stdWidth = 80 },
+        { id = 8, text = "Settings",    compact = "Config",   viewTitle = "SETTINGS & PREFERENCES",     stdWidth = 80 },
     }
     frame.tabButtons = {}
     local prevTab = nil
@@ -2377,7 +2404,7 @@ function CLIAlts:CreateLegacyMainFrame()
     frame.headerBorderR = headerBorderR
 
     frame.headerCells = {}
-    for i = 1, 8 do
+    for i = 1, 12 do
         local hCell = headerFrame:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(hCell, fontSize)
         hCell:SetWordWrap(false)
@@ -2533,9 +2560,9 @@ function CLIAlts:CreateLegacyMainFrame()
         etaText:SetText("")
         row.etaText = etaText
 
-        -- Multi-column cells for Tabs 2 to 6
+        -- Multi-column cells for Tabs 2 to 7
         row.cells = {}
-        for j = 1, 8 do
+        for j = 1, 12 do
             local cell = row:CreateFontString(nil, "OVERLAY")
             self:SetWidgetFont(cell, fontSize)
             cell:SetWordWrap(false)
@@ -3208,8 +3235,7 @@ function CLIAlts:CreateModernMainFrame()
         { id = 5, text = "Economy", badge = nil },
         { id = 6, text = "Cooldowns & Locks", badge = "3", isWarn = true },
         { id = 7, text = "Mail Routing", badge = "0", isMail = true },
-        { id = 8, text = "Beta Tab", badge = "NEW", isBeta = true },
-        { id = 9, text = "Settings", badge = nil, isSettings = true },
+        { id = 8, text = "Settings", badge = nil, isSettings = true },
     }
     frame.tabButtons = {}
     frame.sidebarNavButtons = {}
@@ -4233,7 +4259,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.headerFrame = headerFrame
 
     frame.headerCells = {}
-    for i = 1, 8 do
+    for i = 1, 12 do
         local hCell = headerFrame:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(hCell, 12, "OUTLINE")
         hCell:SetWordWrap(false)
@@ -4524,7 +4550,7 @@ function CLIAlts:CreateModernMainFrame()
 
         -- Multi-column cells for Tabs 2 to 7
         row.cells = {}
-        for j = 1, 8 do
+        for j = 1, 12 do
             local cell = row:CreateFontString(nil, "OVERLAY")
             self:SetWidgetFont(cell, 13)
             cell:SetWordWrap(false)
@@ -4728,9 +4754,6 @@ function CLIAlts:GetVisibleCharactersList()
         elseif activeTab == 7 then
             activeSortBy = "name"
             activeSortAsc = true
-        elseif activeTab == 8 then
-            activeSortBy = "rested"
-            activeSortAsc = false
         end
     end
     return self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
@@ -5067,6 +5090,220 @@ function CLIAlts:RequestRender()
     end
 end
 
+-- ----------------------------------------------------------------------------
+-- Shared Character Row Component (Dual circular gauges, details, g/s/c coins)
+-- ----------------------------------------------------------------------------
+function CLIAlts:RenderCharRow(row, char, derived)
+    if not row or not char then return end
+
+    derived = derived or {}
+    local raisedR, raisedG, raisedB = derived.raisedR or self:Hex("raised")
+    local lineR, lineG, lineB = derived.lineR or self:Hex("line")
+    local panelR, panelG, panelB = derived.panelR or self:Hex("panel")
+    local brandR, brandG, brandB = derived.brandR or self:Hex("brand")
+    local warnR, warnG, warnB = derived.warnR or self:Hex("warn")
+    local fillR, fillG, fillB = derived.fillR or self:Hex("fill")
+    local textR, textG, textB = derived.textR or self:Hex("text")
+    local mutedR, mutedG, mutedB = derived.mutedR or self:Hex("muted")
+
+    local classFile = derived.classFile or char.classFile or "WARRIOR"
+    local cr, cg, cb = derived.cr, derived.cg, derived.cb
+    if not cr then
+        cr, cg, cb = self:GetClassColor(classFile)
+    end
+
+    local isSelected = derived.isSelected
+    if isSelected == nil then
+        isSelected = (self.selectedCharKey and (char.fullName == self.selectedCharKey or char.name == self.selectedCharKey))
+    end
+
+    local xpData = derived.xpData or self:GetLevelProgressData(char)
+    local rested = derived.rested or self:GetRestedData(char)
+    local wastedSec = derived.wastedSec
+    local wastedXP = derived.wastedXP
+    local timeStr = derived.timeStr
+    if wastedSec == nil and wastedXP == nil then
+        wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
+    end
+
+    local isFull = rested and rested.isFull
+    local isWasting = (wastedSec and wastedSec > 0)
+    local isCappedOrWasting = isFull or isWasting
+
+    -- 1. Urgency & Row Highlighting
+    -- Capped or wasting alts get a warning border and subtle alert background
+    local rowIndex = row.rowIndex or 1
+    if isSelected then
+        if row.SetBackdropColor then row:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
+        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(brandR, brandG, brandB, 1.0) end
+    elseif isCappedOrWasting then
+        local bgR = (rowIndex % 2 == 0) and (raisedR * 0.82 + warnR * 0.18) or (panelR * 0.82 + warnR * 0.18)
+        local bgG = (rowIndex % 2 == 0) and (raisedG * 0.82 + warnG * 0.18) or (panelG * 0.82 + warnG * 0.18)
+        local bgB = (rowIndex % 2 == 0) and (raisedB * 0.82 + warnB * 0.18) or (panelB * 0.82 + warnB * 0.18)
+        if row.SetBackdropColor then row:SetBackdropColor(bgR, bgG, bgB, 0.75) end
+        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(warnR, warnG, warnB, 0.90) end
+    else
+        local rowBgR = (rowIndex % 2 == 0) and raisedR or panelR
+        local rowBgG = (rowIndex % 2 == 0) and raisedG or panelG
+        local rowBgB = (rowIndex % 2 == 0) and raisedB or panelB
+        if row.SetBackdropColor then row:SetBackdropColor(rowBgR, rowBgG, rowBgB, 0.65) end
+        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(lineR, lineG, lineB, 0.35) end
+    end
+
+    -- Dim Level 1 alts with 0% XP and 0% Rested
+    local isDimmed = (char.level == 1) and ((xpData and xpData.curXP or 0) == 0) and ((rested and rested.currentRested or 0) == 0)
+    row:SetAlpha(isDimmed and 0.55 or 1.0)
+
+    -- 2. 34px Class-Coloured Square with Character Level
+    if row.classRing then
+        if row.classRing.SetBackdropBorderColor then
+            row.classRing:SetBackdropBorderColor(cr, cg, cb, 0.95)
+        end
+        if row.classRing.SetBackdropColor then
+            row.classRing:SetBackdropColor(cr * 0.15, cg * 0.15, cb * 0.15, 0.70)
+        end
+        if row.classRingInitial then
+            self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE")
+            row.classRingInitial:SetText(tostring(char.level or 1))
+            row.classRingInitial:SetTextColor(cr, cg, cb)
+        end
+        row.classRing:Show()
+    end
+
+    -- 3. Name Line & Subline (expanded to x=295 for long race/class names)
+    if row.nameLine then
+        row.nameLine:ClearAllPoints()
+        row.nameLine:SetPoint("TOPLEFT", row.classRing, "TOPRIGHT", 10, 1)
+        row.nameLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
+        row.nameLine:SetText(char.name or "Unknown")
+        row.nameLine:SetTextColor(cr, cg, cb)
+        row.nameLine:Show()
+    end
+
+    if row.subLine then
+        row.subLine:ClearAllPoints()
+        row.subLine:SetPoint("BOTTOMLEFT", row.classRing, "BOTTOMRIGHT", 10, 0)
+        row.subLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
+        local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or "Unknown"
+        local faction = char.faction or (self.InferFaction and self:InferFaction(char)) or "Neutral"
+        local class = char.class or char.className or classFile
+        row.subLine:SetText(string.format("%s %s · %s", race, class, faction))
+        row.subLine:SetTextColor(mutedR, mutedG, mutedB)
+        row.subLine:Show()
+    end
+
+    -- 4. Gauge 1: Level XP Circular Progress (Size 44, Font 12, centered at x=330)
+    -- Explicit Ring Meaning: % of current level
+    if row.gaugeXP then
+        row.gaugeXP:ClearAllPoints()
+        row.gaugeXP:SetSize(44, 44)
+        row.gaugeXP:SetPoint("CENTER", row, "LEFT", 330, 4)
+        if xpData and not xpData.isMaxLevel then
+            local xpRatio = xpData.ratio or 0
+            row.gaugeXP:SetProgress(xpRatio, fillR, fillG, fillB, string.format("%d%%", xpData.percent))
+        else
+            row.gaugeXP:SetProgress(1.0, mutedR, mutedG, mutedB, "MAX")
+        end
+        row.gaugeXP:Show()
+    end
+
+    -- 5. Gauge 2: Rested XP Circular Progress (Size 44, Font 12, centered at x=390)
+    -- Explicit Ring Meaning: % of rested cap (150%)
+    if row.gaugeRest then
+        row.gaugeRest:ClearAllPoints()
+        row.gaugeRest:SetSize(44, 44)
+        row.gaugeRest:SetPoint("CENTER", row, "LEFT", 390, 4)
+        if rested and not rested.isMaxLevel then
+            local restRatio = rested.ratio or 0
+            if isCappedOrWasting then
+                row.gaugeRest:SetProgress(1.0, warnR, warnG, warnB, "CAP")
+            else
+                local capPct = math.floor(restRatio * 100)
+                local est = rested.isEstimate and "~" or ""
+                row.gaugeRest:SetProgress(restRatio, brandR, brandG, brandB, string.format("%s%d%%", est, capPct))
+            end
+        else
+            row.gaugeRest:SetProgress(0, mutedR, mutedG, mutedB, "---")
+        end
+        row.gaugeRest:Show()
+    end
+
+    -- 6. Rested Details Text (Pool & Rate / Time to Cap, at x=426)
+    if row.betaPoolText then
+        row.betaPoolText:ClearAllPoints()
+        row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 426, -6)
+        row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
+        if rested and not rested.isMaxLevel then
+            local curR = rested.currentRested or 0
+            local maxR = rested.maxRested or 1
+            local est = rested.isEstimate and "~" or ""
+            row.betaPoolText:SetText(string.format("%s%s / %s XP", est, self:FormatNumber(curR), self:FormatNumber(maxR)))
+            if isCappedOrWasting then
+                row.betaPoolText:SetTextColor(warnR, warnG, warnB)
+            else
+                row.betaPoolText:SetTextColor(textR, textG, textB)
+            end
+        else
+            row.betaPoolText:SetText("Level Cap Reached")
+            row.betaPoolText:SetTextColor(mutedR, mutedG, mutedB)
+        end
+        row.betaPoolText:Show()
+    end
+
+    if row.betaRateText then
+        self:SetWidgetFont(row.betaRateText, 15, "")
+        row.betaRateText:ClearAllPoints()
+        row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 426, 6)
+        row.betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
+        if rested and not rested.isMaxLevel then
+            if isCappedOrWasting then
+                if wastedSec and wastedSec > 0 then
+                    row.betaRateText:SetText(string.format("Capped %s ago (≈%s wasted)", timeStr or "", self:FormatNumber(wastedXP or 0)))
+                    row.betaRateText:SetTextColor(warnR, warnG, warnB)
+                else
+                    row.betaRateText:SetText("At Cap (Ready to play)")
+                    row.betaRateText:SetTextColor(fillR, fillG, fillB)
+                end
+            else
+                local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
+                local isInn = char.loggedOutInRestZone
+                local locTag = isInn and "Inn" or "Wild · 4x in Inn"
+                local timeCap = rested.timeLeftStr or "---"
+                row.betaRateText:SetText(string.format("+%s XP/h (%s) · %s to cap", self:FormatNumber(xpPerHour), locTag, timeCap))
+                row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
+            end
+        else
+            row.betaRateText:SetText("No XP accumulation")
+            row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
+        end
+        row.betaRateText:Show()
+    end
+
+    -- 7. Wealth (Gold, Silver & Copper with colored g/s/c coins)
+    if row.goldText then
+        local copper = char.money or 0
+        row.goldText:SetText(self:FormatCoins(copper))
+        row.goldText:SetTextColor(textR, textG, textB)
+        row.goldText:Show()
+    end
+
+    -- 8. Hide linear bars, status chip, and multi-column cells
+    if row.statusPill then row.statusPill:Hide() end
+    if row.restBarBg then row.restBarBg:Hide() end
+    if row.restLabel then row.restLabel:Hide() end
+    if row.colRestBarBg then row.colRestBarBg:Hide() end
+    if row.colRestLabel then row.colRestLabel:Hide() end
+    if row.cells then
+        for idx = 1, #row.cells do
+            local cell = row.cells[idx]
+            if cell then
+                cell:SetText("")
+                cell:Hide()
+            end
+        end
+    end
+end
+
 function CLIAlts:Render(force)
     renderDirty = false
     if self.UpdateLDB then
@@ -5114,14 +5351,14 @@ function CLIAlts:Render(force)
         if activeTab == 7 then
             mainFrame.subViewFilters:SetText("CLICK ALT TO CONFIGURE ROUTING · SHIFT-CLICK TO CYCLE")
         elseif activeTab == 8 then
-            mainFrame.subViewFilters:SetText("CONSOLIDATED DASHBOARD · DUAL CIRCULAR GAUGES (XP & RESTED)")
-        elseif activeTab == 9 then
             mainFrame.subViewFilters:SetText("CONFIGURATION · CRT THEMES · SCALE · CHAT CLONER")
         elseif activeTab == 3 then
             local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
             local lpData = self:CalculateAccountLP()
             local lpVal = (lpData and lpData.effectiveLP) or 0
             mainFrame.subViewFilters:SetText(string.format("WELL RESTED: RANK %d (+%d%%) · ACCOUNT LP: %.1f LP", r, r * 4, lpVal))
+        elseif activeTab == 1 then
+            mainFrame.subViewFilters:SetText("CONSOLIDATED DASHBOARD · DUAL CIRCULAR GAUGES (XP & RESTED)")
         else
             mainFrame.subViewFilters:SetText("RESTED XP    PROFESSIONS    ECONOMY")
         end
@@ -5200,7 +5437,7 @@ function CLIAlts:Render(force)
             mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame.filterBar, "BOTTOMLEFT", 0, -4)
             mainFrame.rowsContainer:SetPoint("BOTTOMRIGHT", mainFrame.mainCol, "BOTTOMRIGHT", 0, 0)
             mainFrame.rowsContainer:Show()
-        elseif activeTab == 9 then
+        elseif activeTab == 8 then
             mainFrame.headerFrame:Hide()
             mainFrame.rowsContainer:Hide()
         else
@@ -5214,13 +5451,13 @@ function CLIAlts:Render(force)
             mainFrame.rowsContainer:Show()
         end
     elseif mainFrame.headerFrame then
-        if activeTab == 1 or activeTab == 9 then
+        if activeTab == 1 or activeTab == 8 then
             mainFrame.headerFrame:Hide()
         else
             mainFrame.headerFrame:Show()
         end
         if mainFrame.rowsContainer then
-            if activeTab == 9 then
+            if activeTab == 8 then
                 mainFrame.rowsContainer:Hide()
             else
                 mainFrame.rowsContainer:Show()
@@ -5267,7 +5504,7 @@ function CLIAlts:Render(force)
                 mainFrame.filterBar:SetPoint("TOPRIGHT", mainFrame.nextBanner, "BOTTOMRIGHT", 0, -8)
                 mainFrame.filterBar:Show()
             end
-        elseif activeTab == 9 then
+        elseif activeTab == 8 then
             if mainFrame.nextBanner then
                 mainFrame.nextBanner:Hide()
             end
@@ -5286,7 +5523,7 @@ function CLIAlts:Render(force)
             end
         end
     else
-        if activeTab == 9 then
+        if activeTab == 8 then
             if mainFrame.recPanel then mainFrame.recPanel:Hide() end
             if mainFrame.kpiContainer then mainFrame.kpiContainer:Hide() end
         elseif activeTab == 7 then
@@ -5647,7 +5884,7 @@ function CLIAlts:Render(force)
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
     end
 
-    for idx = 1, 8 do
+    for idx = 1, 12 do
         local hCell = mainFrame.headerCells and mainFrame.headerCells[idx]
         local btn = headerButtons[idx]
         local col = cols[idx]
@@ -5809,8 +6046,8 @@ function CLIAlts:Render(force)
         self:UpdateFilterChips()
     end
 
-    -- Tab 9: Settings & Preferences (Embedded Tab View)
-    if activeTab == 9 then
+    -- Tab 8: Settings & Preferences (Embedded Tab View)
+    if activeTab == 8 then
         if settingsDialog == nil then
             self:CreateSettingsPanel()
         end
@@ -5883,296 +6120,25 @@ function CLIAlts:Render(force)
 
                     if activeTab == 1 then
                         -- --------------------------------------------------------
-                        -- Tab 1 (Overview): Phase 2 Modern Row Component
+                        -- Tab 1 (Overview): Consolidated Dashboard with Dual Circular Gauges
                         -- --------------------------------------------------------
-                        local classFile = char.classFile or "WARRIOR"
-                        local cr, cg, cb = self:GetClassColor(classFile)
-
-                        -- 1. 34px Class-Coloured Ring with Alt Initial
-                        if row.classRing then
-                            if row.classRing.SetBackdropBorderColor then
-                                row.classRing:SetBackdropBorderColor(cr, cg, cb, 0.95)
-                            end
-                            if row.classRing.SetBackdropColor then
-                                row.classRing:SetBackdropColor(cr * 0.15, cg * 0.15, cb * 0.15, 0.70)
-                            end
-                            if row.classRingInitial then
-                                local initial = self:GetFirstLetter(char.name or "?")
-                                row.classRingInitial:SetText(initial)
-                                row.classRingInitial:SetTextColor(cr, cg, cb)
-                            end
-                            row.classRing:Show()
-                        end
-
-                        -- 2. Name Line
-                        if row.nameLine then
-                            row.nameLine:ClearAllPoints()
-                            row.nameLine:SetPoint("TOPLEFT", row.classRing, "TOPRIGHT", 12, 1)
-                            row.nameLine:SetPoint("RIGHT", row, "LEFT", 385, 0)
-                            row.nameLine:SetText(char.name or "Unknown")
-                            row.nameLine:SetTextColor(cr, cg, cb)
-                            row.nameLine:Show()
-                        end
-
-                        -- 3. Subline (level race class · faction)
-                        if row.subLine then
-                            row.subLine:ClearAllPoints()
-                            row.subLine:SetPoint("BOTTOMLEFT", row.classRing, "BOTTOMRIGHT", 12, 0)
-                            row.subLine:SetPoint("RIGHT", row, "LEFT", 385, 0)
-                            local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or "Unknown"
-                            local faction = char.faction or "Neutral"
-                            local class = char.class or char.className or classFile
-                            row.subLine:SetText(string.format("%d %s %s · %s", char.level or 1, race, class, faction))
-                            row.subLine:SetTextColor(mutedR, mutedG, mutedB)
-                            row.subLine:Show()
-                        end
-
-                        -- 4. Level Progress Bar & Label (XP gained out of required for next level)
-                        local xpData = self:GetLevelProgressData(char)
-                        if xpData and not xpData.isMaxLevel then
-                            local ratio = xpData.ratio or 0
-                            local maxBarW = (row.restBarBg and row.restBarBg.GetWidth and row.restBarBg:GetWidth()) or 180
-                            if not maxBarW or maxBarW <= 0 then maxBarW = 180 end
-                            local barW = math.floor(maxBarW * ratio)
-                            if row.restBarFill then
-                                row.restBarFill:SetWidth(math.max(1, barW))
-                                row.restBarFill:SetVertexColor(brandR, brandG, brandB, 1.0)
-                            end
-                            if row.restBarBg then
-                                row.restBarBg:Show()
-                            end
-
-                            if row.restLabel then
-                                if xpData.maxXP and xpData.maxXP > 0 then
-                                    row.restLabel:SetText(string.format("%d%% XP (%s / %s)", xpData.percent, self:FormatNumber(xpData.curXP), self:FormatNumber(xpData.maxXP)))
-                                else
-                                    row.restLabel:SetText(string.format("%d%% XP", xpData.percent))
-                                end
-                                row.restLabel:SetTextColor(textR, textG, textB)
-                                row.restLabel:Show()
-                            end
-                        else
-                            if row.restLabel then
-                                row.restLabel:SetText("Max Level")
-                                row.restLabel:SetTextColor(mutedR, mutedG, mutedB)
-                                row.restLabel:Show()
-                            end
-                            if row.restBarBg then
-                                row.restBarBg:Hide()
-                            end
-                        end
-
-                        -- 5. Status Pill
-                        local statusText, statusStyle = self:FmtStatus(char, t)
-                        if row.statusPill and row.statusPillText then
-                            row.statusPill:ClearAllPoints()
-                            row.statusPill:SetPoint("LEFT", row.restBarBg, "RIGHT", 20, 6)
-                            row.statusPill:SetSize(120, 24)
-                            row.statusPillText:SetText(statusText)
-                            if statusStyle == "warn_fill" or statusStyle == "warn" then
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(warnR, warnG, warnB, 1.0) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(warnR, warnG, warnB, 1.0) end
-                                row.statusPillText:SetTextColor(0.05, 0.04, 0.02)
-                            elseif statusStyle == "info_outline" or statusStyle == "info" then
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(fillR, fillG, fillB, 0.12) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(fillR, fillG, fillB, 0.85) end
-                                row.statusPillText:SetTextColor(fillR, fillG, fillB)
-                            elseif statusStyle == "dashed_muted" or statusStyle == "dashed" then
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(panelR, panelG, panelB, 0.35) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(lineR, lineG, lineB, 0.50) end
-                                row.statusPillText:SetTextColor(mutedR, mutedG, mutedB)
-                            else -- muted_outline
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(panelR, panelG, panelB, 0.50) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(lineR, lineG, lineB, 0.75) end
-                                row.statusPillText:SetTextColor(mutedR, mutedG, mutedB)
-                            end
-                            row.statusPill:Show()
-                        end
-
-                        -- 6. Right-Aligned Gold Value
-                        if row.goldText then
-                            local copper = char.money or 0
-                            local gold = math.floor(copper / 10000)
-                            row.goldText:SetText(self:FormatNumber(gold) .. "g")
-                            row.goldText:SetTextColor(textR, textG, textB)
-                            row.goldText:Show()
-                        end
-
-                        -- Hide Tab 8 Beta gauges and details on Tab 1
-                        if row.gaugeXP then row.gaugeXP:Hide() end
-                        if row.gaugeRest then row.gaugeRest:Hide() end
-                        if row.betaPoolText then row.betaPoolText:Hide() end
-                        if row.betaRateText then row.betaRateText:Hide() end
-
-                        -- Hide multi-column cells on Tab 1
-                        if row.colRestBarBg then row.colRestBarBg:Hide() end
-                        if row.colRestLabel then row.colRestLabel:Hide() end
-                        for idx = 1, 8 do
-                            local cell = row.cells and row.cells[idx]
-                            if cell then
-                                cell:SetText("")
-                                cell:Hide()
-                            end
-                        end
-                    elseif activeTab == 8 and (mainFrame and not mainFrame.isLegacyUI) then
-                        -- --------------------------------------------------------
-                        -- Tab 8 (Beta Tab): Consolidated Dashboard with Dual Circular Gauges
-                        -- --------------------------------------------------------
-                        local classFile = char.classFile or "WARRIOR"
-                        local cr, cg, cb = self:GetClassColor(classFile)
-
-                        -- 1. 34px Class-Coloured Square with Character Level
-                        if row.classRing then
-                            if row.classRing.SetBackdropBorderColor then
-                                row.classRing:SetBackdropBorderColor(cr, cg, cb, 0.95)
-                            end
-                            if row.classRing.SetBackdropColor then
-                                row.classRing:SetBackdropColor(cr * 0.15, cg * 0.15, cb * 0.15, 0.70)
-                            end
-                            if row.classRingInitial then
-                                self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE")
-                                row.classRingInitial:SetText(tostring(char.level or 1))
-                                row.classRingInitial:SetTextColor(cr, cg, cb)
-                            end
-                            row.classRing:Show()
-                        end
-
-                        -- 2. Name Line & Subline (expanded to x=295 to accommodate long race/class names)
-                        if row.nameLine then
-                            row.nameLine:ClearAllPoints()
-                            row.nameLine:SetPoint("TOPLEFT", row.classRing, "TOPRIGHT", 10, 1)
-                            row.nameLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
-                            row.nameLine:SetText(char.name or "Unknown")
-                            row.nameLine:SetTextColor(cr, cg, cb)
-                            row.nameLine:Show()
-                        end
-
-                        if row.subLine then
-                            row.subLine:ClearAllPoints()
-                            row.subLine:SetPoint("BOTTOMLEFT", row.classRing, "BOTTOMRIGHT", 10, 0)
-                            row.subLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
-                            local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or "Unknown"
-                            local faction = char.faction or (self.InferFaction and self:InferFaction(char)) or "Neutral"
-                            local class = char.class or char.className or classFile
-                            row.subLine:SetText(string.format("%s %s · %s", race, class, faction))
-                            row.subLine:SetTextColor(mutedR, mutedG, mutedB)
-                            row.subLine:Show()
-                        end
-
-                        -- 3. Gauge 1: Level XP Circular Progress (Size 44, Font 12, centered at x=330)
-                        local xpData = self:GetLevelProgressData(char)
-                        if row.gaugeXP then
-                            row.gaugeXP:ClearAllPoints()
-                            row.gaugeXP:SetSize(44, 44)
-                            row.gaugeXP:SetPoint("CENTER", row, "LEFT", 330, 4)
-                            if xpData and not xpData.isMaxLevel then
-                                local xpRatio = xpData.ratio or 0
-                                row.gaugeXP:SetProgress(xpRatio, fillR, fillG, fillB, string.format("%d%%", xpData.percent))
-                            else
-                                row.gaugeXP:SetProgress(1.0, mutedR, mutedG, mutedB, "MAX")
-                            end
-                            row.gaugeXP:Show()
-                        end
-
-                        -- 4. Gauge 2: Rested XP Circular Progress (Size 44, Font 12, centered at x=390)
-                        local rested = self:GetRestedData(char)
-                        if row.gaugeRest then
-                            row.gaugeRest:ClearAllPoints()
-                            row.gaugeRest:SetSize(44, 44)
-                            row.gaugeRest:SetPoint("CENTER", row, "LEFT", 390, 4)
-                            if rested and not rested.isMaxLevel then
-                                local restRatio = rested.ratio or 0
-                                if rested.isFull then
-                                    row.gaugeRest:SetProgress(1.0, warnR, warnG, warnB, "CAP")
-                                else
-                                    local capPct = math.floor(restRatio * 100)
-                                    local est = rested.isEstimate and "~" or ""
-                                    row.gaugeRest:SetProgress(restRatio, brandR, brandG, brandB, string.format("%s%d%%", est, capPct))
-                                end
-                            else
-                                row.gaugeRest:SetProgress(0, mutedR, mutedG, mutedB, "---")
-                            end
-                            row.gaugeRest:Show()
-                        end
-
-                        -- 5. Rested Details Text (Pool & Rate / Time to Cap, moved to x=426)
-                        if row.betaPoolText then
-                            row.betaPoolText:ClearAllPoints()
-                            row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 426, -6)
-                            row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
-                            if rested and not rested.isMaxLevel then
-                                local curR = rested.currentRested or 0
-                                local maxR = rested.maxRested or 1
-                                local est = rested.isEstimate and "~" or ""
-                                row.betaPoolText:SetText(string.format("%s%s / %s XP", est, self:FormatNumber(curR), self:FormatNumber(maxR)))
-                                if rested.isFull then
-                                    row.betaPoolText:SetTextColor(warnR, warnG, warnB)
-                                else
-                                    row.betaPoolText:SetTextColor(textR, textG, textB)
-                                end
-                            else
-                                row.betaPoolText:SetText("Level Cap Reached")
-                                row.betaPoolText:SetTextColor(mutedR, mutedG, mutedB)
-                            end
-                            row.betaPoolText:Show()
-                        end
-
-                        if row.betaRateText then
-                            self:SetWidgetFont(row.betaRateText, 15, "")
-                            row.betaRateText:ClearAllPoints()
-                            row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 426, 6)
-                            row.betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
-                            if rested and not rested.isMaxLevel then
-                                if rested.isFull then
-                                    local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
-                                    if wastedSec and wastedSec > 0 then
-                                        row.betaRateText:SetText(string.format("Capped %s ago (~%s wasted)", timeStr or "", self:FormatNumber(wastedXP or 0)))
-                                        row.betaRateText:SetTextColor(warnR, warnG, warnB)
-                                    else
-                                        row.betaRateText:SetText("At Cap (Ready to play)")
-                                        row.betaRateText:SetTextColor(fillR, fillG, fillB)
-                                    end
-                                else
-                                    local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
-                                    local locTag = char.loggedOutInRestZone and "Inn" or "Wild"
-                                    local timeCap = rested.timeLeftStr or "---"
-                                    row.betaRateText:SetText(string.format("+%s XP/h (%s) · %s to cap", self:FormatNumber(xpPerHour), locTag, timeCap))
-                                    row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
-                                end
-                            else
-                                row.betaRateText:SetText("No XP accumulation")
-                                row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
-                            end
-                            row.betaRateText:Show()
-                        end
-
-                        -- 6. Status Pill (Hidden on Tab 8)
-                        if row.statusPill then row.statusPill:Hide() end
-
-                        -- 7. Right-Aligned Gold, Silver & Copper (Colored g/s/c)
-                        if row.goldText then
-                            local copper = char.money or 0
-                            row.goldText:SetText(self:FormatCoins(copper))
-                            row.goldText:SetTextColor(textR, textG, textB)
-                            row.goldText:Show()
-                        end
-
-                        -- Hide Tab 1 and Tab 3 specific linear bars and multi-column cells
-                        if row.restBarBg then row.restBarBg:Hide() end
-                        if row.restLabel then row.restLabel:Hide() end
-                        if row.colRestBarBg then row.colRestBarBg:Hide() end
-                        if row.colRestLabel then row.colRestLabel:Hide() end
-                        for idx = 1, 8 do
-                            local cell = row.cells and row.cells[idx]
-                            if cell then
-                                cell:SetText("")
-                                cell:Hide()
-                            end
-                        end
+                        self:RenderCharRow(row, char, {
+                            t = t,
+                            raisedR = raisedR, raisedG = raisedG, raisedB = raisedB,
+                            lineR = lineR, lineG = lineG, lineB = lineB,
+                            panelR = panelR, panelG = panelB,
+                            brandR = brandR, brandG = brandB,
+                            warnR = warnR, warnG = warnB,
+                            fillR = fillR, fillG = fillB,
+                            textR = textR, textG = textB,
+                            mutedR = mutedR, mutedG = mutedB,
+                            isSelected = isSelected,
+                        })
                     else
                         -- --------------------------------------------------------
                         -- Tabs 2 to 7: Multi-Column Cells
                         -- --------------------------------------------------------
+                        row:SetAlpha(1.0)
                         if row.classRing then row.classRing:Hide() end
                         if row.nameLine then row.nameLine:Hide() end
                         if row.subLine then row.subLine:Hide() end
@@ -6195,7 +6161,7 @@ function CLIAlts:Render(force)
                         end
 
                         local rowXOffset = 16
-                        for idx = 1, 8 do
+                        for idx = 1, 12 do
                             local cell = row.cells and row.cells[idx]
                             local col = cols[idx]
                             if cell then
@@ -6355,7 +6321,7 @@ function CLIAlts:Render(force)
                         end
                         if row.colRestBarBg then row.colRestBarBg:Hide() end
                         if row.colRestLabel then row.colRestLabel:Hide() end
-                        for idx = 1, 8 do
+                        for idx = 1, 12 do
                             if row.cells and row.cells[idx] then
                                 row.cells[idx]:SetText("")
                                 row.cells[idx]:Hide()
@@ -6372,7 +6338,7 @@ function CLIAlts:Render(force)
                         if row.colRestLabel and activeTab ~= 3 then row.colRestLabel:Hide() end
 
                         local rowXOffset = 16
-                        for idx = 1, 8 do
+                        for idx = 1, 12 do
                             local cell = row.cells and row.cells[idx]
                             local col = cols[idx]
                             if cell then
@@ -6469,7 +6435,7 @@ function CLIAlts:Render(force)
                 if row.restPercentText then row.restPercentText:Hide() end
                 if row.barBg then row.barBg:Hide() end
                 if row.etaText then row.etaText:Hide() end
-                for idx = 1, 8 do
+                for idx = 1, 12 do
                     local cell = row.cells and row.cells[idx]
                     if cell then
                         cell:SetText("")
@@ -6733,7 +6699,9 @@ end
 
 function CLIAlts:SwitchTab(tabId)
     tabId = tonumber(tabId)
-    if not tabId or tabId < 1 or tabId > 9 then return end
+    if not tabId then return end
+    if tabId == 9 then tabId = 8 end
+    if tabId < 1 or tabId > 8 then return end
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.activeTab = tabId
     end
@@ -9058,7 +9026,7 @@ function CLIAlts:ShowSettingsDialog()
     elseif not mainFrame:IsShown() then
         mainFrame:Show()
     end
-    self:SwitchTab(9)
+    self:SwitchTab(8)
     local sd = self:GetSettingsDialog() or self:CreateSettingsPanel()
     if sd and sd.Show then
         sd:Show()

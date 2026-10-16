@@ -3725,102 +3725,132 @@ function CLIAlts:RunSelfTest()
     end
 
     -- ------------------------------------------------------------------------
-    -- 37. Beta Tab: Consolidated Dashboard & Circular Speedometer Gauges
+    -- 37. Overview Consolidated Dashboard & Rested XP Analysis Table Tests
     -- ------------------------------------------------------------------------
     do
-        Assert(self.CreateCircleMeter ~= nil, "BetaTab: CreateCircleMeter API exists on CLIAlts")
+        Assert(self.CreateCircleMeter ~= nil, "ConsolidatedOverview: CreateCircleMeter API exists on CLIAlts")
 
         -- 37a. CreateCircleMeter initialization & SetProgress
         local testMeter = self:CreateCircleMeter(UIParent, 36, "LVL XP")
         Assert(testMeter ~= nil and testMeter.cd ~= nil and testMeter.valText ~= nil and testMeter.label ~= nil,
-            "BetaTab: CreateCircleMeter initializes Cooldown widget, innerDisc, valText, and label")
-        Assert(testMeter.label:GetText() == "LVL XP", "BetaTab: CreateCircleMeter correctly sets label text to 'LVL XP'")
+            "ConsolidatedOverview: CreateCircleMeter initializes Cooldown widget, innerDisc, valText, and label")
+        Assert(testMeter.label:GetText() == "LVL XP", "ConsolidatedOverview: CreateCircleMeter correctly sets label text to 'LVL XP'")
 
         local defaultMeter = self:CreateCircleMeter(UIParent, nil, "RESTED")
-        Assert(defaultMeter:GetWidth() == 44, "BetaTab: CreateCircleMeter default size is 44px")
-        Assert(defaultMeter.valText.fontSize == 12, "BetaTab: CreateCircleMeter default font size is 12 (+2 larger)")
+        Assert(defaultMeter:GetWidth() == 44, "ConsolidatedOverview: CreateCircleMeter default size is 44px")
+        Assert(defaultMeter.valText.fontSize == 12, "ConsolidatedOverview: CreateCircleMeter default font size is 12 (+2 larger)")
 
         testMeter:SetProgress(0.65, 0.2, 0.8, 0.4, "65%")
-        Assert(testMeter.valText:GetText() == "65%", "BetaTab: SetProgress updates percentage text to '65%'")
+        Assert(testMeter.valText:GetText() == "65%", "ConsolidatedOverview: SetProgress updates percentage text to '65%'")
 
         testMeter:SetProgress(1.0, 0.5, 0.5, 0.5, "MAX")
-        Assert(testMeter.valText:GetText() == "MAX", "BetaTab: SetProgress supports special readout 'MAX'")
+        Assert(testMeter.valText:GetText() == "MAX", "ConsolidatedOverview: SetProgress supports special readout 'MAX'")
 
         testMeter:SetProgress(0.0, 0.8, 0.4, 0.2, "CAP")
-        Assert(testMeter.valText:GetText() == "CAP", "BetaTab: SetProgress supports special readout 'CAP'")
+        Assert(testMeter.valText:GetText() == "CAP", "ConsolidatedOverview: SetProgress supports special readout 'CAP'")
 
-        -- 37b. Tab 8 Column Definitions & Bounds
-        local tab8Cols = self:GetColumns(8)
-        Assert(tab8Cols ~= nil and #tab8Cols == 5, "BetaTab: Tab 8 defines 5 consolidated columns")
-        local tab8TotalMpw = 0
-        for _, col in ipairs(tab8Cols) do
-            Assert(col.mpw and col.mpw > 0, string.format("BetaTab: col '%s' defines positive mpw", col.key or "unknown"))
-            tab8TotalMpw = tab8TotalMpw + (col.mpw or 0)
+        -- 37b. Tab 1 Column Definitions & FormatCoins
+        local tab1Cols = self:GetColumns(1)
+        Assert(tab1Cols ~= nil and #tab1Cols == 5, "ConsolidatedOverview: Tab 1 defines 5 consolidated columns")
+        local tab1TotalMpw = 0
+        for _, col in ipairs(tab1Cols) do
+            Assert(col.mpw and col.mpw > 0, string.format("ConsolidatedOverview: col '%s' defines positive mpw", col.key or "unknown"))
+            tab1TotalMpw = tab1TotalMpw + (col.mpw or 0)
         end
-        Assert(tab8TotalMpw <= 850, string.format("BetaTab: total modern column width (%dpx) fits inside row bounds (<= 850px)", tab8TotalMpw))
-        Assert(tab8Cols[1].key == "name" and tab8Cols[2].key == "circleXP" and tab8Cols[3].key == "circleRest" and tab8Cols[4].key == "details" and tab8Cols[5].key == "gold",
-            "BetaTab: columns align with consolidated gauge architecture (name, circleXP, circleRest, details, gold)")
+        Assert(tab1TotalMpw <= 850, string.format("ConsolidatedOverview: total modern column width (%dpx) fits inside row bounds (<= 850px)", tab1TotalMpw))
+        Assert(tab1Cols[1].key == "name" and tab1Cols[2].key == "circleXP" and tab1Cols[3].key == "circleRest" and tab1Cols[4].key == "details" and tab1Cols[5].key == "gold",
+            "ConsolidatedOverview: columns align with consolidated gauge architecture (name, circleXP, circleRest, details, gold)")
 
-        -- Test FormatCoins
         local sampleCoins = self:FormatCoins(123456)
         Assert(sampleCoins == "12|cffffd700g|r 34|cffc7c7cfs|r 56|cffeda55fc|r",
-            "BetaTab: FormatCoins formats copper into colored g, s, c tokens")
+            "ConsolidatedOverview: FormatCoins formats copper into colored g, s, c tokens")
 
-        -- 37c. SwitchTab(8) and Modern Rendering
-        self:SwitchTab(8)
-        Assert(CLIAltsDB.settings.activeTab == 8, "BetaTab: SwitchTab(8) switches activeTab to 8")
-
-        local mBetaFrame = self:CreateModernMainFrame()
-        self:Render()
-        if mBetaFrame.subViewTitle and mBetaFrame.subViewTitle.GetText then
-            Assert(mBetaFrame.subViewTitle:GetText():find("CONSOLIDATED METERS") ~= nil,
-                "BetaTab: subViewTitle shows 'BETA: CONSOLIDATED METERS'")
-        end
-        Assert(mBetaFrame.headerFrame:IsShown() == true,
-            "BetaTab: headerFrame is shown with column headers")
-
-        local betaRow1 = mBetaFrame.rowFrames and mBetaFrame.rowFrames[1]
-        Assert(betaRow1 ~= nil and betaRow1.gaugeXP ~= nil and betaRow1.gaugeRest ~= nil and betaRow1.betaPoolText ~= nil and betaRow1.betaRateText ~= nil,
-            "BetaTab: row contains gaugeXP, gaugeRest, betaPoolText, and betaRateText widgets")
-        if betaRow1 and betaRow1.charData then
-            Assert(betaRow1.gaugeXP:IsShown() == true, "BetaTab: gaugeXP is shown on active character row")
-            Assert(betaRow1.gaugeRest:IsShown() == true, "BetaTab: gaugeRest is shown on active character row")
-            Assert(betaRow1.gaugeXP:GetWidth() == 44, "BetaTab: gaugeXP width is enlarged to 44px")
-            Assert(betaRow1.gaugeRest:GetWidth() == 44, "BetaTab: gaugeRest width is enlarged to 44px")
-            if betaRow1.gaugeXP.valText then
-                Assert(betaRow1.gaugeXP.valText.fontSize == 12, "BetaTab: gaugeXP valText font size is 12 (+2 larger)")
-            end
-            if betaRow1.gaugeRest.valText then
-                Assert(betaRow1.gaugeRest.valText.fontSize == 12, "BetaTab: gaugeRest valText font size is 12 (+2 larger)")
-            end
-            if betaRow1.classRingInitial then
-                Assert(betaRow1.classRingInitial:GetText() == tostring(betaRow1.charData.level or 1),
-                    "BetaTab: classRingInitial displays character level")
-                Assert(betaRow1.classRingInitial.fontSize == 15, "BetaTab: classRingInitial font size is 15")
-            end
-            Assert(betaRow1.betaPoolText:IsShown() == true, "BetaTab: betaPoolText is shown on active character row")
-            Assert(betaRow1.betaRateText:IsShown() == true, "BetaTab: betaRateText is shown on active character row")
-            if betaRow1.statusPill then
-                Assert(betaRow1.statusPill:IsShown() == false, "BetaTab: statusPill is hidden on Tab 8")
-            end
-            if betaRow1.goldText then
-                Assert(betaRow1.goldText:IsShown() == true, "BetaTab: goldText is shown on Tab 8")
-            end
-            Assert(betaRow1.betaRateText.fontSize == 15, "BetaTab: betaRateText font size is 15 (+4 larger)")
-        end
-
-        -- 37d. Tab 8 Reversibility: Switching back to Tab 1 Overview restores linear layout
+        -- 37c. Overview Rendering with Play Next Banner & Rings
         self:SwitchTab(1)
-        Assert(CLIAltsDB.settings.activeTab == 1, "BetaTab: SwitchTab(1) returns cleanly to Tab 1")
+        Assert(CLIAltsDB.settings.activeTab == 1, "ConsolidatedOverview: activeTab is 1")
+
+        local mFrame = self:CreateModernMainFrame()
         self:Render()
-        if betaRow1 then
-            Assert(betaRow1.gaugeXP:IsShown() == false, "BetaTab: gaugeXP is hidden on Tab 1 Overview")
-            Assert(betaRow1.gaugeRest:IsShown() == false, "BetaTab: gaugeRest is hidden on Tab 1 Overview")
-            Assert(betaRow1.betaPoolText:IsShown() == false, "BetaTab: betaPoolText is hidden on Tab 1 Overview")
-            Assert(betaRow1.betaRateText:IsShown() == false, "BetaTab: betaRateText is hidden on Tab 1 Overview")
+        Assert(mFrame.nextBanner ~= nil and mFrame.nextBanner:IsShown() == true,
+            "ConsolidatedOverview: Play next banner is shown on Overview")
+        Assert(mFrame.headerFrame:IsShown() == false,
+            "ConsolidatedOverview: column headerFrame is hidden under Play next banner")
+
+        local row1 = mFrame.rowFrames and mFrame.rowFrames[1]
+        Assert(row1 ~= nil and row1.gaugeXP ~= nil and row1.gaugeRest ~= nil and row1.betaPoolText ~= nil and row1.betaRateText ~= nil,
+            "ConsolidatedOverview: row contains gaugeXP, gaugeRest, betaPoolText, and betaRateText widgets")
+        if row1 and row1.charData then
+            Assert(row1.gaugeXP:IsShown() == true, "ConsolidatedOverview: gaugeXP is shown on Overview row")
+            Assert(row1.gaugeRest:IsShown() == true, "ConsolidatedOverview: gaugeRest is shown on Overview row")
+            Assert(row1.gaugeXP:GetWidth() == 44, "ConsolidatedOverview: gaugeXP width is enlarged to 44px")
+            Assert(row1.gaugeRest:GetWidth() == 44, "ConsolidatedOverview: gaugeRest width is enlarged to 44px")
+            if row1.classRingInitial then
+                Assert(row1.classRingInitial:GetText() == tostring(row1.charData.level or 1),
+                    "ConsolidatedOverview: classRingInitial displays character level")
+                Assert(row1.classRingInitial.fontSize == 15, "ConsolidatedOverview: classRingInitial font size is 15")
+            end
+            Assert(row1.betaPoolText:IsShown() == true, "ConsolidatedOverview: betaPoolText is shown on Overview row")
+            Assert(row1.betaRateText:IsShown() == true, "ConsolidatedOverview: betaRateText is shown on Overview row")
+            if row1.statusPill then
+                Assert(row1.statusPill:IsShown() == false, "ConsolidatedOverview: statusPill is hidden on Overview")
+            end
+            if row1.goldText then
+                Assert(row1.goldText:IsShown() == true, "ConsolidatedOverview: goldText is shown on Overview")
+            end
+            Assert(row1.betaRateText.fontSize == 15, "ConsolidatedOverview: betaRateText font size is 15")
         end
 
-        -- 37e. Faction Grouping Integrity: Alliance first, Horde second, never mixed
+        -- 37d. Shared RenderCharRow Engine: Dimming & Urgency Highlighting
+        local dimChar = { name = "FreshAlt", level = 1, xp = 0, maxXP = 400, classFile = "MAGE", faction = "Alliance" }
+        self:RenderCharRow(row1, dimChar, {
+            xpData = { curXP = 0, maxXP = 400, percent = 0, ratio = 0, isMaxLevel = false },
+            rested = { currentRested = 0, maxRested = 600, percent = 0, ratio = 0, isMaxLevel = false },
+            wastedSec = 0, wastedXP = 0,
+        })
+        Assert(row1.alpha ~= nil and row1.alpha <= 0.60, "ConsolidatedOverview: Level 1 alt with 0% rings is dimmed")
+
+        local cappedChar = { name = "CappedAlt", level = 40, xp = 1000, maxXP = 50000, classFile = "WARRIOR", faction = "Alliance" }
+        self:RenderCharRow(row1, cappedChar, {
+            xpData = { curXP = 1000, maxXP = 50000, percent = 2, ratio = 0.02, isMaxLevel = false },
+            rested = { currentRested = 75000, maxRested = 75000, percent = 150, ratio = 1.0, isFull = true, isMaxLevel = false },
+            wastedSec = 3600, wastedXP = 500, timeStr = "1h",
+        })
+        Assert(row1.alpha == 1.0, "ConsolidatedOverview: active capped alt is fully opaque")
+        Assert(row1.backdropBorderColor ~= nil, "ConsolidatedOverview: row has backdrop border set")
+
+        -- 37e. Rested XP (Tab 3) 9-Column Analysis Table & Formatters
+        local tab3Cols = self:GetColumns(3)
+        Assert(tab3Cols ~= nil and #tab3Cols == 9, "RestedAnalysis: Tab 3 defines 9 analysis columns")
+        local tab3TotalMpw = 0
+        for _, col in ipairs(tab3Cols) do
+            Assert(col.mpw and col.mpw > 0, string.format("RestedAnalysis: col '%s' defines positive mpw", col.key or "unknown"))
+            tab3TotalMpw = tab3TotalMpw + (col.mpw or 0)
+        end
+        Assert(tab3TotalMpw <= 850, string.format("RestedAnalysis: total modern column width (%dpx) fits inside row bounds (<= 850px)", tab3TotalMpw))
+        Assert(tab3Cols[7].key == "loc" and tab3Cols[8].key == "xph" and tab3Cols[9].key == "eta",
+            "RestedAnalysis: columns include loc (Inn/Wild), xph (XP/h), and eta (Status)")
+
+        local innChar = { name = "InnAlt", level = 20, loggedOutInRestZone = true }
+        local wildChar = { name = "WildAlt", level = 20, loggedOutInRestZone = false }
+        local fmtInn = self.FmtRestLoc and self:FmtRestLoc(innChar)
+        local fmtWild = self.FmtRestLoc and self:FmtRestLoc(wildChar)
+        Assert(fmtInn ~= nil and fmtInn:find("Inn") ~= nil, "RestedAnalysis: FmtRestLoc returns 'Inn' for resting alt")
+        Assert(fmtWild ~= nil and fmtWild:find("Wild") ~= nil, "RestedAnalysis: FmtRestLoc returns 'Wild' for wild alt")
+
+        local xphChar = { name = "XPHAlt", level = 20, xp = 0, maxXP = 10000 }
+        local fmtXPH = self.FmtXPHour and self:FmtXPHour(xphChar)
+        Assert(fmtXPH ~= nil, "RestedAnalysis: FmtXPHour returns formatted string")
+
+        local wastingChar = { name = "WastingAlt", level = 30, xp = 500, maxXP = 20000, lastUpdate = time() - 7200 }
+        local statusText = self:FmtStatus(wastingChar)
+        Assert(statusText:find("Losing") == nil, "RestedAnalysis: FmtStatus drops 'Losing' wording")
+
+        local xphList = self:GetCharactersList("xph", false)
+        Assert(xphList ~= nil and #xphList > 0, "RestedAnalysis: GetCharactersList sorts by xph without error")
+        local restList = self:GetCharactersList("resting", false)
+        Assert(restList ~= nil and #restList > 0, "RestedAnalysis: GetCharactersList sorts by resting without error")
+
+        -- 37f. Faction Grouping Integrity: Alliance first, Horde second, never mixed
         local testFactionDB = {
             settings = { sortBy = "level", sortAsc = false },
             characters = {
@@ -3845,39 +3875,42 @@ function CLIAlts:RunSelfTest()
         CLIAltsDB = oldFacDB
     end
 
-    -- 38. Tab 9 Embedded Settings Navigation Panel Engine Tests
+    -- 38. Tab 8 Embedded Settings Navigation Panel Engine Tests
     do
-        local mBetaFrame = self:CreateModernMainFrame()
-        -- 38a. Tab 9 Sidebar Navigation Registration & Empty Columns
-        local foundNavTab9 = false
-        if mBetaFrame and mBetaFrame.sidebarNavButtons then
-            for _, btn in ipairs(mBetaFrame.sidebarNavButtons) do
-                if btn.tabId == 9 then
-                    foundNavTab9 = true
-                    break
+        local mFrame = self:CreateModernMainFrame()
+        -- 38a. Tab 8 Sidebar Navigation Registration & Empty Columns
+        local foundNavTab8 = false
+        local foundOldBetaTab = false
+        if mFrame and mFrame.sidebarNavButtons then
+            for _, btn in ipairs(mFrame.sidebarNavButtons) do
+                if btn.tabId == 8 then
+                    foundNavTab8 = true
+                elseif btn.tabId == 9 then
+                    foundOldBetaTab = true
                 end
             end
         end
-        Assert(foundNavTab9 == true, "SettingsTab: Tab 9 exists in modern sidebarNavButtons")
+        Assert(foundNavTab8 == true, "SettingsTab: Tab 8 exists in modern sidebarNavButtons as Settings")
+        Assert(foundOldBetaTab == false, "SettingsTab: Tab 9 is removed (8 total tabs in navigation)")
 
-        local tab9Cols = self:GetColumns(9)
-        Assert(tab9Cols ~= nil and #tab9Cols == 0, "SettingsTab: Tab 9 defines empty column list (embedded panel view)")
+        local tab8Cols = self:GetColumns(8)
+        Assert(tab8Cols ~= nil and #tab8Cols == 0, "SettingsTab: Tab 8 defines empty column list (embedded panel view)")
 
-        -- 38b. SwitchTab(9) Embeds Settings Dialog in mainFrame
-        self:SwitchTab(9)
-        Assert(CLIAltsDB.settings.activeTab == 9, "SettingsTab: SwitchTab(9) sets activeTab to 9")
+        -- 38b. SwitchTab(8) Embeds Settings Dialog in mainFrame
+        self:SwitchTab(8)
+        Assert(CLIAltsDB.settings.activeTab == 8, "SettingsTab: SwitchTab(8) sets activeTab to 8")
 
         local sdEmbed = _G["CLIAltsSettingsDialog"]
         Assert(sdEmbed ~= nil, "SettingsTab: CLIAltsSettingsDialog exists")
-        Assert(sdEmbed:IsShown() == true, "SettingsTab: CLIAltsSettingsDialog is shown on Tab 9")
-        if mBetaFrame and mBetaFrame.detailPanel then
-            Assert(mBetaFrame.detailPanel:IsShown() == false, "SettingsTab: detailPanel is hidden on Tab 9")
+        Assert(sdEmbed:IsShown() == true, "SettingsTab: CLIAltsSettingsDialog is shown on Tab 8")
+        if mFrame and mFrame.detailPanel then
+            Assert(mFrame.detailPanel:IsShown() == false, "SettingsTab: detailPanel is hidden on Tab 8")
         end
-        if mBetaFrame and mBetaFrame.rowsContainer then
-            Assert(mBetaFrame.rowsContainer:IsShown() == false, "SettingsTab: rowsContainer is hidden on Tab 9")
+        if mFrame and mFrame.rowsContainer then
+            Assert(mFrame.rowsContainer:IsShown() == false, "SettingsTab: rowsContainer is hidden on Tab 8")
         end
-        if mBetaFrame and mBetaFrame.headerFrame then
-            Assert(mBetaFrame.headerFrame:IsShown() == false, "SettingsTab: headerFrame is hidden on Tab 9")
+        if mFrame and mFrame.headerFrame then
+            Assert(mFrame.headerFrame:IsShown() == false, "SettingsTab: headerFrame is hidden on Tab 8")
         end
 
         -- 38c. Close Button / SwitchTab(1) Reversibility
@@ -3885,18 +3918,21 @@ function CLIAlts:RunSelfTest()
             sdEmbed.btnClose:GetScript("OnClick")(sdEmbed.btnClose)
             Assert(CLIAltsDB.settings.activeTab == 1, "SettingsTab: Clicking btnClose returns to Tab 1 Overview")
             Assert(sdEmbed:IsShown() == false, "SettingsTab: CLIAltsSettingsDialog is hidden on Tab 1")
-            if mBetaFrame and mBetaFrame.detailPanel then
-                Assert(mBetaFrame.detailPanel:IsShown() == true, "SettingsTab: detailPanel is restored on Tab 1")
+            if mFrame and mFrame.detailPanel then
+                Assert(mFrame.detailPanel:IsShown() == true, "SettingsTab: detailPanel is restored on Tab 1")
             end
-            if mBetaFrame and mBetaFrame.rowsContainer then
-                Assert(mBetaFrame.rowsContainer:IsShown() == true, "SettingsTab: rowsContainer is restored on Tab 1")
+            if mFrame and mFrame.rowsContainer then
+                Assert(mFrame.rowsContainer:IsShown() == true, "SettingsTab: rowsContainer is restored on Tab 1")
             end
         end
 
-        -- 38d. ShowSettingsDialog() Activates Tab 9
+        -- 38d. ShowSettingsDialog() Activates Tab 8 & Tab 9 Backward Compatibility
         self:ShowSettingsDialog()
-        Assert(CLIAltsDB.settings.activeTab == 9, "SettingsTab: ShowSettingsDialog() activates Tab 9")
+        Assert(CLIAltsDB.settings.activeTab == 8, "SettingsTab: ShowSettingsDialog() activates Tab 8")
         Assert(sdEmbed:IsShown() == true, "SettingsTab: ShowSettingsDialog() shows embedded settings")
+
+        self:SwitchTab(9)
+        Assert(CLIAltsDB.settings.activeTab == 8, "SettingsTab: SwitchTab(9) redirects to Tab 8 for backwards compatibility")
         self:SwitchTab(1)
     end
 
@@ -3969,7 +4005,7 @@ function CLIAlts:RunSelfTest()
     end
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine, Beta Tab & Consolidated Circular Gauges, Tab 9 Embedded Settings Navigation Panel Engine, Performance Profiling & Event Coalescing)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine, Consolidated Overview Dashboard & Rested XP Analysis Table, Tab 8 Embedded Settings Navigation Panel Engine, Performance Profiling & Event Coalescing)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
