@@ -6573,10 +6573,10 @@ function CLIAlts:Render(force)
                                                 if rested.isFull then
                                                     local wastedSec, wastedXP = self:GetRestedWaste(char)
                                                     if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
-                                                        row.colRestLabel:SetText(string.format("100%% (+%s Wasted)", self:FormatWasteShort(wastedXP)))
+                                                        row.colRestLabel:SetText(string.format("100%% [CAPPED] (+%s Wasted)", self:FormatWasteShort(wastedXP)))
                                                         row.colRestLabel:SetTextColor(dangerR, dangerG, dangerB)
                                                     else
-                                                        row.colRestLabel:SetText("100% (Capped)")
+                                                        row.colRestLabel:SetText("100% [CAPPED]")
                                                         row.colRestLabel:SetTextColor(warnR, warnG, warnB)
                                                     end
                                                 else
@@ -6758,10 +6758,10 @@ function CLIAlts:Render(force)
                                                 if rested.isFull then
                                                     local wastedSec, wastedXP = self:GetRestedWaste(char)
                                                     if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
-                                                        row.colRestLabel:SetText(string.format("100%% (+%s Wasted)", self:FormatWasteShort(wastedXP)))
+                                                        row.colRestLabel:SetText(string.format("100%% [CAPPED] (+%s Wasted)", self:FormatWasteShort(wastedXP)))
                                                         row.colRestLabel:SetTextColor(dangerR, dangerG, dangerB)
                                                     else
-                                                        row.colRestLabel:SetText("100% (Capped)")
+                                                        row.colRestLabel:SetText("100% [CAPPED]")
                                                         row.colRestLabel:SetTextColor(warnR, warnG, warnB)
                                                     end
                                                 else

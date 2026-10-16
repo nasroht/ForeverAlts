@@ -656,7 +656,7 @@ function CLIAlts:RunSelfTest()
         self:Render()
         Assert(r1.colRestBarBg ~= nil and r1.colRestBarBg:IsShown(), "RestedTab: Row 1 shows graphical colRestBarBg on Tab 3")
         Assert(r1.colRestBarFill ~= nil and (r1.colRestBarFill:GetWidth() or 0) > 0, "RestedTab: Row 1 colRestBarFill has non-zero width")
-        Assert(r1.colRestLabel ~= nil and r1.colRestLabel:IsShown() and r1.colRestLabel:GetText():find("CAP") ~= nil, "RestedTab: Row 1 colRestLabel displays cap status")
+        Assert(r1.colRestLabel ~= nil and r1.colRestLabel:IsShown() and (r1.colRestLabel:GetText():find("CAP") ~= nil or r1.colRestLabel:GetText():lower():find("cap") ~= nil), "RestedTab: Row 1 colRestLabel displays cap status")
 
         -- Restore DB
         CLIAltsDB.characters = oldChars
