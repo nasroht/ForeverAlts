@@ -1310,8 +1310,11 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
     if money <= 0 and existing and existing.money and existing.money > 0 then
         money = existing.money
     end
-    if restedXP <= 0 and existing and existing.restedXP and existing.restedXP > 0 and not liveResting then
-        restedXP = existing.restedXP
+    if restedXP <= 0 and existing and existing.restedXP and existing.restedXP > 0 then
+        -- Prevent uninitialized zeroes on early login/world enter or logout teardown from wiping saved rested XP
+        if (self.exhaustionReceived == false) or isLogout or maxXP <= 0 then
+            restedXP = existing.restedXP
+        end
     end
 
     local zone = (GetZoneText and GetZoneText()) or ""
@@ -1824,7 +1827,11 @@ function CLIAlts:GetRestedData(char, force, nowOverride)
         local mins = math.floor((timeToFull % 3600) / 60)
 
         if days > 0 then
-            timeLeftStr = string.format("%dd %dh", days, hours)
+            if mins > 0 then
+                timeLeftStr = string.format("%dd %dh %dm", days, hours, mins)
+            else
+                timeLeftStr = string.format("%dd %dh", days, hours)
+            end
         elseif hours > 0 then
             timeLeftStr = string.format("%dh %dm", hours, mins)
         else

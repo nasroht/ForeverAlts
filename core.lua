@@ -254,6 +254,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
 
     elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+        CLIAlts.exhaustionReceived = false
+        SafeAfter(2.0, function()
+            CLIAlts.exhaustionReceived = true
+        end)
         CLIAlts:InitDB()
         CLIAlts:CacheCurrentPlayer()
         CLIAlts:CreateMinimapButton()
@@ -366,6 +370,9 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:RequestRender()
 
     elseif event == "PLAYER_XP_UPDATE" or event == "UPDATE_EXHAUSTION" or event == "PLAYER_LEVEL_UP" then
+        if event == "UPDATE_EXHAUSTION" then
+            CLIAlts.exhaustionReceived = true
+        end
         CLIAlts:UpdateSessionXP()
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:RequestRender()

@@ -1580,7 +1580,11 @@ local function FmtTimeToCap(charOrSelf, charOrTheme, maybeTheme)
             local hours = math.floor((sec % 86400) / 3600)
             local mins = math.floor((sec % 3600) / 60)
             if days > 0 then
-                dur = string.format("%dd %dh", days, hours)
+                if mins > 0 then
+                    dur = string.format("%dd %dh %dm", days, hours, mins)
+                else
+                    dur = string.format("%dd %dh", days, hours)
+                end
             elseif hours > 0 then
                 dur = string.format("%dh %dm", hours, mins)
             elseif mins > 0 then
@@ -4993,6 +4997,10 @@ function CLIAlts:CreateModernMainFrame()
                         end
                     else
                         GameTooltip:AddLine(string.format("Time to Cap: |cffffd700%s|r (%s)", rested.timeLeftStr or "---", rested.fullDate or ""), 0.8, 0.8, 0.8)
+                        local ratePerHr = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
+                        local isInn = row.charData.loggedOutInRestZone
+                        local locDesc = isInn and "Inn/City: 5% per 8h" or "Wild: 1.25% per 8h"
+                        GameTooltip:AddLine(string.format("Resting Rate: |cffffffff+%s XP/h|r (%s)", CLIAlts:FormatNumber(ratePerHr), locDesc), 0.7, 0.8, 0.9)
                     end
                 else
                     GameTooltip:AddLine("Level cap reached - Rested XP no longer accumulates.", 0.7, 0.7, 0.7)
