@@ -3982,13 +3982,6 @@ function CLIAlts:CreateModernMainFrame()
     if restedCard.SetBackdropBorderColor then restedCard:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
     detailPanel.restedCard = restedCard
 
-    local rcHeader = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcHeader, 12, "")
-    rcHeader:SetPoint("TOPLEFT", restedCard, "TOPLEFT", 10, -8)
-    rcHeader:SetText("RESTED XP")
-    rcHeader:SetTextColor(mutedR, mutedG, mutedB)
-    restedCard.header = rcHeader
-
     local rcLP = restedCard:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(rcLP, 12, "OUTLINE")
     rcLP:SetPoint("TOPRIGHT", restedCard, "TOPRIGHT", -10, -8)
@@ -3996,9 +3989,22 @@ function CLIAlts:CreateModernMainFrame()
     rcLP:SetTextColor(brandR, brandG, brandB)
     restedCard.lpText = rcLP
 
+    local rcHeader = restedCard:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(rcHeader, 12, "")
+    rcHeader:SetPoint("TOPLEFT", restedCard, "TOPLEFT", 10, -8)
+    rcHeader:SetPoint("RIGHT", rcLP, "LEFT", -6, 0)
+    rcHeader:SetJustifyH("LEFT")
+    rcHeader:SetWordWrap(false)
+    rcHeader:SetText("RESTED XP")
+    rcHeader:SetTextColor(mutedR, mutedG, mutedB)
+    restedCard.header = rcHeader
+
     local rcStatus = restedCard:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(rcStatus, 15, "OUTLINE")
     rcStatus:SetPoint("TOPLEFT", rcHeader, "BOTTOMLEFT", 0, -3)
+    rcStatus:SetPoint("RIGHT", restedCard, "RIGHT", -10, 0)
+    rcStatus:SetJustifyH("LEFT")
+    rcStatus:SetWordWrap(false)
     rcStatus:SetText("Capped 3d 4h, ~52k XP wasted")
     rcStatus:SetTextColor(warnR, warnG, warnB)
     restedCard.status = rcStatus
@@ -4025,7 +4031,7 @@ function CLIAlts:CreateModernMainFrame()
     restedCard.barFill = rcBarFill
 
     local rcRate = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcRate, 13, "")
+    self:SetWidgetFont(rcRate, 11, "")
     rcRate:SetPoint("TOPLEFT", rcBarBg, "BOTTOMLEFT", 0, -4)
     rcRate:SetPoint("RIGHT", restedCard, "RIGHT", -10, 0)
     rcRate:SetJustifyH("LEFT")
@@ -4035,8 +4041,11 @@ function CLIAlts:CreateModernMainFrame()
     restedCard.rate = rcRate
 
     local rcPerk = restedCard:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(rcPerk, 12, "")
+    self:SetWidgetFont(rcPerk, 11, "")
     rcPerk:SetPoint("TOPLEFT", rcRate, "BOTTOMLEFT", 0, -3)
+    rcPerk:SetPoint("RIGHT", restedCard, "RIGHT", -10, 0)
+    rcPerk:SetJustifyH("LEFT")
+    rcPerk:SetWordWrap(false)
     rcPerk:SetText("")
     rcPerk:SetTextColor(mutedR, mutedG, mutedB)
     restedCard.perkLine = rcPerk
@@ -5366,7 +5375,7 @@ function CLIAlts:UpdateDetailPanel(charArg)
         end
         if dp.restedCard.perkLine then
             if not self:IsRetail() then
-                dp.restedCard.perkLine:SetText(string.format("Well Rested: |cffffffffR%d/5 (+%d%%)|r · Cap: |cffffffff%d%%|r · Alt LP: |cffe8b64a%.1f|r (Acc: %.1f)", r, r * 4, 150 + (r * 6), charLP, lpData.effectiveLP))
+                dp.restedCard.perkLine:SetText(string.format("Perk: |cffffffffR%d/5 (+%d%%)|r · Cap: |cffffffff%d%%|r · LP: |cffe8b64a%.1f|r (Acc: %.1f)", r, r * 4, 150 + (r * 6), charLP, lpData.effectiveLP))
                 dp.restedCard.perkLine:Show()
             else
                 dp.restedCard.perkLine:Hide()
@@ -5414,7 +5423,7 @@ function CLIAlts:UpdateDetailPanel(charArg)
                     dp.restedCard.barFill:SetVertexColor(fillR, fillG, fillB, 1.0)
                 end
                 if dp.restedCard.rate then
-                    dp.restedCard.rate:SetText(string.format("Caps in %s · Banks about %s XP per hour", rested.timeLeftStr or "---", self:FormatNumber(estRate)))
+                    dp.restedCard.rate:SetText(string.format("Caps in %s · +%s XP/hr", rested.timeLeftStr or "---", self:FormatNumber(estRate)))
                     dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
                 end
             end
@@ -5427,7 +5436,7 @@ function CLIAlts:UpdateDetailPanel(charArg)
                 dp.restedCard.barBg:Hide()
             end
             if dp.restedCard.rate then
-                dp.restedCard.rate:SetText("Level cap reached - Rested XP no longer accumulates.")
+                dp.restedCard.rate:SetText("Level cap reached · XP accumulation stopped.")
                 dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
             end
         end
