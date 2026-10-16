@@ -1028,18 +1028,18 @@ function CLIAlts:RunSelfTest()
 
         -- 4. Test Sidebar Nav Buttons Rendering
         self:Render()
-        local navOverview = mFrame.sidebarNavButtons[1]
-        local navRested = mFrame.sidebarNavButtons[2]
-        local navCooldowns = mFrame.sidebarNavButtons[5]
+        Assert(mFrame.sidebarNavButtons ~= nil and #mFrame.sidebarNavButtons == 5, "Phase 5: 5 consolidated nav buttons exist")
+        local navOverview, navCooldowns
+        for _, btn in ipairs(mFrame.sidebarNavButtons or {}) do
+            if btn.tabId == 1 then navOverview = btn end
+            if btn.tabId == 6 then navCooldowns = btn end
+        end
 
-        Assert(navOverview.badge ~= nil and navOverview.badge:IsShown() == true, "Phase 5: Overview badge shown")
-        Assert(navOverview.badge.text:GetText() == "4", "Phase 5: Overview badge displays '4'")
+        Assert(navOverview and navOverview.badge ~= nil and navOverview.badge:IsShown() == true, "Phase 5: Overview badge shown")
+        Assert(navOverview and navOverview.badge.text:GetText() == "4", "Phase 5: Overview badge displays '4'")
 
-        Assert(navRested.badge ~= nil and navRested.badge:IsShown() == true, "Phase 5: Rested badge shown")
-        Assert(navRested.badge.text:GetText() == "2", "Phase 5: Rested badge displays '2'")
-
-        Assert(navCooldowns.badge ~= nil and navCooldowns.badge:IsShown() == true, "Phase 5: Cooldowns badge shown")
-        Assert(navCooldowns.badge.text:GetText() == "2", "Phase 5: Cooldowns badge displays '2'")
+        Assert(navCooldowns and navCooldowns.badge ~= nil and navCooldowns.badge:IsShown() == true, "Phase 5: Cooldowns badge shown")
+        Assert(navCooldowns and navCooldowns.badge.text:GetText() == "2", "Phase 5: Cooldowns badge displays '2'")
 
         -- 5. Test Filter Chips Display & Counts
         Assert(mFrame.filterChips ~= nil and #mFrame.filterChips == 6, "Phase 5: 6 filter chips exist on mainFrame")
