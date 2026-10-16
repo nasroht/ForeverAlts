@@ -859,7 +859,7 @@ function CLIAlts:UpdatePlayNextBanner()
                 end
 
                 -- 3. Metric 1 (Time / Cap State)
-                local metricText = ""
+                local metricText
                 if item.wastedSec and item.wastedSec > 0 then
                     local dur = item.timeStr or "0m"
                     dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
