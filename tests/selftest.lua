@@ -3817,7 +3817,7 @@ function CLIAlts:RunSelfTest()
 
         local defaultMeter = self:CreateCircleMeter(UIParent, nil, "RESTED")
         Assert(defaultMeter:GetWidth() == 44, "ConsolidatedOverview: CreateCircleMeter default size is 44px")
-        Assert(defaultMeter.valText.fontSize == 12, "ConsolidatedOverview: CreateCircleMeter default font size is 12 (+2 larger)")
+        Assert(defaultMeter.valText.fontSize == 15, "ConsolidatedOverview: CreateCircleMeter default font size is 15 (enlarged for legibility)")
 
         testMeter:SetProgress(0.65, 0.2, 0.8, 0.4, "65%")
         Assert(testMeter.valText:GetText() == "65%", "ConsolidatedOverview: SetProgress updates percentage text to '65%'")
