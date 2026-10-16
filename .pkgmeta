@@ -1,6 +1,6 @@
 package-as: ForeverAlts
 curse-project-id: 1747176
-enable-toc-creation: yes
+enable-toc-creation: no
 
 manual-changelog:
   filename: CHANGELOG.md

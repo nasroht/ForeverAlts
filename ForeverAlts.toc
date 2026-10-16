@@ -1,5 +1,4 @@
-## Interface: 11506, 11507, 11508, 11509
-## Interface-Classic: 11506, 11507, 11508, 11509
+## Interface: 16001
 ## Title: |cff00ff66ForeverAlts|r - WoW Forever Alt Manager
 ## Notes: Purpose-built for World of Warcraft: Forever. Retro terminal alt dashboard, Well Rested perk optimization, leveling cohorts & milestones, automated dungeon quest tracker, Legacy Point calculator, and inter-alt supply chain router.
 ## Author: ForeverAlts
