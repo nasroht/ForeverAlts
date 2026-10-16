@@ -563,7 +563,7 @@ function CLIAlts:RunSelfTest()
         CLIAltsDB.settings.activeTab = 1
         self:Render()
         Assert(not mFrame.mailActionBar:IsShown(), "ModernMailUI: mailActionBar is hidden on Tab 1")
-        Assert(not mFrame.headerFrame:IsShown(), "ModernMailUI: headerFrame is hidden on Tab 1")
+        Assert(mFrame.headerFrame:IsShown(), "ModernMailUI: headerFrame is shown on Tab 1")
 
         -- Test ShowMailRouteDialog
         self:ShowMailRouteDialog(mockMule)
@@ -3856,8 +3856,8 @@ function CLIAlts:RunSelfTest()
         self:Render()
         Assert(mFrame.nextBanner ~= nil and mFrame.nextBanner:IsShown() == true,
             "ConsolidatedOverview: Play next banner is shown on Overview")
-        Assert(mFrame.headerFrame:IsShown() == false,
-            "ConsolidatedOverview: column headerFrame is hidden under Play next banner")
+        Assert(mFrame.headerFrame:IsShown() == true,
+            "ConsolidatedOverview: column headerFrame is shown above rows on Tab 1")
 
         local row1 = mFrame.rowFrames and mFrame.rowFrames[1]
         Assert(row1 ~= nil and row1.gaugeXP ~= nil and row1.gaugeRest ~= nil and row1.betaPoolText ~= nil and row1.betaRateText ~= nil,

@@ -581,9 +581,9 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
     if innerDisc.EnableMouse then innerDisc:EnableMouse(false) end
     f.innerDisc = innerDisc
 
-    -- Centered Percentage Value String (increased by +2 to 12)
+    -- Centered Percentage Value String (enlarged font size 13-15pt)
     local valText = innerDisc:CreateFontString(nil, "OVERLAY")
-    local valFontSize = (size >= 42) and 12 or math.max(9, math.floor(size * 0.28))
+    local valFontSize = (size >= 42) and 15 or math.max(9, math.floor(size * 0.28))
     self:SetWidgetFont(valText, valFontSize, "OUTLINE")
     valText:SetPoint("CENTER", innerDisc, "CENTER", 0, 0)
     valText:SetText("")
@@ -621,12 +621,14 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
         end
         if self.valText then
             local str = textStr or string.format("%d%%", math.floor(ratio * 100))
-            if #str >= 5 then
-                CLIAlts:SetWidgetFont(self.valText, 10, "OUTLINE")
-            elseif #str >= 4 then
-                CLIAlts:SetWidgetFont(self.valText, 11, "OUTLINE")
-            else
+            if #str >= 6 then
                 CLIAlts:SetWidgetFont(self.valText, 12, "OUTLINE")
+            elseif #str == 5 then
+                CLIAlts:SetWidgetFont(self.valText, 13, "OUTLINE")
+            elseif #str == 4 then
+                CLIAlts:SetWidgetFont(self.valText, 14, "OUTLINE")
+            else
+                CLIAlts:SetWidgetFont(self.valText, 15, "OUTLINE")
             end
             self.valText:SetText(str)
             if r and g and b then
@@ -1966,11 +1968,11 @@ CLIAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
     [1] = { -- 1: OVERVIEW (Consolidated Dashboard with Dual Circular Gauges)
-        { key = "name",       title = "CHARACTER",         w = 30, pw = 300, cpw = 260, mpw = 300, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "xp",       fmt = FmtCurXP },
-        { key = "circleRest", title = "RESTED",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "rested",   fmt = FmtRested },
-        { key = "details",    title = "RESTED DETAILS",    w = 25, pw = 250, cpw = 220, mpw = 250, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
-        { key = "gold",       title = "WEALTH",            w = 15, pw = 150, cpw = 140, mpw = 150, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
+        { key = "name",       title = "CHARACTER",         w = 30, pw = 280, cpw = 260, mpw = 280, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 78,  cpw = 70,  mpw = 78,  align = "CENTER", sort = "xp",       fmt = FmtCurXP },
+        { key = "circleRest", title = "RESTED XP",         w = 9,  pw = 76,  cpw = 70,  mpw = 76,  align = "CENTER", sort = "rested",   fmt = FmtRested },
+        { key = "details",    title = "RESTED DETAILS",    w = 25, pw = 230, cpw = 200, mpw = 230, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
+        { key = "gold",       title = "WEALTH",            w = 15, pw = 160, cpw = 140, mpw = 160, padRight = 16, cpadRight = 12, mpadRight = 16, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
     },
     [2] = { -- 2: FOREVER ROUTE
         { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 38,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
@@ -4971,22 +4973,22 @@ function CLIAlts:CreateModernMainFrame()
         goldText:SetText("")
         row.goldText = goldText
 
-        -- Beta Tab: Consolidated Dual Speedometer Gauges
-        local gaugeXP = self:CreateCircleMeter(row, 44, "LVL XP")
-        gaugeXP:SetPoint("CENTER", row, "LEFT", 330, 4)
+        -- Overview Tab: Consolidated Dual Speedometer Gauges
+        local gaugeXP = self:CreateCircleMeter(row, 44, nil)
+        gaugeXP:SetPoint("CENTER", row, "LEFT", 335, 0)
         gaugeXP:Hide()
         row.gaugeXP = gaugeXP
 
-        local gaugeRest = self:CreateCircleMeter(row, 44, "RESTED")
-        gaugeRest:SetPoint("CENTER", row, "LEFT", 390, 4)
+        local gaugeRest = self:CreateCircleMeter(row, 44, nil)
+        gaugeRest:SetPoint("CENTER", row, "LEFT", 412, 0)
         gaugeRest:Hide()
         row.gaugeRest = gaugeRest
 
         -- Rested Details text (Pool & Rate / Time to Cap)
         local betaPoolText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(betaPoolText, 13, "OUTLINE")
-        betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 426, -6)
-        betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
+        betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 450, -6)
+        betaPoolText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         betaPoolText:SetJustifyH("LEFT")
         betaPoolText:SetWordWrap(false)
         betaPoolText:SetText("")
@@ -4995,8 +4997,8 @@ function CLIAlts:CreateModernMainFrame()
 
         local betaRateText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(betaRateText, 15, "")
-        betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 426, 6)
-        betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
+        betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 450, 6)
+        betaRateText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         betaRateText:SetJustifyH("LEFT")
         betaRateText:SetWordWrap(false)
         betaRateText:SetText("")
@@ -5716,12 +5718,12 @@ function CLIAlts:RenderCharRow(row, char, derived)
         row.subLine:Show()
     end
 
-    -- 4. Gauge 1: Level XP Circular Progress (Size 44, Font 12, centered at x=330)
+    -- 4. Gauge 1: Level XP Circular Progress (Size 44, centered at x=335, y=0)
     -- Explicit Ring Meaning: % of current level
     if row.gaugeXP then
         row.gaugeXP:ClearAllPoints()
         row.gaugeXP:SetSize(44, 44)
-        row.gaugeXP:SetPoint("CENTER", row, "LEFT", 330, 4)
+        row.gaugeXP:SetPoint("CENTER", row, "LEFT", 335, 0)
         if xpData and not xpData.isMaxLevel then
             local xpRatio = xpData.ratio or 0
             if (xpData.curXP or 0) <= 0 then
@@ -5735,12 +5737,12 @@ function CLIAlts:RenderCharRow(row, char, derived)
         row.gaugeXP:Show()
     end
 
-    -- 5. Gauge 2: Rested XP Circular Progress (Size 44, Font 12, centered at x=390)
+    -- 5. Gauge 2: Rested XP Circular Progress (Size 44, centered at x=412, y=0)
     -- Explicit Ring Meaning: % of rested cap (150%+)
     if row.gaugeRest then
         row.gaugeRest:ClearAllPoints()
         row.gaugeRest:SetSize(44, 44)
-        row.gaugeRest:SetPoint("CENTER", row, "LEFT", 390, 4)
+        row.gaugeRest:SetPoint("CENTER", row, "LEFT", 412, 0)
         if rested and not rested.isMaxLevel then
             local restRatio = rested.ratio or 0
             if isCappedOrWasting then
@@ -5780,11 +5782,11 @@ function CLIAlts:RenderCharRow(row, char, derived)
         row.gaugeRest:Show()
     end
 
-    -- 6. Rested Details Text (Pool & Rate / Time to Cap, at x=426)
+    -- 6. Rested Details Text (Pool & Rate / Time to Cap, at x=450)
     if row.betaPoolText then
         row.betaPoolText:ClearAllPoints()
-        row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 426, -6)
-        row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
+        row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 450, -6)
+        row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         if rested and not rested.isMaxLevel then
             local curR = rested.currentRested or 0
             local maxR = rested.maxRested or 1
@@ -5805,8 +5807,8 @@ function CLIAlts:RenderCharRow(row, char, derived)
     if row.betaRateText then
         self:SetWidgetFont(row.betaRateText, 15, "")
         row.betaRateText:ClearAllPoints()
-        row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 426, 6)
-        row.betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
+        row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 450, 6)
+        row.betaRateText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         if rested and not rested.isMaxLevel then
             if isCappedOrWasting then
                 if wastedSec and wastedSec > 0 then
@@ -5989,13 +5991,7 @@ function CLIAlts:Render(force)
     end
 
     if mainFrame.headerFrame and mainFrame.rowsContainer and mainFrame.filterBar and mainFrame.mainCol then
-        if activeTab == 1 then
-            mainFrame.headerFrame:Hide()
-            mainFrame.rowsContainer:ClearAllPoints()
-            mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame.filterBar, "BOTTOMLEFT", 0, -4)
-            mainFrame.rowsContainer:SetPoint("BOTTOMRIGHT", mainFrame.mainCol, "BOTTOMRIGHT", 0, 0)
-            mainFrame.rowsContainer:Show()
-        elseif activeTab == 8 then
+        if activeTab == 8 then
             mainFrame.headerFrame:Hide()
             mainFrame.rowsContainer:Hide()
         else
@@ -6009,7 +6005,7 @@ function CLIAlts:Render(force)
             mainFrame.rowsContainer:Show()
         end
     elseif mainFrame.headerFrame then
-        if activeTab == 1 or activeTab == 8 then
+        if activeTab == 8 then
             mainFrame.headerFrame:Hide()
         else
             mainFrame.headerFrame:Show()
