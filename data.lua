@@ -4174,6 +4174,8 @@ function CLIAlts:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
         elseif pLower:find("inscript", 1, true) or pLower:find("schrift", 1, true) or pLower:find("callig", 1, true) then
             canonicalProf = "Inscription"
         end
+    end
+
     self._isScanningRecipe = false
     return isKnown, (canonicalProf or reqProfession), reqSkill
 end

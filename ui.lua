@@ -8624,7 +8624,7 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
     end
 
     self._isAddingTooltipInfo = true
-    local ok, _ = pcall(function()
+    pcall(function()
         -- Guard against duplicate additions within the same tooltip rendering pass
         self.processedTooltips = self.processedTooltips or setmetatable({}, { __mode = "k" })
         if self.processedTooltips[tooltip] == itemID or tooltip._clialtsProcessed == itemID then
