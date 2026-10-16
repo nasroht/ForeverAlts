@@ -3692,6 +3692,7 @@ function CLIAlts:RunSelfTest()
         if betaRow1.goldText then
             Assert(betaRow1.goldText:IsShown() == true, "BetaTab: goldText is shown on Tab 8")
         end
+        Assert(betaRow1.betaRateText.fontSize == 15, "BetaTab: betaRateText font size is 15 (+4 larger)")
     end
 
     -- 37d. Tab 8 Reversibility: Switching back to Tab 1 Overview restores linear layout

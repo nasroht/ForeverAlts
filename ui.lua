@@ -4448,8 +4448,8 @@ function CLIAlts:CreateModernMainFrame()
         -- Rested Details text (Pool & Rate / Time to Cap)
         local betaPoolText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(betaPoolText, 13, "OUTLINE")
-        betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 380, -10)
-        betaPoolText:SetPoint("RIGHT", row, "LEFT", 535, 0)
+        betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 396, -6)
+        betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
         betaPoolText:SetJustifyH("LEFT")
         betaPoolText:SetWordWrap(false)
         betaPoolText:SetText("")
@@ -4457,9 +4457,9 @@ function CLIAlts:CreateModernMainFrame()
         row.betaPoolText = betaPoolText
 
         local betaRateText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(betaRateText, 11, "")
-        betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 380, 10)
-        betaRateText:SetPoint("RIGHT", row, "LEFT", 535, 0)
+        self:SetWidgetFont(betaRateText, 15, "")
+        betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 396, 6)
+        betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
         betaRateText:SetJustifyH("LEFT")
         betaRateText:SetWordWrap(false)
         betaRateText:SetText("")
@@ -6095,8 +6095,8 @@ function CLIAlts:Render()
                         -- 5. Rested Details Text (Pool & Rate / Time to Cap)
                         if row.betaPoolText then
                             row.betaPoolText:ClearAllPoints()
-                            row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 396, -10)
-                            row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 640, 0)
+                            row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 396, -6)
+                            row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
                             if rested and not rested.isMaxLevel then
                                 local curR = rested.currentRested or 0
                                 local maxR = rested.maxRested or 1
@@ -6115,9 +6115,10 @@ function CLIAlts:Render()
                         end
 
                         if row.betaRateText then
+                            self:SetWidgetFont(row.betaRateText, 15, "")
                             row.betaRateText:ClearAllPoints()
-                            row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 396, 10)
-                            row.betaRateText:SetPoint("RIGHT", row, "LEFT", 640, 0)
+                            row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 396, 6)
+                            row.betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
                             if rested and not rested.isMaxLevel then
                                 if rested.isFull then
                                     local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
