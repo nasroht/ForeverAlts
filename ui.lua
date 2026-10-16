@@ -5434,11 +5434,13 @@ function CLIAlts:RenderCharRow(row, char, derived)
     local fillR, fillG, fillB = self:Hex("fill")
     local textR, textG, textB = self:Hex("text")
     local mutedR, mutedG, mutedB = self:Hex("muted")
+    local dangerR, dangerG, dangerB = self:Hex("danger")
     if derived.raisedR then raisedR, raisedG, raisedB = derived.raisedR, derived.raisedG, derived.raisedB end
     if derived.lineR then lineR, lineG, lineB = derived.lineR, derived.lineG, derived.lineB end
     if derived.panelR then panelR, panelG, panelB = derived.panelR, derived.panelG, derived.panelB end
     if derived.brandR then brandR, brandG, brandB = derived.brandR, derived.brandG, derived.brandB end
     if derived.warnR then warnR, warnG, warnB = derived.warnR, derived.warnG, derived.warnB end
+    if derived.dangerR then dangerR, dangerG, dangerB = derived.dangerR, derived.dangerG, derived.dangerB end
     if derived.fillR then fillR, fillG, fillB = derived.fillR, derived.fillG, derived.fillB end
     if derived.textR then textR, textG, textB = derived.textR, derived.textG, derived.textB end
     if derived.mutedR then mutedR, mutedG, mutedB = derived.mutedR, derived.mutedG, derived.mutedB end
@@ -5558,7 +5560,6 @@ function CLIAlts:RenderCharRow(row, char, derived)
         if rested and not rested.isMaxLevel then
             local restRatio = rested.ratio or 0
             if isCappedOrWasting then
-                local wastedSec, wastedXP = self:GetRestedWaste(char)
                 if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
                     row.gaugeRest:SetProgress(1.0, dangerR, dangerG, dangerB, "CAP")
                 else
