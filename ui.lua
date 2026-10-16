@@ -11,7 +11,9 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 -- ----------------------------------------------------------------------------
 -- Constants & Terminal Configuration
 -- ----------------------------------------------------------------------------
-local FONT_PATH = "Interface\\AddOns\\" .. (addonName or "ForeverAlts") .. "\\media\\VT323-Regular.ttf"
+local FONT_MONO = "Interface\\AddOns\\" .. (addonName or "ForeverAlts") .. "\\media\\VT323-Regular.ttf"
+local FONT_PATH = FONT_MONO -- backward-compatibility alias
+local FONT_NORMAL = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
 local DEFAULT_FONT_SIZE = 18
 local LINE_WIDTH = 110
 local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
@@ -394,19 +396,39 @@ end
 -- ----------------------------------------------------------------------------
 -- Typography & Monospace Helpers
 -- ----------------------------------------------------------------------------
-function CLIAlts:SetWidgetFont(fontString, size, flags)
+function CLIAlts:GetFontPath(isMono)
+    if isMono then
+        return FONT_MONO
+    end
+    return _G["STANDARD_TEXT_FONT"] or FONT_NORMAL or "Fonts\\FRIZQT__.TTF"
+end
+
+function CLIAlts:SetMonoFont(fontString, size, flags)
+    self:SetWidgetFont(fontString, size, flags, "mono")
+end
+
+function CLIAlts:SetWidgetFont(fontString, size, flags, fontType)
     if not fontString or not fontString.SetFont then return end
     size = size or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     if not flags or type(flags) ~= "string" or flags == "BOLD" then
         flags = ""
     end
+
+    local useMono = false
+    if fontType == "mono" or fontType == true then
+        useMono = true
+    elseif mainFrame and mainFrame.isLegacyUI then
+        useMono = true
+    end
+
+    local fontFile = self:GetFontPath(useMono)
     local setOk = false
     pcall(function()
-        setOk = fontString:SetFont(FONT_PATH, size, flags)
+        setOk = fontString:SetFont(fontFile, size, flags)
     end)
     if not setOk then
         pcall(function()
-            local fallback = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
+            local fallback = useMono and FONT_MONO or (_G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF")
             setOk = fontString:SetFont(fallback, size, flags)
         end)
     end
@@ -436,7 +458,7 @@ function CLIAlts:GetCharWidth(fontSize)
         probeString:Hide()
     end
     if probeString then
-        self:SetWidgetFont(probeString, sz)
+        self:SetWidgetFont(probeString, sz, "", "mono")
         probeString:SetText("==================================================")
         local w = probeString:GetStringWidth()
         if w and w > 0 then
@@ -581,10 +603,10 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
     if innerDisc.EnableMouse then innerDisc:EnableMouse(false) end
     f.innerDisc = innerDisc
 
-    -- Centered Percentage Value String (enlarged font size 13-15pt)
+    -- Centered Percentage Value String (enlarged font size 13-15pt, monospaced)
     local valText = innerDisc:CreateFontString(nil, "OVERLAY")
     local valFontSize = (size >= 42) and 15 or math.max(9, math.floor(size * 0.28))
-    self:SetWidgetFont(valText, valFontSize, "OUTLINE")
+    self:SetWidgetFont(valText, valFontSize, "OUTLINE", "mono")
     valText:SetPoint("CENTER", innerDisc, "CENTER", 0, 0)
     valText:SetText("")
     f.valText = valText
@@ -592,7 +614,7 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
     -- Optional Sub-Label (below the gauge)
     if labelText then
         local label = f:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(label, 9, "OUTLINE")
+        self:SetWidgetFont(label, 9, "OUTLINE", "normal")
         label:SetPoint("TOP", f, "BOTTOM", 0, -1)
         label:SetText(labelText)
         label:SetTextColor(0.55, 0.60, 0.68)
@@ -622,13 +644,13 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
         if self.valText then
             local str = textStr or string.format("%d%%", math.floor(ratio * 100))
             if #str >= 6 then
-                CLIAlts:SetWidgetFont(self.valText, 12, "OUTLINE")
+                CLIAlts:SetWidgetFont(self.valText, 12, "OUTLINE", "mono")
             elseif #str == 5 then
-                CLIAlts:SetWidgetFont(self.valText, 13, "OUTLINE")
+                CLIAlts:SetWidgetFont(self.valText, 13, "OUTLINE", "mono")
             elseif #str == 4 then
-                CLIAlts:SetWidgetFont(self.valText, 14, "OUTLINE")
+                CLIAlts:SetWidgetFont(self.valText, 14, "OUTLINE", "mono")
             else
-                CLIAlts:SetWidgetFont(self.valText, 15, "OUTLINE")
+                CLIAlts:SetWidgetFont(self.valText, 15, "OUTLINE", "mono")
             end
             self.valText:SetText(str)
             if r and g and b then
@@ -1226,18 +1248,18 @@ function CLIAlts:UpdateAllFonts(fontSize)
         for _, row in ipairs(rowFrames) do
             if row.cells then
                 for _, cell in ipairs(row.cells) do
-                    self:SetWidgetFont(cell, 13)
+                    self:SetWidgetFont(cell, 13, "", "normal")
                 end
             end
-            if row.nameLine then self:SetWidgetFont(row.nameLine, 16, "OUTLINE") end
-            if row.subLine then self:SetWidgetFont(row.subLine, 13, "") end
-            if row.goldText then self:SetWidgetFont(row.goldText, 16, "OUTLINE") end
-            if row.restLabel then self:SetWidgetFont(row.restLabel, 13, "OUTLINE") end
-            if row.colRestLabel then self:SetWidgetFont(row.colRestLabel, 12, "OUTLINE") end
-            if row.statusPillText then self:SetWidgetFont(row.statusPillText, 12, "OUTLINE") end
-            if row.betaPoolText then self:SetWidgetFont(row.betaPoolText, 13, "OUTLINE") end
-            if row.betaRateText then self:SetWidgetFont(row.betaRateText, 15, "") end
-            if row.classRingInitial then self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE") end
+            if row.nameLine then self:SetWidgetFont(row.nameLine, 16, "OUTLINE", "normal") end
+            if row.subLine then self:SetWidgetFont(row.subLine, 13, "", "normal") end
+            if row.goldText then self:SetWidgetFont(row.goldText, 16, "OUTLINE", "mono") end
+            if row.restLabel then self:SetWidgetFont(row.restLabel, 13, "OUTLINE", "mono") end
+            if row.colRestLabel then self:SetWidgetFont(row.colRestLabel, 12, "OUTLINE", "mono") end
+            if row.statusPillText then self:SetWidgetFont(row.statusPillText, 12, "OUTLINE", "mono") end
+            if row.betaPoolText then self:SetWidgetFont(row.betaPoolText, 13, "OUTLINE", "mono") end
+            if row.betaRateText then self:SetWidgetFont(row.betaRateText, 15, "", "mono") end
+            if row.classRingInitial then self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE", "mono") end
         end
     end
 end
@@ -1969,37 +1991,37 @@ CLIAlts.FmtMailPending = FmtMailPending
 local COLS = {
     [1] = { -- 1: OVERVIEW (Consolidated Dashboard with Dual Circular Gauges)
         { key = "name",       title = "CHARACTER",         w = 30, pw = 280, cpw = 260, mpw = 280, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 78,  cpw = 70,  mpw = 78,  align = "CENTER", sort = "xp",       fmt = FmtCurXP },
-        { key = "circleRest", title = "RESTED XP",         w = 9,  pw = 76,  cpw = 70,  mpw = 76,  align = "CENTER", sort = "rested",   fmt = FmtRested },
+        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 78,  cpw = 70,  mpw = 78,  align = "CENTER", sort = "xp",       fmt = FmtCurXP, mono = true },
+        { key = "circleRest", title = "RESTED XP",         w = 9,  pw = 76,  cpw = 70,  mpw = 76,  align = "CENTER", sort = "rested",   fmt = FmtRested, mono = true },
         { key = "details",    title = "RESTED DETAILS",    w = 25, pw = 230, cpw = 200, mpw = 230, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
-        { key = "gold",       title = "WEALTH",            w = 15, pw = 160, cpw = 140, mpw = 160, padRight = 16, cpadRight = 12, mpadRight = 16, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
+        { key = "gold",       title = "WEALTH",            w = 15, pw = 160, cpw = 140, mpw = 160, padRight = 16, cpadRight = 12, mpadRight = 16, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins, mono = true },
     },
     [2] = { -- 2: FOREVER ROUTE
-        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 38,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder },
+        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 38,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder, mono = true },
         { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
-        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget },
-        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  mpw = 95,  align = "RIGHT",  sort = "rested",   fmt = FmtRested },
-        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  mpw = 75,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore },
-        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget, mono = true },
+        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  mpw = 95,  align = "RIGHT",  sort = "rested",   fmt = FmtRested, mono = true },
+        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  mpw = 75,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore, mono = true },
+        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA, mono = true },
         { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 370, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
     },
     [3] = { -- 3: RESTED XP MONITOR (Simplified Numeric Analysis Table)
         { key = "fac",       title = "FAC",         w = 3,  pw = 36,  cpw = 32,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
         { key = "name",      title = "CHARACTER",   w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",         w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "RIGHT",  sort = "level",    fmt = FmtLevel, padRight = 6, mpadRight = 6 },
-        { key = "curXP",     title = "CURRENT XP",  w = 12, pw = 120, cpw = 0,   mpw = 100, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED POOL", w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "bonus",     title = "XP BONUS",    w = 8,  pw = 75,  cpw = 60,  mpw = 70,  padRight = 6,  mpadRight = 6, align = "RIGHT",  sort = "bonus",    fmt = FmtRestedBonus },
+        { key = "lvl",       title = "LVL",         w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "RIGHT",  sort = "level",    fmt = FmtLevel, padRight = 6, mpadRight = 6, mono = true },
+        { key = "curXP",     title = "CURRENT XP",  w = 12, pw = 120, cpw = 0,   mpw = 100, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP, mono = true },
+        { key = "pool",      title = "RESTED POOL", w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool, mono = true },
+        { key = "bonus",     title = "XP BONUS",    w = 8,  pw = 75,  cpw = 60,  mpw = 70,  padRight = 6,  mpadRight = 6, align = "RIGHT",  sort = "bonus",    fmt = FmtRestedBonus, mono = true },
         { key = "restBar",   title = "PROGRESS",    w = 14, pw = 130, cpw = 110, mpw = 115, mpadRight = 8, align = "LEFT",   sort = "progress", fmt = FmtRestedBar },
-        { key = "cap",       title = "RESTED CAP",  w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "cap",      fmt = FmtRestedCap },
+        { key = "cap",       title = "RESTED CAP",  w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "cap",      fmt = FmtRestedCap, mono = true },
         { key = "loc",       title = "REST LOC",    w = 6,  pw = 65,  cpw = 50,  mpw = 55,  align = "CENTER", sort = "resting",  fmt = FmtRestLoc },
-        { key = "timeToCap", title = "TIME TO CAP", w = 12, pw = 130, cpw = 110, mpw = 115, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtTimeToCap },
+        { key = "timeToCap", title = "TIME TO CAP", w = 12, pw = 130, cpw = 110, mpw = 115, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtTimeToCap, mono = true },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
         { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 155, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel, mono = true },
         { key = "prof1",     title = "PRIMARY PROF 1",    w = 23, pw = 300, cpw = 220, mpw = 205, align = "LEFT",   sort = "prof",     fmt = FmtProf1 },
         { key = "prof2",     title = "PRIMARY PROF 2",    w = 22, pw = 295, cpw = 220, mpw = 205, align = "LEFT",   fmt = FmtProf2 },
         { key = "sec",       title = "SECONDARY SKILLS",  w = 18, pw = 250, cpw = 180, mpw = 180, align = "LEFT",   fmt = FmtSecProf },
@@ -2007,16 +2029,16 @@ local COLS = {
     [5] = { -- 5: ECONOMY & WEALTH
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
         { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 155, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "gold",      title = "GOLD & SILVER",     w = 14, pw = 200, cpw = 160, mpw = 175, padRight = 32, cpadRight = 20, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel, mono = true },
+        { key = "gold",      title = "GOLD & SILVER",     w = 14, pw = 200, cpw = 160, mpw = 175, padRight = 32, cpadRight = 20, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong, mono = true },
         { key = "location",  title = "LAST ZONE",         w = 18, pw = 310, cpw = 220, mpw = 205, align = "LEFT",   sort = "location", fmt = FmtLocation },
         { key = "hearth",    title = "HEARTHSTONE",       w = 18, pw = 330, cpw = 230, mpw = 210, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [6] = { -- 6: COOLDOWNS & INSTANCE LOCKS
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
         { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 155, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, mpw = 295, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel, mono = true },
+        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, mpw = 295, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns, mono = true },
         { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, mpw = 295, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
     },
     [7] = { -- 7: MAIL ROUTING & SUPPLY CHAIN
@@ -2026,7 +2048,7 @@ local COLS = {
         { key = "profs",     title = "PROFESSIONS",         w = 20, pw = 240, cpw = 175, mpw = 160, align = "LEFT",   sort = "prof",     fmt = FmtMailProfessions },
         { key = "route",     title = "ASSIGNED MATERIALS",  w = 24, pw = 280, cpw = 210, mpw = 195, align = "LEFT",   sort = "supply",   fmt = FmtMailRoute },
         { key = "mode",      title = "MODE",                w = 8,  pw = 110, cpw = 90,  mpw = 85,  align = "CENTER", fmt = FmtMailMode },
-        { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 140, align = "RIGHT",  fmt = FmtMailPending },
+        { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 140, align = "RIGHT",  fmt = FmtMailPending, mono = true },
     },
     [8] = {}, -- 8: SETTINGS & PREFERENCES (Embedded Panel)
 }
@@ -3851,7 +3873,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.legendText = legendText
 
     local promptBox = CreateFrame("EditBox", "CLIAltsPromptEditBox", cmdBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    self:SetWidgetFont(promptBox, 12)
+    self:SetWidgetFont(promptBox, 13, "", "mono")
     promptBox:SetPoint("LEFT", prevChip, "RIGHT", 10, 0)
     promptBox:SetPoint("RIGHT", legendText, "LEFT", -14, 0)
     promptBox:SetHeight(22)
@@ -4853,7 +4875,7 @@ function CLIAlts:CreateModernMainFrame()
         -- 34px Class-Coloured Ring with Alt Initial
         local classRing = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
         classRing:SetSize(34, 34)
-        classRing:SetPoint("LEFT", row, "LEFT", 12, 0)
+        classRing:SetPoint("LEFT", row, "LEFT", 14, 0)
         classRing:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
             edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -4863,15 +4885,15 @@ function CLIAlts:CreateModernMainFrame()
         row.classRing = classRing
 
         local classRingInitial = classRing:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(classRingInitial, 16, "OUTLINE")
+        self:SetWidgetFont(classRingInitial, 15, "OUTLINE", "mono")
         classRingInitial:SetPoint("CENTER", classRing, "CENTER", 0, 0)
         row.classRingInitial = classRingInitial
 
         -- Name & Subline (level race class · faction)
         -- Separated cleanly with vertical clearance and generous horizontal width (up to x=385)
         local nameLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(nameLine, 16, "OUTLINE")
-        nameLine:SetPoint("TOPLEFT", classRing, "TOPRIGHT", 12, 1)
+        self:SetWidgetFont(nameLine, 16, "OUTLINE", "normal")
+        nameLine:SetPoint("TOPLEFT", classRing, "TOPRIGHT", 12, 2)
         nameLine:SetPoint("RIGHT", row, "LEFT", 385, 0)
         nameLine:SetJustifyH("LEFT")
         nameLine:SetWordWrap(false)
@@ -4879,8 +4901,8 @@ function CLIAlts:CreateModernMainFrame()
         row.nameLine = nameLine
 
         local subLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(subLine, 13, "")
-        subLine:SetPoint("BOTTOMLEFT", classRing, "BOTTOMRIGHT", 12, 0)
+        self:SetWidgetFont(subLine, 13, "", "normal")
+        subLine:SetPoint("BOTTOMLEFT", classRing, "BOTTOMRIGHT", 12, -2)
         subLine:SetPoint("RIGHT", row, "LEFT", 385, 0)
         subLine:SetJustifyH("LEFT")
         subLine:SetWordWrap(false)
@@ -4955,7 +4977,7 @@ function CLIAlts:CreateModernMainFrame()
         row.statusPill = statusPill
 
         local statusPillText = statusPill:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(statusPillText, 12, "OUTLINE")
+        self:SetWidgetFont(statusPillText, 12, "OUTLINE", "mono")
         statusPillText:SetPoint("CENTER", statusPill, "CENTER", 0, 0)
         statusPillText:SetText("")
         row.statusPillText = statusPillText
@@ -4963,7 +4985,7 @@ function CLIAlts:CreateModernMainFrame()
 
         -- Right-Aligned Gold Value
         local goldText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(goldText, 16, "OUTLINE")
+        self:SetWidgetFont(goldText, 16, "OUTLINE", "mono")
         goldText:SetPoint("RIGHT", row, "RIGHT", -16, 0)
         goldText:SetJustifyH("RIGHT")
         goldText:SetText("")
@@ -4982,7 +5004,7 @@ function CLIAlts:CreateModernMainFrame()
 
         -- Rested Details text (Pool & Rate / Time to Cap)
         local betaPoolText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(betaPoolText, 13, "OUTLINE")
+        self:SetWidgetFont(betaPoolText, 13, "OUTLINE", "mono")
         betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 450, -6)
         betaPoolText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         betaPoolText:SetJustifyH("LEFT")
@@ -4992,7 +5014,7 @@ function CLIAlts:CreateModernMainFrame()
         row.betaPoolText = betaPoolText
 
         local betaRateText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(betaRateText, 15, "")
+        self:SetWidgetFont(betaRateText, 15, "", "mono")
         betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 450, 6)
         betaRateText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         betaRateText:SetJustifyH("LEFT")
@@ -5068,9 +5090,9 @@ function CLIAlts:CreateModernMainFrame()
         row.cells = {}
         for j = 1, 12 do
             local cell = row:CreateFontString(nil, "OVERLAY")
-            self:SetWidgetFont(cell, 13)
+            self:SetWidgetFont(cell, 13, "", "normal")
             cell:SetWordWrap(false)
-            cell:SetHeight(20)
+            cell:SetHeight(24)
             cell:SetText("")
             row.cells[j] = cell
         end
@@ -5096,7 +5118,7 @@ function CLIAlts:CreateModernMainFrame()
         row.colRestBarFill = colRestBarFill
 
         local colRestLabel = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(colRestLabel, 12, "OUTLINE")
+        self:SetWidgetFont(colRestLabel, 12, "OUTLINE", "mono")
         colRestLabel:SetJustifyH("LEFT")
         colRestLabel:SetWordWrap(false)
         colRestLabel:SetText("")
@@ -5685,7 +5707,7 @@ function CLIAlts:RenderCharRow(row, char, derived)
             row.classRing:SetBackdropColor(cr * 0.15, cg * 0.15, cb * 0.15, 0.70)
         end
         if row.classRingInitial then
-            self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE")
+            self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE", "mono")
             row.classRingInitial:SetText(tostring(char.level or 1))
             row.classRingInitial:SetTextColor(cr, cg, cb)
         end
@@ -5694,8 +5716,9 @@ function CLIAlts:RenderCharRow(row, char, derived)
 
     -- 3. Name Line & Subline (expanded to x=295 for long race/class names)
     if row.nameLine then
+        self:SetWidgetFont(row.nameLine, 16, "OUTLINE", "normal")
         row.nameLine:ClearAllPoints()
-        row.nameLine:SetPoint("TOPLEFT", row.classRing, "TOPRIGHT", 10, 1)
+        row.nameLine:SetPoint("TOPLEFT", row.classRing, "TOPRIGHT", 12, 2)
         row.nameLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
         row.nameLine:SetText(char.name or "Unknown")
         row.nameLine:SetTextColor(cr, cg, cb)
@@ -5703,8 +5726,9 @@ function CLIAlts:RenderCharRow(row, char, derived)
     end
 
     if row.subLine then
+        self:SetWidgetFont(row.subLine, 13, "", "normal")
         row.subLine:ClearAllPoints()
-        row.subLine:SetPoint("BOTTOMLEFT", row.classRing, "BOTTOMRIGHT", 10, 0)
+        row.subLine:SetPoint("BOTTOMLEFT", row.classRing, "BOTTOMRIGHT", 12, -2)
         row.subLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
         local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or "Unknown"
         local faction = char.faction or (self.InferFaction and self:InferFaction(char)) or "Neutral"
@@ -5780,6 +5804,7 @@ function CLIAlts:RenderCharRow(row, char, derived)
 
     -- 6. Rested Details Text (Pool & Rate / Time to Cap, at x=450)
     if row.betaPoolText then
+        self:SetWidgetFont(row.betaPoolText, 13, "OUTLINE", "mono")
         row.betaPoolText:ClearAllPoints()
         row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 450, -6)
         row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 680, 0)
@@ -5801,7 +5826,7 @@ function CLIAlts:RenderCharRow(row, char, derived)
     end
 
     if row.betaRateText then
-        self:SetWidgetFont(row.betaRateText, 15, "")
+        self:SetWidgetFont(row.betaRateText, 15, "", "mono")
         row.betaRateText:ClearAllPoints()
         row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 450, 6)
         row.betaRateText:SetPoint("RIGHT", row, "LEFT", 680, 0)
@@ -5831,6 +5856,7 @@ function CLIAlts:RenderCharRow(row, char, derived)
 
     -- 7. Wealth (Gold, Silver & Copper with colored g/s/c coins)
     if row.goldText then
+        self:SetWidgetFont(row.goldText, 16, "OUTLINE", "mono")
         local copper = char.money or 0
         row.goldText:SetText(self:FormatCoins(copper))
         row.goldText:SetTextColor(textR, textG, textB)
@@ -6707,7 +6733,7 @@ function CLIAlts:Render(force)
 
                         local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
                         local curFontSz = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
-                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":" .. curFontSz .. ":v8"
+                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":" .. curFontSz .. ":v9"
                         local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                         if relayoutRow then
                             row.lastLayoutKey = rowLayoutKey
@@ -6721,12 +6747,16 @@ function CLIAlts:Render(force)
                                 if col then
                                     local colW = (mainFrame and not mainFrame.isLegacyUI and col.mpw) or (isComp and (col.cpw or col.pw)) or col.pw
                                     local padR = (mainFrame and not mainFrame.isLegacyUI and col.mpadRight) or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
+                                    if padR == 0 and col.align ~= "RIGHT" and col.align ~= "CENTER" then
+                                        padR = 8
+                                    end
                                     local cellW = math.max(1, colW - padR)
                                     if relayoutRow then
                                         cell:ClearAllPoints()
                                         cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
                                         cell:SetWidth(cellW)
                                         cell:SetJustifyH(col.align or "LEFT")
+                                        self:SetWidgetFont(cell, 13, "", col.mono and "mono" or "normal")
                                     end
 
                                     if col.key == "restBar" and row.colRestBarBg then
@@ -6740,6 +6770,7 @@ function CLIAlts:Render(force)
                                         row.colRestLabel:ClearAllPoints()
                                         row.colRestLabel:SetPoint("BOTTOMLEFT", row.colRestBarBg, "TOPLEFT", 0, 4)
                                         row.colRestLabel:SetWidth(cellW)
+                                        self:SetWidgetFont(row.colRestLabel, 12, "OUTLINE", "mono")
 
                                         local rested = self:GetRestedData(char)
                                         if rested and not rested.isMaxLevel then
