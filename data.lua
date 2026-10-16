@@ -3869,6 +3869,28 @@ function CLIAlts:ProfessionsMatch(p1, p2)
     return l1 == l2 or l1:find(l2, 1, true) or l2:find(l1, 1, true)
 end
 
+local ALLIANCE_RACES = {
+    ["human"] = true, ["dwarf"] = true, ["nightelf"] = true, ["gnome"] = true,
+    ["draenei"] = true, ["worgen"] = true,
+}
+local HORDE_RACES = {
+    ["orc"] = true, ["scourge"] = true, ["undead"] = true, ["tauren"] = true,
+    ["troll"] = true, ["bloodelf"] = true, ["goblin"] = true,
+}
+
+local function InferFaction(char)
+    if not char then return nil end
+    local fac = char.faction
+    if fac and fac ~= "" and fac ~= "Neutral" and fac ~= "Unknown" then
+        return fac
+    end
+    local race = (char.raceFile or char.race or ""):lower():gsub("%s+", "")
+    if ALLIANCE_RACES[race] then return "Alliance" end
+    if HORDE_RACES[race] then return "Horde" end
+    return nil
+end
+CLIAlts.InferFaction = InferFaction
+
 function CLIAlts:IsMailCandidate(char)
     if not char or self:IsCurrentPlayer(char) then
         return false
@@ -3880,12 +3902,23 @@ function CLIAlts:IsMailCandidate(char)
     if not curChar and self.curPlayerFullName and CLIAltsDB and CLIAltsDB.characters then
         curChar = CLIAltsDB.characters[self.curPlayerFullName]
     end
-    local curFaction = (curChar and curChar.faction) or (UnitFactionGroup and UnitFactionGroup("player"))
-    if curFaction and curFaction ~= "" and curFaction ~= "Neutral" and char.faction and char.faction ~= "" and char.faction ~= "Neutral" then
-        if curFaction ~= char.faction then
+
+    -- 1. Realm Isolation: Never mail across different realms in Classic / WoW Forever
+    local curRealm = (curChar and curChar.realm) or (self.GetPlayerRealm and self:GetPlayerRealm()) or (GetRealmName and GetRealmName())
+    local targetRealm = char.realm
+    if curRealm and curRealm ~= "" and targetRealm and targetRealm ~= "" and curRealm ~= targetRealm then
+        return false
+    end
+
+    -- 2. Faction Isolation: Never route mail across Alliance and Horde
+    local curFaction = InferFaction(curChar) or (UnitFactionGroup and UnitFactionGroup("player"))
+    local targetFaction = InferFaction(char)
+    if curFaction and targetFaction and curFaction ~= "" and targetFaction ~= "" then
+        if curFaction ~= targetFaction then
             return false
         end
     end
+
     return true
 end
 
@@ -4042,8 +4075,8 @@ end
 function CLIAlts:FindBankMule()
     local chars = self:GetCharactersList("level", false)
     for _, c in ipairs(chars) do
-        -- Never route mail to the character currently logged in
-        if not self:IsCurrentPlayer(c) then
+        -- Never route mail to current player or cross-faction / cross-realm candidates
+        if self:IsMailCandidate(c) then
             local srole = (c.supply_role or ""):lower()
             if c.tier == "BANK" or srole:find("bank", 1, true) or srole:find("mule", 1, true) or srole:find("storage", 1, true) then
                 return c

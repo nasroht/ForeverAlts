@@ -3325,6 +3325,98 @@ function CLIAlts:RunSelfTest()
     local fillOk, fillErr = self:FillSendMailNextBatch("BankMule")
     Assert(fillOk == false and fillErr == "Recipient is current player", "SelfMailGuard: FillSendMailNextBatch rejects self-mailing explicitly")
 
+    -- 29e. Cross-Faction & Cross-Realm Mail Isolation Guard
+    do
+        local allianceChar = {
+            name = "AllianceCrafter-Forever",
+            fullName = "AllianceCrafter-Forever",
+            faction = "Alliance",
+            race = "Human",
+            raceFile = "Human",
+            tier = "CORE",
+            professions = { primary = { { name = "Tailoring", rank = 150, maxRank = 150 } } },
+        }
+        local hordeChar = {
+            name = "HordeCrafter-Forever",
+            fullName = "HordeCrafter-Forever",
+            faction = "Horde",
+            race = "Orc",
+            raceFile = "Orc",
+            tier = "CORE",
+            professions = { primary = { { name = "Tailoring", rank = 150, maxRank = 150 } } },
+        }
+        local hordeMule = {
+            name = "HordeMule-Forever",
+            fullName = "HordeMule-Forever",
+            faction = "Horde",
+            race = "Tauren",
+            raceFile = "Tauren",
+            tier = "BANK",
+        }
+        local allianceMule = {
+            name = "AllianceMule-Forever",
+            fullName = "AllianceMule-Forever",
+            faction = "Alliance",
+            race = "Gnome",
+            raceFile = "Gnome",
+            tier = "BANK",
+        }
+        local crossRealmChar = {
+            name = "AllianceOtherRealm-Different",
+            fullName = "AllianceOtherRealm-Different",
+            faction = "Alliance",
+            realm = "DifferentRealm",
+            race = "Human",
+            raceFile = "Human",
+            tier = "CORE",
+        }
+        local factionDB = {
+            settings = {},
+            characters = {
+                ["AllianceCrafter-Forever"] = allianceChar,
+                ["HordeCrafter-Forever"] = hordeChar,
+                ["HordeMule-Forever"] = hordeMule,
+                ["AllianceMule-Forever"] = allianceMule,
+                ["AllianceOtherRealm-Different"] = crossRealmChar,
+            },
+        }
+        local savedDB = CLIAltsDB
+        local savedCurKey = self.curPlayerKey
+        local savedCurFull = self.curPlayerFullName
+        local savedCurPrim = self.curPlayerPrimary
+
+        CLIAltsDB = factionDB
+        self.curPlayerKey = "AllianceCrafter-Forever"
+        self.curPlayerFullName = "AllianceCrafter-Forever"
+        self.curPlayerPrimary = "AllianceCrafter"
+
+        -- Current player is Alliance: Horde characters must NEVER be valid mail candidates
+        Assert(self:IsMailCandidate(hordeChar) == false, "FactionMailGuard: IsMailCandidate rejects Horde character when logged in as Alliance")
+        Assert(self:IsMailCandidate(hordeMule) == false, "FactionMailGuard: IsMailCandidate rejects Horde bank mule when logged in as Alliance")
+        Assert(self:IsMailCandidate(allianceMule) == true, "FactionMailGuard: IsMailCandidate accepts Alliance bank mule when logged in as Alliance")
+
+        -- Cross-realm characters on different realms must be rejected
+        allianceChar.realm = "TargetRealm"
+        crossRealmChar.realm = "DifferentRealm"
+        Assert(self:IsMailCandidate(crossRealmChar) == false, "FactionMailGuard: IsMailCandidate rejects character on different realm")
+
+        -- FindBankMule must resolve to the Alliance bank mule, NOT the Horde bank mule
+        local foundMule = self:FindBankMule()
+        Assert(foundMule ~= nil and foundMule.name == "AllianceMule-Forever", "FactionMailGuard: FindBankMule resolves to same-faction bank mule")
+
+        -- Test race inference when faction is omitted or uninitialized
+        local uninitHorde = { name = "UninitHorde", raceFile = "Orc" }
+        Assert(self:IsMailCandidate(uninitHorde) == false, "FactionMailGuard: IsMailCandidate rejects uninitialized Horde character via racial inference")
+
+        local uninitAlliance = { name = "UninitAlliance", raceFile = "Gnome" }
+        Assert(self:IsMailCandidate(uninitAlliance) == true, "FactionMailGuard: IsMailCandidate accepts uninitialized Alliance character via racial inference")
+
+        CLIAltsDB = savedDB
+        self.curPlayerKey = savedCurKey
+        self.curPlayerFullName = savedCurFull
+        self.curPlayerPrimary = savedCurPrim
+    end
+
     -- ------------------------------------------------------------------------
     -- 30. Account Liquid Wealth & Dynamic Trend Engine
     -- ------------------------------------------------------------------------
