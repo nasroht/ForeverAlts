@@ -749,37 +749,42 @@ function CLIAlts:UpdatePlayNextBanner()
     if not banner or not banner:IsShown() then return end
 
     local brandR, brandG, brandB = self:Hex("brand")
-    local warnR, warnG, warnB = self:Hex("warn")
-    local fillR, fillG, fillB = self:Hex("fill")
-    local textR, textG, textB = self:Hex("text")
     local mutedR, mutedG, mutedB = self:Hex("muted")
 
     local bannerW = banner:GetWidth() or 700
-    local cardW = math.floor((bannerW - 24 - 16) / 3)
+    local cardW = math.floor((bannerW - 28 - 20) / 3)
     if cardW < 120 then cardW = 120 end
 
     local priorityList = self:GetNextAltsPriority()
-    local losingCount = 0
+    local cappedCount = 0
     local allChars = self:GetCharactersList()
     for _, c in ipairs(allChars) do
-        local wastedSec = self:GetRestedWaste(c)
-        if wastedSec and wastedSec > 0 then
-            losingCount = losingCount + 1
+        local rested = self:GetRestedData(c)
+        if rested and rested.isFull then
+            cappedCount = cappedCount + 1
         end
     end
 
     if banner.title then
+        banner.title:SetText("NEXT SESSION")
         banner.title:SetTextColor(brandR, brandG, brandB)
     end
 
-    -- 1. Headline ("<n> alts are losing rested XP right now", hides when n is 0)
-    if banner.headline then
-        if losingCount > 0 then
-            local headStr = (losingCount == 1) and "1 alt is losing rested XP right now" or string.format("%d alts are losing rested XP right now", losingCount)
-            banner.headline:SetText(headStr)
-            banner.headline:SetTextColor(warnR, warnG, warnB)
+    if banner.subtitle then
+        banner.subtitle:SetText("Recommended characters based on XP waste, rested bonus and time to cap.")
+        banner.subtitle:SetTextColor(mutedR, mutedG, mutedB)
+    end
+
+    -- 1. Capped Badge ("2 capped")
+    if banner.cappedBadge and banner.headline then
+        if cappedCount > 0 then
+            banner.headline:SetText(string.format("%d capped", cappedCount))
+            local textW = (banner.headline.GetStringWidth and banner.headline:GetStringWidth()) or 48
+            banner.cappedBadge:SetWidth(math.max(68, textW + 16))
+            banner.cappedBadge:Show()
             banner.headline:Show()
         else
+            banner.cappedBadge:Hide()
             banner.headline:Hide()
         end
     end
@@ -815,70 +820,92 @@ function CLIAlts:UpdatePlayNextBanner()
                 local char = item.char
                 card.charData = char
 
-                local classFile = char.classFile or "WARRIOR"
-                local cr, cg, cb = self:GetClassColor(classFile)
-                local class = char.class or char.className or classFile
+                -- 1. Tag (e.g. 01 · URGENT, 02 · NEXT, 03 · OPTIONAL)
+                local tagNum = string.format("%02d", i)
+                local tagLabel, tagR, tagG, tagB
+                local statusText, statR, statG, statB
 
+                if i == 1 and item.wastedSec and item.wastedSec > 0 then
+                    tagLabel = "URGENT"
+                    tagR, tagG, tagB = 0.98, 0.45, 0.15 -- warm orange/red
+                    statusText = "XP currently wasted"
+                    statR, statG, statB = 0.98, 0.65, 0.15 -- amber
+                elseif i == 2 then
+                    tagLabel = "NEXT"
+                    tagR, tagG, tagB = 0.22, 0.75, 0.98 -- cyan/blue
+                    statusText = item.isCapped and "Rested XP available" or "Low urgency"
+                    statR, statG, statB = item.isCapped and 0.60 or 0.50, item.isCapped and 0.78 or 0.55, item.isCapped and 0.90 or 0.62
+                elseif i == 3 then
+                    tagLabel = "OPTIONAL"
+                    tagR, tagG, tagB = 0.58, 0.64, 0.72 -- muted slate
+                    statusText = item.isCapped and "Rested XP available" or "Low urgency"
+                    statR, statG, statB = item.isCapped and 0.60 or 0.50, item.isCapped and 0.78 or 0.55, item.isCapped and 0.90 or 0.62
+                else
+                    tagLabel = "NEXT"
+                    tagR, tagG, tagB = 0.22, 0.75, 0.98
+                    statusText = item.isCapped and "Rested XP available" or "Low urgency"
+                    statR, statG, statB = item.isCapped and 0.60 or 0.50, item.isCapped and 0.78 or 0.55, item.isCapped and 0.90 or 0.62
+                end
+
+                if card.tag then
+                    card.tag:SetText(string.format("%s · %s", tagNum, tagLabel))
+                    card.tag:SetTextColor(tagR, tagG, tagB)
+                end
+
+                -- 2. Character Name
                 if card.title then
-                    card.title:SetText(string.format("%d. %s", i, char.name or "Unknown"))
-                    card.title:SetTextColor(cr, cg, cb)
+                    card.title:SetText(char.name or "Unknown")
+                    card.title:SetTextColor(1, 1, 1)
                 end
 
-                if card.meta then
-                    card.meta:SetText(string.format("%d %s", char.level or 1, class))
-                    card.meta:SetTextColor(mutedR, mutedG, mutedB)
-                end
-
-                if card.reason then
-                    if item.wastedSec and item.wastedSec > 0 then
-                        local dur = item.timeStr or "0m"
-                        dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
-                        if dur == "Just capped" then dur = "0m" end
-                        local lostXP = self:FormatWasteShort(item.wastedXP) .. " XP"
-                        card.reason:SetText(string.format("Capped %s · ~%s lost", dur, lostXP))
-                        card.reason:SetTextColor(warnR, warnG, warnB)
-                    elseif item.isCapped then
-                        card.reason:SetText(string.format("Capped (%d%%) · Ready to play", item.maxPercent or 150))
-                        card.reason:SetTextColor(warnR, warnG, warnB)
+                -- 3. Metric 1 (Time / Cap State)
+                local metricText = ""
+                if item.wastedSec and item.wastedSec > 0 then
+                    local dur = item.timeStr or "0m"
+                    dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
+                    if dur == "Just capped" then
+                        metricText = "Just capped"
                     else
-                        local rested = self:GetRestedData(char)
-                        local timeLeftStr = (rested and rested.timeLeftStr) or "---"
-                        card.reason:SetText(string.format("Caps in %s", timeLeftStr))
-                        card.reason:SetTextColor(fillR, fillG, fillB)
+                        metricText = string.format("%s capped", dur)
                     end
+                elseif item.isCapped then
+                    local dur = item.timeStr or ""
+                    dur = dur:gsub(" 0h$", ""):gsub(" 0m$", "")
+                    if dur ~= "" and dur ~= "0m" and dur ~= "Just capped" then
+                        metricText = string.format("%s capped", dur)
+                    else
+                        metricText = "Just capped"
+                    end
+                else
+                    local rested = self:GetRestedData(char)
+                    local timeLeftStr = (rested and rested.timeLeftStr) or "---"
+                    metricText = string.format("Caps in %s", timeLeftStr)
+                end
+
+                if card.metric then
+                    card.metric:SetText(metricText)
+                    card.metric:SetTextColor(0.85, 0.88, 0.92)
+                end
+
+                -- 4. Metric 2 (Secondary Status)
+                if card.subText then
+                    card.subText:SetText(statusText)
+                    card.subText:SetTextColor(statR, statG, statB)
+                end
+
+                -- Backward compatibility properties
+                if card.reason then
+                    card.reason:SetText(string.format("%s · %s", metricText, statusText))
+                end
+                if card.meta then
+                    local class = char.class or char.className or char.classFile or "Warrior"
+                    card.meta:SetText(string.format("%d %s", char.level or 1, class))
                 end
 
                 card:Show()
             else
                 card.charData = nil
                 card:Hide()
-            end
-        end
-    end
-
-    -- 3. Plan Line (default 2h, hidden in compact mode)
-    if banner.planLine then
-        if self:IsCompact() then
-            banner.planLine:Hide()
-        else
-            local schedule = self:GenerateLevelingPlan(2)
-            if schedule and #schedule > 0 then
-                local planParts = {}
-                local totalPlanXP = 0
-                for _, cand in ipairs(schedule) do
-                    table.insert(planParts, string.format("%s %dm", cand.name, cand.mins))
-                    local xpHour = cand.xpHour or 35000
-                    totalPlanXP = totalPlanXP + math.floor((xpHour * (cand.mins / 60)) * 2)
-                end
-                local planAltsStr = table.concat(planParts, ", then ")
-                local xpStr = self:FormatWasteShort(totalPlanXP) .. " XP"
-                banner.planLine:SetText(string.format("2h plan: %s · about %s, none wasted", planAltsStr, xpStr))
-                banner.planLine:SetTextColor(textR, textG, textB)
-                banner.planLine:Show()
-            else
-                banner.planLine:SetText("2h plan: All active alts rested · Nothing is being wasted")
-                banner.planLine:SetTextColor(mutedR, mutedG, mutedB)
-                banner.planLine:Show()
             end
         end
     end
@@ -4268,7 +4295,7 @@ function CLIAlts:CreateModernMainFrame()
     local nextBanner = CreateFrame("Frame", "CLIAltsPlayNextBanner", mainCol, BackdropTemplateMixin and "BackdropTemplate" or nil)
     nextBanner:SetPoint("TOPLEFT", mainCol, "TOPLEFT", 0, 0)
     nextBanner:SetPoint("TOPRIGHT", mainCol, "TOPRIGHT", 0, 0)
-    nextBanner:SetHeight(110)
+    nextBanner:SetHeight(146)
     nextBanner:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -4280,42 +4307,66 @@ function CLIAlts:CreateModernMainFrame()
     frame.nextBanner = nextBanner
     frame.recPanel = nextBanner
 
-    -- 1. Title ("Play next")
+    -- 1. Title ("NEXT SESSION")
     local bannerTitle = nextBanner:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(bannerTitle, 15, "OUTLINE")
-    bannerTitle:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -10)
-    bannerTitle:SetText("Play next")
+    bannerTitle:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 14, -12)
+    bannerTitle:SetText("NEXT SESSION")
     bannerTitle:SetTextColor(brandR, brandG, brandB)
     nextBanner.title = bannerTitle
     frame.recHeroTitle = bannerTitle
 
-    -- 2. Headline ("<n> alts are losing rested XP right now", hides when n is 0)
-    local bannerHeadline = nextBanner:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(bannerHeadline, 12, "OUTLINE")
-    bannerHeadline:SetPoint("TOPRIGHT", nextBanner, "TOPRIGHT", -12, -12)
+    -- 2. Capped Badge Pill ("2 capped") on TOPRIGHT
+    local bannerCappedBadge = CreateFrame("Frame", "CLIAltsPlayNextCappedBadge", nextBanner, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    bannerCappedBadge:SetSize(72, 20)
+    bannerCappedBadge:SetPoint("TOPRIGHT", nextBanner, "TOPRIGHT", -14, -11)
+    bannerCappedBadge:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if bannerCappedBadge.SetBackdropColor then
+        bannerCappedBadge:SetBackdropColor(0.28, 0.12, 0.08, 0.90)
+    end
+    if bannerCappedBadge.SetBackdropBorderColor then
+        bannerCappedBadge:SetBackdropBorderColor(0.70, 0.28, 0.15, 0.65)
+    end
+    local bannerHeadline = bannerCappedBadge:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(bannerHeadline, 11, "OUTLINE")
+    bannerHeadline:SetPoint("CENTER", bannerCappedBadge, "CENTER", 0, 0)
     bannerHeadline:SetText("")
-    bannerHeadline:SetTextColor(warnR, warnG, warnB)
+    bannerHeadline:SetTextColor(0.98, 0.52, 0.22)
+    nextBanner.cappedBadge = bannerCappedBadge
     nextBanner.headline = bannerHeadline
     frame.recReasonLine = bannerHeadline
 
-    -- 3. Empty State Text ("Nothing is being wasted")
+    -- 3. Subtitle ("Recommended characters based on XP waste, rested bonus and time to cap.")
+    local bannerSubtitle = nextBanner:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(bannerSubtitle, 11, "")
+    bannerSubtitle:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 14, -32)
+    bannerSubtitle:SetText("Recommended characters based on XP waste, rested bonus and time to cap.")
+    bannerSubtitle:SetTextColor(mutedR, mutedG, mutedB)
+    nextBanner.subtitle = bannerSubtitle
+
+    -- 4. Empty State Text ("Nothing is being wasted")
     local bannerEmpty = nextBanner:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(bannerEmpty, 13, "OUTLINE")
-    bannerEmpty:SetPoint("CENTER", nextBanner, "CENTER", 0, -4)
+    bannerEmpty:SetPoint("CENTER", nextBanner, "CENTER", 0, -10)
     bannerEmpty:SetText("Nothing is being wasted")
     bannerEmpty:SetTextColor(mutedR, mutedG, mutedB)
     bannerEmpty:Hide()
     nextBanner.emptyText = bannerEmpty
 
-    -- 4. Three Cards (name, level class, one reason line)
+    -- 5. Three Cards (01 · URGENT, Name, 2h 43m capped, XP currently wasted)
     nextBanner.cards = {}
     for i = 1, 3 do
         local card = CreateFrame("Button", "CLIAltsPlayNextCard" .. i, nextBanner, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        card:SetHeight(44)
+        card:SetHeight(78)
         if i == 1 then
-            card:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 12, -32)
+            card:SetPoint("TOPLEFT", nextBanner, "TOPLEFT", 14, -54)
         else
-            card:SetPoint("TOPLEFT", nextBanner.cards[i - 1], "TOPRIGHT", 8, 0)
+            card:SetPoint("TOPLEFT", nextBanner.cards[i - 1], "TOPRIGHT", 10, 0)
         end
         card:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -4323,33 +4374,54 @@ function CLIAlts:CreateModernMainFrame()
             edgeSize = 1,
             insets = { left = 1, right = 1, top = 1, bottom = 1 }
         })
-        if card.SetBackdropColor then card:SetBackdropColor(raisedR, raisedG, raisedB, 0.70) end
-        if card.SetBackdropBorderColor then card:SetBackdropBorderColor(lineR, lineG, lineB, 0.50) end
+        if card.SetBackdropColor then card:SetBackdropColor(0.08, 0.11, 0.17, 0.85) end
+        if card.SetBackdropBorderColor then card:SetBackdropBorderColor(0.18, 0.24, 0.32, 0.65) end
 
+        -- Tag: "01 · URGENT", "02 · NEXT", "03 · OPTIONAL"
+        local cardTag = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(cardTag, 10, "OUTLINE")
+        cardTag:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -8)
+        cardTag:SetText("")
+        card.tag = cardTag
+
+        -- Character Name
         local cardTitle = card:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(cardTitle, 12, "OUTLINE")
-        cardTitle:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -6)
+        self:SetWidgetFont(cardTitle, 14, "OUTLINE")
+        cardTitle:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -24)
         cardTitle:SetText("")
+        cardTitle:SetTextColor(1, 1, 1)
         card.title = cardTitle
 
-        local cardMeta = card:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(cardMeta, 11, "")
-        cardMeta:SetPoint("LEFT", cardTitle, "RIGHT", 5, 0)
-        cardMeta:SetText("")
-        cardMeta:SetTextColor(mutedR, mutedG, mutedB)
-        card.meta = cardMeta
+        -- Primary Metric: "2h 43m capped" or "Caps in 3d 23h"
+        local cardMetric = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(cardMetric, 11, "")
+        cardMetric:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -44)
+        cardMetric:SetText("")
+        cardMetric:SetTextColor(0.85, 0.88, 0.92)
+        card.metric = cardMetric
+        card.reason = cardMetric -- backward compatibility
 
-        local cardReason = card:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(cardReason, 10, "")
-        cardReason:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -24)
-        cardReason:SetPoint("RIGHT", card, "RIGHT", -6, 0)
-        cardReason:SetJustifyH("LEFT")
-        cardReason:SetText("")
-        card.reason = cardReason
+        -- Secondary Status: "XP currently wasted" or "Rested XP available" or "Low urgency"
+        local cardSubText = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(cardSubText, 10, "")
+        cardSubText:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -60)
+        cardSubText:SetText("")
+        card.subText = cardSubText
+
+        -- Backward compat meta fontstring
+        local cardMeta = card:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(cardMeta, 10, "")
+        cardMeta:SetPoint("TOPRIGHT", card, "TOPRIGHT", -12, -8)
+        cardMeta:SetText("")
+        cardMeta:Hide()
+        card.meta = cardMeta
 
         card:SetScript("OnClick", function(cSelf)
             if cSelf.charData then
                 CLIAlts.selectedCharKey = cSelf.charData.fullName or cSelf.charData.name
+                if mainFrame and mainFrame.detailPanel then
+                    mainFrame.detailPanel.currentChar = cSelf.charData
+                end
                 local charsList = CLIAlts:GetCharactersList()
                 local rowsPerPage = CLIAlts:GetRowsPerPage()
                 for idx, c in ipairs(charsList) do
@@ -4359,41 +4431,76 @@ function CLIAlts:CreateModernMainFrame()
                     end
                 end
                 PlayRetroSound()
+                CLIAlts:UpdateDetailPanel(cSelf.charData)
                 CLIAlts:Render()
             end
         end)
         card:SetScript("OnEnter", function(cSelf)
             if cSelf.SetBackdropBorderColor then
-                cSelf:SetBackdropBorderColor(brandR, brandG, brandB, 0.90)
+                cSelf:SetBackdropBorderColor(0.35, 0.55, 0.85, 0.95)
             end
             if cSelf.SetBackdropColor then
-                cSelf:SetBackdropColor(raisedR, raisedG, raisedB, 1.0)
+                cSelf:SetBackdropColor(0.12, 0.16, 0.24, 0.95)
+            end
+            if cSelf.charData then
+                GameTooltip:SetOwner(cSelf, "ANCHOR_TOP")
+                local c = cSelf.charData
+                local classFile = c.classFile or "WARRIOR"
+                local cr, cg, cb = CLIAlts:GetClassColor(classFile)
+                local class = c.class or c.className or classFile
+                local cName = c.fullName or c.name or "Character"
+                GameTooltip:AddLine(cName, cr, cg, cb)
+                GameTooltip:AddLine(string.format("Level %d %s", c.level or 1, class), 0.8, 0.8, 0.8)
+                GameTooltip:AddLine(" ")
+
+                local rested = CLIAlts:GetRestedData(c)
+                local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(c, nil, rested)
+                local curPercent = (rested and rested.percent) or 0
+                local maxPercent = (rested and rested.maxPercent) or 150
+                local currentRested = (rested and rested.currentRested) or 0
+
+                GameTooltip:AddDoubleLine("Rested XP:", string.format("%s (%d%% / %d%%)", CLIAlts:FormatNumber(currentRested), curPercent, maxPercent), 0.8, 0.8, 0.8, 1, 1, 1)
+
+                if wastedSec and wastedSec > 0 then
+                    local dur = timeStr or "0m"
+                    GameTooltip:AddDoubleLine("Time Capped:", dur, 1, 0.4, 0.2, 1, 0.4, 0.2)
+                    GameTooltip:AddDoubleLine("Wasted XP:", string.format("~%s XP lost", CLIAlts:FormatNumber(wastedXP or 0)), 1, 0.4, 0.2, 1, 0.4, 0.2)
+                elseif rested and rested.isFull then
+                    GameTooltip:AddLine("|cff00ff66At max rested XP cap (ready to level)|r")
+                else
+                    local timeLeftStr = (rested and rested.timeLeftStr) or "---"
+                    GameTooltip:AddDoubleLine("Time to Cap:", timeLeftStr, 0.8, 0.8, 0.8, 0.2, 0.8, 1)
+                end
+
+                GameTooltip:AddLine(" ")
+                GameTooltip:AddLine("Click to select this character", 1, 0.82, 0)
+                GameTooltip:Show()
             end
         end)
         card:SetScript("OnLeave", function(cSelf)
             if cSelf.SetBackdropBorderColor then
-                cSelf:SetBackdropBorderColor(lineR, lineG, lineB, 0.50)
+                cSelf:SetBackdropBorderColor(0.18, 0.24, 0.32, 0.65)
             end
             if cSelf.SetBackdropColor then
-                cSelf:SetBackdropColor(raisedR, raisedG, raisedB, 0.70)
+                cSelf:SetBackdropColor(0.08, 0.11, 0.17, 0.85)
             end
+            GameTooltip:Hide()
         end)
 
         nextBanner.cards[i] = card
     end
 
-    -- 5. Plan Line (from existing planner, default 2h, hidden in compact mode)
+    -- Keep planLine definition hidden for backward compatibility
     local bannerPlanLine = nextBanner:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(bannerPlanLine, 11, "")
-    bannerPlanLine:SetPoint("BOTTOMLEFT", nextBanner, "BOTTOMLEFT", 12, 8)
-    bannerPlanLine:SetPoint("BOTTOMRIGHT", nextBanner, "BOTTOMRIGHT", -12, 8)
+    bannerPlanLine:SetPoint("BOTTOMLEFT", nextBanner, "BOTTOMLEFT", 14, 8)
     bannerPlanLine:SetText("")
-    bannerPlanLine:SetTextColor(textR, textG, textB)
+    bannerPlanLine:Hide()
     nextBanner.planLine = bannerPlanLine
 
     nextBanner:SetScript("OnSizeChanged", function(bSelf)
         local bw = bSelf:GetWidth() or 700
-        local cw = math.floor((bw - 24 - 16) / 3)
+        local cw = math.floor((bw - 28 - 20) / 3)
         if cw < 120 then cw = 120 end
         if bSelf.cards then
             for i = 1, 3 do
@@ -6992,6 +7099,10 @@ function CLIAlts:ApplyTheme()
         if mainFrame.recPanel then
             if mainFrame.recPanel.SetBackdropColor then mainFrame.recPanel:SetBackdropColor(panelR, panelG, panelB, panelA) end
             if mainFrame.recPanel.SetBackdropBorderColor then mainFrame.recPanel:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+        end
+        if mainFrame.nextBanner then
+            if mainFrame.nextBanner.title then mainFrame.nextBanner.title:SetTextColor(brandR, brandG, brandB) end
+            if mainFrame.nextBanner.subtitle then mainFrame.nextBanner.subtitle:SetTextColor(mutedR, mutedG, mutedB) end
         end
         if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(brandR, brandG, brandB) end
         if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(textR, textG, textB) end

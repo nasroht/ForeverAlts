@@ -787,11 +787,11 @@ function CLIAlts:RunSelfTest()
         local mFrame = self:CreateModernMainFrame()
         local banner = mFrame.nextBanner
         Assert(banner ~= nil, "Phase 4: nextBanner exists")
-        Assert(banner:GetHeight() == 110, "Phase 4: nextBanner height is 110px")
-        Assert(banner.title ~= nil and banner.title:GetText() == "Play next", "Phase 4: banner.title displays 'Play next'")
+        Assert(banner:GetHeight() == 146, "Phase 4: nextBanner height is 146px")
+        Assert(banner.title ~= nil and banner.title:GetText() == "NEXT SESSION", "Phase 4: banner.title displays 'NEXT SESSION'")
         Assert(banner.headline ~= nil, "Phase 4: banner.headline exists")
         Assert(banner.cards ~= nil and #banner.cards == 3, "Phase 4: banner has 3 pooled cards")
-        Assert(banner.planLine ~= nil, "Phase 4: banner.planLine exists")
+        Assert(banner.subtitle ~= nil, "Phase 4: banner.subtitle exists")
         Assert(banner.emptyText ~= nil, "Phase 4: banner.emptyText exists")
 
         -- 1. Full 3-alt scenario matching Artboard B (Thor, Ragnar, Åse)
@@ -843,44 +843,35 @@ function CLIAlts:RunSelfTest()
 
         Assert(banner:IsShown() == true, "Phase 4: nextBanner is visible on Tab 1")
         Assert(banner.headline:IsShown() == true, "Phase 4: Headline is shown when alts are losing XP")
-        Assert(banner.headline:GetText() == "2 alts are losing rested XP right now", "Phase 4: Headline text is '2 alts are losing rested XP right now' (got: " .. tostring(banner.headline:GetText()) .. ")")
+        Assert(banner.headline:GetText() == "2 capped", "Phase 4: Headline text is '2 capped' (got: " .. tostring(banner.headline:GetText()) .. ")")
 
         -- Verify Card 1 (Thor)
         local c1 = banner.cards[1]
         Assert(c1:IsShown() == true, "Phase 4: Card 1 is shown")
-        Assert(c1.title:GetText() == "1. Thor", "Phase 4: Card 1 title is '1. Thor' (got: " .. tostring(c1.title:GetText()) .. ")")
-        Assert(c1.meta:GetText():find("47") ~= nil, "Phase 4: Card 1 meta includes level 47")
-        Assert(c1.reason:GetText():find("Capped 3d 4h") ~= nil and c1.reason:GetText():find("lost") ~= nil, "Phase 4: Card 1 reason is 'Capped 3d 4h · ~52k lost' (got: " .. tostring(c1.reason:GetText()) .. ")")
+        Assert(c1.title:GetText() == "Thor", "Phase 4: Card 1 title is 'Thor' (got: " .. tostring(c1.title:GetText()) .. ")")
+        Assert(c1.tag:GetText() == "01 · URGENT", "Phase 4: Card 1 tag is '01 · URGENT'")
+        Assert(c1.metric:GetText():find("3d 4h capped") ~= nil, "Phase 4: Card 1 metric is '3d 4h capped' (got: " .. tostring(c1.metric:GetText()) .. ")")
+        Assert(c1.subText:GetText() == "XP currently wasted", "Phase 4: Card 1 subText is 'XP currently wasted'")
 
         -- Verify Card 2 (Ragnar)
         local c2 = banner.cards[2]
         Assert(c2:IsShown() == true, "Phase 4: Card 2 is shown")
-        Assert(c2.title:GetText() == "2. Ragnar", "Phase 4: Card 2 title is '2. Ragnar'")
-        Assert(c2.reason:GetText():find("Capped 11h") ~= nil and c2.reason:GetText():find("lost") ~= nil, "Phase 4: Card 2 reason is 'Capped 11h · ~6k lost' (got: " .. tostring(c2.reason:GetText()) .. ")")
+        Assert(c2.title:GetText() == "Ragnar", "Phase 4: Card 2 title is 'Ragnar'")
+        Assert(c2.tag:GetText() == "02 · NEXT", "Phase 4: Card 2 tag is '02 · NEXT'")
+        Assert(c2.metric:GetText():find("11h capped") ~= nil, "Phase 4: Card 2 metric is '11h capped' (got: " .. tostring(c2.metric:GetText()) .. ")")
+        Assert(c2.subText:GetText() == "Rested XP available", "Phase 4: Card 2 subText is 'Rested XP available'")
 
         -- Verify Card 3 (Åse)
         local c3 = banner.cards[3]
         Assert(c3:IsShown() == true, "Phase 4: Card 3 is shown")
-        Assert(c3.title:GetText() == "3. Åse", "Phase 4: Card 3 title is '3. Åse'")
-        Assert(c3.reason:GetText():find("Caps in") ~= nil, "Phase 4: Card 3 reason is 'Caps in ...' (got: " .. tostring(c3.reason:GetText()) .. ")")
-
-        -- Verify Plan Line
-        Assert(banner.planLine:IsShown() == true, "Phase 4: Plan line is shown in standard mode")
-        local planText = banner.planLine:GetText()
-        Assert(planText:find("2h plan:") ~= nil, "Phase 4: Plan line starts with '2h plan:'")
-        Assert(planText:find("none wasted") ~= nil or planText:find("Thor") ~= nil, "Phase 4: Plan line lists recommended allocation")
+        Assert(c3.title:GetText() == "Åse", "Phase 4: Card 3 title is 'Åse'")
+        Assert(c3.tag:GetText() == "03 · OPTIONAL", "Phase 4: Card 3 tag is '03 · OPTIONAL'")
+        Assert(c3.metric:GetText():find("Caps in") ~= nil, "Phase 4: Card 3 metric is 'Caps in ...' (got: " .. tostring(c3.metric:GetText()) .. ")")
+        Assert(c3.subText:GetText() == "Low urgency", "Phase 4: Card 3 subText is 'Low urgency'")
 
         -- 2. Card Click Selection
         c2:GetScript("OnClick")(c2)
         Assert(self.selectedCharKey == "Ragnar-Pyrewood", "Phase 4: Clicking card 2 selects Ragnar-Pyrewood")
-
-        -- 3. Compact Mode Hiding Plan Line
-        CLIAltsDB.settings.compact = true
-        CLIAltsDB.settings.compactMode = true
-        self:Render()
-        Assert(banner.planLine:IsShown() == false, "Phase 4: Plan line is hidden in compact mode")
-        CLIAltsDB.settings.compact = false
-        CLIAltsDB.settings.compactMode = false
 
         -- 4. Headline Hides When n is 0
         CLIAltsDB.characters = {
