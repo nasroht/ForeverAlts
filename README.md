@@ -21,16 +21,17 @@ A high-density, retro-terminal alt management dashboard and operations suite pur
 
 ForeverAlts is designed around the custom progression systems and mechanics of **WoW Forever**:
 
-- **Well Rested Legacy Perk Integration**:
+- **Per-Character Well Rested Legacy Perk Integration**:
   - Real-time offline rest accrual calculations calibrated for WoW Forever's **Well Rested** legacy perk (Ranks 0–5).
+  - Legacy Points are per character: track or set perk ranks individually per alt (`/fa perk <0-5> [character]` or via the right-click character context menu) or globally.
   - Accurately models accelerated accumulation (+4% rate per rank) and expanded rested pools (+6% capacity per rank, up to **180% maximum rested XP**).
-  - Displays time sitting at cap with precise wasted XP tracking (`Capped 1h 46m ago (≈500 wasted)`), dropping generic and confusing status text.
-- **Custom Legacy Point (LP) Progress Tracker**:
+  - Standardized cap and waste telemetry (`100% [CAPPED]`, `100% [CAPPED] (+1.2k Wasted)`), dropping generic or confusing status text.
+- **Custom Legacy Point (LP) Progress Tracker & Isolation**:
   - Automatically calculates account and individual character Legacy Point contributions toward account unlock tiers:
     - **Tier 1** (10 LP)
     - **Tier 2** (16 LP - Core Target)
     - **Tier 3** (18 LP)
-  - Tracks rewards for level thresholds (L20 → 1.0 LP, L35 → 3.0 LP, L60 → 5.0 LP) and profession caps (75 → 0.5 LP, 150 → 1.0 LP, 300 → 2.0 LP).
+  - Tracks per-character rewards for level thresholds (L20 → 1.0 LP, L35 → 3.0 LP, L60 → 5.0 LP) and profession caps (75 → 0.5 LP, 150 → 1.0 LP, 300 → 2.0 LP).
   - Live `[ LP: %.1f/%d ]` telemetry progress chip displayed in the dashboard header.
 - **Cohort Milestone Engine**:
   - Assign characters to strategic leveling cohorts: **`CORE`** (Target Level 35), **`RESERVE`** (Target Level 25), **`CAP`** (Target Level 60), or **`BANK`** (Mule storage).
@@ -59,11 +60,24 @@ ForeverAlts provides a focused, streamlined **Two-Screen Architecture**:
 - **Strict Faction Grouping**: Characters are organized cleanly by faction—Alliance first, followed by Horde—guaranteeing rosters are never mixed.
 - **Retro Coin Wealth**: Formatted liquid gold, silver, and copper tokens (`FormatCoins`).
 
-### 2. Rested XP Analysis Table (`/fa 3`)
-- **9 Dedicated Analysis Columns**: Total width fitted within 820px ($\le 850$px row bounds):
-  `FAC` · `CHARACTER` · `LVL` · `CURRENT XP` · `RESTED / CAP` · `RESTED PROGRESS` · `REST LOC` · `XP/H` · `STATUS`
-- **Clickable Header Sorting**: Sort your entire roster by faction, character name, level, current XP, rested pool, rest location (`REST LOC` - Inn vs Wild), hourly rest rate (`XP/H`), or status.
-- **Precise Status Telemetry**: Shows exact time-to-cap or waste duration (`Capped ... ago (≈N wasted)`).
+### 2. Rested XP Monitor (`/fa 3`)
+- **10 Streamlined Analysis Columns**: Total width fitted within 820px ($\le 850$px row bounds) with right-aligned numeric data:
+  `FAC` (`CENTER`) · `CHARACTER` (`LEFT`) · `LVL` (`RIGHT`) · `CURRENT XP` (`RIGHT`) · `RESTED POOL` (`RIGHT`) · `XP BONUS` (`RIGHT`) · `PROGRESS` (`LEFT`) · `RESTED CAP` (`RIGHT`) · `REST LOC` (`CENTER`) · `TIME TO CAP` (`RIGHT`)
+- **5 Distinct XP Metrics**:
+  1. **Current XP** (`curXP`): Level progression (e.g., `5.0k/10.0k (50%)` or `MAX LEVEL`).
+  2. **Rested XP Pool** (`pool`): Pure accrued pool (e.g., `12.0k XP`).
+  3. **Rested XP Bonus** (`bonus`): Well Rested speed perk multiplier and character rank (e.g., `+12% (R3)` or `+0% (R0)`).
+  4. **Rested Cap** (`cap`): Rested XP cap and dynamic ceiling percentage (e.g., `16.8k (168%)`).
+  5. **Time to Cap** (`timeToCap`): Duration remaining or standardized status indicator.
+- **Clearly Defined Progress Bars**: Represents progress toward that character's Rested Cap (0–100%) with clean label (`75% of Cap`, `100% [CAPPED]`, or `100% [CAPPED] (+... Wasted)`).
+- **Standardized Cap States & Wasted-XP Indicators**:
+  - **Accruing**: Formatted time remaining (e.g., `18h 30m`, `3d 12h`).
+  - **At Cap**: Amber `[CAPPED]` indicator.
+  - **Overflow / Wasted**: Red `[+<waste> WASTED]` indicator with danger-colored fill and label (`100% [CAPPED] (+<waste> Wasted)`).
+  - **Max Level**: Muted grey `MAX LEVEL`.
+- **Interactive Calculation Tooltip (`ShowRestedTooltip`)**:
+  - Hovering over any character row or progress bar opens a rich GameTooltip with complete calculations: Level Progress, Rested XP Breakdown, Well Rested Perk info, Accumulation Rate (+XP/h), and Cap / Overflow Analysis.
+- **Clickable Header Sorting**: Sort your entire roster by character name, level, current XP (`sort = "xp"`), rested pool (`sort = "rested"`), perk bonus (`sort = "bonus"`), cap progress (`sort = "progress"`), rested cap (`sort = "cap"`), rest location (`sort = "resting"`), or waste/time-to-cap (`sort = "waste"`).
 
 ---
 
@@ -129,7 +143,7 @@ Access settings via `[CONFIG]`, the sidebar/header tab, `/fa config`, or `/fa se
 - **8 Dashboard Navigation Views**:
   1. **Overview** (`/fa 1`): Consolidated dashboard featuring the "Play next" recommendation banner, dual circular gauges (Level XP % of level and Rested XP % of cap), character level in class-colored square, details subline (rest pool & accrual rate), urgency row highlighting, and coin wealth.
   2. **Forever Route** (`/fa 2`): Smart rotation recommendations, usable rested ranking, cohort tiers (`CORE`, `RESERVE`, `BANK`).
-  3. **Rested XP** (`/fa 3`): Real-time offline rest accrual analysis table with 9 sortable columns, including Inn/Wild location (`loc`), XP/h rate (`xph`), and time-to-cap/waste status.
+  3. **Rested XP** (`/fa 3`): Simplified Rested XP Monitor with 10 right-aligned columns, 5 distinct metrics (Current XP, Rested Pool, Perk Bonus, Cap, Time to Cap), progress bars calibrated to individual perk caps, standardized cap/overflow states, and full calculation tooltips.
   4. **Professions** (`/fa 4`): Phase profession milestones (75/150/225/300) and recipes.
   5. **Economy** (`/fa 5`): Total account wealth, liquid gold across alts, and transaction delta tracker.
   6. **Cooldowns & Locks** (`/fa 6`): Trade cooldowns (Transmutes, Mooncloth) and raid/dungeon instance reset timers.
@@ -186,7 +200,7 @@ Type into the dashboard terminal prompt (`> `) or in standard chat (`/fa` or `/f
 | `/fa font <size>` | Set monospace font size (`12` to `24`) |
 | `/fa perf` | Run active benchmark of `Render()` with `debugprofilestop()` and print memory usage |
 | `/fa copychat <alt>` | Copy chat window layout and channels from another character |
-| `/fa sort <col>` | Sort table by column key (`role`, `prof`, `name`, `level`, `gold`, `rested`, `waste`, `xp`, `loc`, `xph`) |
+| `/fa sort <col>` | Sort table by column key (`name`, `level`, `xp`, `rested`, `bonus`, `progress`, `cap`, `loc`, `waste`, `role`, `prof`, `gold`) |
 | `/fa filter <query>`| Filter characters by faction, level, class, or profession |
 | `/fa clear` | Clear the active filter |
 | `/fa next` | Recommend top alts losing rested XP |
@@ -200,8 +214,8 @@ Type into the dashboard terminal prompt (`> `) or in standard chat (`/fa` or `/f
 | `/fa mailignore <item>` | Add an item to the mail ignore list |
 | `/fa mailunignore <item>` | Remove an item from the mail ignore list |
 | `/fa mailconsumables` | Toggle auto-routing of food/water/potions (safe by default) |
-| `/fa lp [pts\|auto]`| View account Legacy Point progress or set manual override |
-| `/fa perk [0-5]` | Set or cycle Well Rested legacy perk rank (0–5) |
+| `/fa lp [pts\|auto] [alt]`| View account or per-character Legacy Point balance, or set manual override |
+| `/fa perk [0-5] [alt]` | Set or cycle Well Rested legacy perk rank (0–5) for current or specified character |
 | `/fa watch <item>` | Add item to bag & bank watchlist tracker |
 | `/fa unwatch <item>` | Remove item from watchlist |
 | `/fa watchlist` | Display inventory totals for watched items |
@@ -213,7 +227,7 @@ Type into the dashboard terminal prompt (`> `) or in standard chat (`/fa` or `/f
 | `/fa selftest` | Run complete unit test assertions suite |
 | `/fa help` | Open the in-game Quick Guide manual |
 
-*(Note: Legacy aliases `/clialts` and `/ca` remain fully supported).*
+*(Note: Legacy aliases `/clialts` and `/ca` remain fully supported. Right-click any character row in the dashboard to open the quick context menu to adjust individual Well Rested perk ranks, delete records, or inspect full alt details).*
 
 ---
 
