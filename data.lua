@@ -402,8 +402,8 @@ function CLIAlts:InitDB()
     _G["CLIAltsDB"] = CLIAltsDB
     _G["ForeverAlts"] = CLIAlts
     CLIAltsDB.settings = CLIAltsDB.settings or {}
-    if not CLIAltsDB.settings.theme or (CLIAltsDB.settings.theme == "AMBER" and not CLIAltsDB.settings.themeExplicit) then
-        CLIAltsDB.settings.theme = "BLIZZARD"
+    if not CLIAltsDB.settings.theme or ((CLIAltsDB.settings.theme == "AMBER" or CLIAltsDB.settings.theme == "BLIZZARD") and not CLIAltsDB.settings.themeExplicit) then
+        CLIAltsDB.settings.theme = "DEFAULT"
     end
     CLIAltsDB.settings.minimapPos = CLIAltsDB.settings.minimapPos or 45
     CLIAltsDB.settings.minimapShow = (CLIAltsDB.settings.minimapShow ~= false)

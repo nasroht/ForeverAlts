@@ -10,20 +10,21 @@ _G["clialts"] = CLIAlts
 _G["ForeverAlts"] = CLIAlts
 _G["foreveralts"] = CLIAlts
 
--- Design Tokens (Base Phase 1 Tokens)
+-- Design Tokens (Base Phase 1 Tokens: Default Palette)
 CLIAlts.TOKENS = {
-    bg     = "0F131A",
-    panel  = "171C26",
-    raised = "232B3A",
-    line   = "2B3445",
-    text   = "F3F5F8",
-    muted  = "9AA6B8",
-    brand  = "E8B64A",
-    warn   = "F2B84B",
-    fill   = "4CC2D6",
-    info   = "7FDBEA",
-    ready  = "33FF66",
-    danger = "FF4444",
+    bg     = "0A0E17",
+    panel  = "131A26",
+    raised = "1B2436",
+    line   = "26334A",
+    text   = "E2E8F0",
+    muted  = "8896AB",
+    brand  = "22D3EE",
+    warn   = "F59E0B",
+    fill   = "22D3EE",
+    info   = "22D3EE",
+    ready  = "34D399",
+    danger = "EF4444",
+    highlight = "FBBF24",
     radius = { row = 6, card = 10, window = 12 },
     space  = { 4, 8, 12, 16 },
     rowH   = 52,
@@ -33,6 +34,7 @@ CLIAlts.TOKENS = {
 
 -- Alternative Theme Token Sets
 CLIAlts.THEME_TOKENS = {
+    ["DEFAULT"] = CLIAlts.TOKENS,
     ["BLIZZARD"] = {
         bg     = "0B0E14",
         panel  = "131722",
@@ -52,7 +54,25 @@ CLIAlts.THEME_TOKENS = {
         minClick = 28,
         font   = { title = 19, body = 14, small = 12, num = 14 },
     },
-    ["DARK"] = CLIAlts.TOKENS,
+    ["DARK"] = {
+        bg     = "0F131A",
+        panel  = "171C26",
+        raised = "232B3A",
+        line   = "2B3445",
+        text   = "F3F5F8",
+        muted  = "9AA6B8",
+        brand  = "E8B64A",
+        warn   = "F2B84B",
+        fill   = "4CC2D6",
+        info   = "7FDBEA",
+        ready  = "33FF66",
+        danger = "FF4444",
+        radius = { row = 6, card = 10, window = 12 },
+        space  = { 4, 8, 12, 16 },
+        rowH   = 52,
+        minClick = 28,
+        font   = { title = 19, body = 14, small = 12, num = 14 },
+    },
     ["AMBER"] = {
         bg     = "100E08",
         panel  = "19150C",
@@ -156,11 +176,12 @@ CLIAlts.THEME_TOKENS = {
         font   = { title = 19, body = 14, small = 12, num = 14 },
     },
 }
+CLIAlts.THEME_TOKENS["DEF"] = CLIAlts.THEME_TOKENS["DEFAULT"]
 CLIAlts.THEME_TOKENS["WOW"] = CLIAlts.THEME_TOKENS["BLIZZARD"]
 
 function CLIAlts:GetTokens()
-    local themeKey = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
-    return self.THEME_TOKENS[themeKey] or self.THEME_TOKENS["BLIZZARD"] or self.TOKENS
+    local themeKey = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
+    return self.THEME_TOKENS[themeKey] or self.THEME_TOKENS["DEFAULT"] or self.TOKENS
 end
 
 function CLIAlts:Hex(token, alpha)

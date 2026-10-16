@@ -35,6 +35,37 @@ local renderDirty = false
 -- CRT Theme Definitions (With Syntax Coloring Hex Codes)
 -- ----------------------------------------------------------------------------
 CLIAlts.THEMES = {
+    ["DEFAULT"] = {
+        name = "Default",
+        tag = "DEF",
+        bg = { 0.039, 0.055, 0.090, 0.96 }, -- near-black navy #0A0E17
+        panelBg = { 0.075, 0.102, 0.149, 0.92 }, -- dark slate #131A26
+        border = { 0.149, 0.200, 0.290, 0.85 }, -- subdued slate #26334A
+        primary = { 0.133, 0.827, 0.933 }, -- cyan selection and interactive #22D3EE
+        dim = { 0.533, 0.588, 0.671 }, -- muted grey secondary text #8896AB
+        highlight = { 0.984, 0.749, 0.141 }, -- amber/yellow recommendations #FBBF24
+        accent = { 0.133, 0.827, 0.933 }, -- cyan #22D3EE
+        ready = { 0.204, 0.827, 0.600 }, -- green ready/available #34D399
+        pending = { 0.961, 0.620, 0.043 }, -- amber warnings/capped XP #F59E0B
+        blocked = { 0.937, 0.267, 0.267 }, -- red errors/critical #EF4444
+        text = { 0.886, 0.910, 0.941 }, -- light grey primary text #E2E8F0
+        muted = { 0.533, 0.588, 0.671 }, -- muted grey secondary text #8896AB
+        rowOdd = { 0.075, 0.102, 0.149, 0.40 },
+        rowEven = { 0.106, 0.141, 0.212, 0.60 },
+        rowHover = { 0.149, 0.200, 0.290, 0.75 },
+        borderHex = "26334a",
+        primaryHex = "22d3ee",
+        dimHex = "8896ab",
+        highlightHex = "fbbf24",
+        textHex = "e2e8f0",
+        mutedHex = "8896ab",
+        accentHex = "22d3ee",
+        readyHex = "34d399",
+        pendingHex = "f59e0b",
+        blockedHex = "ef4444",
+        barFill = "|cff22d3ee",
+        barEmpty = "|cff1b2436",
+    },
     ["BLIZZARD"] = {
         name = "World of Warcraft Best Practice",
         tag = "WOW",
@@ -299,12 +330,13 @@ CLIAlts.THEMES = {
 }
 
 CLIAlts.THEME_MAP = {
+    default = "DEFAULT",
+    def = "DEFAULT",
     blizzard = "BLIZZARD",
     blizz = "BLIZZARD",
     wow = "BLIZZARD",
     dark = "DARK",
     drk = "DARK",
-    default = "BLIZZARD",
     amber = "AMBER",
     amb = "AMBER",
     green = "GREEN",
@@ -321,32 +353,32 @@ CLIAlts.THEME_MAP = {
     dra = "DRACULA",
 }
 
-local THEME_ORDER = { "BLIZZARD", "AMBER", "GREEN", "CYAN", "MONO", "COLORBLIND", "SYNTHWAVE", "DRACULA" }
+local THEME_ORDER = { "DEFAULT", "BLIZZARD", "AMBER", "GREEN", "CYAN", "MONO", "COLORBLIND", "SYNTHWAVE", "DRACULA" }
 local SCALES = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
 
 function CLIAlts:GetTheme()
-    local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
-    local t = self.THEMES[key] or self.THEMES["BLIZZARD"] or self.THEMES["AMBER"]
+    local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
+    local t = self.THEMES[key] or self.THEMES["DEFAULT"] or self.THEMES["BLIZZARD"] or self.THEMES["AMBER"]
     -- Ensure non-nil fallbacks for design tokens
-    t.text = t.text or { 1.0, 1.0, 1.0 }
-    t.muted = t.muted or t.dim or { 0.690, 0.722, 0.784 }
-    t.textHex = t.textHex or "ffffff"
-    t.mutedHex = t.mutedHex or t.dimHex or "b0b8c8"
-    t.dimHex = t.dimHex or "b0b8c8"
-    t.accentHex = t.accentHex or "33d9ff"
-    t.readyHex = t.readyHex or "33ff66"
-    t.pendingHex = t.pendingHex or "ffb033"
-    t.blockedHex = t.blockedHex or "ff4444"
-    t.panelBg = t.panelBg or { 0.075, 0.090, 0.133, 0.92 }
-    t.rowOdd = t.rowOdd or { 0.071, 0.082, 0.122, 0.40 }
-    t.rowEven = t.rowEven or { 0.094, 0.114, 0.161, 0.60 }
-    t.rowHover = t.rowHover or { 0.145, 0.176, 0.239, 0.75 }
+    t.text = t.text or { 0.886, 0.910, 0.941 }
+    t.muted = t.muted or t.dim or { 0.533, 0.588, 0.671 }
+    t.textHex = t.textHex or "e2e8f0"
+    t.mutedHex = t.mutedHex or t.dimHex or "8896ab"
+    t.dimHex = t.dimHex or "8896ab"
+    t.accentHex = t.accentHex or "22d3ee"
+    t.readyHex = t.readyHex or "34d399"
+    t.pendingHex = t.pendingHex or "f59e0b"
+    t.blockedHex = t.blockedHex or "ef4444"
+    t.panelBg = t.panelBg or { 0.075, 0.102, 0.149, 0.92 }
+    t.rowOdd = t.rowOdd or { 0.075, 0.102, 0.149, 0.40 }
+    t.rowEven = t.rowEven or { 0.106, 0.141, 0.212, 0.60 }
+    t.rowHover = t.rowHover or { 0.149, 0.200, 0.290, 0.75 }
     return t
 end
 
 function CLIAlts:CycleTheme()
-    local current = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
-    local nextTheme = "BLIZZARD"
+    local current = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
+    local nextTheme = "DEFAULT"
     for i, name in ipairs(THEME_ORDER) do
         if name == current then
             nextTheme = THEME_ORDER[(i % #THEME_ORDER) + 1]
@@ -7066,7 +7098,7 @@ function CLIAlts:ExecutePromptCommand(input)
                 self:Render()
                 self:SetPromptFeedback(string.format("Theme set to %s (%s)", choice, self.THEMES[choice] and self.THEMES[choice].tag or choice))
             else
-                self:SetPromptFeedback("Themes: blizzard, amber, green, cyan, mono, safe, synthwave, dracula", true)
+                self:SetPromptFeedback("Themes: default, blizzard, amber, green, cyan, mono, safe, synthwave, dracula", true)
             end
         else
             self:CycleTheme()
@@ -7415,7 +7447,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
                 end
             end
         elseif cmd == "theme" then
-            local themes = { "blizzard", "wow", "amber", "green", "cyan", "mono", "safe", "colorblind", "synthwave", "dracula" }
+            local themes = { "default", "blizzard", "wow", "amber", "green", "cyan", "mono", "safe", "colorblind", "synthwave", "dracula" }
             for _, th in ipairs(themes) do
                 if th:sub(1, #arg) == arg:lower() and th ~= arg:lower() then
                     editBox:SetText("theme " .. th)
@@ -8893,6 +8925,7 @@ function CLIAlts:CreateSettingsPanel()
         sd.secTheme = secTheme
 
         local themes = {
+            { key = "DEFAULT", name = "Default" },
             { key = "BLIZZARD", name = "Blizzard Gold" },
             { key = "AMBER", name = "VT220 Amber" },
             { key = "GREEN", name = "Phosphor CRT" },
@@ -8904,9 +8937,9 @@ function CLIAlts:CreateSettingsPanel()
         }
         sd.themeButtons = {}
         for i, info in ipairs(themes) do
-            local col = (i - 1) % 4
-            local row = math.floor((i - 1) / 4)
-            local btn = CreateRetroButton(sd, info.name, 150, 24, function()
+            local col = (i - 1) % 3
+            local row = math.floor((i - 1) / 3)
+            local btn = CreateRetroButton(sd, info.name, 206, 22, function()
                 CLIAltsDB.settings = CLIAltsDB.settings or {}
                 CLIAltsDB.settings.theme = info.key
                 CLIAltsDB.settings.themeExplicit = true
@@ -8914,7 +8947,7 @@ function CLIAlts:CreateSettingsPanel()
                 CLIAlts:Render()
                 CLIAlts:UpdateSettingsDialog()
             end, 11)
-            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + (col * 160), -92 - (row * 30))
+            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + (col * 217), -90 - (row * 26))
             btn.themeKey = info.key
             btn.themeName = info.name
             table.insert(sd.themeButtons, btn)
@@ -8923,7 +8956,7 @@ function CLIAlts:CreateSettingsPanel()
         -- Section 2: Interface Font Size
         local secFont = sd:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(secFont, 13, "OUTLINE")
-        secFont:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -164)
+        secFont:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -174)
         secFont:SetText("[ INTERFACE FONT SIZE ]")
         sd.secFont = secFont
 
@@ -8931,11 +8964,11 @@ function CLIAlts:CreateSettingsPanel()
         sd.fontButtons = {}
         for i, sz in ipairs(fontSizes) do
             local label = (sz == 18) and string.format("%dpx*", sz) or string.format("%dpx", sz)
-            local btn = CreateRetroButton(sd, label, 85, 24, function()
+            local btn = CreateRetroButton(sd, label, 85, 22, function()
                 CLIAlts:SetFontSize(sz)
                 CLIAlts:UpdateSettingsDialog()
             end, 11)
-            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 92), -188)
+            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 92), -196)
             btn.fontSize = sz
             table.insert(sd.fontButtons, btn)
         end
@@ -8943,7 +8976,7 @@ function CLIAlts:CreateSettingsPanel()
         -- Section 3: Display Scale
         local secScale = sd:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(secScale, 13, "OUTLINE")
-        secScale:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -224)
+        secScale:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -228)
         secScale:SetText("[ DISPLAY & PANEL SCALE ]")
         sd.secScale = secScale
 
@@ -8952,12 +8985,12 @@ function CLIAlts:CreateSettingsPanel()
         for i, sc in ipairs(scaleList) do
             local pct = math.floor(sc * 100 + 0.5)
             local label = (math.abs(sc - 1.0) < 0.05) and string.format("%d%%*", pct) or string.format("%d%%", pct)
-            local btn = CreateRetroButton(sd, label, 100, 24, function()
+            local btn = CreateRetroButton(sd, label, 100, 22, function()
                 CLIAlts:SetScale(sc)
                 CLIAlts:Render()
                 CLIAlts:UpdateSettingsDialog()
             end, 11)
-            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 108), -248)
+            btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 108), -250)
             btn.scaleVal = sc
             table.insert(sd.scaleButtons, btn)
         end
@@ -8965,7 +8998,7 @@ function CLIAlts:CreateSettingsPanel()
         -- Section 4: Interface & Automation Toggles
         local secToggles = sd:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(secToggles, 13, "OUTLINE")
-        secToggles:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -284)
+        secToggles:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -282)
         secToggles:SetText("[ INTERFACE & AUTOMATION ]")
         sd.secToggles = secToggles
 
@@ -8975,7 +9008,7 @@ function CLIAlts:CreateSettingsPanel()
             CLIAltsDB.settings.soundDisabled = not CLIAltsDB.settings.soundDisabled
             CLIAlts:UpdateSettingsDialog()
         end, 11)
-        btnAudio:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -308)
+        btnAudio:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -306)
         sd.btnAudio = btnAudio
 
         local btnSort = CreateRetroButton(sd, "Bag Sort Button: ENABLED", 310, 26, function()
@@ -8983,7 +9016,7 @@ function CLIAlts:CreateSettingsPanel()
             CLIAlts:ToggleBagSortButton(not cur)
             CLIAlts:UpdateSettingsDialog()
         end, 11)
-        btnSort:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -338)
+        btnSort:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -336)
         sd.btnSort = btnSort
 
         local btnTip = CreateRetroButton(sd, "Cross-Alt Tooltips: ENABLED", 310, 26, function()
@@ -8991,7 +9024,7 @@ function CLIAlts:CreateSettingsPanel()
             CLIAltsDB.settings.showInventoryTooltips = (CLIAltsDB.settings.showInventoryTooltips == false)
             CLIAlts:UpdateSettingsDialog()
         end, 11)
-        btnTip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -368)
+        btnTip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -366)
         sd.btnTip = btnTip
 
         -- Col 2 toggles (x = 345, width = 310)
@@ -9000,7 +9033,7 @@ function CLIAlts:CreateSettingsPanel()
             CLIAlts:ToggleMailAutoFillButton(not cur)
             CLIAlts:UpdateSettingsDialog()
         end, 11)
-        btnMail:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -308)
+        btnMail:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -306)
         sd.btnMail = btnMail
 
         local btnCons = CreateRetroButton(sd, "Route Consumables: DISABLED", 310, 26, function()
@@ -9008,7 +9041,7 @@ function CLIAlts:CreateSettingsPanel()
             CLIAltsDB.settings.autoMailConsumables = not CLIAltsDB.settings.autoMailConsumables
             CLIAlts:UpdateSettingsDialog()
         end, 11)
-        btnCons:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -338)
+        btnCons:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -336)
         sd.btnCons = btnCons
 
         local btnAutoSend = CreateRetroButton(sd, "Auto-Fill On Mail Open: ENABLED", 310, 26, function()
@@ -9016,7 +9049,7 @@ function CLIAlts:CreateSettingsPanel()
             CLIAltsDB.settings.autoFillMailOnSend = (CLIAltsDB.settings.autoFillMailOnSend == false)
             CLIAlts:UpdateSettingsDialog()
         end, 11)
-        btnAutoSend:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -368)
+        btnAutoSend:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -366)
         sd.btnAutoSend = btnAutoSend
 
         -- Section 5: Chat Layout Cloner
@@ -9103,7 +9136,7 @@ function CLIAlts:CreateSettingsPanel()
 
         local btnReset = CreateRetroButton(sd, "[ Reset Defaults ]", 140, 26, function()
             CLIAltsDB.settings = CLIAltsDB.settings or {}
-            CLIAltsDB.settings.theme = "BLIZZARD"
+            CLIAltsDB.settings.theme = "DEFAULT"
             CLIAltsDB.settings.themeExplicit = true
             CLIAlts:SetScale(1.0)
             CLIAlts:SetFontSize(18)
@@ -9164,7 +9197,7 @@ function CLIAlts:UpdateSettingsDialog()
     if settingsDialog.tip then settingsDialog.tip:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
 
     -- Theme buttons
-    local curTheme = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
+    local curTheme = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
     for _, btn in ipairs(settingsDialog.themeButtons or {}) do
         local isSel = (btn.themeKey == curTheme)
         btn.isSelected = isSel

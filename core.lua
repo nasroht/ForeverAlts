@@ -703,12 +703,13 @@ local function SlashHandler(msg)
     elseif cmd == "theme" then
         if arg and arg ~= "" then
             local map = CLIAlts.THEME_MAP or {
+                default = "DEFAULT",
+                def = "DEFAULT",
                 blizzard = "BLIZZARD",
                 blizz = "BLIZZARD",
                 wow = "BLIZZARD",
                 dark = "DARK",
                 drk = "DARK",
-                default = "BLIZZARD",
                 amber = "AMBER",
                 amb = "AMBER",
                 green = "GREEN",
@@ -734,12 +735,12 @@ local function SlashHandler(msg)
                 if CLIAlts.Render then CLIAlts:Render() end
                 CLIAlts:Print(string.format("Theme set to %s (%s).", choice, CLIAlts.THEMES[choice].tag or choice))
             else
-                CLIAlts:Print("Usage: |cff00ff66/fa theme <blizzard|amber|green|cyan|mono|safe|synthwave|dracula>|r")
+                CLIAlts:Print("Usage: |cff00ff66/fa theme <default|blizzard|amber|green|cyan|mono|safe|synthwave|dracula>|r")
             end
         else
             if CLIAlts.CycleTheme then
                 CLIAlts:CycleTheme()
-                local curTheme = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "BLIZZARD"
+                local curTheme = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
                 CLIAlts:Print(string.format("Theme cycled: %s", curTheme))
             end
         end

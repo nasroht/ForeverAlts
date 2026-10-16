@@ -367,6 +367,13 @@ function CLIAlts:RunSelfTest()
     -- 11. Theme Verification & Compact Mode Tests
     -- 11a. Colorblind, Amber, Synthwave, Dracula Themes
     if self.THEMES then
+        local defTheme = self.THEMES["DEFAULT"]
+        Assert(defTheme ~= nil, "Theme: DEFAULT theme exists in THEMES")
+        Assert(defTheme and defTheme.tag == "DEF", "Theme: DEFAULT tag is 'DEF'")
+        Assert(defTheme and defTheme.primaryHex == "22d3ee", "Theme: DEFAULT primaryHex is cyan 22d3ee")
+        Assert(defTheme and defTheme.textHex == "e2e8f0", "Theme: DEFAULT textHex is light grey e2e8f0")
+        Assert(defTheme and defTheme.borderHex == "26334a", "Theme: DEFAULT borderHex is subdued slate 26334a")
+
         local blizzTheme = self.THEMES["BLIZZARD"]
         Assert(blizzTheme ~= nil, "Theme: BLIZZARD theme exists in THEMES")
         Assert(blizzTheme and blizzTheme.tag == "WOW", "Theme: BLIZZARD tag is 'WOW'")
@@ -396,7 +403,8 @@ function CLIAlts:RunSelfTest()
 
         -- Phase 0: verify that every theme name accepted by the command parser maps to a valid theme in THEMES
         local themeMap = self.THEME_MAP or {
-            blizzard = "BLIZZARD", blizz = "BLIZZARD", wow = "BLIZZARD", dark = "DARK", drk = "DARK", default = "BLIZZARD",
+            default = "DEFAULT", def = "DEFAULT",
+            blizzard = "BLIZZARD", blizz = "BLIZZARD", wow = "BLIZZARD", dark = "DARK", drk = "DARK",
             green = "GREEN", grn = "GREEN",
             amber = "AMBER", amb = "AMBER",
             cyan = "CYAN", cyn = "CYAN",
@@ -1529,7 +1537,7 @@ function CLIAlts:RunSelfTest()
         local sd = _G["CLIAltsSettingsDialog"]
         Assert(sd ~= nil, "SettingsUI: CLIAltsSettingsDialog frame exists")
         Assert(sd:IsShown() == true, "SettingsUI: CLIAltsSettingsDialog is shown")
-        Assert(sd.themeButtons ~= nil and #sd.themeButtons == 8, "SettingsUI: Has 8 CRT theme buttons")
+        Assert(sd.themeButtons ~= nil and #sd.themeButtons == 9, "SettingsUI: Has 9 theme buttons")
         Assert(sd.fontButtons ~= nil and #sd.fontButtons == 7, "SettingsUI: Has 7 typography font buttons")
         Assert(sd.scaleButtons ~= nil and #sd.scaleButtons == 6, "SettingsUI: Has 6 UI scale buttons")
         Assert(sd.btnAudio ~= nil, "SettingsUI: Has Audio SFX toggle")
@@ -1549,7 +1557,14 @@ function CLIAlts:RunSelfTest()
         Assert(sd.chatStatus ~= nil, "SettingsUI: Has Chat Status label")
 
         -- Test clicking theme button (e.g. Amber)
-        local btnAmber = sd.themeButtons[2]
+        local btnAmber = nil
+        for _, btn in ipairs(sd.themeButtons) do
+            if btn.themeKey == "AMBER" then
+                btnAmber = btn
+                break
+            end
+        end
+        Assert(btnAmber ~= nil, "SettingsUI: Found Amber theme button")
         btnAmber:GetScript("OnClick")(btnAmber)
         Assert(CLIAltsDB.settings.theme == "AMBER", "SettingsUI: Clicking theme button updates theme to AMBER")
         Assert(btnAmber.isSelected == true, "SettingsUI: Selected theme button has isSelected = true")
@@ -1571,7 +1586,7 @@ function CLIAlts:RunSelfTest()
 
         -- Test Reset Defaults
         sd.btnReset:GetScript("OnClick")(sd.btnReset)
-        Assert(CLIAltsDB.settings.theme == "BLIZZARD", "SettingsUI: Reset defaults restores theme to BLIZZARD")
+        Assert(CLIAltsDB.settings.theme == "DEFAULT", "SettingsUI: Reset defaults restores theme to DEFAULT")
         Assert(CLIAltsDB.settings.fontSize == 18, "SettingsUI: Reset defaults restores font to 18")
         Assert(math.abs(CLIAltsDB.settings.scale - 1.0) < 0.01, "SettingsUI: Reset defaults restores scale to 1.0")
 
