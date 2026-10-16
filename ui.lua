@@ -3670,8 +3670,38 @@ function CLIAlts:CreateModernMainFrame()
         navBtn:SetScript("OnEnter", function(self)
             if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.6) end
             self.label:SetTextColor(1, 1, 1)
+            if GameTooltip then
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                local bCount = self.badge and self.badge.text and self.badge.text:GetText()
+                if self.tabId == 1 then
+                    GameTooltip:AddLine(string.format("Overview (%s Characters)", bCount or "0"), 1, 1, 1)
+                    GameTooltip:AddLine("Total active characters tracked across all realms and factions.", 0.8, 0.8, 0.8, true)
+                elseif self.tabId == 3 then
+                    GameTooltip:AddLine(string.format("Rested XP (%s Capped Alts)", bCount or "0"), 1, 1, 1)
+                    GameTooltip:AddLine("Number of alts currently sitting at maximum Rested XP cap and losing potential gains.", 0.8, 0.8, 0.8, true)
+                elseif self.tabId == 4 then
+                    GameTooltip:AddLine("Professions", 1, 1, 1)
+                    GameTooltip:AddLine("Track primary and secondary profession skills, skill caps, and recipe discovery.", 0.8, 0.8, 0.8, true)
+                elseif self.tabId == 5 then
+                    GameTooltip:AddLine("Economy", 1, 1, 1)
+                    GameTooltip:AddLine("View liquid gold, inventory wealth, and trade supplies across your roster.", 0.8, 0.8, 0.8, true)
+                elseif self.tabId == 6 then
+                    GameTooltip:AddLine(string.format("Cooldowns & Locks (%s Ready)", bCount or "0"), 1, 1, 1)
+                    GameTooltip:AddLine("Trade skill crafting cooldowns ready to use and available raid resets.", 0.8, 0.8, 0.8, true)
+                elseif self.tabId == 7 then
+                    GameTooltip:AddLine(string.format("Mail Routing (%s Packages)", bCount or "0"), 1, 1, 1)
+                    GameTooltip:AddLine("Pending mail packages and supply shipments queued across your alts.", 0.8, 0.8, 0.8, true)
+                elseif self.tabId == 8 then
+                    GameTooltip:AddLine("Settings & Preferences", 1, 1, 1)
+                    GameTooltip:AddLine("Configure themes, display options, cohorts, and tracking filters.", 0.8, 0.8, 0.8, true)
+                else
+                    GameTooltip:AddLine(self.baseText or "Tab", 1, 1, 1)
+                end
+                GameTooltip:Show()
+            end
         end)
         navBtn:SetScript("OnLeave", function(self)
+            if GameTooltip then GameTooltip:Hide() end
             local curTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
             local active = (curTab == self.tabId)
             if self.SetBackdropColor then
