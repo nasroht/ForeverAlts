@@ -2841,9 +2841,9 @@ function CLIAlts:RunSelfTest()
         return self:ExecuteSelfTest()
     end
     if loadfile then
-        local chunk = loadfile("tests/selftest.lua") or loadfile("Interface/AddOns/clialts/tests/selftest.lua")
+        local chunk = loadfile("tests/selftest.lua") or loadfile("Interface/AddOns/ForeverAlts/tests/selftest.lua") or loadfile("Interface/AddOns/clialts/tests/selftest.lua")
         if chunk then
-            local ok = pcall(chunk, "CLIAlts", self)
+            local ok = pcall(chunk, "ForeverAlts", self)
             if ok and self.ExecuteSelfTest then
                 return self:ExecuteSelfTest()
             end

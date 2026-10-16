@@ -3895,6 +3895,51 @@ function CLIAlts:RunSelfTest()
     Assert(sdEmbed:IsShown() == true, "SettingsTab: ShowSettingsDialog() shows embedded settings")
     self:SwitchTab(1)
 
+    -- ------------------------------------------------------------------------
+    -- 39. Performance Profiling, Render Benchmarking & Event Coalescing
+    -- ------------------------------------------------------------------------
+    -- 39a. MeasureRenderPerf API
+    Assert(self.MeasureRenderPerf ~= nil, "Perf: MeasureRenderPerf API exists on CLIAlts")
+    local avgMs, minMs, maxMs, measuredSamples = self:MeasureRenderPerf(3)
+    Assert(type(avgMs) == "number" and avgMs >= 0, "Perf: MeasureRenderPerf returns non-negative avgMs")
+    Assert(type(minMs) == "number" and minMs >= 0, "Perf: MeasureRenderPerf returns non-negative minMs")
+    Assert(type(maxMs) == "number" and maxMs >= minMs, "Perf: MeasureRenderPerf returns maxMs >= minMs")
+    Assert(measuredSamples == 3, "Perf: MeasureRenderPerf returns sample count matching request (3)")
+    Assert(self.perfData ~= nil and self.perfData.renderCount > 0, "Perf: Render metric recorded in perfData")
+
+    -- 39b. PrintPerf API
+    Assert(self.PrintPerf ~= nil, "Perf: PrintPerf API exists on CLIAlts")
+    local perfOk = pcall(function() self:PrintPerf(avgMs, minMs, maxMs, measuredSamples) end)
+    Assert(perfOk == true, "Perf: PrintPerf executes cleanly with benchmark args")
+    local perfAutoOk = pcall(function() self:PrintPerf() end)
+    Assert(perfAutoOk == true, "Perf: PrintPerf executes cleanly in automatic benchmark mode")
+
+    -- 39c. Event Coalescing for ZONE_CHANGED* and QUEST_LOG_UPDATE
+    Assert(self.ScheduleZoneChange ~= nil, "Coalesce: ScheduleZoneChange API exists")
+    Assert(self.ScheduleQuestLogUpdate ~= nil, "Coalesce: ScheduleQuestLogUpdate API exists")
+    local zoneOk = pcall(function()
+        self:ScheduleZoneChange()
+        self:ScheduleZoneChange()
+    end)
+    Assert(zoneOk == true, "Coalesce: ScheduleZoneChange coalesces successive calls without error")
+
+    local questOk = pcall(function()
+        self:ScheduleQuestLogUpdate()
+        self:ScheduleQuestLogUpdate()
+    end)
+    Assert(questOk == true, "Coalesce: ScheduleQuestLogUpdate coalesces successive calls without error")
+
+    -- 39d. ForeverAlts.toc integrity: selftest.lua excluded from game client TOC
+    if io and io.open then
+        local tocFile = io.open("ForeverAlts.toc", "r")
+        if tocFile then
+            local content = tocFile:read("*a")
+            tocFile:close()
+            Assert(content:find("tests/selftest.lua") == nil,
+                "TOC: tests/selftest.lua is excluded from ForeverAlts.toc production load order")
+        end
+    end
+
     -- Restore master state
     if masterState.db then
         CLIAltsDB = masterState.db
@@ -3917,7 +3962,7 @@ function CLIAlts:RunSelfTest()
     end
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine, Beta Tab & Consolidated Circular Gauges, Tab 9 Embedded Settings Navigation Panel Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine, Beta Tab & Consolidated Circular Gauges, Tab 9 Embedded Settings Navigation Panel Engine, Performance Profiling & Event Coalescing)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

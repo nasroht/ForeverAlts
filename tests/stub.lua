@@ -361,6 +361,12 @@ C_Item = C_Item or {
 
 -- 3. WoW System & Timer APIs
 GetTime = GetTime or function() return os.time() end
+debugprofilestop = debugprofilestop or function()
+    if os and os.clock then
+        return os.clock() * 1000
+    end
+    return ((os and os.time and os.time()) or 0) * 1000
+end
 WOW_PROJECT_ID = WOW_PROJECT_ID or nil
 WOW_PROJECT_MAINLINE = WOW_PROJECT_MAINLINE or 1
 WOW_PROJECT_CLASSIC = WOW_PROJECT_CLASSIC or 2

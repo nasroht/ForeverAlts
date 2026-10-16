@@ -15,4 +15,3 @@ theme.lua
 minimap.lua
 ui.lua
 core.lua
-tests/selftest.lua

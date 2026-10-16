@@ -56,12 +56,12 @@ end
 
 local origRender = CLIAlts.Render
 if origRender then
-    CLIAlts.Render = function(self, ...)
+    CLIAlts.Render = function(self, force, ...)
         local t0 = (debugprofilestop and debugprofilestop()) or 0
-        local r1, r2, r3 = origRender(self, ...)
+        local r1, r2, r3 = origRender(self, force, ...)
         if debugprofilestop then
             local dt = debugprofilestop() - t0
-            if (self.mainFrame and self.mainFrame:IsShown()) or dt > 0.05 then
+            if (self.mainFrame and self.mainFrame:IsShown()) or force or dt > 0.05 then
                 RecordPerfMetric("render", dt)
             end
         end
@@ -69,27 +69,71 @@ if origRender then
     end
 end
 
-function CLIAlts:PrintPerf()
+function CLIAlts:MeasureRenderPerf(samples)
+    samples = samples or 5
+    if not self.mainFrame and self.CreateModernMainFrame then
+        self:CreateModernMainFrame()
+    end
+    -- Warmup pass (forcing render even if frame hidden)
+    if self.Render then
+        self:Render(true)
+    end
+
+    local totalMs = 0
+    local minMs = 999999
+    local maxMs = 0
+    for _ = 1, samples do
+        local t0 = (debugprofilestop and debugprofilestop()) or 0
+        if self.Render then
+            self:Render(true)
+        end
+        local t1 = (debugprofilestop and debugprofilestop()) or 0
+        local dt = t1 - t0
+        totalMs = totalMs + dt
+        if dt < minMs then minMs = dt end
+        if dt > maxMs then maxMs = dt end
+    end
+    local avgMs = totalMs / samples
+    RecordPerfMetric("render", avgMs)
+    return avgMs, minMs, maxMs, samples
+end
+
+function CLIAlts:PrintPerf(liveAvg, liveMin, liveMax, samples)
+    if not liveAvg and self.MeasureRenderPerf then
+        liveAvg, liveMin, liveMax, samples = self:MeasureRenderPerf(5)
+    end
     if UpdateAddOnMemoryUsage then
         pcall(UpdateAddOnMemoryUsage)
     elseif C_AddOns and C_AddOns.UpdateAddOnMemoryUsage then
         pcall(C_AddOns.UpdateAddOnMemoryUsage)
     end
-    local memKB = (GetAddOnMemoryUsage and GetAddOnMemoryUsage(addonName or "clialts"))
-        or (C_AddOns and C_AddOns.GetAddOnMemoryUsage and C_AddOns.GetAddOnMemoryUsage(addonName or "clialts"))
+    local addonId = addonName or "ForeverAlts"
+    local memKB = (GetAddOnMemoryUsage and GetAddOnMemoryUsage(addonId))
+        or (C_AddOns and C_AddOns.GetAddOnMemoryUsage and C_AddOns.GetAddOnMemoryUsage(addonId))
+        or (GetAddOnMemoryUsage and GetAddOnMemoryUsage("clialts"))
         or 0
     local p = self.perfData or {}
     local collectStr = (p.collectCount and p.collectCount > 0)
         and string.format("%.2f ms (%d samples)", p.collectMs or 0, p.collectCount)
         or "N/A (no samples)"
     local renderStr = (p.renderCount and p.renderCount > 0)
-        and string.format("%.2f ms (%d samples)", p.renderMs or 0, p.renderCount)
+        and string.format("%.2f ms (EMA across %d calls)", p.renderMs or 0, p.renderCount)
         or "N/A (no samples)"
 
-    self:Print("--- Performance Metrics (Exponential Moving Avg) ---")
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Collect: %s", collectStr))
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Render:  %s", renderStr))
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Memory:  %.1f KB (%.2f MB)", memKB, memKB / 1024))
+    self:Print("--- Performance Benchmark (debugprofilestop) ---")
+    if liveAvg then
+        DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Active Render() Benchmark: %.3f ms (min: %.3f ms, max: %.3f ms over %d runs)",
+            liveAvg, liveMin or liveAvg, liveMax or liveAvg, samples or 1))
+    end
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Moving Average Render:     %s", renderStr))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Data Collection:           %s", collectStr))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Addon Memory:              %.1f KB (%.2f MB)", memKB, memKB / 1024))
+
+    if liveAvg and liveAvg > 16.0 then
+        DEFAULT_CHAT_FRAME:AddMessage("  * Recommendation: Per-row derived caching advised (frame time exceeds 16ms budget).")
+    elseif liveAvg then
+        DEFAULT_CHAT_FRAME:AddMessage("  * Efficiency: Excellent (< 1ms). Per-row derived caching not needed.")
+    end
 end
 
 -- ----------------------------------------------------------------------------
@@ -169,6 +213,32 @@ function CLIAlts:ScheduleInventoryScan(scanBank)
         if CLIAlts.RequestRender then
             CLIAlts:RequestRender()
         end
+    end)
+end
+
+local zoneChangeTimer = nil
+
+function CLIAlts:ScheduleZoneChange()
+    if zoneChangeTimer then return end
+    zoneChangeTimer = true
+    self:CollectCurrentCharacter()
+    self:RequestRender()
+    SafeAfter(1.0, function()
+        zoneChangeTimer = nil
+        CLIAlts:CollectCurrentCharacter(false, true)
+        CLIAlts:RequestRender()
+    end)
+end
+
+local questLogTimer = nil
+
+function CLIAlts:ScheduleQuestLogUpdate()
+    if questLogTimer then return end
+    questLogTimer = true
+    SafeAfter(0.3, function()
+        questLogTimer = nil
+        CLIAlts:CollectCurrentCharacter()
+        CLIAlts:RequestRender()
     end)
 end
 
@@ -305,11 +375,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:RequestRender()
 
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" or event == "ZONE_CHANGED_INDOORS" then
-        CLIAlts:CollectCurrentCharacter()
-        SafeAfter(1.0, function()
-            CLIAlts:CollectCurrentCharacter(false, true)
-            CLIAlts:RequestRender()
-        end)
+        CLIAlts:ScheduleZoneChange()
 
     elseif event == "SKILL_LINES_CHANGED" or event == "SPELLS_CHANGED" or event == "CHAT_MSG_SKILL" or event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_UPDATE" or event == "CRAFT_SHOW" or event == "CRAFT_UPDATE" then
         CLIAlts:CollectCurrentCharacter()
@@ -320,8 +386,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         CLIAlts:RequestRender()
 
     elseif event == "QUEST_TURNED_IN" or event == "QUEST_LOG_UPDATE" or event == "QUEST_FINISHED" then
-        CLIAlts:CollectCurrentCharacter()
-        CLIAlts:RequestRender()
+        CLIAlts:ScheduleQuestLogUpdate()
 
     elseif event == "BANKFRAME_OPENED" then
         CLIAlts.isBankOpen = true

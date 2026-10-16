@@ -93,12 +93,22 @@ Configure your chat layout once on your main character, then replicate it across
 
 ---
 
-## Dedicated Settings Dialog
+## Dedicated Settings & 9 Integrated Tabs
 
-Access the settings modal via `[CONFIG]`, `/fa config`, or `/fa settings`:
+Access settings via `[CONFIG]`, the sidebar/header tab, `/fa config`, or `/fa settings`:
 
+- **9 Dashboard Navigation Views**:
+  1. **Overview** (`/fa 1`): Roster summary with class, level in initial square, rest progress bar, status pill, and gold.
+  2. **Forever Route** (`/fa 2`): Smart rotation recommendations, usable rested ranking, cohort tiers (`CORE`, `RESERVE`, `BANK`).
+  3. **Rested XP** (`/fa 3`): Real-time offline rest accrual calibrated for Well Rested perks (Ranks 0–5, up to 180% cap), time-to-cap, and waste tracking.
+  4. **Professions** (`/fa 4`): Phase profession milestones (75/150/225/300) and recipes.
+  5. **Economy** (`/fa 5`): Total account wealth, liquid gold across alts, and transaction delta tracker.
+  6. **Cooldowns & Locks** (`/fa 6`): Trade cooldowns (Transmutes, Mooncloth) and raid/dungeon instance reset timers.
+  7. **Mail Routing** (`/fa 7`): Supply chain auto-routing for crafting trades with 1-click mailbox auto-fill and cross-faction isolation.
+  8. **Beta Tab** (`/fa 8`): Consolidated dashboard featuring dual 44px circular gauges (Level XP & Rested XP) and coin wealth.
+  9. **Settings & Preferences** (`/fa 9`): Full integrated configuration panel.
 - **Theme Palette**: Choose between 7 CRT phosphor themes (`Amber`, `Green`, `Cyan`, `Monochrome`, `Colorblind Safe`, `Synthwave`, `Dracula`).
-- **Display Scaling & Font Size**: Adjust UI scale (70%–180%) and monospace font size (12px–22px) with live previews.
+- **Display Scaling & Font Size**: Adjust UI scale (80%–145%) and monospace font size (12px–24px) with live previews.
 - **Audio & Visual Preferences**: Toggle sound effects, login alert digests, minimap button, and bag sort button.
 - **Chat Layout Management**: Snapshot and clone chat settings between characters.
 
@@ -125,13 +135,14 @@ Type into the dashboard terminal prompt (`> `) or in standard chat (`/fa` or `/f
 | Command | Action |
 | :--- | :--- |
 | `/fa` | Toggle the main alt monitor dashboard |
-| `/fa [1-7]` | Switch directly to a specific tab (Overview, Route, Rested, Profs, Gold, CDs, Mail) |
-| `/fa config` | Open the dedicated Settings & Preferences Dialog |
+| `/fa [1-9]` | Switch directly to a specific tab (Overview, Route, Rested, Profs, Economy, CDs, Mail, Beta, Settings) |
+| `/fa config` | Open the integrated Settings & Preferences view (Tab 9) |
 | `/fa tour` | Launch the interactive first-run onboarding tour |
 | `/fa compact` | Toggle 680px compact mode |
 | `/fa theme [name]` | Cycle or set phosphor theme |
-| `/fa scale <val>` | Adjust UI scale (`0.7` to `1.8`) |
-| `/fa font <size>` | Set monospace font size (`12` to `22`) |
+| `/fa scale <val>` | Adjust UI scale (`0.8` to `1.45`) |
+| `/fa font <size>` | Set monospace font size (`12` to `24`) |
+| `/fa perf` | Run active benchmark of `Render()` with `debugprofilestop()` and print memory usage |
 | `/fa copychat <alt>` | Copy chat window layout and channels from another character |
 | `/fa sort <col>` | Sort table by column key (`role`, `prof`, `name`, `level`, `gold`, `rested`, `waste`, `xp`) |
 | `/fa filter <query>`| Filter characters by faction, level, class, or profession |

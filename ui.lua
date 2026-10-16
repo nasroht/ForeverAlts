@@ -5067,12 +5067,12 @@ function CLIAlts:RequestRender()
     end
 end
 
-function CLIAlts:Render()
+function CLIAlts:Render(force)
     renderDirty = false
     if self.UpdateLDB then
         self:UpdateLDB()
     end
-    if not mainFrame or not mainFrame:IsShown() then return end
+    if not mainFrame or (not force and not mainFrame:IsShown()) then return end
 
     local ok, err = pcall(function()
         if (not rowFrames or #rowFrames == 0) and mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
