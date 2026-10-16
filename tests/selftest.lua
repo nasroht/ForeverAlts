@@ -1558,6 +1558,7 @@ function CLIAlts:RunSelfTest()
         local btnFont20 = sd.fontButtons[5]
         btnFont20:GetScript("OnClick")(btnFont20)
         Assert(CLIAltsDB.settings.fontSize == 20, "SettingsUI: Clicking font button updates fontSize to 20")
+        Assert(CLIAltsDB.settings.scale >= 1.15, "SettingsUI: Increasing font size increases panel scale")
 
         -- Test clicking scale button (e.g. 115%)
         local btnScale115 = sd.scaleButtons[4]

@@ -1037,17 +1037,71 @@ function CLIAlts:RestoreWindowPosition(frame)
 end
 
 -- ----------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Scale & Font Size API
 -- ----------------------------------------------------------------------------
-function CLIAlts:SetScale(scale)
+local FONT_TO_SCALE = {
+    [12] = 0.80,
+    [14] = 0.90,
+    [16] = 1.00,
+    [18] = 1.00,
+    [20] = 1.15,
+    [22] = 1.30,
+    [24] = 1.45,
+}
+
+local SCALE_TO_FONT = {
+    [0.80] = 12,
+    [0.90] = 14,
+    [1.00] = 18,
+    [1.15] = 20,
+    [1.30] = 22,
+    [1.45] = 24,
+}
+
+function CLIAlts:GetScaleForFontSize(size)
+    size = tonumber(size) or DEFAULT_FONT_SIZE
+    size = math.min(24, math.max(12, size))
+    if FONT_TO_SCALE[size] then
+        return FONT_TO_SCALE[size]
+    end
+    if size <= 18 then
+        return 0.8 + ((size - 12) / (18 - 12)) * (1.0 - 0.8)
+    else
+        return 1.0 + ((size - 18) / (24 - 18)) * (1.45 - 1.0)
+    end
+end
+
+function CLIAlts:GetFontSizeForScale(scale)
+    scale = tonumber(scale) or 1.0
+    scale = math.min(1.45, math.max(0.8, scale))
+    local bestFont = 18
+    local bestDiff = 999
+    for sc, sz in pairs(SCALE_TO_FONT) do
+        local diff = math.abs(sc - scale)
+        if diff < bestDiff then
+            bestDiff = diff
+            bestFont = sz
+        end
+    end
+    return bestFont
+end
+
+function CLIAlts:SetScale(scale, skipFont)
     scale = tonumber(scale) or 1.0
     scale = math.min(1.8, math.max(0.7, scale))
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.scale = scale
     end
+    if not skipFont then
+        local matchedFont = self:GetFontSizeForScale(scale)
+        if CLIAltsDB and CLIAltsDB.settings then
+            CLIAltsDB.settings.fontSize = matchedFont
+        end
+    end
     if mainFrame then
         mainFrame:SetScale(scale)
-        if mainFrame.btnScale then
+        if mainFrame.btnScale and mainFrame.btnScale.label then
             mainFrame.btnScale.label:SetText(string.format("[ SCALE: %d%% ]", math.floor(scale * 100 + 0.5)))
         end
     end
@@ -1066,11 +1120,15 @@ function CLIAlts:CycleScale()
     self:Render()
 end
 
-function CLIAlts:SetFontSize(size)
+function CLIAlts:SetFontSize(size, skipScale)
     size = tonumber(size) or DEFAULT_FONT_SIZE
     size = math.min(24, math.max(12, size))
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.fontSize = size
+    end
+    if not skipScale then
+        local targetScale = self:GetScaleForFontSize(size)
+        self:SetScale(targetScale, true)
     end
     if mainFrame then
         self:UpdateAllFonts(size)
@@ -1082,28 +1140,48 @@ function CLIAlts:UpdateAllFonts(fontSize)
     if not mainFrame then return end
     fontSize = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
 
-    self:SetWidgetFont(mainFrame.topAscii, fontSize)
-    self:SetWidgetFont(mainFrame.titleText, fontSize + 1, "OUTLINE")
-    self:SetWidgetFont(mainFrame.midAscii1, fontSize)
-    self:SetWidgetFont(mainFrame.statusBarText, fontSize)
-    self:SetWidgetFont(mainFrame.midAscii2, fontSize)
-    self:SetWidgetFont(mainFrame.tableTopAscii, fontSize)
-    if mainFrame.headerBorderL then self:SetWidgetFont(mainFrame.headerBorderL, fontSize) end
-    if mainFrame.headerBorderR then self:SetWidgetFont(mainFrame.headerBorderR, fontSize) end
-    for _, hCell in ipairs(mainFrame.headerCells or {}) do
-        self:SetWidgetFont(hCell, fontSize)
-    end
-    self:SetWidgetFont(mainFrame.tableSepAscii, fontSize)
-    self:SetWidgetFont(mainFrame.tableBotAscii, fontSize)
-    self:SetWidgetFont(mainFrame.botAscii, fontSize)
-    self:SetWidgetFont(mainFrame.pageText, fontSize)
-    self:SetWidgetFont(mainFrame.statusTip, fontSize)
+    if mainFrame.isLegacyUI then
+        self:SetWidgetFont(mainFrame.topAscii, fontSize)
+        self:SetWidgetFont(mainFrame.titleText, fontSize + 1, "OUTLINE")
+        self:SetWidgetFont(mainFrame.midAscii1, fontSize)
+        self:SetWidgetFont(mainFrame.statusBarText, fontSize)
+        self:SetWidgetFont(mainFrame.midAscii2, fontSize)
+        self:SetWidgetFont(mainFrame.tableTopAscii, fontSize)
+        if mainFrame.headerBorderL then self:SetWidgetFont(mainFrame.headerBorderL, fontSize) end
+        if mainFrame.headerBorderR then self:SetWidgetFont(mainFrame.headerBorderR, fontSize) end
+        for _, hCell in ipairs(mainFrame.headerCells or {}) do
+            self:SetWidgetFont(hCell, fontSize)
+        end
+        self:SetWidgetFont(mainFrame.tableSepAscii, fontSize)
+        self:SetWidgetFont(mainFrame.tableBotAscii, fontSize)
+        self:SetWidgetFont(mainFrame.botAscii, fontSize)
+        self:SetWidgetFont(mainFrame.pageText, fontSize)
+        self:SetWidgetFont(mainFrame.statusTip, fontSize)
 
-    for _, row in ipairs(rowFrames) do
-        if row.borderL then self:SetWidgetFont(row.borderL, fontSize) end
-        if row.borderR then self:SetWidgetFont(row.borderR, fontSize) end
-        for _, cell in ipairs(row.cells or {}) do
-            self:SetWidgetFont(cell, fontSize)
+        for _, row in ipairs(rowFrames) do
+            if row.borderL then self:SetWidgetFont(row.borderL, fontSize) end
+            if row.borderR then self:SetWidgetFont(row.borderR, fontSize) end
+            for _, cell in ipairs(row.cells or {}) do
+                self:SetWidgetFont(cell, fontSize)
+            end
+        end
+    else
+        -- Modern UI: Keep fonts proportional and bound within column widths
+        for _, row in ipairs(rowFrames) do
+            if row.cells then
+                for _, cell in ipairs(row.cells) do
+                    self:SetWidgetFont(cell, 13)
+                end
+            end
+            if row.nameLine then self:SetWidgetFont(row.nameLine, 16, "OUTLINE") end
+            if row.subLine then self:SetWidgetFont(row.subLine, 13, "") end
+            if row.goldText then self:SetWidgetFont(row.goldText, 16, "OUTLINE") end
+            if row.restLabel then self:SetWidgetFont(row.restLabel, 13, "OUTLINE") end
+            if row.colRestLabel then self:SetWidgetFont(row.colRestLabel, 12, "OUTLINE") end
+            if row.statusPillText then self:SetWidgetFont(row.statusPillText, 12, "OUTLINE") end
+            if row.betaPoolText then self:SetWidgetFont(row.betaPoolText, 13, "OUTLINE") end
+            if row.betaRateText then self:SetWidgetFont(row.betaRateText, 15, "") end
+            if row.classRingInitial then self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE") end
         end
     end
 end
@@ -5903,7 +5981,8 @@ function CLIAlts:Render(force)
     local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
     local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
     local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v7"
+    local curFontSz = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":" .. curFontSz .. ":v8"
     local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
     if relayoutHeaders and mainFrame.headerFrame then
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
@@ -6179,7 +6258,8 @@ function CLIAlts:Render(force)
                         if row.colRestLabel and activeTab ~= 3 then row.colRestLabel:Hide() end
 
                         local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v7"
+                        local curFontSz = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
+                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":" .. curFontSz .. ":v8"
                         local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                         if relayoutRow then
                             row.lastLayoutKey = rowLayoutKey
@@ -8840,11 +8920,11 @@ function CLIAlts:CreateSettingsPanel()
             table.insert(sd.themeButtons, btn)
         end
 
-        -- Section 2: Terminal Font Size
+        -- Section 2: Interface Font Size
         local secFont = sd:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(secFont, 13, "OUTLINE")
         secFont:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -164)
-        secFont:SetText("[ TERMINAL FONT SIZE ]")
+        secFont:SetText("[ INTERFACE FONT SIZE ]")
         sd.secFont = secFont
 
         local fontSizes = { 12, 14, 16, 18, 20, 22, 24 }
@@ -8864,7 +8944,7 @@ function CLIAlts:CreateSettingsPanel()
         local secScale = sd:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(secScale, 13, "OUTLINE")
         secScale:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -224)
-        secScale:SetText("[ DISPLAY SCALE ]")
+        secScale:SetText("[ DISPLAY & PANEL SCALE ]")
         sd.secScale = secScale
 
         local scaleList = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }

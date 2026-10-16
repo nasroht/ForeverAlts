@@ -749,7 +749,8 @@ local function SlashHandler(msg)
             local sz = tonumber(arg)
             if sz and sz >= 12 and sz <= 24 then
                 CLIAlts:SetFontSize(sz)
-                CLIAlts:Print(string.format("Terminal font size set to %dpx.", sz))
+                local sc = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+                CLIAlts:Print(string.format("Interface font size set to %dpx (panel scale: %d%%).", sz, math.floor(sc * 100 + 0.5)))
             else
                 CLIAlts:Print("Usage: |cff00ff66/clialts font <12-24>|r")
             end
