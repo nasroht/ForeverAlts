@@ -74,9 +74,11 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:SetBackdrop(...) end
     function frame:SetBackdropColor(r, g, b, a)
         if r == nil then error("bad argument #1 to 'SetVertexColor' (Usage: self:SetVertexColor(color [, a]))", 2) end
+        self.backdropColor = { r, g, b, a }
     end
     function frame:SetBackdropBorderColor(r, g, b, a)
         if r == nil then error("bad argument #1 to 'SetVertexColor' (Usage: self:SetVertexColor(color [, a]))", 2) end
+        self.backdropBorderColor = { r, g, b, a }
     end
     function frame:ClearAllPoints(...) end
     function frame:SetAllPoints(...) end

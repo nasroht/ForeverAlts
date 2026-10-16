@@ -629,7 +629,7 @@ function CLIAlts:RunSelfTest()
         self:Render()
 
         Assert(r1.nameLine:GetText() == "Thor", "RowList: Row 1 displays name 'Thor'")
-        Assert(r1.subLine:GetText() == "47 Orc Warrior · Horde", "RowList: Row 1 displays subline '47 Orc Warrior · Horde'")
+        Assert(r1.subLine:GetText() == "Orc Warrior · Horde", "RowList: Row 1 displays subline 'Orc Warrior · Horde'")
         Assert(r1.classRingInitial:GetText() == "47", "RowList: Row 1 displays level '47' in class square")
         Assert(r1.goldText:GetText():find("412") ~= nil, "RowList: Row 1 displays formatted gold coins")
         Assert(r1.gaugeXP ~= nil and r1.gaugeXP:IsShown(), "RowList: Row 1 displays level XP circular gauge")
