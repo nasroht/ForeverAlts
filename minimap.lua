@@ -129,14 +129,14 @@ function CLIAlts:CreateMinimapButton()
             if button == "RightButton" then
                 CLIAlts:Refresh()
                 local summary = CLIAlts:GetAccountSummary()
-                DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[CLIAlts]|r Data refreshed. Tracked alts: %d.", summary.totalAlts))
+                DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[ForeverAlts]|r Data refreshed. Tracked alts: %d.", summary.totalAlts))
             else
                 CLIAlts:CollectCurrentCharacter()
                 CLIAlts:Toggle()
             end
         end)
         if not ok then
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r Click error: %s", tostring(err)))
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[ForeverAlts]|r Click error: %s", tostring(err)))
         end
     end)
 
@@ -157,7 +157,7 @@ function CLIAlts:CreateMinimapButton()
         local hb = themeData and themeData.highlight[3] or 0.6
 
         GameTooltip:AddLine("+-----------------------------------------------+", br, bgCol, bb)
-        GameTooltip:AddLine("|  .:: [ CLIALTS ] - RETRO ALT MONITOR ::.     |", hr, hg, hb)
+        GameTooltip:AddLine("|  .:: [ FOREVERALTS ] - ALT MONITOR ::.        |", hr, hg, hb)
         GameTooltip:AddLine("+-----------------------------------------------+", br, bgCol, bb)
         GameTooltip:AddDoubleLine("| Total Tracked Alts:", string.format("%d alts |", summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)
         GameTooltip:AddDoubleLine("| Total Account Wealth:", string.format("%s |", moneyStr), 0.7, 0.7, 0.7, 1, 1, 1)
@@ -273,11 +273,11 @@ function CLIAlts:InitLDB()
     local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
     if not LDB then return nil end
 
-    self.ldbObject = LDB:NewDataObject("CLIAlts", {
+    self.ldbObject = LDB:NewDataObject("ForeverAlts", {
         type = "data source",
-        text = self.GetLDBText and self:GetLDBText() or "CLIAlts",
+        text = self.GetLDBText and self:GetLDBText() or "ForeverAlts",
         icon = "Interface\\Icons\\INV_Misc_Book_09",
-        label = "CLIAlts",
+        label = "ForeverAlts",
         OnClick = function(clickedframe, button)
             if button == "LeftButton" then
                 if CLIAlts.Toggle then CLIAlts:Toggle() end
@@ -289,7 +289,7 @@ function CLIAlts:InitLDB()
             if not tooltip or not tooltip.AddLine then return end
             local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
             local hr, hg, hb = t and t.highlight[1] or 0.2, t and t.highlight[2] or 1, t and t.highlight[3] or 0.6
-            tooltip:AddLine("CLIAlts", hr, hg, hb)
+            tooltip:AddLine("ForeverAlts", hr, hg, hb)
             local cappedCount, totalWastedXP
             if CLIAlts.GetLDBText then
                 local _

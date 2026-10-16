@@ -4,9 +4,11 @@
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable or _G["CLIAlts"] or {}
+local CLIAlts = addonTable or _G["CLIAlts"] or _G["ForeverAlts"] or {}
 _G["CLIAlts"] = CLIAlts
 _G["clialts"] = CLIAlts
+_G["ForeverAlts"] = CLIAlts
+_G["foreveralts"] = CLIAlts
 
 -- Design Tokens (Base Phase 1 Tokens)
 CLIAlts.TOKENS = {

@@ -5,22 +5,24 @@
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable or _G["CLIAlts"] or {}
+local CLIAlts = addonTable or _G["CLIAlts"] or _G["ForeverAlts"] or {}
 _G["CLIAlts"] = CLIAlts
 _G["clialts"] = CLIAlts
+_G["ForeverAlts"] = CLIAlts
+_G["foreveralts"] = CLIAlts
 
 function CLIAlts:Print(msg)
-    local tag = "|cffffb000[CLIAlts]|r"
+    local tag = "|cffffb000[ForeverAlts]|r"
     if self.GetTheme then
         local t = self:GetTheme()
         if t and t.primaryHex then
-            tag = string.format("|cff%s[CLIAlts]|r", t.primaryHex)
+            tag = string.format("|cff%s[ForeverAlts]|r", t.primaryHex)
         end
     end
     if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
         DEFAULT_CHAT_FRAME:AddMessage(string.format("%s %s", tag, msg or ""))
     else
-        print(string.format("[CLIAlts] %s", msg or ""))
+        print(string.format("[ForeverAlts] %s", msg or ""))
     end
 end
 
@@ -351,7 +353,7 @@ function CLIAlts:BackupDB(reason)
     backup._backupTime = time()
     backup._backupReason = reason or "manual"
     CLIAltsDB.backup = backup
-    return true, "Backup saved to CLIAltsDB.backup."
+    return true, "Backup saved to ForeverAltsDB.backup."
 end
 
 function CLIAlts:RestoreDB()
@@ -2226,7 +2228,7 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
     end
 
     if not foundChar then
-        return false, string.format("Character '%s' not found in CLIAlts database", targetName)
+        return false, string.format("Character '%s' not found in ForeverAlts database", targetName)
     end
 
     local normalizedTier = foundChar.tier or "UNASSIGNED"
@@ -3120,7 +3122,7 @@ function CLIAlts:CheckCappedAltsNotice()
             local coloredName = self:ColorizePlayerName(c.name, c.classFile)
             table.insert(parts, string.format("%s (~%s XP lost)", coloredName, self:FormatNumber(capped[i].wastedXP)))
         end
-        self:Print(string.format("|cffffaa00Notice:|r %d alts capped (%s). Type |cff00ff66/ca next|r for priority.",
+        self:Print(string.format("|cffffaa00Notice:|r %d alts capped (%s). Type |cff00ff66/fa next|r for priority.",
             #capped, table.concat(parts, ", ")))
     end
 end
@@ -3654,7 +3656,7 @@ function CLIAlts:PrintDungeonReadiness(dungeonQuery)
     if validTag then
         local dng = self.DUNGEON_DATA[validTag]
         self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", top))
-        self:Print(string.format("|cff%sCLIALTS :: %s (%s) READINESS CHECK|r", t.highlightHex or "ffd34e", dng.name:upper(), dng.tag))
+        self:Print(string.format("|cff%sFOREVERALTS :: %s (%s) READINESS CHECK|r", t.highlightHex or "ffd34e", dng.name:upper(), dng.tag))
         self:Print(string.format("  Zone: %s | Faction: %s | Level Range: %d-%d (Rec: %d)", dng.zone, dng.faction, dng.minLevel, dng.maxLevel, dng.recLevel))
         self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", sep))
 
@@ -3679,7 +3681,7 @@ function CLIAlts:PrintDungeonReadiness(dungeonQuery)
         return summary, true
     else
         self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", top))
-        self:Print(string.format("|cff%sCLIALTS :: DUNGEON QUEST READINESS OVERVIEW (WOW FOREVER)|r", t.highlightHex or "ffd34e"))
+        self:Print(string.format("|cff%sFOREVERALTS :: DUNGEON QUEST READINESS OVERVIEW (WOW FOREVER)|r", t.highlightHex or "ffd34e"))
         self:Print("  Instances: RFC (13-18), WC (17-24), DM (17-24), SFK (22-30), BFD (22-30)")
         self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", sep))
 
@@ -3705,7 +3707,7 @@ function CLIAlts:PrintDungeonReadiness(dungeonQuery)
         end
 
         self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", bottom))
-        self:Print("Tip: Type |cff00ff66/clialts dungeon <rfc|wc|dm|sfk|bfd>|r for single instance details.")
+        self:Print("Tip: Type |cff00ff66/fa dungeon <rfc|wc|dm|sfk|bfd>|r for single instance details.")
         return "Dungeon overview printed.", true
     end
 end
@@ -3973,7 +3975,7 @@ end
 function CLIAlts:ToggleCharacterCooking(charOrName)
     local char = self:ResolveCharacter(charOrName)
     if not char then
-        self:Print("Character not found. Usage: |cff00ff66/clialts cook <name>|r")
+        self:Print("Character not found. Usage: |cff00ff66/fa cook <name>|r")
         return false
     end
     char.routeCooking = not char.routeCooking
@@ -3988,7 +3990,7 @@ end
 function CLIAlts:ToggleCharacterFirstAid(charOrName)
     local char = self:ResolveCharacter(charOrName)
     if not char then
-        self:Print("Character not found. Usage: |cff00ff66/clialts firstaid <name>|r")
+        self:Print("Character not found. Usage: |cff00ff66/fa firstaid <name>|r")
         return false
     end
     char.routeFirstAid = not char.routeFirstAid
@@ -4720,7 +4722,7 @@ function CLIAlts:IgnoreMailItem(itemIdentifier)
     end
 
     if not itemIdentifier or itemIdentifier == "" then
-        self:Print("Usage: |cff00ff66/clialts mailignore <[Item Link] or Item Name or Item ID>|r (or hold item on cursor)")
+        self:Print("Usage: |cff00ff66/fa mailignore <[Item Link] or Item Name or Item ID>|r (or hold item on cursor)")
         return false
     end
 
@@ -4786,7 +4788,7 @@ function CLIAlts:UnignoreMailItem(itemIdentifier)
     end
 
     if not itemIdentifier or itemIdentifier == "" then
-        self:Print("Usage: |cff00ff66/clialts mailunignore <[Item Link] or Item Name or Item ID>|r")
+        self:Print("Usage: |cff00ff66/fa mailunignore <[Item Link] or Item Name or Item ID>|r")
         return false
     end
 
@@ -4888,7 +4890,7 @@ function CLIAlts:ListIgnoredMailItems()
     for _, itemStr in ipairs(unique) do
         self:Print(string.format("  |cffffb547*|r %s", itemStr))
     end
-    self:Print("|cffa9a08cType /ca mailunignore <item> to remove an item.|r")
+    self:Print("|cffa9a08cType /fa mailunignore <item> to remove an item.|r")
     return #unique
 end
 
@@ -5209,7 +5211,7 @@ function CLIAlts:PrintMailRouting()
     local bottom = string.rep("=", 72)
 
     self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", top))
-    self:Print(string.format("|cff%sCLIALTS :: INTER-ALT MAIL & SUPPLY CHAIN ROUTER|r", t.highlightHex or "ffd34e"))
+    self:Print(string.format("|cff%sFOREVERALTS :: INTER-ALT MAIL & SUPPLY CHAIN ROUTER|r", t.highlightHex or "ffd34e"))
     self:Print("  Scans your bags for materials & BoE goods destined for other alts.")
     self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("-", 72)))
 
@@ -5317,7 +5319,7 @@ function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
     if SendMailSubjectEditBox then
         local primaryReason = chosenGroup.items[1] and chosenGroup.items[1].reason or "Supplies"
         local primaryCat = chosenGroup.items[1] and chosenGroup.items[1].category or "Materials"
-        local subj = string.format("CLIAlts: %s", (primaryReason and primaryReason ~= "") and primaryReason or primaryCat)
+        local subj = string.format("ForeverAlts: %s", (primaryReason and primaryReason ~= "") and primaryReason or primaryCat)
         SendMailSubjectEditBox:SetText(subj)
     end
 
@@ -5555,7 +5557,7 @@ function CLIAlts:PrintLegacyPointStatus(arg)
     local bottom = string.rep("=", 72)
 
     self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", top))
-    self:Print(string.format("|cff%sCLIALTS :: LEGACY POINT (LP) PROGRESS TRACKER (WOW FOREVER)|r", t.highlightHex or "ffd34e"))
+    self:Print(string.format("|cff%sFOREVERALTS :: LEGACY POINT (LP) PROGRESS TRACKER (WOW FOREVER)|r", t.highlightHex or "ffd34e"))
     local modeStr = data.isManual and string.format("|cff%s[MANUAL OVERRIDE: %s LP]|r", t.pendingHex or "ffb547", tostring(data.manualLP)) or "|cff00ff66[AUTO SCANNED]|r"
     self:Print(string.format("  Current Account LP: |cffffffff%.1f LP|r %s", data.effectiveLP, modeStr))
     self:Print(string.format("  Next Unlock Tier:   |cffffffff%s|r (%d%% complete)", data.tierName, data.percent))
@@ -5578,7 +5580,7 @@ function CLIAlts:PrintLegacyPointStatus(arg)
     end
 
     self:Print(string.format("|cff%s%s|r", t.borderHex or "f2c94c", bottom))
-    self:Print("Tip: Type |cff00ff66/clialts lp <points>|r to override, or |cff00ff66/clialts lp auto|r to reset.")
+    self:Print("Tip: Type |cff00ff66/fa lp <points>|r to override, or |cff00ff66/fa lp auto|r to reset.")
     return string.format("Account LP: %.1f/%d (%s)", data.effectiveLP, data.nextTier, data.tierName), true
 end
 
@@ -5807,10 +5809,10 @@ end
 function CLIAlts:PrintWatchlist()
     local summary = self:GetWatchlistSummary()
     if #summary == 0 then
-        self:Print("Watchlist is empty. Use |cff00ff66/ca watch <Item Link, ID, or Name>|r to track specific items across alts.")
+        self:Print("Watchlist is empty. Use |cff00ff66/fa watch <Item Link, ID, or Name>|r to track specific items across alts.")
         return
     end
-    self:Print("--- CLIAlts Watchlist Summary ---")
+    self:Print("--- ForeverAlts Watchlist Summary ---")
     for _, entry in ipairs(summary) do
         local parts = {}
         for _, b in ipairs(entry.breakdown) do
@@ -5977,16 +5979,16 @@ function CLIAlts:ToggleAlert(category, explicitState)
 end
 
 function CLIAlts:PrintAlertStatus()
-    self:Print("--- Login Alert Settings (/ca alerts <category>) ---")
+    self:Print("--- Login Alert Settings (/fa alerts <category>) ---")
     local cd = self:IsAlertEnabled("cooldowns") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
     local rest = self:IsAlertEnabled("rested") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
     local mail = self:IsAlertEnabled("mail") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
     local lock = self:IsAlertEnabled("lockouts") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Ready Cooldowns: %s |cff888888(/ca alerts cd)|r", cd))
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Rested Capped:   %s |cff888888(/ca alerts rested)|r", rest))
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Mail Expiry:     %s |cff888888(/ca alerts mail)|r", mail))
-    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Lockouts Reset:  %s |cff888888(/ca alerts locks)|r", lock))
-    DEFAULT_CHAT_FRAME:AddMessage("  |cff888888Commands: /ca alerts [on|off|show|cd|rested|mail|locks]|r")
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Ready Cooldowns: %s |cff888888(/fa alerts cd)|r", cd))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Rested Capped:   %s |cff888888(/fa alerts rested)|r", rest))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Mail Expiry:     %s |cff888888(/fa alerts mail)|r", mail))
+    DEFAULT_CHAT_FRAME:AddMessage(string.format("  * Lockouts Reset:  %s |cff888888(/fa alerts locks)|r", lock))
+    DEFAULT_CHAT_FRAME:AddMessage("  |cff888888Commands: /fa alerts [on|off|show|cd|rested|mail|locks]|r")
 end
 
 function CLIAlts:HandleAlertsCommand(arg)
@@ -6259,7 +6261,7 @@ function CLIAlts:FormatLoginDigestLines(items)
         table.insert(lines, items[2].text)
         local line3 = items[3].compact .. "  |  " .. items[4].compact
         if #items > 4 then
-            line3 = line3 .. string.format("  |  |cff888888+%d more (/ca digest)|r", #items - 4)
+            line3 = line3 .. string.format("  |  |cff888888+%d more (/fa digest)|r", #items - 4)
         end
         table.insert(lines, line3)
     end
@@ -6268,7 +6270,7 @@ end
 
 function CLIAlts:PrintLoginDigest(force)
     local items = self:GetLoginDigestItems()
-    local border = "+-----------------[ CLIAlts :: LOGIN DIGEST ]-----------------+"
+    local border = "+-----------------[ ForeverAlts :: LOGIN DIGEST ]-----------------+"
     local bottom = "+-------------------------------------------------------------+"
 
     if #items == 0 then

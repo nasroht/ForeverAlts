@@ -2075,7 +2075,7 @@ function CLIAlts:RunSelfTest()
         if dp then
             Assert(dp:IsShown() == true, "Dossier: popup is shown")
             local bodyTxt = dp.body and dp.body:GetText() or ""
-            Assert(bodyTxt:find("CLIALTS :: ALT DOSSIER") ~= nil, "Dossier: header rendered in body text")
+            Assert(bodyTxt:find("FOREVERALTS :: ALT DOSSIER") ~= nil or bodyTxt:find("CLIALTS :: ALT DOSSIER") ~= nil, "Dossier: header rendered in body text")
             Assert(bodyTxt:find("ROSTER COHORT") ~= nil, "Dossier: ROSTER COHORT rendered in body text")
             Assert(dp.btnRoleTailor ~= nil, "Dossier: btnRoleTailor created")
             Assert(dp.btnRoleAlch ~= nil, "Dossier: btnRoleAlch created")
@@ -3044,7 +3044,7 @@ function CLIAlts:RunSelfTest()
     Assert(fillWho == "TailorAlt-Forever", "MailAutoFill: Filled recipient TailorAlt-Forever")
     Assert(fillCount == 1, "MailAutoFill: Attached 1 item")
     Assert(SendMailNameEditBox:GetText() == "TailorAlt-Forever", "MailAutoFill: SendMailNameEditBox contains TailorAlt-Forever")
-    Assert(SendMailSubjectEditBox:GetText():find("CLIAlts:") ~= nil, "MailAutoFill: SendMailSubjectEditBox set with CLIAlts prefix")
+    Assert(SendMailSubjectEditBox:GetText():find("ForeverAlts:") ~= nil or SendMailSubjectEditBox:GetText():find("CLIAlts:") ~= nil, "MailAutoFill: SendMailSubjectEditBox set with ForeverAlts prefix")
 
     -- 26b2. Live mode attachment test via PickupContainerItem and ClickSendMailItemButton
     local pickedBag, pickedSlot, clickedSlot

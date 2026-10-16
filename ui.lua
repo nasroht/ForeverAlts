@@ -11,7 +11,7 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 -- ----------------------------------------------------------------------------
 -- Constants & Terminal Configuration
 -- ----------------------------------------------------------------------------
-local FONT_PATH = "Interface\\AddOns\\" .. (addonName or "clialts") .. "\\media\\VT323-Regular.ttf"
+local FONT_PATH = "Interface\\AddOns\\" .. (addonName or "ForeverAlts") .. "\\media\\VT323-Regular.ttf"
 local DEFAULT_FONT_SIZE = 18
 local LINE_WIDTH = 110
 local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
@@ -1916,7 +1916,7 @@ function CLIAlts:ApplyLayoutSize()
 
     -- Top bar layout
     if mainFrame.titleText then
-        mainFrame.titleText:SetText("CLIAlts")
+        mainFrame.titleText:SetText("ForeverAlts")
     end
     if mainFrame.subTitleText then
         mainFrame.subTitleText:SetText("/ ALT MONITOR")
@@ -2095,7 +2095,7 @@ function CLIAlts:CreateLegacyMainFrame()
     local titleText = frame:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(titleText, 17, "OUTLINE")
     titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14)
-    titleText:SetText("CLIAlts")
+    titleText:SetText("ForeverAlts")
     frame.titleText = titleText
 
     local subtitleText = frame:CreateFontString(nil, "OVERLAY")
@@ -2382,7 +2382,7 @@ function CLIAlts:CreateLegacyMainFrame()
         GameTooltip:AddLine(string.format("Rest Speed: |cff00ff66+%d%%|r", r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested Cap: |cff00ff66%d%%|r", 150 + (r * 6)), 0.8, 0.8, 0.8)
         GameTooltip:AddLine("Click to cycle rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Slash cmd: |cff00ff66/clialts perk <0-5>|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Slash cmd: |cff00ff66/fa perk <0-5>|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
@@ -3202,7 +3202,7 @@ function CLIAlts:CreateModernMainFrame()
     local logoText = topBar:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(logoText, 19, "OUTLINE")
     logoText:SetPoint("LEFT", topBar, "LEFT", 18, 0)
-    logoText:SetText("CLIAlts")
+    logoText:SetText("ForeverAlts")
     logoText:SetTextColor(brandR, brandG, brandB)
     frame.logoText = logoText
     frame.titleText = logoText
@@ -3293,7 +3293,7 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Commands: |cff00ff66/ca perk <0-5>|r  |cff00ff66/ca lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Commands: |cff00ff66/fa perk <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
@@ -3751,7 +3751,7 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Commands: |cff00ff66/ca perk <0-5>|r  |cff00ff66/ca lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Commands: |cff00ff66/fa perk <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     restedCard:SetScript("OnLeave", function(self)
@@ -4305,7 +4305,7 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Commands: |cff00ff66/ca perk <0-5>|r  |cff00ff66/ca lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Commands: |cff00ff66/fa perk <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     wellRestedBadge:SetScript("OnLeave", function(self)
@@ -5441,7 +5441,7 @@ function CLIAlts:Render(force)
     }
     local curTabTitle = tabTitles[activeTab] or "OVERVIEW"
     if mainFrame.titleText then
-        mainFrame.titleText:SetText("CLIAlts")
+        mainFrame.titleText:SetText("ForeverAlts")
     end
     if mainFrame.subTitleText then
         mainFrame.subTitleText:SetText(isComp and "/ ALT MONITOR" or "/ ALT MONITOR")
@@ -6564,7 +6564,7 @@ function CLIAlts:Render(force)
     self._cachedMailReadySummary = nil
     if not ok then
         if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r UI Render error: %s", tostring(err)))
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[ForeverAlts]|r UI Render error: %s", tostring(err)))
         end
     end
 end
@@ -7165,7 +7165,7 @@ function CLIAlts:ExecutePromptCommand(input)
 
     elseif cmd == "backup" then
         local ok, msg = self:BackupDB("manual")
-        self:SetPromptFeedback(ok and "Backup saved to CLIAltsDB.backup." or msg, not ok)
+        self:SetPromptFeedback(ok and "Backup saved to ForeverAltsDB.backup." or msg, not ok)
 
     elseif cmd == "restore" then
         local ok, msg = self:RestoreDB()
@@ -7668,7 +7668,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
 
     local ok, renderErr = pcall(function()
         local lines = {}
-        table.insert(lines, string.format("|cff%sCLIALTS :: ALT DOSSIER & RECORD|r", t.highlightHex or "ffd34e"))
+        table.insert(lines, string.format("|cff%sFOREVERALTS :: ALT DOSSIER & RECORD|r", t.highlightHex or "ffd34e"))
         table.insert(lines, string.format("|cff%s%s|r", t.borderHex or "f2c94c", string.rep("=", 68)))
 
         if char.secondaryName and char.secondaryName ~= "" then
@@ -8364,7 +8364,7 @@ function CLIAlts:ShowMailRouteDialog(charData)
     end
     local profText = (#profParts > 0) and table.concat(profParts, " · ") or "No primary professions"
 
-    dlg.title:SetText(string.format("|cff%sCLIAlts :: MAIL ROUTING & SUPPLY CHAIN|r", t.highlightHex or "ffd34e"))
+    dlg.title:SetText(string.format("|cff%sForeverAlts :: MAIL ROUTING & SUPPLY CHAIN|r", t.highlightHex or "ffd34e"))
     dlg.subtitle:SetText(string.format("%s · %s · %s", coloredName, lvlStr, profText))
 
     local curRole, isOverride, autoRole = self:GetCharacterEffectiveSupplyRole(charData)
@@ -8468,7 +8468,7 @@ function CLIAlts:ShowConfirmDelete(char)
         "",
         "Are you sure you want to delete",
         string.format("|cff%s%s|r", t.blockedHex or "ff6b6b", cleanKey),
-        "from the local CLIAlts database?",
+        "from the local ForeverAlts database?",
         "",
     }
     confirmPopup.body:SetText(table.concat(msg, "\n"))
@@ -8503,7 +8503,7 @@ function CLIAlts:ShowConfirmPrunePopup(days, count, names)
         "",
         string.format("Delete |cff%s%d characters|r inactive for %d+ days?", t.blockedHex or "ff6b6b", count, days),
         string.format("|cff%s%s|r", t.pendingHex or "ffb547", sampleStr),
-        "from the local CLIAlts database?",
+        "from the local ForeverAlts database?",
     }
     confirmPopup.body:SetText(table.concat(msg, "\n"))
     confirmPopup:Show()
@@ -8554,46 +8554,46 @@ function CLIAlts:ShowHelpPopup()
 
     local sep = string.rep("-", 68)
     local helpText = {
-        string.format("|cff%s%s|r", t.highlightHex or "ffd34e", "CLIALTS :: QUICK GUIDE & COMMANDS"),
+        string.format("|cff%s%s|r", t.highlightHex or "ffd34e", "FOREVERALTS :: QUICK GUIDE & COMMANDS"),
         string.format("|cff%s%s|r", t.borderHex or "f2c94c", sep),
         string.format("|cff%sSlash Commands:|r", t.primaryHex or "f2c94c"),
-        "  /clialts            - Toggle the main TUI monitor",
-        "  /clialts [1-5]      - Open directly to specific tab (1-5)",
-        "  /clialts compact    - Toggle compact view (hide XP bar, slim)",
-        "  /clialts next       - Recommend top 3 alts with rested XP waste",
-        "  /clialts watch <it> - Track item count in bags & bank (e.g. ore)",
-        "  /clialts watchlist  - Print tracked items summary",
-        "  /clialts export     - Open CSV export dialog for spreadsheets",
-        "  /clialts scale <val>- Set UI scale (0.7 to 1.8, e.g. 1.2 / 120%)",
-        "  /clialts font <sz>  - Set terminal font size (12 to 22)",
-        "  /clialts track      - Force save current character to tracker",
-        "  /clialts rested     - Print quick rested XP report to chat",
-        "  /clialts perk <0-5> - Set Well Rested legacy perk rank (0-5)",
-        "  /clialts gold       - Print total account gold summary",
-        "  /clialts perf       - Print smoothed Collect/Render ms & memory",
-        "  /clialts selftest   - Run unit assertions with fake timestamps",
-        "  /clialts alerts     - Toggle login alert categories (cd/rest/mail)",
-        "  /clialts digest     - Display boxed login summary digest now",
-        "  /clialts plan [hrs] - Print leveling plan schedule (default: 2h)",
-        "  /clialts note <who> <txt> - Set/view alt note (clear to remove)",
-        "  /clialts unlocked <inst> - List alts with no active lock (gap finder)",
-        "  /clialts prune <days> [confirm] - Bulk purge alts inactive for N days",
-        "  /clialts tooltips   - Toggle item hover tooltips (bags/bank alts)",
-        "  /clialts sortbags   - Auto-sort inventory & stack items (/sortbags)",
-        "  /clialts sortbtn    - Toggle [S] bag sort button on backpack",
-        "  /clialts fillmail   - Auto-fill next alt mail & attach items (/fillmail)",
-        "  /clialts mailbtn    - Toggle auto-fill button on Send Mail frame",
-        "  /clialts mailignore <item> - Exclude item from auto-mail (or hold on cursor)",
-        "  /clialts mailunignore <item> - Remove item from mail ignore list",
-        "  /clialts mailignores - List all currently ignored items for mail",
-        "  /clialts forever    - Toggle WoW Forever Cohort mode (auto-active)",
-        "  /clialts core <who> - Set Core cohort (Target Level 35)",
-        "  /clialts alt <who>  - Set Alt/Reserve cohort (Target Level 25)",
-        "  /clialts bank <who> - Set Bank mule (Target Level 1)",
-        "  /clialts prof       - Print profession milestones & train alerts",
-        "  /clialts backup     - Save one-slot snapshot to CLIAltsDB.backup",
-        "  /clialts restore    - Restore database from CLIAltsDB.backup",
-        "  /clialts reset      - Reset window position to center",
+        "  /fa                 - Toggle the main TUI monitor",
+        "  /fa [1-8]           - Open directly to specific tab (1-8)",
+        "  /fa compact         - Toggle compact view (hide XP bar, slim)",
+        "  /fa next            - Recommend top 3 alts with rested XP waste",
+        "  /fa watch <it>      - Track item count in bags & bank (e.g. ore)",
+        "  /fa watchlist       - Print tracked items summary",
+        "  /fa export          - Open CSV export dialog for spreadsheets",
+        "  /fa scale <val>     - Set UI scale (0.7 to 1.8, e.g. 1.2 / 120%)",
+        "  /fa font <sz>       - Set terminal font size (12 to 24)",
+        "  /fa track           - Force save current character to tracker",
+        "  /fa rested          - Print quick rested XP report to chat",
+        "  /fa perk <0-5>      - Set Well Rested legacy perk rank (0-5)",
+        "  /fa gold            - Print total account gold summary",
+        "  /fa perf            - Print smoothed Collect/Render ms & memory",
+        "  /fa selftest        - Run unit assertions with fake timestamps",
+        "  /fa alerts          - Toggle login alert categories (cd/rest/mail)",
+        "  /fa digest          - Display boxed login summary digest now",
+        "  /fa plan [hrs]      - Print leveling plan schedule (default: 2h)",
+        "  /fa note <who> <txt>- Set/view alt note (clear to remove)",
+        "  /fa unlocked <inst> - List alts with no active lock (gap finder)",
+        "  /fa prune <days> [confirm] - Bulk purge alts inactive for N days",
+        "  /fa tooltips        - Toggle item hover tooltips (bags/bank alts)",
+        "  /fa sortbags        - Auto-sort inventory & stack items (/sortbags)",
+        "  /fa sortbtn         - Toggle [S] bag sort button on backpack",
+        "  /fa fillmail        - Auto-fill next alt mail & attach items (/fillmail)",
+        "  /fa mailbtn         - Toggle auto-fill button on Send Mail frame",
+        "  /fa mailignore <item>   - Exclude item from auto-mail (or hold on cursor)",
+        "  /fa mailunignore <item> - Remove item from mail ignore list",
+        "  /fa mailignores     - List all currently ignored items for mail",
+        "  /fa forever         - Toggle WoW Forever Cohort mode (auto-active)",
+        "  /fa core <who>      - Set Core cohort (Target Level 35)",
+        "  /fa alt <who>       - Set Alt/Reserve cohort (Target Level 25)",
+        "  /fa bank <who>      - Set Bank mule (Target Level 1)",
+        "  /fa prof            - Print profession milestones & train alerts",
+        "  /fa backup          - Save one-slot snapshot to ForeverAltsDB.backup",
+        "  /fa restore         - Restore database from ForeverAltsDB.backup",
+        "  /fa reset           - Reset window position to center",
         string.format("|cff%s%s|r", t.mutedHex or "a9a08c", sep),
         string.format("|cff%sInteractive Terminal Command Prompt (>):|r", t.primaryHex or "f2c94c"),
         "  > 1 .. 5            - Switch tab (Overview, Rest, Prof, Econ, Cd)",
@@ -8682,7 +8682,7 @@ function CLIAlts:ShowExportPopup()
         local title = ep:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(title, 14, "OUTLINE")
         title:SetPoint("TOPLEFT", ep, "TOPLEFT", 16, -14)
-        title:SetText("CLIALTS :: CSV EXPORT (PRESS CTRL+C TO COPY)")
+        title:SetText("FOREVERALTS :: CSV EXPORT (PRESS CTRL+C TO COPY)")
         ep.title = title
 
         local scrollFrame = CreateFrame("ScrollFrame", "CLIAltsExportScrollFrame", ep, "UIPanelScrollFrameTemplate")
@@ -8869,7 +8869,7 @@ function CLIAlts:CreateSettingsPanel()
     local title = sd:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(title, 15, "OUTLINE")
     title:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -16)
-    title:SetText("CLIALTS :: SETTINGS & PREFERENCES")
+    title:SetText("FOREVERALTS :: SETTINGS & PREFERENCES")
     sd.title = title
 
     local sub = sd:CreateFontString(nil, "OVERLAY")
@@ -9084,7 +9084,7 @@ function CLIAlts:CreateSettingsPanel()
         local tip = sd:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(tip, 11, "")
         tip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -508)
-        tip:SetText("Tip: Chat commands /clialts copychat <alt>, /clialts theme <name>, /clialts font <12-24> also work.")
+        tip:SetText("Tip: Chat commands /fa copychat <alt>, /fa theme <name>, /fa font <12-24> also work.")
         sd.tip = tip
 
         -- Bottom utility buttons
@@ -9342,7 +9342,7 @@ function CLIAlts:Toggle(show)
     end)
     if not ok then
         if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r UI Toggle error: %s", tostring(err)))
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[ForeverAlts]|r UI Toggle error: %s", tostring(err)))
         end
     end
 end
@@ -9356,7 +9356,7 @@ function CLIAlts:Refresh()
     end)
     if not ok then
         if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r Refresh error: %s", tostring(err)))
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[ForeverAlts]|r Refresh error: %s", tostring(err)))
         end
     end
 end
@@ -9672,11 +9672,11 @@ function CLIAlts:InitBagSortButton()
         if GameTooltip then
             GameTooltip:SetOwner(s, "ANCHOR_TOPRIGHT")
             GameTooltip:ClearLines()
-            GameTooltip:AddLine("|cfff2c94cCLIAlts: Bag Auto-Sort|r")
+            GameTooltip:AddLine("|cfff2c94cForeverAlts: Bag Auto-Sort|r")
             GameTooltip:AddLine("|cff55e39aLeft-Click|r: Auto-sort and consolidate bags", 0.9, 0.9, 0.9)
-            GameTooltip:AddLine("|cff57d6e8Right-Click|r: Open CLIAlts Dashboard", 0.9, 0.9, 0.9)
+            GameTooltip:AddLine("|cff57d6e8Right-Click|r: Open ForeverAlts Dashboard", 0.9, 0.9, 0.9)
             GameTooltip:AddLine("|cffa9a08cSupports both Combined Bags & Separate Bags|r", 0.7, 0.7, 0.7)
-            GameTooltip:AddLine("|cffa9a08c/sortbags or /clialts sortbtn to toggle|r", 0.7, 0.7, 0.7)
+            GameTooltip:AddLine("|cffa9a08c/sortbags or /fa sortbtn to toggle|r", 0.7, 0.7, 0.7)
             GameTooltip:Show()
         end
         if s.SetBackdropColor then
@@ -9852,7 +9852,7 @@ function CLIAlts:InitMailAutoFillButton()
         if GameTooltip then
             GameTooltip:SetOwner(s, "ANCHOR_TOPRIGHT")
             GameTooltip:ClearLines()
-            GameTooltip:AddLine("|cfff2c94cCLIAlts: Mail Auto-Fill|r")
+            GameTooltip:AddLine("|cfff2c94cForeverAlts: Mail Auto-Fill|r")
             GameTooltip:AddLine("|cff55e39aLeft-Click|r: Fill next alt recipient & attach items", 0.9, 0.9, 0.9)
             local autoSend = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoFillMailOnSend
             GameTooltip:AddLine(string.format("|cff57d6e8Right-Click|r: Auto-load next on Send (|cffffd700%s|r)", autoSend and "ENABLED" or "DISABLED"), 0.9, 0.9, 0.9)
@@ -9935,7 +9935,7 @@ CLIAlts.TOUR_STEPS = {
     {
         badge = "STEP 1 OF 3",
         title = "Play Next Priority",
-        desc = "CLIAlts identifies alts at danger of wasting rested XP or with urgent cooldowns and ranks them here. Click any hero card to inspect.",
+        desc = "ForeverAlts identifies alts at danger of wasting rested XP or with urgent cooldowns and ranks them here. Click any hero card to inspect.",
         target = function()
             local mf = CLIAlts.mainFrame or _G["CLIAltsMainFrame"]
             if mf and mf.nextBanner and mf.nextBanner:IsShown() then
@@ -10167,7 +10167,7 @@ function CLIAlts:StartTour()
     local ok, err = pcall(function()
         if InCombatLockdown and InCombatLockdown() then
             if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-                DEFAULT_CHAT_FRAME:AddMessage("|cffff3333[CLIAlts]|r Cannot start onboarding tour while in combat.")
+                DEFAULT_CHAT_FRAME:AddMessage("|cffff3333[ForeverAlts]|r Cannot start onboarding tour while in combat.")
             end
             return
         end
@@ -10189,7 +10189,7 @@ function CLIAlts:StartTour()
     end)
     if not ok then
         if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[CLIAlts]|r StartTour error: %s", tostring(err)))
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("|cffff3333[ForeverAlts]|r StartTour error: %s", tostring(err)))
         end
     end
 end

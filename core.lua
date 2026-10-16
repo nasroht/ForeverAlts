@@ -284,7 +284,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             self.hasAnnounced = true
             local coloredName = CLIAlts:ColorizePlayerName(char.name, char.classFile)
             local summary = CLIAlts:GetAccountSummary()
-            CLIAlts:Print(string.format("Tracking %s (Level %d %s). Total tracked: %d. Type |cff00ff66/clialts|r to view.",
+            CLIAlts:Print(string.format("Tracking %s (Level %d %s). Total tracked: %d. Type |cff00ff66/fa|r to view.",
                 coloredName, char.level or 1, CLIAlts:FormatRaceClass(char), summary.totalAlts or 1))
 
             -- Unified boxed login digest (at most 5 lines)
@@ -435,7 +435,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             local mailSum = CLIAlts:GetMailReadySummary()
             if mailSum and mailSum.totalPackages > 0 then
                 CLIAlts.hasAnnouncedMailThisSession = true
-                CLIAlts:Print(string.format("|cff57d6e8[Mail Router]|r %d package(s) (%d items) in your bags ready to send to alts! Type |cff00ff66/ca mail|r to view.", mailSum.totalPackages, mailSum.totalItems))
+                CLIAlts:Print(string.format("|cff57d6e8[Mail Router]|r %d package(s) (%d items) in your bags ready to send to alts! Type |cff00ff66/fa mail|r to view.", mailSum.totalPackages, mailSum.totalItems))
             end
         end
 
@@ -520,7 +520,7 @@ local function SlashHandler(msg)
                 CLIAlts:Render()
             end
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts [1-8]|r (Switches to specified tab)")
+            CLIAlts:Print("Usage: |cff00ff66/fa [1-8]|r (Switches to specified tab)")
         end
 
     elseif cmd == "next" then
@@ -578,7 +578,7 @@ local function SlashHandler(msg)
                 CLIAlts:ToggleSortKey(key)
             end
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts sort <name|level|rotation|cohort|gold|rested|waste|xp|bags>|r")
+            CLIAlts:Print("Usage: |cff00ff66/fa sort <name|level|rotation|cohort|gold|rested|waste|xp|bags>|r")
         end
 
     elseif cmd == "watch" then
@@ -593,7 +593,7 @@ local function SlashHandler(msg)
             end
             CLIAlts:RequestRender()
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts watch <Item Link, ID, or Name>|r")
+            CLIAlts:Print("Usage: |cff00ff66/fa watch <Item Link, ID, or Name>|r")
         end
 
     elseif cmd == "unwatch" then
@@ -607,7 +607,7 @@ local function SlashHandler(msg)
             end
             CLIAlts:RequestRender()
         else
-            CLIAlts:Print("Usage: |cff00ff66/clialts unwatch <Item Link, ID, or Name>|r")
+            CLIAlts:Print("Usage: |cff00ff66/fa unwatch <Item Link, ID, or Name>|r")
         end
 
     elseif cmd == "watchlist" then
@@ -670,7 +670,7 @@ local function SlashHandler(msg)
         if CLIAltsDB and CLIAltsDB.settings then
             CLIAltsDB.settings.legacyUI = nil
         end
-        CLIAlts:Print("CLIAlts now uses Modern v2 exclusively. The legacy ASCII UI has been deprecated.")
+        CLIAlts:Print("ForeverAlts now uses Modern v2 exclusively. The legacy ASCII UI has been deprecated.")
         if CLIAlts.RecreateMainFrame then
             local wasShown = CLIAltsMainFrame and CLIAltsMainFrame:IsShown()
             CLIAlts:RecreateMainFrame()
@@ -694,7 +694,7 @@ local function SlashHandler(msg)
                 CLIAlts:SetScale(val)
                 CLIAlts:Print(string.format("UI scale set to %.2fx (%d%%).", val, math.floor(val * 100 + 0.5)))
             else
-                CLIAlts:Print("Usage: |cff00ff66/clialts scale <0.7 - 1.8>|r (e.g. 1.2 or 120%)")
+                CLIAlts:Print("Usage: |cff00ff66/fa scale <0.7 - 1.8>|r (e.g. 1.2 or 120%)")
             end
         else
             CLIAlts:CycleScale()
@@ -734,7 +734,7 @@ local function SlashHandler(msg)
                 if CLIAlts.Render then CLIAlts:Render() end
                 CLIAlts:Print(string.format("Theme set to %s (%s).", choice, CLIAlts.THEMES[choice].tag or choice))
             else
-                CLIAlts:Print("Usage: |cff00ff66/clialts theme <blizzard|amber|green|cyan|mono|safe|synthwave|dracula>|r")
+                CLIAlts:Print("Usage: |cff00ff66/fa theme <blizzard|amber|green|cyan|mono|safe|synthwave|dracula>|r")
             end
         else
             if CLIAlts.CycleTheme then
@@ -752,11 +752,11 @@ local function SlashHandler(msg)
                 local sc = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
                 CLIAlts:Print(string.format("Interface font size set to %dpx (panel scale: %d%%).", sz, math.floor(sc * 100 + 0.5)))
             else
-                CLIAlts:Print("Usage: |cff00ff66/clialts font <12-24>|r")
+                CLIAlts:Print("Usage: |cff00ff66/fa font <12-24>|r")
             end
         else
             local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
-            CLIAlts:Print(string.format("Current font size: %dpx. Usage: |cff00ff66/clialts font <12-24>|r", cur))
+            CLIAlts:Print(string.format("Current font size: %dpx. Usage: |cff00ff66/fa font <12-24>|r", cur))
         end
 
     elseif cmd == "gold" then
@@ -774,7 +774,7 @@ local function SlashHandler(msg)
             if rank and rank >= 0 and rank <= 5 then
                 CLIAlts:SetWellRestedRank(rank)
             else
-                CLIAlts:Print("Usage: |cff00ff66/clialts perk <0-5>|r (Sets your Well Rested perk rank)")
+                CLIAlts:Print("Usage: |cff00ff66/fa perk <0-5>|r (Sets your Well Rested perk rank)")
             end
         else
             CLIAlts:CycleWellRestedPerk()
@@ -829,7 +829,7 @@ local function SlashHandler(msg)
         local daysStr, optConfirm = (arg or ""):match("^(%d+)%s*(.*)$")
         local days = tonumber(daysStr)
         if not days or days < 1 then
-            CLIAlts:Print("Usage: |cff00ff66/clialts prune <days> [confirm]|r (e.g. /ca prune 30)")
+            CLIAlts:Print("Usage: |cff00ff66/fa prune <days> [confirm]|r (e.g. /fa prune 30)")
         else
             local count, names = CLIAlts:GetPrunableCharacters(days)
             if count == 0 then
@@ -843,7 +843,7 @@ local function SlashHandler(msg)
                 CLIAlts:Toggle(true)
                 local sample = table.concat(names, ", ", 1, math.min(5, #names))
                 if #names > 5 then sample = sample .. "..." end
-                CLIAlts:Print(string.format("Found %d alts inactive for %d+ days (%s). Confirm in popup or run: |cff00ff66/ca prune %d confirm|r",
+                CLIAlts:Print(string.format("Found %d alts inactive for %d+ days (%s). Confirm in popup or run: |cff00ff66/fa prune %d confirm|r",
                     count, sample, days))
                 CLIAlts:ShowConfirmPrunePopup(days, count, names)
             end
@@ -851,7 +851,7 @@ local function SlashHandler(msg)
 
     elseif cmd == "backup" then
         local ok, msg = CLIAlts:BackupDB("manual")
-        CLIAlts:Print(ok and "|cff00ff66Database backup created in CLIAltsDB.backup.|r" or msg)
+        CLIAlts:Print(ok and "|cff00ff66Database backup created in ForeverAltsDB.backup.|r" or msg)
 
     elseif cmd == "restore" then
         local ok, msg = CLIAlts:RestoreDB()
@@ -875,7 +875,7 @@ local function SlashHandler(msg)
 
     elseif cmd == "core" then
         if not arg or arg == "" then
-            CLIAlts:Print("Usage: |cff00ff66/clialts core <name> [target_level]|r (defaults to target level 35)")
+            CLIAlts:Print("Usage: |cff00ff66/fa core <name> [target_level]|r (defaults to target level 35)")
         else
             local targetName, targetLvl = arg:match("^(%S+)%s*(%d*)$")
             local ok, msg = CLIAlts:SetCharacterCohort(targetName, "CORE", tonumber(targetLvl))
@@ -885,7 +885,7 @@ local function SlashHandler(msg)
 
     elseif cmd == "alt" or cmd == "alts" or cmd == "reserve" then
         if not arg or arg == "" then
-            CLIAlts:Print("Usage: |cff00ff66/clialts alt <name> [target_level]|r (defaults to target level 25)")
+            CLIAlts:Print("Usage: |cff00ff66/fa alt <name> [target_level]|r (defaults to target level 25)")
         else
             local targetName, targetLvl = arg:match("^(%S+)%s*(%d*)$")
             local ok, msg = CLIAlts:SetCharacterCohort(targetName, "RESERVE", tonumber(targetLvl))
@@ -895,7 +895,7 @@ local function SlashHandler(msg)
 
     elseif cmd == "bank" or cmd == "mule" then
         if not arg or arg == "" then
-            CLIAlts:Print("Usage: |cff00ff66/clialts bank <name>|r")
+            CLIAlts:Print("Usage: |cff00ff66/fa bank <name>|r")
         else
             local targetName = arg:match("^(%S+)")
             local ok, msg = CLIAlts:SetCharacterCohort(targetName, "BANK", 1)
@@ -905,7 +905,7 @@ local function SlashHandler(msg)
 
     elseif cmd == "unassign" or cmd == "unset" then
         if not arg or arg == "" then
-            CLIAlts:Print("Usage: |cff00ff66/clialts unassign <name>|r")
+            CLIAlts:Print("Usage: |cff00ff66/fa unassign <name>|r")
         else
             local targetName = arg:match("^(%S+)")
             local ok, msg = CLIAlts:SetCharacterCohort(targetName, "UNASSIGNED", 60)
@@ -919,7 +919,7 @@ local function SlashHandler(msg)
         else
             local targetName, tier, remaining = arg:match("^(%S+)%s+(%S+)%s*(.*)$")
             if not targetName or not tier then
-                CLIAlts:Print("Usage: |cff00ff66/clialts role <name> <core|reserve|bank|none> [supply_role] [target_level]|r")
+                CLIAlts:Print("Usage: |cff00ff66/fa role <name> <core|reserve|bank|none> [supply_role] [target_level]|r")
             else
                 local supplyRole, targetLvl = remaining:match("^(.-)%s+(%d+)$")
                 if not supplyRole then
@@ -939,7 +939,7 @@ local function SlashHandler(msg)
 
     elseif cmd == "supply" then
         if not arg or arg == "" then
-            CLIAlts:Print("Usage: |cff00ff66/clialts supply <name> [role]|r (e.g. /ca supply Grok Tailor/Bags, or /ca supply Grok auto)")
+            CLIAlts:Print("Usage: |cff00ff66/fa supply <name> [role]|r (e.g. /fa supply Grok Tailor/Bags, or /fa supply Grok auto)")
         else
             local targetName, supplyRole = arg:match("^(%S+)%s*(.*)$")
             if not supplyRole or supplyRole == "" then supplyRole = "clear" end
@@ -980,7 +980,7 @@ local function SlashHandler(msg)
 
     elseif cmd == "copychat" or cmd == "chatcopy" or cmd == "clonechat" then
         if not arg or arg == "" then
-            CLIAlts:Print("Usage: |cff00ff66/clialts copychat <character_name>|r (or configure in Settings Dialog)")
+            CLIAlts:Print("Usage: |cff00ff66/fa copychat <character_name>|r (or configure in Settings Dialog)")
             local profiles = CLIAlts:GetChatProfilesList()
             if #profiles > 0 then
                 local names = {}
@@ -1011,10 +1011,10 @@ local function SlashHandler(msg)
 
     elseif cmd == "help" or cmd == "?" then
         CLIAlts:ShowHelpPopup()
-        CLIAlts:Print("Showing Quick Guide. Type |cff00ff66/clialts|r to toggle alt monitor.")
+        CLIAlts:Print("Showing Quick Guide. Type |cff00ff66/fa|r to toggle alt monitor.")
 
     else
-        CLIAlts:Print("Unknown command. Type |cff00ff66/clialts help|r for available options.")
+        CLIAlts:Print("Unknown command. Type |cff00ff66/fa help|r for available options.")
     end
 end
 
