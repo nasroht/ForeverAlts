@@ -1820,6 +1820,37 @@ function CLIAlts:RunSelfTest()
     self.isRetailOverride = nil
     Assert(self:IsRetail() == false, "IsRetail: resets cleanly when isRetailOverride is cleared")
 
+    -- 16d. Individual Character Well Rested Tracking & Multipliers
+    local charRank0 = { name = "AltZero", maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true, wellRestedRank = 0 }
+    local charRank3 = { name = "AltThree", maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true, wellRestedRank = 3 }
+    local charRank5 = { name = "AltFive", maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true, wellRestedRank = 5 }
+
+    Assert(self:GetWellRestedRank(charRank0) == 0, "GetWellRestedRank: resolves 0 for AltZero")
+    Assert(self:GetWellRestedRank(charRank3) == 3, "GetWellRestedRank: resolves 3 for AltThree")
+    Assert(self:GetWellRestedRank(charRank5) == 5, "GetWellRestedRank: resolves 5 for AltFive")
+
+    local rested0 = self:GetRestedData(charRank0, true, T0)
+    local rested3 = self:GetRestedData(charRank3, true, T0)
+    local rested5 = self:GetRestedData(charRank5, true, T0)
+
+    Assert(rested0.maxPercent == 150, "GetRestedData: Rank 0 cap is 150%")
+    Assert(rested3.maxPercent == 168, "GetRestedData: Rank 3 cap is 168%")
+    Assert(rested5.maxPercent == 180, "GetRestedData: Rank 5 cap is 180%")
+
+    Assert(math.abs(rested0.speedMult - 1.00) < 0.001, "GetRestedData: Rank 0 speed multiplier is 1.00x")
+    Assert(math.abs(rested3.speedMult - 1.12) < 0.001, "GetRestedData: Rank 3 speed multiplier is 1.12x")
+    Assert(math.abs(rested5.speedMult - 1.20) < 0.001, "GetRestedData: Rank 5 speed multiplier is 1.20x")
+
+    -- Cycling individual characters
+    self:CycleWellRestedPerk(charRank0)
+    Assert(charRank0.wellRestedRank == 1, "CycleWellRestedPerk: cycles Rank 0 to Rank 1 on AltZero")
+    Assert(charRank5.wellRestedRank == 5, "CycleWellRestedPerk: AltFive remains at Rank 5 when AltZero cycles")
+
+    -- Setting rank directly per character
+    self:SetWellRestedRank(4, charRank0)
+    Assert(charRank0.wellRestedRank == 4, "SetWellRestedRank: sets AltZero directly to Rank 4")
+    Assert(charRank5.wellRestedRank == 5, "SetWellRestedRank: AltFive remains isolated at Rank 5")
+
     CLIAltsDB = oldLiveDB
 
     -- 17. Cross-Character Inventory Scanner & Tooltip Summary Tests (Feature 6)
@@ -2842,6 +2873,24 @@ function CLIAlts:RunSelfTest()
     -- 24d. PrintLegacyPointStatus execution
     local fbLp, okLp = self:PrintLegacyPointStatus()
     Assert(okLp == true and fbLp:find("Account LP:") ~= nil, "LP: PrintLegacyPointStatus executes and returns summary")
+
+    -- 24e. Individual Character LP Override & Inspection
+    local fbCharLp, okCharLp = self:PrintLegacyPointStatus("Journeyman")
+    Assert(okCharLp == true and fbCharLp:find("Journeyman") ~= nil, "LP: PrintLegacyPointStatus('Journeyman') inspects character LP")
+    local fbSetLp, okSetLp = self:SetCharacterLP("Journeyman", 12.5)
+    Assert(okSetLp == true and fbSetLp:find("12.5 LP") ~= nil, "LP: SetCharacterLP('Journeyman', 12.5) sets manual override")
+    local jrnChar = self:FindCharacter("Journeyman")
+    Assert(jrnChar and jrnChar.legacyPoints == 12.5, "LP: Journeyman.legacyPoints set to 12.5")
+    local lpAfterManual = self:CalculateCharacterLP(jrnChar)
+    Assert(lpAfterManual == 12.5, "LP: CalculateCharacterLP respects manual override")
+    self:SetCharacterLP("Journeyman", "auto")
+    Assert(jrnChar.legacyPoints == nil, "LP: SetCharacterLP('Journeyman', 'auto') clears manual override")
+
+    -- 24f. Individual Character Well Rested perk rank assignment & isolation
+    self:SetWellRestedRank(3, jrnChar)
+    Assert(self:GetWellRestedRank(jrnChar) == 3, "LP: Journeyman perk set to Rank 3")
+    local expChar = self:FindCharacter("Expert")
+    Assert(self:GetWellRestedRank(expChar) == 0, "LP: Expert remains at Rank 0 when Journeyman is set to Rank 3")
 
     CLIAltsDB = oldLpDB
     end

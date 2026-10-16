@@ -1412,15 +1412,17 @@ local function FmtRestedPool(char, t)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
     end
+    local r = CLIAlts:GetWellRestedRank(char)
+    local perkTag = (r > 0) and string.format(" |cff%s(R%d)|r", t.readyHex or "55e39a", r) or ""
     if mainFrame and not mainFrame.isLegacyUI then
         local curK = (rested.currentRested or 0) >= 1000 and string.format("%.1fk", (rested.currentRested or 0) / 1000) or tostring(rested.currentRested or 0)
         local capStr = rested.isFull and (string.format("|cff%s%d%%*|r", t.highlightHex, rested.maxPercent or 150)) or (string.format("%d%%", rested.percent or 0))
-        return string.format("|cff%s%s XP (%s)|r", t.textHex or t.primaryHex, curK, capStr)
+        return string.format("|cff%s%s XP (%s)%s|r", t.textHex or t.primaryHex, curK, capStr, perkTag)
     end
     local capStr = rested.isFull and (string.format("|cff%s%d%%*|r", t.highlightHex, rested.maxPercent or 150)) or (string.format("%d%%", rested.percent or 0))
-    return string.format("|cff%s%s|r |cff%s/ %s (%s)|r",
+    return string.format("|cff%s%s|r |cff%s/ %s (%s)%s|r",
         t.textHex or t.primaryHex, CLIAlts:FormatNumber(rested.currentRested),
-        t.dimHex, CLIAlts:FormatNumber(rested.maxRested), capStr)
+        t.dimHex, CLIAlts:FormatNumber(rested.maxRested), capStr, perkTag)
 end
 
 local function FmtRestedBar(char, t)
@@ -2396,25 +2398,32 @@ function CLIAlts:CreateLegacyMainFrame()
     frame.recDetail = recDetail
 
     -- Well Rested Perk quick toggle button
-    local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+    local initPerkRank = CLIAlts:GetWellRestedRank(selChar)
     local btnPerk = CreateRetroButton(recPanel, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 130, 18, function(self)
-        CLIAlts:CycleWellRestedPerk()
+        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        CLIAlts:CycleWellRestedPerk(curChar)
         if MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
+        CLIAlts:Render()
     end)
     btnPerk:SetPoint("RIGHT", recBtnSetup, "LEFT", -6, 0)
     btnPerk:SetScript("OnEnter", function(self)
         local curT = CLIAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("WoW Forever: Well Rested Perk", 1, 1, 1)
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local cName = (curChar and (curChar.fullName or curChar.name)) or "Character"
+        GameTooltip:AddLine(string.format("%s: Well Rested Perk", cName), 1, 1, 1)
+        local r = CLIAlts:GetWellRestedRank(curChar)
+        local charLP = CLIAlts:CalculateCharacterLP(curChar)
         GameTooltip:AddLine(string.format("Current Rank: |cffffffff%d / 5|r", r), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rest Speed: |cff00ff66+%d%%|r", r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested Cap: |cff00ff66%d%%|r", 150 + (r * 6)), 0.8, 0.8, 0.8)
-        GameTooltip:AddLine("Click to cycle rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Slash cmd: |cff00ff66/fa perk <0-5>|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine(string.format("Character LP: |cffe8b64a%.1f LP|r", charLP), 1, 1, 1)
+        GameTooltip:AddLine("Click to cycle this alt's rank (0-5).", 1, 0.82, 0)
+        GameTooltip:AddLine("Slash cmd: |cff00ff66/fa perk [alt] <0-5>|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
@@ -3299,11 +3308,12 @@ function CLIAlts:CreateModernMainFrame()
     btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -8, 0)
     frame.btnHelp = btnHelp
 
-    local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-    local initLpData = CLIAlts:CalculateAccountLP()
-    local initLpVal = (initLpData and initLpData.effectiveLP) or 0
-    local btnPerk = CreateRetroButton(topBar, string.format("[ WELL RESTED: R%d · %.1f LP ]", initPerkRank, initLpVal), 170, 22, function(self)
-        CLIAlts:CycleWellRestedPerk()
+    local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+    local initPerkRank = CLIAlts:GetWellRestedRank(selChar)
+    local initCharLp = CLIAlts:CalculateCharacterLP(selChar)
+    local btnPerk = CreateRetroButton(topBar, string.format("[ WELL RESTED: R%d · %.1f LP ]", initPerkRank, initCharLp), 170, 22, function(self)
+        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        CLIAlts:CycleWellRestedPerk(curChar)
         if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
@@ -3314,18 +3324,24 @@ function CLIAlts:CreateModernMainFrame()
         local curT = CLIAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
-        GameTooltip:AddLine("WoW Forever: Well Rested & Legacy Points", 1, 0.82, 0)
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local cName = (curChar and (curChar.fullName or curChar.name)) or "Character"
+        GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
+        local r = CLIAlts:GetWellRestedRank(curChar)
+        local charLP, lpReasons = CLIAlts:CalculateCharacterLP(curChar)
         local lpData = CLIAlts:CalculateAccountLP()
         GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 1, 1, 1)
-        GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Character Legacy Points: |cffe8b64a%.1f LP|r", charLP), 1, 1, 1)
+        if #lpReasons > 0 then
+            GameTooltip:AddLine(string.format("  Milestones: |cffffffff%s|r", table.concat(lpReasons, ", ")), 0.7, 0.7, 0.7)
+        end
+        GameTooltip:AddLine(string.format("Account Total LP: |cffffffff%.1f LP|r (Target: %s)", lpData.effectiveLP, lpData.tierName), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Commands: |cff00ff66/fa perk <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Click to cycle this alt's perk rank (0-5).", 1, 0.82, 0)
+        GameTooltip:AddLine("Commands: |cff00ff66/fa perk [alt] <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
@@ -3772,18 +3788,24 @@ function CLIAlts:CreateModernMainFrame()
         local curT = CLIAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.45) end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("WoW Forever: Well Rested & Legacy Points", 1, 0.82, 0)
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local selChar = detailPanel.currentChar or CLIAlts:GetCurrentPlayer()
+        local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
+        GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
+        local r = CLIAlts:GetWellRestedRank(selChar)
+        local charLP, lpReasons = CLIAlts:CalculateCharacterLP(selChar)
         local lpData = CLIAlts:CalculateAccountLP()
         GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 1, 1, 1)
-        GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Character Legacy Points: |cffe8b64a%.1f LP|r", charLP), 1, 1, 1)
+        if #lpReasons > 0 then
+            GameTooltip:AddLine(string.format("  Milestones: |cffffffff%s|r", table.concat(lpReasons, ", ")), 0.7, 0.7, 0.7)
+        end
+        GameTooltip:AddLine(string.format("Account Total LP: |cffffffff%.1f LP|r (Target: %s)", lpData.effectiveLP, lpData.tierName), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Commands: |cff00ff66/fa perk <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Click to cycle this alt's perk rank (0-5).", 1, 0.82, 0)
+        GameTooltip:AddLine("Commands: |cff00ff66/fa perk [alt] <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     restedCard:SetScript("OnLeave", function(self)
@@ -3791,8 +3813,9 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:Hide()
     end)
     restedCard:SetScript("OnMouseDown", function()
-        CLIAlts:CycleWellRestedPerk()
-        CLIAlts:UpdateDetailPanel()
+        local selChar = detailPanel.currentChar or CLIAlts:GetCurrentPlayer()
+        CLIAlts:CycleWellRestedPerk(selChar)
+        CLIAlts:UpdateDetailPanel(selChar)
         CLIAlts:Render()
     end)
 
@@ -4320,24 +4343,31 @@ function CLIAlts:CreateModernMainFrame()
     frame.wellRestedBadge = wellRestedBadge
 
     wellRestedBadge:SetScript("OnClick", function()
-        CLIAlts:CycleWellRestedPerk()
+        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        CLIAlts:CycleWellRestedPerk(selChar)
         CLIAlts:Render()
     end)
     wellRestedBadge:SetScript("OnEnter", function(self)
         if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine("WoW Forever: Well Rested & Legacy Points", 1, 0.82, 0)
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
+        GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
+        local r = CLIAlts:GetWellRestedRank(selChar)
+        local charLP, lpReasons = CLIAlts:CalculateCharacterLP(selChar)
         local lpData = CLIAlts:CalculateAccountLP()
         GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(string.format("Account Legacy Points: |cffe8b64a%.1f LP|r", lpData.effectiveLP), 1, 1, 1)
-        GameTooltip:AddLine(string.format("Next Unlock Tier: |cffffffff%s|r (%.1f LP needed)", lpData.tierName, lpData.neededLP), 0.8, 0.8, 0.8)
+        GameTooltip:AddLine(string.format("Character Legacy Points: |cffe8b64a%.1f LP|r", charLP), 1, 1, 1)
+        if #lpReasons > 0 then
+            GameTooltip:AddLine(string.format("  Milestones: |cffffffff%s|r", table.concat(lpReasons, ", ")), 0.7, 0.7, 0.7)
+        end
+        GameTooltip:AddLine(string.format("Account Total LP: |cffffffff%.1f LP|r (Target: %s)", lpData.effectiveLP, lpData.tierName), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Click to cycle perk rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Commands: |cff00ff66/fa perk <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
+        GameTooltip:AddLine("Click to cycle this alt's perk rank (0-5).", 1, 0.82, 0)
+        GameTooltip:AddLine("Commands: |cff00ff66/fa perk [alt] <0-5>|r  |cff00ff66/fa lp|r", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
     wellRestedBadge:SetScript("OnLeave", function(self)
@@ -4967,8 +4997,8 @@ function CLIAlts:UpdateDetailPanel()
     -- 2. Rested XP Card
     if dp.restedCard then
         local rested = self:GetRestedData(char)
-        local estRate = char.xpHour or 38000
-        local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+        local r = self:GetWellRestedRank(char)
+        local charLP = self:CalculateCharacterLP(char)
         local lpData = self:CalculateAccountLP()
 
         if dp.restedCard.header then
@@ -4979,8 +5009,8 @@ function CLIAlts:UpdateDetailPanel()
             end
         end
         if dp.restedCard.lpText then
-            if not self:IsRetail() and lpData and lpData.effectiveLP then
-                dp.restedCard.lpText:SetText(string.format("|cffe8b64a%.1f LP|r", lpData.effectiveLP))
+            if not self:IsRetail() and charLP then
+                dp.restedCard.lpText:SetText(string.format("|cffe8b64a%.1f LP|r", charLP))
                 dp.restedCard.lpText:Show()
             else
                 dp.restedCard.lpText:Hide()
@@ -4988,7 +5018,7 @@ function CLIAlts:UpdateDetailPanel()
         end
         if dp.restedCard.perkLine then
             if not self:IsRetail() then
-                dp.restedCard.perkLine:SetText(string.format("Well Rested: |cffffffffR%d/5 (+%d%%)|r · Cap: |cffffffff%d%%|r · LP: |cffe8b64a%.1f LP|r", r, r * 4, 150 + (r * 6), lpData.effectiveLP))
+                dp.restedCard.perkLine:SetText(string.format("Well Rested: |cffffffffR%d/5 (+%d%%)|r · Cap: |cffffffff%d%%|r · Alt LP: |cffe8b64a%.1f|r (Acc: %.1f)", r, r * 4, 150 + (r * 6), charLP, lpData.effectiveLP))
                 dp.restedCard.perkLine:Show()
             else
                 dp.restedCard.perkLine:Hide()
@@ -5488,10 +5518,13 @@ function CLIAlts:Render(force)
         elseif activeTab == 8 then
             mainFrame.subViewFilters:SetText("CONFIGURATION · CRT THEMES · SCALE · CHAT CLONER")
         elseif activeTab == 3 then
-            local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+            local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+            local r = self:GetWellRestedRank(selChar)
+            local charLP = self:CalculateCharacterLP(selChar)
             local lpData = self:CalculateAccountLP()
             local lpVal = (lpData and lpData.effectiveLP) or 0
-            mainFrame.subViewFilters:SetText(string.format("WELL RESTED: RANK %d (+%d%%) · ACCOUNT LP: %.1f LP", r, r * 4, lpVal))
+            local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
+            mainFrame.subViewFilters:SetText(string.format("%s: WELL RESTED R%d (+%d%%) · ALT: %.1f LP · ACCOUNT: %.1f LP", string.upper(cName), r, r * 4, charLP, lpVal))
         elseif activeTab == 1 then
             mainFrame.subViewFilters:SetText("CONSOLIDATED DASHBOARD · DUAL CIRCULAR GAUGES (XP & RESTED)")
         else
@@ -5553,10 +5586,13 @@ function CLIAlts:Render(force)
 
     if mainFrame.wellRestedBadge then
         if activeTab == 3 and not self:IsRetail() then
-            local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+            local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+            local r = self:GetWellRestedRank(selChar)
+            local charLP = self:CalculateCharacterLP(selChar)
             local lpData = self:CalculateAccountLP()
             local lpVal = (lpData and lpData.effectiveLP) or 0
-            local badgeStr = string.format("Well Rested: Rank %d (+%d%%) · %.1f LP", r, r * 4, lpVal)
+            local cName = (selChar and (selChar.fullName or selChar.name)) or "Char"
+            local badgeStr = string.format("%s: R%d (+%d%%) · %.1f LP (Acc: %.1f)", cName, r, r * 4, charLP, lpVal)
             mainFrame.wellRestedBadge.text:SetText(badgeStr)
             mainFrame.wellRestedBadge:SetWidth(math.max(160, #badgeStr * 7 + 20))
             mainFrame.wellRestedBadge:Show()
@@ -5611,10 +5647,10 @@ function CLIAlts:Render(force)
         else
             mainFrame.btnPerk:Show()
             if mainFrame.btnPerk.label then
-                local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-                local lpData = self:CalculateAccountLP()
-                local lpVal = (lpData and lpData.effectiveLP) or 0
-                mainFrame.btnPerk.label:SetText(string.format("[ WELL RESTED: R%d · %.1f LP ]", r, lpVal))
+                local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+                local r = self:GetWellRestedRank(selChar)
+                local charLP = self:CalculateCharacterLP(selChar)
+                mainFrame.btnPerk.label:SetText(string.format("[ WELL RESTED: R%d · %.1f LP ]", r, charLP))
                 mainFrame.btnPerk:SetWidth(170)
             end
         end
@@ -6771,7 +6807,8 @@ function CLIAlts:ApplyTheme()
             mainFrame.btnPerk:Hide()
         else
             mainFrame.btnPerk:Show()
-            local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+            local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+            local r = self:GetWellRestedRank(selChar)
             mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
             mainFrame.btnPerk.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
         end
@@ -7127,18 +7164,41 @@ function CLIAlts:ExecutePromptCommand(input)
             self:SetPromptFeedback("Perks are not applicable on Retail WoW", true)
             return
         end
+        local selChar = (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
         if args and args ~= "" then
             local r = tonumber(args)
             if r and r >= 0 and r <= 5 then
-                self:SetWellRestedRank(r)
-                self:SetPromptFeedback(string.format("Well Rested perk set to Rank %d", r))
+                self:SetWellRestedRank(r, selChar)
+                local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
+                self:SetPromptFeedback(string.format("%s: Well Rested perk set to Rank %d", cName, r))
             else
-                self:SetPromptFeedback("Usage: perk <0-5>", true)
+                local a1, a2 = args:match("^(%S+)%s+(%S+)$")
+                if a1 and a2 then
+                    local r1, r2 = tonumber(a1), tonumber(a2)
+                    if r1 and r1 >= 0 and r1 <= 5 then
+                        self:SetWellRestedRank(r1, a2)
+                        self:SetPromptFeedback(string.format("%s: Well Rested perk set to Rank %d", a2, r1))
+                    elseif r2 and r2 >= 0 and r2 <= 5 then
+                        self:SetWellRestedRank(r2, a1)
+                        self:SetPromptFeedback(string.format("%s: Well Rested perk set to Rank %d", a1, r2))
+                    else
+                        self:SetPromptFeedback("Usage: perk [alt] <0-5>", true)
+                    end
+                else
+                    local foundChar = self:FindCharacter(args)
+                    if foundChar then
+                        local curRank = self:GetWellRestedRank(foundChar)
+                        self:SetPromptFeedback(string.format("%s: Well Rested Rank %d/5 (+%d%%, %d%% cap)", foundChar.fullName or foundChar.name, curRank, curRank * 4, 150 + (curRank * 6)))
+                    else
+                        self:SetPromptFeedback("Usage: perk [alt] <0-5>", true)
+                    end
+                end
             end
         else
-            self:CycleWellRestedPerk()
-            local curR = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0
-            self:SetPromptFeedback(string.format("Well Rested perk rank: %d", curR))
+            self:CycleWellRestedPerk(selChar)
+            local curR = self:GetWellRestedRank(selChar)
+            local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
+            self:SetPromptFeedback(string.format("%s: Well Rested perk rank: %d", cName, curR))
         end
 
     elseif cmd == "refresh" then
@@ -7605,6 +7665,39 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
         btnClose:SetPoint("BOTTOMRIGHT", dp, "BOTTOMRIGHT", -16, 14)
         dp.btnClose = btnClose
 
+        local btnPerk = CreateRetroButton(dp, "[ PERK: R0 ]", 115, 20, function(self)
+            if dp.charData then
+                CLIAlts:CycleWellRestedPerk(dp.charData)
+                CLIAlts:ShowDossierPopup(dp.charData)
+                CLIAlts:RequestRender()
+            end
+        end, 11)
+        btnPerk:SetPoint("RIGHT", btnClose, "LEFT", -6, 0)
+        btnPerk:SetScript("OnEnter", function(self)
+            local curT = CLIAlts:GetTheme()
+            if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            local c = dp.charData
+            local cName = (c and (c.fullName or c.name)) or "Character"
+            GameTooltip:AddLine(string.format("%s: Well Rested Perk", cName), 1, 0.82, 0)
+            local r = CLIAlts:GetWellRestedRank(c)
+            local charLP = CLIAlts:CalculateCharacterLP(c)
+            GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
+            GameTooltip:AddLine(string.format("Alt Legacy Points: |cffe8b64a%.1f LP|r", charLP), 1, 1, 1)
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine("Click to cycle this alt's perk rank (0-5).", 1, 0.82, 0)
+            GameTooltip:Show()
+        end)
+        btnPerk:SetScript("OnLeave", function(self)
+            local curT = CLIAlts:GetTheme()
+            local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
+            if self.SetBackdropColor then self:SetBackdropColor(curBg[1], curBg[2], curBg[3], curBg[4] or 0.85) end
+            GameTooltip:Hide()
+        end)
+        dp.btnPerk = btnPerk
+
         -- Row 2 (Middle, y=42): 1-Click Supply Role Configuration Bar
         local roleLabel = dp:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(roleLabel, 11, "")
@@ -7695,6 +7788,16 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
             dossierPopup.btnRoleCustom.label:SetText(string.format("|cff%s*%s*|r", activeHex, trunc))
         else
             dossierPopup.btnRoleCustom.label:SetText("[ Custom... ]")
+        end
+    end
+
+    if dossierPopup.btnPerk then
+        if self:IsRetail() then
+            dossierPopup.btnPerk:Hide()
+        else
+            local r = self:GetWellRestedRank(char)
+            dossierPopup.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
+            dossierPopup.btnPerk:Show()
         end
     end
 
@@ -7967,7 +8070,7 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
     if not contextMenu then
         local cm = CreateFrame("Frame", "CLIAltsContextMenu", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         cm:Hide()
-        cm:SetSize(216, 230)
+        cm:SetSize(216, 255)
         cm:SetFrameStrata("DIALOG")
         cm:EnableMouse(true)
         tinsert(UISpecialFrames, "CLIAltsContextMenu")
@@ -8017,11 +8120,16 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
                 CLIAlts:SetCharacterCohort(name, "BANK")
                 CLIAlts:Render()
             end },
-            { key = "route", label = "5. Configure Mail Route...", fn = function(c)
+            { key = "perk", label = "5. Well Rested: Rank 0 (+0%)", fn = function(c)
+                cm:Hide()
+                CLIAlts:CycleWellRestedPerk(c)
+                CLIAlts:Render()
+            end },
+            { key = "route", label = "6. Configure Mail Route...", fn = function(c)
                 cm:Hide()
                 CLIAlts:ShowMailRouteDialog(c)
             end },
-            { key = "watch", label = "6. Toggle Watchlist", fn = function(c)
+            { key = "watch", label = "7. Toggle Watchlist", fn = function(c)
                 cm:Hide()
                 local name = c.fullName or c.name
                 if CLIAlts.ToggleWatchlist then
@@ -8029,11 +8137,11 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
                 end
                 CLIAlts:Render()
             end },
-            { key = "delete", label = "7. Remove Alt...", fn = function(c)
+            { key = "delete", label = "8. Remove Alt...", fn = function(c)
                 cm:Hide()
                 CLIAlts:ShowConfirmDelete(c)
             end },
-            { key = "cancel", label = "8. Cancel", fn = function()
+            { key = "cancel", label = "9. Cancel", fn = function()
                 cm:Hide()
             end },
         }
@@ -8103,9 +8211,17 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
     contextMenu.title:SetText(string.format("|cff%s[#] %s|r", t.highlightHex or "ffd34e", charName:upper()))
     contextMenu.sep:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
 
+    local r = self:GetWellRestedRank(charData)
     for _, btn in ipairs(contextMenu.buttons) do
         btn:SetBackdropColor(0, 0, 0, 0)
         btn:SetBackdropBorderColor(0, 0, 0, 0)
+        if btn.actKey == "perk" then
+            if self:IsRetail() then
+                btn.label:SetText("5. Well Rested: N/A (Retail)")
+            else
+                btn.label:SetText(string.format("5. Well Rested: Rank %d (+%d%%)", r, r * 4))
+            end
+        end
         if btn.actKey == "delete" then
             btn.label:SetTextColor(0.9, 0.5, 0.5)
         else

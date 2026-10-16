@@ -770,33 +770,57 @@ local function SlashHandler(msg)
             CLIAlts:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
             return
         end
+        local selChar = (CLIAlts.GetMainFrame and CLIAlts:GetMainFrame() and CLIAlts:GetMainFrame().detailPanel and CLIAlts:GetMainFrame().detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
         if arg and arg ~= "" then
             local rank = tonumber(arg)
             if rank and rank >= 0 and rank <= 5 then
-                CLIAlts:SetWellRestedRank(rank)
+                CLIAlts:SetWellRestedRank(rank, selChar)
             else
-                CLIAlts:Print("Usage: |cff00ff66/fa perk <0-5>|r (Sets your Well Rested perk rank)")
+                local a1, a2 = arg:match("^(%S+)%s+(%S+)$")
+                if a1 and a2 then
+                    local r1, r2 = tonumber(a1), tonumber(a2)
+                    if r1 and r1 >= 0 and r1 <= 5 then
+                        CLIAlts:SetWellRestedRank(r1, a2)
+                    elseif r2 and r2 >= 0 and r2 <= 5 then
+                        CLIAlts:SetWellRestedRank(r2, a1)
+                    else
+                        CLIAlts:Print("Usage: |cff00ff66/fa perk [character] <0-5>|r")
+                    end
+                else
+                    local foundChar = CLIAlts:FindCharacter(arg)
+                    if foundChar then
+                        local curRank = CLIAlts:GetWellRestedRank(foundChar)
+                        CLIAlts:Print(string.format("Well Rested perk for |cffffffff%s|r: Rank %d/5 (+%d%% speed, %d%% cap).",
+                            foundChar.fullName or foundChar.name, curRank, curRank * 4, 150 + (curRank * 6)))
+                    else
+                        CLIAlts:Print("Usage: |cff00ff66/fa perk [character] <0-5>|r (Sets or inspects Well Rested perk rank)")
+                    end
+                end
             end
         else
-            CLIAlts:CycleWellRestedPerk()
+            CLIAlts:CycleWellRestedPerk(selChar)
         end
 
     elseif cmd == "rested" then
         if CLIAlts:IsRetail() then
             CLIAlts:Print("--- Rested XP Summary (Retail: Standard 150% Cap) ---")
         else
-            local r = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0
-            CLIAlts:Print(string.format("--- Rested XP Summary (Well Rested Perk: Rank %d/5 +%d%%) ---", r, r * 4))
+            local selChar = (CLIAlts.GetMainFrame and CLIAlts:GetMainFrame() and CLIAlts:GetMainFrame().detailPanel and CLIAlts:GetMainFrame().detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+            local r = CLIAlts:GetWellRestedRank(selChar)
+            local cName = (selChar and (selChar.fullName or selChar.name)) or "Active"
+            CLIAlts:Print(string.format("--- Rested XP Summary (Well Rested Perk: %s R%d/5 +%d%%) ---", cName, r, r * 4))
         end
         local chars = CLIAlts:GetCharactersList("rested", false)
         for _, char in ipairs(chars) do
             local rested = CLIAlts:GetRestedData(char)
             local coloredName = CLIAlts:ColorizePlayerName(char.name, char.classFile)
+            local charRank = CLIAlts:GetWellRestedRank(char)
+            local rankTag = (not CLIAlts:IsRetail() and charRank > 0) and string.format(" [R%d, %d%% cap]", charRank, 150 + (charRank * 6)) or ""
             if rested and not rested.isMaxLevel then
-                DEFAULT_CHAT_FRAME:AddMessage(string.format("  * %s (Lvl %d): %s %d%% - %s (%s)",
-                    coloredName, char.level or 1, rested.statusStr, rested.percent, rested.timeLeftStr, rested.fullDate))
+                DEFAULT_CHAT_FRAME:AddMessage(string.format("  * %s (Lvl %d)%s: %s %d%% - %s (%s)",
+                    coloredName, char.level or 1, rankTag, rested.statusStr, rested.percent, rested.timeLeftStr, rested.fullDate))
             else
-                DEFAULT_CHAT_FRAME:AddMessage(string.format("  * %s (Lvl %d): [ MAX LEVEL ]", coloredName, char.level or 1))
+                DEFAULT_CHAT_FRAME:AddMessage(string.format("  * %s (Lvl %d)%s: [ MAX LEVEL ]", coloredName, char.level or 1, rankTag))
             end
         end
 

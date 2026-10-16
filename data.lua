@@ -1389,6 +1389,8 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         routeCooking = (existing and existing.routeCooking) or (cachedCurrentChar and cachedCurrentChar.routeCooking),
         routeFirstAid = (existing and existing.routeFirstAid) or (cachedCurrentChar and cachedCurrentChar.routeFirstAid),
         target_level = (existing and existing.target_level) or (cachedCurrentChar and cachedCurrentChar.target_level),
+        wellRestedRank = (existing and existing.wellRestedRank) or (cachedCurrentChar and cachedCurrentChar.wellRestedRank),
+        legacyPoints = (existing and existing.legacyPoints) or (cachedCurrentChar and cachedCurrentChar.legacyPoints),
         inventory = self:CollectInventory(existing and existing.inventory),
         dungeonQuests = self:CollectDungeonQuests(existing and existing.dungeonQuests),
         activeQuests = self:CollectActiveDungeonQuests(),
@@ -1504,18 +1506,59 @@ end
 -- ----------------------------------------------------------------------------
 -- WoW Forever Legacy Perk: "Well Rested" (Adventure Tree, Ranks 0-5)
 -- Each rank gives +4% accumulation speed and +4% max rested cap (up to +20%).
+-- In WoW Forever, Legacy Points and perk selections are tracked individually per character.
 -- ----------------------------------------------------------------------------
-function CLIAlts:SetWellRestedRank(rank)
+function CLIAlts:GetWellRestedRank(char)
+    if self:IsRetail() then return 0 end
+    if type(char) == "string" then
+        char = self:FindCharacter(char)
+    end
+    if not char then
+        char = (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+    end
+    local r = char and tonumber(char.wellRestedRank)
+    if r ~= nil and r >= 0 and r <= 5 then
+        return math.floor(r)
+    end
+    -- Fallback to global setting if set, else 0
+    local globalR = CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)
+    if globalR and globalR >= 0 and globalR <= 5 then
+        return math.floor(globalR)
+    end
+    return 0
+end
+
+function CLIAlts:SetWellRestedRank(rank, charOrName)
     if self:IsRetail() then
         self:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
-        return
+        return false
     end
     rank = tonumber(rank) or 0
     if rank < 0 then rank = 0 end
     if rank > 5 then rank = 5 end
 
-    CLIAltsDB.settings = CLIAltsDB.settings or {}
-    CLIAltsDB.settings.wellRestedRank = rank
+    local char = nil
+    if charOrName then
+        if type(charOrName) == "table" then
+            char = charOrName
+        else
+            char = self:FindCharacter(charOrName)
+        end
+    end
+    if not char then
+        if self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar then
+            char = self.mainFrame.detailPanel.currentChar
+        else
+            char = self:GetCurrentPlayer()
+        end
+    end
+
+    if char then
+        char.wellRestedRank = rank
+    else
+        CLIAltsDB.settings = CLIAltsDB.settings or {}
+        CLIAltsDB.settings.wellRestedRank = rank
+    end
 
     if self.InvalidateRestedCache then
         self:InvalidateRestedCache()
@@ -1523,26 +1566,60 @@ function CLIAlts:SetWellRestedRank(rank)
 
     local speedBonus = rank * 4
     local capPercent = 150 + (rank * 6)
-    self:Print(string.format("Well Rested perk set to |cffffffffRank %d/5|r (+%d%% rest speed, %d%% cap).", rank, speedBonus, capPercent))
+    local charName = (char and (char.fullName or char.name)) or "Account Default"
+    self:Print(string.format("Well Rested perk for |cffffffff%s|r set to |cffffffffRank %d/5|r (+%d%% rest speed, %d%% cap).", charName, rank, speedBonus, capPercent))
 
     local frame = self.mainFrame or _G["CLIAltsMainFrame"]
     if frame and frame.btnPerk and frame.btnPerk.label then
-        frame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", rank, speedBonus))
+        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or self:GetCurrentPlayer()
+        local r = self:GetWellRestedRank(selChar)
+        local charLP = self.CalculateCharacterLP and self:CalculateCharacterLP(selChar) or 0
+        frame.btnPerk.label:SetText(string.format("[ WELL RESTED: R%d · %.1f LP ]", r, charLP))
+    end
+    if frame and frame.wellRestedBadge and frame.wellRestedBadge.text then
+        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or self:GetCurrentPlayer()
+        local r = self:GetWellRestedRank(selChar)
+        local charLP = self.CalculateCharacterLP and self:CalculateCharacterLP(selChar) or 0
+        local lpData = self.CalculateAccountLP and self:CalculateAccountLP()
+        local lpVal = (lpData and lpData.effectiveLP) or 0
+        local cName = (selChar and (selChar.fullName or selChar.name)) or "Char"
+        frame.wellRestedBadge.text:SetText(string.format("%s: R%d (+%d%%) · %.1f LP (Acc: %.1f)", cName, r, r * 4, charLP, lpVal))
+    end
+
+    if self.UpdateDetailPanel and char then
+        self:UpdateDetailPanel(char)
     end
 
     if frame and frame:IsShown() then
         self:Render()
     end
+    return true
 end
 
-function CLIAlts:CycleWellRestedPerk()
+function CLIAlts:CycleWellRestedPerk(charOrName)
     if self:IsRetail() then
         self:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
         return
     end
-    local currentRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    local char = nil
+    if charOrName then
+        if type(charOrName) == "table" then
+            char = charOrName
+        else
+            char = self:FindCharacter(charOrName)
+        end
+    end
+    if not char then
+        if self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar then
+            char = self.mainFrame.detailPanel.currentChar
+        else
+            char = self:GetCurrentPlayer()
+        end
+    end
+
+    local currentRank = self:GetWellRestedRank(char)
     local nextRank = (currentRank + 1) % 6
-    self:SetWellRestedRank(nextRank)
+    self:SetWellRestedRank(nextRank, char)
 end
 
 -- ----------------------------------------------------------------------------
@@ -1650,9 +1727,7 @@ function CLIAlts:GetRestedData(char, force, nowOverride)
     -- Well Rested Perk (0 to 5 ranks; hard-locked to 0 on Retail)
     local perkRank = 0
     if not self:IsRetail() then
-        perkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-        if perkRank < 0 then perkRank = 0 end
-        if perkRank > 5 then perkRank = 5 end
+        perkRank = self:GetWellRestedRank(char)
     end
 
     local speedMult = 1 + (perkRank * 0.04)   -- +4% speed per rank (1.00 to 1.20)
@@ -2725,7 +2800,7 @@ function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride, forceLogoutS
     local maxXP = char.maxXP or 0
     if maxXP <= 0 then return char.restedXP or 0 end
 
-    local rank = rankOverride or (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
+    local rank = rankOverride or self:GetWellRestedRank(char)
     if rank < 0 then rank = 0 end
     if rank > 5 then rank = 5 end
 
@@ -2826,27 +2901,31 @@ function CLIAlts:CalibrateRestedModel()
 
     local curLevel = (UnitLevel and UnitLevel("player")) or 1
     local actualRested = GetXPExhaustion() or 0
-    local curRank = (CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
-    local pendingRank = CLIAltsDB.settings and CLIAltsDB.settings.pendingCalibratedRank
+    local curRank = self:GetWellRestedRank(old)
+    local pendingRank = old.pendingCalibratedRank or (CLIAltsDB.settings and CLIAltsDB.settings.pendingCalibratedRank)
 
     local inferredRank, drift, status = self:EvaluateCalibration(old, actualRested, curLevel, time(), curRank, pendingRank)
     if status == "MATCH" then
+        old.pendingCalibratedRank = nil
         if CLIAltsDB.settings then
             CLIAltsDB.settings.pendingCalibratedRank = nil
         end
     elseif status == "PENDING" then
+        old.pendingCalibratedRank = inferredRank
         if CLIAltsDB.settings then
             CLIAltsDB.settings.pendingCalibratedRank = inferredRank
         end
     elseif status == "CONFIRMED" then
+        old.wellRestedRank = inferredRank
+        old.pendingCalibratedRank = nil
         if CLIAltsDB.settings then
             CLIAltsDB.settings.wellRestedRank = inferredRank
             CLIAltsDB.settings.calibrated = true
             CLIAltsDB.settings.pendingCalibratedRank = nil
         end
         self:InvalidateRestedCache()
-        self:Print(string.format("Rested model self-calibrated (confirmed): Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
-            inferredRank, inferredRank * 4, drift * 100))
+        self:Print(string.format("Rested model self-calibrated for %s (confirmed): Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
+            old.name or "Character", inferredRank, inferredRank * 4, drift * 100))
     end
 end
 
@@ -5425,6 +5504,10 @@ CLIAlts.LP_TIERS = { 10, 16, 18 }
 
 function CLIAlts:CalculateCharacterLP(char)
     if not char then return 0.0, {} end
+    if char.legacyPoints and tonumber(char.legacyPoints) then
+        local manualPts = tonumber(char.legacyPoints)
+        return manualPts, { string.format("Manual: %.1f LP", manualPts) }
+    end
     local pts = 0.0
     local reasons = {}
     local lvl = tonumber(char.level) or 1
@@ -5472,7 +5555,7 @@ function CLIAlts:CalculateAccountLP()
 
     for _, c in ipairs(chars) do
         local pts, reasons = self:CalculateCharacterLP(c)
-        if pts > 0 then
+        if pts > 0 or (c.wellRestedRank and c.wellRestedRank > 0) then
             totalCalc = totalCalc + pts
             table.insert(breakdown, {
                 char = c,
@@ -5482,6 +5565,7 @@ function CLIAlts:CalculateAccountLP()
                 tier = c.tier or "UNASSIGNED",
                 points = pts,
                 reasons = reasons,
+                wellRestedRank = self:GetWellRestedRank(c),
             })
         end
     end
@@ -5535,8 +5619,72 @@ function CLIAlts:SetAccountLP(points)
     return string.format("Legacy Points manually set to %.1f LP (Target: %d LP, %.1f needed).", num, data.nextTier, data.neededLP), true
 end
 
+function CLIAlts:SetCharacterLP(charOrName, points)
+    local char = nil
+    if charOrName then
+        if type(charOrName) == "table" then
+            char = charOrName
+        else
+            char = self:FindCharacter(charOrName)
+        end
+    end
+    if not char then
+        char = (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+    end
+    if not char then
+        return "Character not found.", false
+    end
+
+    if not points or points == "" or points == "auto" or points == "reset" or points == "calc" then
+        char.legacyPoints = nil
+        local calcPts = self:CalculateCharacterLP(char)
+        return string.format("Legacy Points for %s reset to auto calculation (%.1f LP).", char.name or "alt", calcPts), true
+    end
+
+    local num = tonumber(points)
+    if not num or num < 0 or num > 50 then
+        return "Usage: /fa lp [alt] <points|auto>", false
+    end
+    char.legacyPoints = num
+    return string.format("Legacy Points for %s set to %.1f LP.", char.name or "alt", num), true
+end
+
 function CLIAlts:PrintLegacyPointStatus(arg)
     if arg and arg ~= "" then
+        local a1, a2 = arg:match("^(%S+)%s+(%S+)$")
+        if a1 and a2 then
+            local n1, n2 = tonumber(a1), tonumber(a2)
+            if n1 and not n2 then
+                local msg, ok = self:SetCharacterLP(a2, n1)
+                self:Print(msg)
+                self:RequestRender()
+                return msg, ok
+            elseif n2 and not n1 then
+                local msg, ok = self:SetCharacterLP(a1, n2)
+                self:Print(msg)
+                self:RequestRender()
+                return msg, ok
+            end
+        end
+
+        local num = tonumber(arg)
+        if num or arg == "auto" or arg == "reset" or arg == "calc" then
+            local msg, ok = self:SetAccountLP(arg)
+            self:Print(msg)
+            self:RequestRender()
+            return msg, ok
+        end
+
+        local c = self:FindCharacter(arg)
+        if c then
+            local pts, reasons = self:CalculateCharacterLP(c)
+            local r = self:GetWellRestedRank(c)
+            local detail = (#reasons > 0) and table.concat(reasons, ", ") or "None"
+            self:Print(string.format("Legacy Points for |cffffffff%s|r: |cffe8b64a%.1f LP|r [%s] · Well Rested: |cff00ff66Rank %d/5 (+%d%%)|r",
+                c.fullName or c.name, pts, detail, r, r * 4))
+            return string.format("%s: %.1f LP (R%d)", c.name or arg, pts, r), true
+        end
+
         local msg, ok = self:SetAccountLP(arg)
         self:Print(msg)
         self:RequestRender()
@@ -5575,7 +5723,9 @@ function CLIAlts:PrintLegacyPointStatus(arg)
         for _, b in ipairs(data.breakdown) do
             local cName = self:ColorizePlayerName(b.name, b.classFile)
             local detail = table.concat(b.reasons, ", ")
-            DEFAULT_CHAT_FRAME:AddMessage(string.format("    * %-16s (Lvl %2d): |cffffffff%.1f LP|r [%s]", cName, b.level, b.points, detail))
+            local r = b.wellRestedRank or 0
+            local rTag = (r > 0) and string.format(" · |cff%sWell Rested: R%d (+%d%%)|r", t.readyHex or "55e39a", r, r * 4) or ""
+            DEFAULT_CHAT_FRAME:AddMessage(string.format("    * %-16s (Lvl %2d): |cffffffff%.1f LP|r [%s]%s", cName, b.level, b.points, detail, rTag))
         end
     end
 
@@ -6547,7 +6697,8 @@ function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
                 local burnMinutes = math.max(1, math.floor(burnHours * 60 + 0.5))
 
                 local maxXP = c.maxXP or 1
-                local speedMult = 1 + (((CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank) or 0) * 0.04)
+                local cRank = self:GetWellRestedRank(c)
+                local speedMult = 1 + (cRank * 0.04)
                 local maxRested = maxXP * 1.5 * speedMult
                 local isCapped = (restedXP >= maxRested * 0.99)
                 local wastedXP = 0
