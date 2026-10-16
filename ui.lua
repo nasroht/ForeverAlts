@@ -3620,7 +3620,7 @@ function CLIAlts:CreateModernMainFrame()
         { id = 1, text = "Overview", badge = "7", isOverview = true },
         { id = 4, text = "Professions", badge = nil },
         { id = 6, text = "World & Locks", badge = "3", isWarn = true },
-        { id = 7, text = "Mail Logistics", badge = "0", isMail = true },
+        { id = 7, text = "Mail Routing", badge = "0", isMail = true },
         { id = 8, text = "Settings", badge = nil, isSettings = true },
     }
     frame.tabButtons = {}
@@ -3707,7 +3707,7 @@ function CLIAlts:CreateModernMainFrame()
                     GameTooltip:AddLine(string.format("World & Locks (%s Ready)", bCount or "0"), 1, 1, 1)
                     GameTooltip:AddLine("Trade crafting cooldowns, raid lockouts, last active zones, and hearthstone binds.", 0.8, 0.8, 0.8, true)
                 elseif self.tabId == 7 then
-                    GameTooltip:AddLine(string.format("Mail Logistics (%s Packages)", bCount or "0"), 1, 1, 1)
+                    GameTooltip:AddLine(string.format("Mail Routing (%s Packages)", bCount or "0"), 1, 1, 1)
                     GameTooltip:AddLine("Pending mail packages and supply shipments queued across your alts.", 0.8, 0.8, 0.8, true)
                 elseif self.tabId == 8 then
                     GameTooltip:AddLine("Settings & Preferences", 1, 1, 1)
