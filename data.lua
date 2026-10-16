@@ -660,20 +660,22 @@ function CLIAlts:IsCurrentPlayer(char)
     local curPrim = (UnitName and UnitName("player")) or self.curPlayerPrimary
     local curFull = self.curPlayerFullName
     local curKey = self.curPlayerKey
+    local curSec = self.curPlayerSecondary
 
     if (not curPrim or curPrim == "Unknown") and not curFull and not curKey then
         return false
     end
 
-    local targetName, targetFull, targetKey
+    local targetName, targetFull, targetKey, targetSec
     if type(char) == "string" then
         targetName = char
         targetFull = char
         targetKey = char
     elseif type(char) == "table" then
-        targetName = char.primaryName or char.name
+        targetName = char.fullName or char.name or char.primaryName
         targetFull = char.fullName or char.name
-        targetKey = char.key
+        targetKey = char.key or char.fullName or char.name
+        targetSec = char.secondaryName
     else
         return false
     end
@@ -685,28 +687,38 @@ function CLIAlts:IsCurrentPlayer(char)
         return clean
     end
 
-    local normCurPrim = norm(curPrim)
     local normCurFull = norm(curFull)
     local normCurKey = norm(curKey)
+    local normCurPrim = norm(curPrim)
 
-    local normTargetName = norm(targetName)
     local normTargetFull = norm(targetFull)
     local normTargetKey = norm(targetKey)
+    local normTargetName = norm(targetName)
 
-    if normTargetName and (normTargetName == normCurPrim or normTargetName == normCurFull or normTargetName == normCurKey) then
+    -- 1. Direct match on full identifier, key, or stripped realm
+    if normTargetKey and (normTargetKey == normCurKey or normTargetKey == normCurFull) then
         return true
     end
-    if normTargetFull and (normTargetFull == normCurPrim or normTargetFull == normCurFull or normTargetFull == normCurKey) then
-        return true
-    end
-    if normTargetKey and (normTargetKey == normCurPrim or normTargetKey == normCurFull or normTargetKey == normCurKey) then
+    if normTargetFull and (normTargetFull == normCurFull or normTargetFull == normCurKey) then
         return true
     end
 
-    local tLower = tostring(targetName):lower():match("^%s*(.-)%s*$")
-    if curPrim and tLower ~= "unknown" and tLower == curPrim:lower() then return true end
-    if curFull and tLower ~= "unknown" and tLower == curFull:lower() then return true end
-    if curKey and tLower ~= "unknown" and tLower == tostring(curKey):lower() then return true end
+    -- 2. If current player has a secondary name (WoW Forever / RP surname),
+    -- do NOT allow matching by primary name alone across different characters!
+    if curSec and curSec ~= "" then
+        if targetSec and norm(targetSec) ~= norm(curSec) then
+            return false
+        end
+        if normTargetFull and normTargetFull ~= normCurFull then
+            return false
+        end
+        return false
+    end
+
+    -- 3. Standard WoW (single-word character name without surnames)
+    if normTargetName and normCurPrim and normTargetName == normCurPrim then
+        return true
+    end
 
     return false
 end
@@ -1666,6 +1678,15 @@ function CLIAlts:GetLevelProgressData(char)
         end
     end
 
+    -- Self-heal cross-contaminated maxXP for offline alts
+    if not isCurrent and level > 1 and maxXP <= 400 then
+        local classicXP = { [1]=400, [2]=900, [3]=1400, [4]=2100, [5]=2800, [6]=3600, [7]=4500, [8]=5400, [9]=6500, [10]=7600 }
+        if classicXP[level] then
+            maxXP = classicXP[level]
+            char.maxXP = maxXP
+        end
+    end
+
     if isMaxLevel then
         return {
             isMaxLevel = true,
@@ -2120,14 +2141,23 @@ function CLIAlts:FindCharacter(query)
         return CLIAltsDB.characters[query], query
     end
 
-    -- 1. Exact case-insensitive match on name, full name, or key
+    -- 1. Exact case-insensitive match on full name, key, or name
     for k, char in pairs(CLIAltsDB.characters) do
-        local name = (char.name or ""):lower()
         local full = (char.fullName or ""):lower()
-        local prim = (char.primaryName or ""):lower()
         local keyLower = tostring(k):lower()
-        if name == qLower or full == qLower or prim == qLower or keyLower == qLower then
+        local name = (char.name or ""):lower()
+        if full == qLower or keyLower == qLower or name == qLower then
             return char, k
+        end
+    end
+
+    -- 1b. Fallback exact match on primaryName only if query doesn't contain a space
+    if not qLower:find(" ") then
+        for k, char in pairs(CLIAltsDB.characters) do
+            local prim = (char.primaryName or ""):lower()
+            if prim == qLower then
+                return char, k
+            end
         end
     end
 
