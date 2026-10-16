@@ -8611,79 +8611,94 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
         return
     end
 
-    -- Guard against duplicate additions within the same tooltip rendering pass
-    self.processedTooltips = self.processedTooltips or setmetatable({}, { __mode = "k" })
-    if self.processedTooltips[tooltip] == itemID or tooltip._clialtsProcessed == itemID then
+    -- 1. Anti-recursion / scanner tooltip guards:
+    if self._isAddingTooltipInfo then return end
+    if tooltip._isScanTip then return end
+    if tooltip.IsForbidden and tooltip:IsForbidden() then return end
+    local tipName = tooltip.GetName and tooltip:GetName()
+    if tipName and (tipName:find("ScanTip") or tipName:find("CLIAlts") or tipName:find("ForeverAlts")) then
+        return
+    end
+    if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip and (tooltip.IsShown and not tooltip:IsShown()) then
         return
     end
 
-    -- Check if the tooltip already has CLIAlts lines to prevent stacking
-    local numLines = (tooltip.NumLines and tooltip:NumLines()) or 0
-    if numLines > 0 and tooltip.GetName then
-        local tipName = tooltip:GetName()
-        if tipName then
-            for i = 1, numLines do
-                local line = _G[tipName .. "TextLeft" .. i]
-                local text = line and line:GetText()
-                if text and text:find("%[CLIAlts%]") then
-                    self.processedTooltips[tooltip] = itemID
-                    return
+    self._isAddingTooltipInfo = true
+    local ok, _ = pcall(function()
+        -- Guard against duplicate additions within the same tooltip rendering pass
+        self.processedTooltips = self.processedTooltips or setmetatable({}, { __mode = "k" })
+        if self.processedTooltips[tooltip] == itemID or tooltip._clialtsProcessed == itemID then
+            return
+        end
+
+        -- Check if the tooltip already has CLIAlts lines to prevent stacking
+        local numLines = (tooltip.NumLines and tooltip:NumLines()) or 0
+        if numLines > 0 and tooltip.GetName then
+            if tipName then
+                for i = 1, numLines do
+                    local line = _G[tipName .. "TextLeft" .. i]
+                    local text = line and line:GetText()
+                    if text and (text:find("%[CLIAlts%]") or text:find("%[ForeverAlts%]")) then
+                        self.processedTooltips[tooltip] = itemID
+                        return
+                    end
                 end
             end
         end
-    end
 
-    local didAdd = false
+        local didAdd = false
 
-    local totalCount, breakdown = self:GetItemInventorySummary(itemID)
-    if totalCount > 0 and breakdown and #breakdown > 0 then
-        tooltip:AddDoubleLine("|cff00ff66[CLIAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
-        for _, entry in ipairs(breakdown) do
-            local _, _, _, colorHex = self:GetClassColor(entry.classFile)
-            colorHex = colorHex or "ffffff"
-            local nameStr = string.format("|cff%s%s|r", colorHex, entry.name)
-            if entry.isCurrent then
-                nameStr = nameStr .. " |cff888888(you)|r"
-            elseif entry.realm and self.curPlayerRealm and entry.realm ~= self.curPlayerRealm then
-                nameStr = nameStr .. string.format(" |cff888888(%s)|r", entry.realm)
+        local totalCount, breakdown = self:GetItemInventorySummary(itemID)
+        if totalCount > 0 and breakdown and #breakdown > 0 then
+            tooltip:AddDoubleLine("|cff00ff66[ForeverAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
+            for _, entry in ipairs(breakdown) do
+                local _, _, _, colorHex = self:GetClassColor(entry.classFile)
+                colorHex = colorHex or "ffffff"
+                local nameStr = string.format("|cff%s%s|r", colorHex, entry.name)
+                if entry.isCurrent then
+                    nameStr = nameStr .. " |cff888888(you)|r"
+                elseif entry.realm and self.curPlayerRealm and entry.realm ~= self.curPlayerRealm then
+                    nameStr = nameStr .. string.format(" |cff888888(%s)|r", entry.realm)
+                end
+
+                local countDetail
+                if entry.bag > 0 and entry.bank > 0 then
+                    countDetail = string.format("%d (Bags: %d, Bank: %d)", entry.total, entry.bag, entry.bank)
+                elseif entry.bag > 0 then
+                    countDetail = string.format("%d (Bags)", entry.bag)
+                else
+                    countDetail = string.format("%d (Bank)", entry.bank)
+                end
+
+                tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
             end
-
-            local countDetail
-            if entry.bag > 0 and entry.bank > 0 then
-                countDetail = string.format("%d (Bags: %d, Bank: %d)", entry.total, entry.bag, entry.bank)
-            elseif entry.bag > 0 then
-                countDetail = string.format("%d (Bags)", entry.bag)
-            else
-                countDetail = string.format("%d (Bank)", entry.bank)
-            end
-
-            tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
-        end
-        didAdd = true
-    end
-
-    if self.GetMaterialDestination then
-        local isIgnored = self.IsItemMailIgnored and self:IsItemMailIgnored(itemID)
-        if isIgnored then
-            tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Status:", "|cffff4444IGNORED (Not Mailed)|r")
             didAdd = true
-        else
-            local dest = self:GetMaterialDestination(itemID)
-            if dest and not dest.isCurrentPlayer and not self:IsCurrentPlayer(dest.destName) and not self:IsCurrentPlayer(dest.destChar) then
-                local _, _, _, cHex = self:GetClassColor(dest.classFile)
-                cHex = cHex or "55e39a"
-                tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Send to:", string.format("|cff%s%s|r (|cffffd700%s|r)", cHex, dest.destName, dest.reason))
+        end
+
+        if self.GetMaterialDestination then
+            local isIgnored = self.IsItemMailIgnored and self:IsItemMailIgnored(itemID)
+            if isIgnored then
+                tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Status:", "|cffff4444IGNORED (Not Mailed)|r")
                 didAdd = true
+            else
+                local dest = self:GetMaterialDestination(itemID)
+                if dest and not dest.isCurrentPlayer and not self:IsCurrentPlayer(dest.destName) and not self:IsCurrentPlayer(dest.destChar) then
+                    local _, _, _, cHex = self:GetClassColor(dest.classFile)
+                    cHex = cHex or "55e39a"
+                    tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Send to:", string.format("|cff%s%s|r (|cffffd700%s|r)", cHex, dest.destName, dest.reason))
+                    didAdd = true
+                end
             end
         end
-    end
 
-    if didAdd then
-        self.processedTooltips[tooltip] = itemID
-        if type(tooltip) == "table" and not tooltip.GetName then
-            tooltip._clialtsProcessed = itemID
+        if didAdd then
+            self.processedTooltips[tooltip] = itemID
+            if type(tooltip) == "table" and not tooltip.GetName then
+                tooltip._clialtsProcessed = itemID
+            end
         end
-    end
+    end)
+    self._isAddingTooltipInfo = false
 end
 
 function CLIAlts:InitTooltipHooks()
@@ -8712,6 +8727,15 @@ function CLIAlts:InitTooltipHooks()
         TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
             if InCombatLockdown and InCombatLockdown() then return end
             if not tooltip or not data then return end
+            if tooltip._isScanTip then return end
+            if tooltip.IsForbidden and tooltip:IsForbidden() then return end
+            local tipName = tooltip.GetName and tooltip:GetName()
+            if tipName and (tipName:find("ScanTip") or tipName:find("CLIAlts") or tipName:find("ForeverAlts")) then
+                return
+            end
+            if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip and (tooltip.IsShown and not tooltip:IsShown()) then
+                return
+            end
             local itemID = data.id
             if not itemID and tooltip.GetItem then
                 local _, link = tooltip:GetItem()
@@ -8725,6 +8749,15 @@ function CLIAlts:InitTooltipHooks()
         local function OnTooltipSetItem(tooltip)
             if InCombatLockdown and InCombatLockdown() then return end
             if not tooltip or not tooltip.GetItem then return end
+            if tooltip._isScanTip then return end
+            if tooltip.IsForbidden and tooltip:IsForbidden() then return end
+            local tipName = tooltip.GetName and tooltip:GetName()
+            if tipName and (tipName:find("ScanTip") or tipName:find("CLIAlts") or tipName:find("ForeverAlts")) then
+                return
+            end
+            if tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip and (tooltip.IsShown and not tooltip:IsShown()) then
+                return
+            end
             local _, link = tooltip:GetItem()
             if link then
                 local itemID = tonumber(link:match("item:(%d+)"))

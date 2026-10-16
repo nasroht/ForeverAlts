@@ -1874,7 +1874,7 @@ function CLIAlts:RunSelfTest()
         }
         self:AddInventoryInfoToTooltip(mockTooltip, 14047)
         Assert(#mockTooltip.lines >= 4, "AddInventoryInfoToTooltip: appends header line plus 3 alt lines")
-        Assert(mockTooltip.lines[1].left:find("%[CLIAlts%]"), "AddInventoryInfoToTooltip: header contains '[CLIAlts]'")
+        Assert(mockTooltip.lines[1].left:find("%[ForeverAlts%]") ~= nil or mockTooltip.lines[1].left:find("%[CLIAlts%]") ~= nil, "AddInventoryInfoToTooltip: header contains '[ForeverAlts]'")
 
         -- Verify idempotency / deduplication (no stacking if invoked again on same draw)
         self:AddInventoryInfoToTooltip(mockTooltip, 14047)
@@ -1893,6 +1893,18 @@ function CLIAlts:RunSelfTest()
         self:AddInventoryInfoToTooltip(mockTooltip2, 14047)
         Assert(#mockTooltip2.lines == 0, "AddInventoryInfoToTooltip: does not add lines when showInventoryTooltips is false")
         CLIAltsDB.settings.showInventoryTooltips = true
+
+        -- Verify internal scan tooltips are ignored to prevent C stack overflow recursion
+        local scanTipMock = {
+            _isScanTip = true,
+            GetName = function() return "CLIAltsScanTip" end,
+            lines = {},
+            AddDoubleLine = function(self, left, right)
+                table.insert(self.lines, { left = left, right = right })
+            end,
+        }
+        self:AddInventoryInfoToTooltip(scanTipMock, 14047)
+        Assert(#scanTipMock.lines == 0, "AddInventoryInfoToTooltip: ignores internal scan tooltips")
     end
 
     -- 17g. CollectInventory bank preservation

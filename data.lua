@@ -4049,8 +4049,11 @@ function CLIAlts:GetScanTooltip()
         pcall(function()
             local parent = UIParent or nil
             scanTooltip = CreateFrame("GameTooltip", "CLIAltsScanTip", parent, "GameTooltipTemplate")
-            if scanTooltip and scanTooltip.SetOwner then
-                scanTooltip:SetOwner(parent or scanTooltip, "ANCHOR_NONE")
+            if scanTooltip then
+                scanTooltip._isScanTip = true
+                if scanTooltip.SetOwner then
+                    scanTooltip:SetOwner(parent or scanTooltip, "ANCHOR_NONE")
+                end
             end
         end)
     end
@@ -4058,6 +4061,10 @@ function CLIAlts:GetScanTooltip()
 end
 
 function CLIAlts:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
+    if self._isScanningRecipe then
+        return false, nil, nil
+    end
+    self._isScanningRecipe = true
     local isKnown = false
     local reqProfession = nil
     local reqSkill = nil
@@ -4167,8 +4174,7 @@ function CLIAlts:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
         elseif pLower:find("inscript", 1, true) or pLower:find("schrift", 1, true) or pLower:find("callig", 1, true) then
             canonicalProf = "Inscription"
         end
-    end
-
+    self._isScanningRecipe = false
     return isKnown, (canonicalProf or reqProfession), reqSkill
 end
 
