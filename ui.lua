@@ -3405,10 +3405,6 @@ function CLIAlts:CreateModernMainFrame()
     end)
 
     -- Keyboard Navigation (Phase 6: Up/Down arrow selection and Enter)
-    frame:EnableKeyboard(true)
-    if frame.SetPropagateKeyboardInput then
-        frame:SetPropagateKeyboardInput(true)
-    end
     frame:SetScript("OnKeyDown", function(self, key)
         if InCombatLockdown and InCombatLockdown() then return end
         if (self.searchBox and self.searchBox:HasFocus())
