@@ -770,7 +770,7 @@ local function SlashHandler(msg)
             CLIAlts:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
             return
         end
-        local selChar = (CLIAlts.GetMainFrame and CLIAlts:GetMainFrame() and CLIAlts:GetMainFrame().detailPanel and CLIAlts:GetMainFrame().detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local selChar = (CLIAlts.GetSelectedOrCurChar and CLIAlts:GetSelectedOrCurChar()) or (CLIAlts.GetMainFrame and CLIAlts:GetMainFrame() and CLIAlts:GetMainFrame().detailPanel and CLIAlts:GetMainFrame().detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
         if arg and arg ~= "" then
             local rank = tonumber(arg)
             if rank and rank >= 0 and rank <= 5 then
@@ -805,7 +805,7 @@ local function SlashHandler(msg)
         if CLIAlts:IsRetail() then
             CLIAlts:Print("--- Rested XP Summary (Retail: Standard 150% Cap) ---")
         else
-            local selChar = (CLIAlts.GetMainFrame and CLIAlts:GetMainFrame() and CLIAlts:GetMainFrame().detailPanel and CLIAlts:GetMainFrame().detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+            local selChar = (CLIAlts.GetSelectedOrCurChar and CLIAlts:GetSelectedOrCurChar()) or (CLIAlts.GetMainFrame and CLIAlts:GetMainFrame() and CLIAlts:GetMainFrame().detailPanel and CLIAlts:GetMainFrame().detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
             local r = CLIAlts:GetWellRestedRank(selChar)
             local cName = (selChar and (selChar.fullName or selChar.name)) or "Active"
             CLIAlts:Print(string.format("--- Rested XP Summary (Well Rested Perk: %s R%d/5 +%d%%) ---", cName, r, r * 4))

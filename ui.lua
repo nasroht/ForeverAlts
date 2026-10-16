@@ -2598,12 +2598,12 @@ function CLIAlts:CreateLegacyMainFrame()
     frame.recDetail = recDetail
 
     -- Well Rested Perk quick toggle button
-    local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+    local selChar = CLIAlts:GetSelectedOrCurChar()
     local initPerkRank = CLIAlts:GetWellRestedRank(selChar)
     local btnPerk = CreateRetroButton(recPanel, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 130, 18, function(self)
-        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local curChar = CLIAlts:GetSelectedOrCurChar()
         CLIAlts:CycleWellRestedPerk(curChar)
-        if MouseIsOver(self) and self:GetScript("OnEnter") then
+        if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
         CLIAlts:Render()
@@ -2613,7 +2613,7 @@ function CLIAlts:CreateLegacyMainFrame()
         local curT = CLIAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local curChar = CLIAlts:GetSelectedOrCurChar()
         local cName = (curChar and (curChar.fullName or curChar.name)) or "Character"
         GameTooltip:AddLine(string.format("%s: Well Rested Perk", cName), 1, 1, 1)
         local r = CLIAlts:GetWellRestedRank(curChar)
@@ -2950,6 +2950,9 @@ function CLIAlts:CreateLegacyMainFrame()
         row:SetScript("OnClick", function(self, button)
             if self.charData then
                 CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
+                if mainFrame and mainFrame.detailPanel then
+                    mainFrame.detailPanel.currentChar = self.charData
+                end
                 CLIAlts:Render()
                 local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
                 if button == "RightButton" then
@@ -3380,7 +3383,7 @@ function CLIAlts:CreateModernMainFrame()
                 if CLIAlts:IsCompact() then
                     CLIAlts:ShowDossierPopup(char)
                 else
-                    CLIAlts:UpdateDetailPanel()
+                    CLIAlts:UpdateDetailPanel(char)
                     CLIAlts:Render()
                 end
             end
@@ -3494,11 +3497,11 @@ function CLIAlts:CreateModernMainFrame()
     btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -8, 0)
     frame.btnHelp = btnHelp
 
-    local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+    local selChar = CLIAlts:GetSelectedOrCurChar()
     local initPerkRank = CLIAlts:GetWellRestedRank(selChar)
     local initCharLp = CLIAlts:CalculateCharacterLP(selChar)
     local btnPerk = CreateRetroButton(topBar, string.format("[ WELL RESTED: R%d · %.1f LP ]", initPerkRank, initCharLp), 170, 22, function(self)
-        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local curChar = CLIAlts:GetSelectedOrCurChar()
         CLIAlts:CycleWellRestedPerk(curChar)
         if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
@@ -3510,7 +3513,7 @@ function CLIAlts:CreateModernMainFrame()
         local curT = CLIAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
-        local curChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local curChar = CLIAlts:GetSelectedOrCurChar()
         local cName = (curChar and (curChar.fullName or curChar.name)) or "Character"
         GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
         local r = CLIAlts:GetWellRestedRank(curChar)
@@ -3974,7 +3977,7 @@ function CLIAlts:CreateModernMainFrame()
         local curT = CLIAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.45) end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        local selChar = detailPanel.currentChar or CLIAlts:GetCurrentPlayer()
+        local selChar = CLIAlts:GetSelectedOrCurChar()
         local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
         GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
         local r = CLIAlts:GetWellRestedRank(selChar)
@@ -3998,10 +4001,13 @@ function CLIAlts:CreateModernMainFrame()
         if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
         GameTooltip:Hide()
     end)
-    restedCard:SetScript("OnMouseDown", function()
-        local selChar = detailPanel.currentChar or CLIAlts:GetCurrentPlayer()
+    restedCard:SetScript("OnMouseDown", function(self)
+        local selChar = CLIAlts:GetSelectedOrCurChar()
         CLIAlts:CycleWellRestedPerk(selChar)
         CLIAlts:UpdateDetailPanel(selChar)
+        if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
+            self:GetScript("OnEnter")(self)
+        end
         CLIAlts:Render()
     end)
 
@@ -4528,15 +4534,19 @@ function CLIAlts:CreateModernMainFrame()
     wellRestedBadge:Hide()
     frame.wellRestedBadge = wellRestedBadge
 
-    wellRestedBadge:SetScript("OnClick", function()
-        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+    wellRestedBadge:SetScript("OnClick", function(self)
+        local selChar = CLIAlts:GetSelectedOrCurChar()
         CLIAlts:CycleWellRestedPerk(selChar)
+        if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
+            self:GetScript("OnEnter")(self)
+        end
         CLIAlts:Render()
     end)
     wellRestedBadge:SetScript("OnEnter", function(self)
-        if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
+        local curT = CLIAlts:GetTheme()
+        if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.45) end
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or CLIAlts:GetCurrentPlayer()
+        local selChar = CLIAlts:GetSelectedOrCurChar()
         local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
         GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
         local r = CLIAlts:GetWellRestedRank(selChar)
@@ -4945,6 +4955,9 @@ function CLIAlts:CreateModernMainFrame()
         row:SetScript("OnClick", function(self, button)
             if self.charData then
                 CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
+                if mainFrame and mainFrame.detailPanel then
+                    mainFrame.detailPanel.currentChar = self.charData
+                end
                 local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
                 if button == "RightButton" then
                     CLIAlts:ShowRowContextMenu(self, self.charData)
@@ -5120,13 +5133,18 @@ function CLIAlts:GetSelectedOrCurChar()
     return charList[1]
 end
 
-function CLIAlts:UpdateDetailPanel()
+function CLIAlts:UpdateDetailPanel(charArg)
     if not mainFrame or not mainFrame.detailPanel then return end
     local dp = mainFrame.detailPanel
-    local char = self:GetSelectedOrCurChar()
+    local char = charArg or self:GetSelectedOrCurChar()
     if not char then
+        dp.currentChar = nil
         dp:Hide()
         return
+    end
+    dp.currentChar = char
+    if char.fullName or char.name then
+        self.selectedCharKey = char.fullName or char.name
     end
     dp:Show()
 
@@ -5705,7 +5723,7 @@ function CLIAlts:Render(force)
         elseif activeTab == 8 then
             mainFrame.subViewFilters:SetText("CONFIGURATION · CRT THEMES · SCALE · CHAT CLONER")
         elseif activeTab == 3 then
-            local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+            local selChar = self:GetSelectedOrCurChar()
             local r = self:GetWellRestedRank(selChar)
             local charLP = self:CalculateCharacterLP(selChar)
             local lpData = self:CalculateAccountLP()
@@ -5773,7 +5791,7 @@ function CLIAlts:Render(force)
 
     if mainFrame.wellRestedBadge then
         if activeTab == 3 and not self:IsRetail() then
-            local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+            local selChar = self:GetSelectedOrCurChar()
             local r = self:GetWellRestedRank(selChar)
             local charLP = self:CalculateCharacterLP(selChar)
             local lpData = self:CalculateAccountLP()
@@ -5834,7 +5852,7 @@ function CLIAlts:Render(force)
         else
             mainFrame.btnPerk:Show()
             if mainFrame.btnPerk.label then
-                local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+                local selChar = self:GetSelectedOrCurChar()
                 local r = self:GetWellRestedRank(selChar)
                 local charLP = self:CalculateCharacterLP(selChar)
                 mainFrame.btnPerk.label:SetText(string.format("[ WELL RESTED: R%d · %.1f LP ]", r, charLP))
@@ -7015,7 +7033,7 @@ function CLIAlts:ApplyTheme()
             mainFrame.btnPerk:Hide()
         else
             mainFrame.btnPerk:Show()
-            local selChar = (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+            local selChar = (self.GetSelectedOrCurChar and self:GetSelectedOrCurChar()) or (mainFrame.detailPanel and mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
             local r = self:GetWellRestedRank(selChar)
             mainFrame.btnPerk.label:SetText(string.format("[ PERK: R%d (+%d%%) ]", r, r * 4))
             mainFrame.btnPerk.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
@@ -7372,7 +7390,7 @@ function CLIAlts:ExecutePromptCommand(input)
             self:SetPromptFeedback("Perks are not applicable on Retail WoW", true)
             return
         end
-        local selChar = (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+        local selChar = (self.GetSelectedOrCurChar and self:GetSelectedOrCurChar()) or (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
         if args and args ~= "" then
             local r = tonumber(args)
             if r and r >= 0 and r <= 5 then
@@ -7768,7 +7786,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
         if not mainFrame or not mainFrame:IsShown() then
             self:Toggle(true)
         end
-        self:UpdateDetailPanel()
+        self:UpdateDetailPanel(char)
         self:Render()
         return
     end
@@ -7878,6 +7896,9 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
                 CLIAlts:CycleWellRestedPerk(dp.charData)
                 CLIAlts:ShowDossierPopup(dp.charData)
                 CLIAlts:RequestRender()
+                if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
+                    self:GetScript("OnEnter")(self)
+                end
             end
         end, 11)
         btnPerk:SetPoint("RIGHT", btnClose, "LEFT", -6, 0)

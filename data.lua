@@ -1528,7 +1528,7 @@ function CLIAlts:GetWellRestedRank(char)
         char = self:FindCharacter(char)
     end
     if not char then
-        char = (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+        char = (self.GetSelectedOrCurChar and self:GetSelectedOrCurChar()) or (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
     end
     local r = char and tonumber(char.wellRestedRank)
     if r ~= nil and r >= 0 and r <= 5 then
@@ -1560,15 +1560,14 @@ function CLIAlts:SetWellRestedRank(rank, charOrName)
         end
     end
     if not char then
-        if self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar then
-            char = self.mainFrame.detailPanel.currentChar
-        else
-            char = self:GetCurrentPlayer()
-        end
+        char = (self.GetSelectedOrCurChar and self:GetSelectedOrCurChar()) or (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
     end
 
     if char then
         char.wellRestedRank = rank
+        if char.fullName or char.name then
+            self.selectedCharKey = char.fullName or char.name
+        end
     else
         CLIAltsDB.settings = CLIAltsDB.settings or {}
         CLIAltsDB.settings.wellRestedRank = rank
@@ -1584,24 +1583,28 @@ function CLIAlts:SetWellRestedRank(rank, charOrName)
     self:Print(string.format("Well Rested perk for |cffffffff%s|r set to |cffffffffRank %d/5|r (+%d%% rest speed, %d%% cap).", charName, rank, speedBonus, capPercent))
 
     local frame = self.mainFrame or _G["CLIAltsMainFrame"]
+    local activeChar = char or (self.GetSelectedOrCurChar and self:GetSelectedOrCurChar()) or self:GetCurrentPlayer()
+
+    if frame and frame.detailPanel then
+        frame.detailPanel.currentChar = activeChar
+    end
+
     if frame and frame.btnPerk and frame.btnPerk.label then
-        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or self:GetCurrentPlayer()
-        local r = self:GetWellRestedRank(selChar)
-        local charLP = self.CalculateCharacterLP and self:CalculateCharacterLP(selChar) or 0
+        local r = self:GetWellRestedRank(activeChar)
+        local charLP = self.CalculateCharacterLP and self:CalculateCharacterLP(activeChar) or 0
         frame.btnPerk.label:SetText(string.format("[ WELL RESTED: R%d · %.1f LP ]", r, charLP))
     end
     if frame and frame.wellRestedBadge and frame.wellRestedBadge.text then
-        local selChar = (frame.detailPanel and frame.detailPanel.currentChar) or self:GetCurrentPlayer()
-        local r = self:GetWellRestedRank(selChar)
-        local charLP = self.CalculateCharacterLP and self:CalculateCharacterLP(selChar) or 0
+        local r = self:GetWellRestedRank(activeChar)
+        local charLP = self.CalculateCharacterLP and self:CalculateCharacterLP(activeChar) or 0
         local lpData = self.CalculateAccountLP and self:CalculateAccountLP()
         local lpVal = (lpData and lpData.effectiveLP) or 0
-        local cName = (selChar and (selChar.fullName or selChar.name)) or "Char"
+        local cName = (activeChar and (activeChar.fullName or activeChar.name)) or "Char"
         frame.wellRestedBadge.text:SetText(string.format("%s: R%d (+%d%%) · %.1f LP (Acc: %.1f)", cName, r, r * 4, charLP, lpVal))
     end
 
-    if self.UpdateDetailPanel and char then
-        self:UpdateDetailPanel(char)
+    if self.UpdateDetailPanel and activeChar then
+        self:UpdateDetailPanel(activeChar)
     end
 
     if frame and frame:IsShown() then
@@ -1624,11 +1627,7 @@ function CLIAlts:CycleWellRestedPerk(charOrName)
         end
     end
     if not char then
-        if self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar then
-            char = self.mainFrame.detailPanel.currentChar
-        else
-            char = self:GetCurrentPlayer()
-        end
+        char = (self.GetSelectedOrCurChar and self:GetSelectedOrCurChar()) or (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
     end
 
     local currentRank = self:GetWellRestedRank(char)
@@ -5652,7 +5651,7 @@ function CLIAlts:SetCharacterLP(charOrName, points)
         end
     end
     if not char then
-        char = (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
+        char = (self.GetSelectedOrCurChar and self:GetSelectedOrCurChar()) or (self.mainFrame and self.mainFrame.detailPanel and self.mainFrame.detailPanel.currentChar) or self:GetCurrentPlayer()
     end
     if not char then
         return "Character not found.", false
