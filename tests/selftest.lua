@@ -2301,7 +2301,7 @@ function CLIAlts:RunSelfTest()
         Assert(cm ~= nil, "Interactions: Context menu frame created successfully")
         if cm then
             Assert(cm:IsShown() == true, "Interactions: Context menu is shown on invocation")
-            Assert(cm.buttons ~= nil and #cm.buttons == 8, "Interactions: Context menu has 8 actionable buttons")
+            Assert(cm.buttons ~= nil and #cm.buttons == 9, "Interactions: Context menu has 9 actionable buttons")
             cm:Hide()
             Assert(cm:IsShown() == false, "Interactions: Context menu dismissed safely")
         end
