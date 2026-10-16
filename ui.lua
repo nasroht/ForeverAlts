@@ -1390,75 +1390,113 @@ local function FmtRouteReason(char, t)
 end
 
 -- Tab 3 Rested Monitor Formatters
-local function FmtCurXP(char, t)
-    t = t or CLIAlts:GetTheme()
+local function ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local char, t
+    if charOrSelf == CLIAlts or (type(charOrSelf) == "table" and (charOrSelf.GetColumns or charOrSelf.GetTheme or charOrSelf.RunSelfTest)) then
+        char = charOrTheme
+        t = maybeTheme
+    else
+        char = charOrSelf
+        t = charOrTheme
+    end
+    if type(t) ~= "table" or (not t.textHex and not t.primaryHex and not t.dimHex) then
+        t = (CLIAlts.GetTheme and CLIAlts:GetTheme()) or {}
+    end
+    return char, t
+end
+
+local function FmtCurXP(charOrSelf, charOrTheme, maybeTheme)
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local textHex = (t and t.textHex) or "f4ead2"
+    local dimHex = (t and t.dimHex) or "736953"
+    if not char then return string.format("|cff%s---|r", mutedHex) end
+
     local xpData = CLIAlts:GetLevelProgressData(char)
     if not xpData or xpData.isMaxLevel then
-        return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%sMAX LEVEL|r", mutedHex)
     end
     if mainFrame and not mainFrame.isLegacyUI then
         local curK = (xpData.curXP or 0) >= 1000 and string.format("%.1fk", (xpData.curXP or 0) / 1000) or tostring(xpData.curXP or 0)
         local maxK = (xpData.maxXP or 0) >= 1000 and string.format("%.1fk", (xpData.maxXP or 0) / 1000) or tostring(xpData.maxXP or 0)
-        return string.format("|cff%s%s/%s (%d%%)|r", t.textHex or "f4ead2", curK, maxK, xpData.percent or 0)
+        return string.format("|cff%s%s/%s (%d%%)|r", textHex, curK, maxK, xpData.percent or 0)
     end
     return string.format("|cff%s%s|r |cff%s/ %s (%d%%)|r",
-        t.textHex or "f4ead2", CLIAlts:FormatNumber(xpData.curXP),
-        t.dimHex or "736953", CLIAlts:FormatNumber(xpData.maxXP), xpData.percent)
+        textHex, CLIAlts:FormatNumber(xpData.curXP or 0),
+        dimHex, CLIAlts:FormatNumber(xpData.maxXP or 0), xpData.percent or 0)
 end
+CLIAlts.FmtCurXP = FmtCurXP
 
-local function FmtRestedPool(char, t)
-    t = t or CLIAlts:GetTheme()
+local function FmtRestedPool(charOrSelf, charOrTheme, maybeTheme)
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local textHex = (t and (t.textHex or t.primaryHex)) or "f4ead2"
+    if not char then return string.format("|cff%s---|r", mutedHex) end
+
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", mutedHex)
     end
     if mainFrame and not mainFrame.isLegacyUI then
         local curK = (rested.currentRested or 0) >= 1000 and string.format("%.1fk", (rested.currentRested or 0) / 1000) or tostring(rested.currentRested or 0)
-        return string.format("|cff%s%s XP|r", t.textHex or t.primaryHex or "f4ead2", curK)
+        return string.format("|cff%s%s XP|r", textHex, curK)
     end
-    return string.format("|cff%s%s XP|r", t.textHex or t.primaryHex or "f4ead2", CLIAlts:FormatNumber(rested.currentRested or 0))
+    return string.format("|cff%s%s XP|r", textHex, CLIAlts:FormatNumber(rested.currentRested or 0))
 end
 CLIAlts.FmtRestedPool = FmtRestedPool
 
-local function FmtRestedBonus(char, t)
-    t = t or CLIAlts:GetTheme()
+local function FmtRestedBonus(charOrSelf, charOrTheme, maybeTheme)
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local readyHex = (t and t.readyHex) or "55e39a"
+    if not char then return string.format("|cff%s---|r", mutedHex) end
+
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", mutedHex)
     end
-    if CLIAlts:IsRetail() then
-        return string.format("|cff%s+0%%|r", t.mutedHex or "a9a08c")
+    if CLIAlts.IsRetail and CLIAlts:IsRetail() then
+        return string.format("|cff%s+0%%|r", mutedHex)
     end
-    local rank = rested.perkRank or CLIAlts:GetWellRestedRank(char)
+    local rank = (rested and rested.perkRank) or (CLIAlts.GetWellRestedRank and CLIAlts:GetWellRestedRank(char)) or 0
     local pct = rank * 4
     if rank > 0 then
-        return string.format("|cff%s+%d%% (R%d)|r", t.readyHex or "55e39a", pct, rank)
+        return string.format("|cff%s+%d%% (R%d)|r", readyHex, pct, rank)
     else
-        return string.format("|cff%s+0%% (R0)|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s+0%% (R0)|r", mutedHex)
     end
 end
 CLIAlts.FmtRestedBonus = FmtRestedBonus
 
-local function FmtRestedCap(char, t)
-    t = t or CLIAlts:GetTheme()
+local function FmtRestedCap(charOrSelf, charOrTheme, maybeTheme)
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local textHex = (t and (t.textHex or t.primaryHex)) or "f4ead2"
+    if not char then return string.format("|cff%s---|r", mutedHex) end
+
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", mutedHex)
     end
-    local capPct = rested.maxPercent or 150
+    local capPct = (rested and rested.maxPercent) or 150
     if mainFrame and not mainFrame.isLegacyUI then
         local capK = (rested.maxRested or 0) >= 1000 and string.format("%.1fk", (rested.maxRested or 0) / 1000) or tostring(rested.maxRested or 0)
-        return string.format("|cff%s%s (%d%%)|r", t.textHex or "f4ead2", capK, capPct)
+        return string.format("|cff%s%s (%d%%)|r", textHex, capK, capPct)
     end
-    return string.format("|cff%s%s (%d%%)|r", t.textHex or "f4ead2", CLIAlts:FormatNumber(rested.maxRested or 0), capPct)
+    return string.format("|cff%s%s (%d%%)|r", textHex, CLIAlts:FormatNumber(rested.maxRested or 0), capPct)
 end
 CLIAlts.FmtRestedCap = FmtRestedCap
 
-local function FmtRestedBar(char, t)
-    t = t or CLIAlts:GetTheme()
+local function FmtRestedBar(charOrSelf, charOrTheme, maybeTheme)
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local dimHex = (t and t.dimHex) or "8896ab"
+    local highlightHex = (t and t.highlightHex) or "ffffff"
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    if not char then return string.format("|cff%s[==========]|r |cff%s---|r", dimHex, mutedHex) end
+
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s[==========]|r |cff%sMAX|r", t.dimHex, t.highlightHex)
+        return string.format("|cff%s[==========]|r |cff%sMAX|r", dimHex, highlightHex)
     end
 
     local isFull = rested.isFull
@@ -1470,27 +1508,32 @@ local function FmtRestedBar(char, t)
     local emptyStr = string.rep(".", empty)
     local est = rested.isEstimate and "~" or ""
     local capPct = math.floor(ratio * 100)
-    local barColor = isFull and (t.pendingHex or "f59e0b") or (t.accentHex or t.primaryHex)
-    local labelColor = isFull and (t.pendingHex or "f59e0b") or (t.textHex or t.primaryHex)
+    local barColor = isFull and ((t and t.pendingHex) or "f59e0b") or ((t and (t.accentHex or t.primaryHex)) or "22d3ee")
+    local labelColor = isFull and ((t and t.pendingHex) or "f59e0b") or ((t and (t.textHex or t.primaryHex)) or "f4ead2")
 
     if isFull then
         return string.format("|cff%s[|r|cff%s%s|r|cff%s]|r |cff%s100%% (Capped)|r",
-            t.dimHex, barColor, fillStr, t.dimHex, labelColor)
+            dimHex, barColor, fillStr, dimHex, labelColor)
     end
 
     return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%% of Cap|r",
-        t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, est, capPct)
+        dimHex, barColor, fillStr, dimHex, emptyStr, dimHex, labelColor, est, capPct)
 end
 CLIAlts.FmtRestedBar = FmtRestedBar
 
-local function FmtTimeToCap(char, t)
-    t = t or CLIAlts:GetTheme()
-    if not char then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
+local function FmtTimeToCap(charOrSelf, charOrTheme, maybeTheme)
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local textHex = (t and (t.textHex or t.primaryHex)) or "f4ead2"
+    local pendingHex = (t and t.pendingHex) or "f59e0b"
+    local blockedHex = (t and t.blockedHex) or "ef4444"
+
+    if not char then return string.format("|cff%s---|r", mutedHex) end
 
     local maxLevel = CLIAlts.GetMaxLevel and CLIAlts:GetMaxLevel() or 60
     local level = char.level or 1
     if level >= maxLevel then
-        return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%sMAX LEVEL|r", mutedHex)
     end
 
     local now = time()
@@ -1499,7 +1542,7 @@ local function FmtTimeToCap(char, t)
     local staleDays = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.staleDays)) or 30
 
     if unseenDays >= staleDays or char.isStale then
-        return string.format("|cff%sUnseen %dd|r", t.mutedHex or "a9a08c", math.max(unseenDays, 1))
+        return string.format("|cff%sUnseen %dd|r", mutedHex, math.max(unseenDays, 1))
     end
 
     local rested = CLIAlts:GetRestedData(char, false, now)
@@ -1508,9 +1551,9 @@ local function FmtTimeToCap(char, t)
     if rested and rested.isFull then
         if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
             local wasteStr = CLIAlts:FormatWasteShort(wastedXP)
-            return string.format("|cff%s[+%s WASTED]|r", t.blockedHex or "ef4444", wasteStr)
+            return string.format("|cff%s[+%s WASTED]|r", blockedHex, wasteStr)
         else
-            return string.format("|cff%s[CAPPED]|r", t.pendingHex or "f59e0b")
+            return string.format("|cff%s[CAPPED]|r", pendingHex)
         end
     end
 
@@ -1534,65 +1577,61 @@ local function FmtTimeToCap(char, t)
         else
             dur = rested.timeLeftStr or "---"
         end
-        return string.format("|cff%s%s%s|r", t.textHex or "f4ead2", est, dur)
+        return string.format("|cff%s%s%s|r", textHex, est, dur)
     end
 
-    return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+    return string.format("|cff%s---|r", mutedHex)
 end
 CLIAlts.FmtTimeToCap = FmtTimeToCap
 
-local function FmtRate(char, t)
-    t = t or CLIAlts:GetTheme()
+local function FmtRate(charOrSelf, charOrTheme, maybeTheme)
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local dimHex = (t and t.dimHex) or "8896ab"
+    if not char then return string.format("|cff%s---|r", mutedHex) end
+
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", mutedHex)
     end
     local s = rested.isResting and "+5.0%/8h" or "+1.25%/8h"
-    return string.format("|cff%s%s|r", t.dimHex, s)
+    return string.format("|cff%s%s|r", dimHex, s)
 end
 CLIAlts.FmtRate = FmtRate
 
 local function FmtRestLoc(charOrSelf, charOrTheme, maybeTheme)
-    local char, t
-    if charOrSelf == CLIAlts or (type(charOrSelf) == "table" and charOrSelf.GetColumns) then
-        char = charOrTheme
-        t = maybeTheme
-    else
-        char = charOrSelf
-        t = charOrTheme
-    end
-    t = t or CLIAlts:GetTheme()
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local readyHex = (t and t.readyHex) or "55e39a"
+    if not char then return string.format("|cff%s---|r", mutedHex) end
+
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", (t and t.mutedHex) or "a9a08c")
+        return string.format("|cff%s---|r", mutedHex)
     end
     if char and (char.loggedOutInRestZone or char.isResting) then
-        return string.format("|cff%sInn|r", (t and t.readyHex) or "55e39a")
+        return string.format("|cff%sInn|r", readyHex)
     else
-        return string.format("|cff%sWild|r", (t and t.mutedHex) or "a9a08c")
+        return string.format("|cff%sWild|r", mutedHex)
     end
 end
 CLIAlts.FmtRestLoc = FmtRestLoc
 
 local function FmtXPHour(charOrSelf, charOrTheme, maybeTheme)
-    local char, t
-    if charOrSelf == CLIAlts or (type(charOrSelf) == "table" and charOrSelf.GetColumns) then
-        char = charOrTheme
-        t = maybeTheme
-    else
-        char = charOrSelf
-        t = charOrTheme
-    end
-    t = t or CLIAlts:GetTheme()
+    local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
+    local mutedHex = (t and t.mutedHex) or "a9a08c"
+    local dimHex = (t and t.dimHex) or "ffd34e"
+    if not char then return string.format("|cff%s---|r", mutedHex) end
+
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", (t and t.mutedHex) or "a9a08c")
+        return string.format("|cff%s---|r", mutedHex)
     end
     local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
     if xpPerHour <= 0 then
-        return string.format("|cff%s---|r", (t and t.mutedHex) or "a9a08c")
+        return string.format("|cff%s---|r", mutedHex)
     end
-    return string.format("|cff%s+%s/h|r", (t and t.dimHex) or "ffd34e", CLIAlts:FormatNumber(xpPerHour))
+    return string.format("|cff%s+%s/h|r", dimHex, CLIAlts:FormatNumber(xpPerHour))
 end
 CLIAlts.FmtXPHour = FmtXPHour
 

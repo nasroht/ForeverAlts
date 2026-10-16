@@ -3308,7 +3308,7 @@ function CLIAlts:RunSelfTest()
                 Assert(str ~= nil, "ModernUI: FmtRestedBonus produces formatted bonus string")
             elseif col.key == "restBar" then
                 local str = col.fmt(mockAlt)
-                Assert(str:find("cap") ~= nil and #str < 120, "ModernUI: FmtRestedBar produces compact cap string in modern view")
+                Assert(str:lower():find("cap") ~= nil and #str < 120, "ModernUI: FmtRestedBar produces compact cap string in modern view")
             elseif col.key == "cap" then
                 local str = col.fmt(mockAlt)
                 Assert(str ~= nil and str:find("21%.6k") ~= nil, "ModernUI: FmtRestedCap produces formatted cap string")
