@@ -1570,9 +1570,9 @@ local COLS = {
         { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel },
         { key = "curXP",     title = "CURRENT XP",        w = 14, pw = 180, cpw = 0,   mpw = 135, padRight = 10, mpadRight = 10, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
         { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 175, cpw = 145, mpw = 140, padRight = 14, cpadRight = 10, mpadRight = 10, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 150, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 85,  padRight = 8, mpadRight = 8, align = "RIGHT",  fmt = FmtRate },
-        { key = "eta",       title = "STATUS",            w = 12, pw = 150, cpw = 120, mpw = 90,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+        { key = "restBar",   title = "RESTED PROGRESS",   w = 18, pw = 225, cpw = 180, mpw = 160, mpadRight = 10, align = "LEFT",   fmt = FmtRestedBar },
+        { key = "rate",      title = "RATE",              w = 8,  pw = 110, cpw = 95,  mpw = 80,  padRight = 8, mpadRight = 8, align = "RIGHT",  fmt = FmtRate },
+        { key = "eta",       title = "STATUS",            w = 12, pw = 150, cpw = 120, mpw = 85,  padRight = 8, mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
@@ -2428,6 +2428,65 @@ function CLIAlts:CreateLegacyMainFrame()
             cell:SetText("")
             row.cells[j] = cell
         end
+
+        -- Column Progress Bar for Multi-Column Tabs (e.g. Tab 3: Rested XP Monitor)
+        local colRestBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        colRestBarBg:SetHeight(7)
+        colRestBarBg:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 0, right = 0, top = 0, bottom = 0 }
+        })
+        if colRestBarBg.SetBackdropColor then colRestBarBg:SetBackdropColor(0.17, 0.20, 0.27, 1.0) end
+        if colRestBarBg.SetBackdropBorderColor then colRestBarBg:SetBackdropBorderColor(0, 0, 0, 0) end
+        row.colRestBarBg = colRestBarBg
+
+        local colRestBarFill = colRestBarBg:CreateTexture(nil, "ARTWORK")
+        colRestBarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+        colRestBarFill:SetPoint("TOPLEFT", colRestBarBg, "TOPLEFT", 0, 0)
+        colRestBarFill:SetPoint("BOTTOMLEFT", colRestBarBg, "BOTTOMLEFT", 0, 0)
+        colRestBarFill:SetWidth(0)
+        row.colRestBarFill = colRestBarFill
+
+        local colRestLabel = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(colRestLabel, fontSize - 1, "OUTLINE")
+        colRestLabel:SetJustifyH("LEFT")
+        colRestLabel:SetWordWrap(false)
+        colRestLabel:SetText("")
+        row.colRestLabel = colRestLabel
+
+        colRestBarBg:EnableMouse(true)
+        colRestBarBg:SetScript("OnEnter", function(self)
+            if row.charData then
+                local rested = CLIAlts:GetRestedData(row.charData)
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:AddLine(string.format("Rested XP: %s", CLIAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
+                if rested and not rested.isMaxLevel then
+                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Rested Cap: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150), 0.8, 0.8, 0.8)
+                    if rested.isFull then
+                        local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(row.charData)
+                        if wastedSec and wastedSec > 0 then
+                            GameTooltip:AddLine(string.format("|cffff4444Capped %s (~%s XP wasted)|r", timeStr or "", CLIAlts:FormatNumber(wastedXP or 0)), 1, 0.3, 0.3)
+                        else
+                            GameTooltip:AddLine("|cff55e39aAt Rested Cap (Ready now)|r", 0.3, 1, 0.3)
+                        end
+                    else
+                        GameTooltip:AddLine(string.format("Time to Cap: |cffffd700%s|r (%s)", rested.timeLeftStr or "---", rested.fullDate or ""), 0.8, 0.8, 0.8)
+                    end
+                else
+                    GameTooltip:AddLine("Level cap reached - Rested XP no longer accumulates.", 0.7, 0.7, 0.7)
+                end
+                GameTooltip:Show()
+            end
+        end)
+        colRestBarBg:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        colRestBarBg:SetScript("OnMouseDown", function(_, button)
+            if row.GetScript and row:GetScript("OnClick") then
+                row:GetScript("OnClick")(row, button)
+            end
+        end)
 
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         row:SetScript("OnClick", function(self, button)
@@ -4288,6 +4347,65 @@ function CLIAlts:CreateModernMainFrame()
             row.cells[j] = cell
         end
 
+        -- Column Progress Bar for Multi-Column Tabs (e.g. Tab 3: Rested XP Monitor)
+        local colRestBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        colRestBarBg:SetHeight(7)
+        colRestBarBg:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 0, right = 0, top = 0, bottom = 0 }
+        })
+        if colRestBarBg.SetBackdropColor then colRestBarBg:SetBackdropColor(lineR, lineG, lineB, 1.0) end
+        if colRestBarBg.SetBackdropBorderColor then colRestBarBg:SetBackdropBorderColor(0, 0, 0, 0) end
+        row.colRestBarBg = colRestBarBg
+
+        local colRestBarFill = colRestBarBg:CreateTexture(nil, "ARTWORK")
+        colRestBarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
+        colRestBarFill:SetPoint("TOPLEFT", colRestBarBg, "TOPLEFT", 0, 0)
+        colRestBarFill:SetPoint("BOTTOMLEFT", colRestBarBg, "BOTTOMLEFT", 0, 0)
+        colRestBarFill:SetWidth(0)
+        row.colRestBarFill = colRestBarFill
+
+        local colRestLabel = row:CreateFontString(nil, "OVERLAY")
+        self:SetWidgetFont(colRestLabel, 12, "OUTLINE")
+        colRestLabel:SetJustifyH("LEFT")
+        colRestLabel:SetWordWrap(false)
+        colRestLabel:SetText("")
+        row.colRestLabel = colRestLabel
+
+        colRestBarBg:EnableMouse(true)
+        colRestBarBg:SetScript("OnEnter", function(self)
+            if row.charData then
+                local rested = CLIAlts:GetRestedData(row.charData)
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                GameTooltip:AddLine(string.format("Rested XP: %s", CLIAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
+                if rested and not rested.isMaxLevel then
+                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Rested Cap: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150), 0.8, 0.8, 0.8)
+                    if rested.isFull then
+                        local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(row.charData)
+                        if wastedSec and wastedSec > 0 then
+                            GameTooltip:AddLine(string.format("|cffff4444Capped %s (~%s XP wasted)|r", timeStr or "", CLIAlts:FormatNumber(wastedXP or 0)), 1, 0.3, 0.3)
+                        else
+                            GameTooltip:AddLine("|cff55e39aAt Rested Cap (Ready now)|r", 0.3, 1, 0.3)
+                        end
+                    else
+                        GameTooltip:AddLine(string.format("Time to Cap: |cffffd700%s|r (%s)", rested.timeLeftStr or "---", rested.fullDate or ""), 0.8, 0.8, 0.8)
+                    end
+                else
+                    GameTooltip:AddLine("Level cap reached - Rested XP no longer accumulates.", 0.7, 0.7, 0.7)
+                end
+                GameTooltip:Show()
+            end
+        end)
+        colRestBarBg:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        colRestBarBg:SetScript("OnMouseDown", function(_, button)
+            if row.GetScript and row:GetScript("OnClick") then
+                row:GetScript("OnClick")(row, button)
+            end
+        end)
+
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         row:SetScript("OnClick", function(self, button)
             if self.charData then
@@ -5610,6 +5728,8 @@ function CLIAlts:Render()
                         end
 
                         -- Hide multi-column cells on Tab 1
+                        if row.colRestBarBg then row.colRestBarBg:Hide() end
+                        if row.colRestLabel then row.colRestLabel:Hide() end
                         for idx = 1, 8 do
                             local cell = row.cells and row.cells[idx]
                             if cell then
@@ -5628,6 +5748,8 @@ function CLIAlts:Render()
                         if row.restBarBg then row.restBarBg:Hide() end
                         if row.statusPill then row.statusPill:Hide() end
                         if row.goldText then row.goldText:Hide() end
+                        if row.colRestBarBg and activeTab ~= 3 then row.colRestBarBg:Hide() end
+                        if row.colRestLabel and activeTab ~= 3 then row.colRestLabel:Hide() end
 
                         local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
                         local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":v7"
@@ -5651,8 +5773,60 @@ function CLIAlts:Render()
                                         cell:SetWidth(cellW)
                                         cell:SetJustifyH(col.align or "LEFT")
                                     end
-                                    cell:SetText(col.fmt(char, t) or "")
-                                    cell:Show()
+
+                                    if col.key == "restBar" and row.colRestBarBg then
+                                        cell:SetText("")
+                                        cell:Hide()
+
+                                        row.colRestBarBg:ClearAllPoints()
+                                        row.colRestBarBg:SetPoint("LEFT", row, "LEFT", rowXOffset, -6)
+                                        row.colRestBarBg:SetWidth(cellW)
+
+                                        row.colRestLabel:ClearAllPoints()
+                                        row.colRestLabel:SetPoint("BOTTOMLEFT", row.colRestBarBg, "TOPLEFT", 0, 4)
+                                        row.colRestLabel:SetWidth(cellW)
+
+                                        local rested = self:GetRestedData(char)
+                                        if rested and not rested.isMaxLevel then
+                                            local ratio = math.min(1.0, math.max(0, rested.ratio or 0))
+                                            local barW = math.floor(cellW * ratio)
+                                            if row.colRestBarFill then
+                                                row.colRestBarFill:SetWidth(math.max(1, barW))
+                                                if rested.isFull then
+                                                    row.colRestBarFill:SetVertexColor(warnR, warnG, warnB, 1.0)
+                                                else
+                                                    row.colRestBarFill:SetVertexColor(fillR, fillG, fillB, 1.0)
+                                                end
+                                            end
+                                            row.colRestBarBg:Show()
+
+                                            if row.colRestLabel then
+                                                local est = rested.isEstimate and "~" or ""
+                                                local capPct = math.floor(ratio * 100)
+                                                if rested.isFull then
+                                                    local capPctVal = rested.maxPercent or 150
+                                                    row.colRestLabel:SetText(string.format("%d%%* [CAP] (%d%% lvl)", capPctVal, rested.percent or capPctVal))
+                                                    row.colRestLabel:SetTextColor(warnR, warnG, warnB)
+                                                else
+                                                    row.colRestLabel:SetText(string.format("%s%d%% cap (%d%% lvl)", est, capPct, rested.percent or 0))
+                                                    row.colRestLabel:SetTextColor(textR, textG, textB)
+                                                end
+                                                row.colRestLabel:Show()
+                                            end
+                                        else
+                                            if row.colRestLabel then
+                                                row.colRestLabel:SetText("Max Level")
+                                                row.colRestLabel:SetTextColor(mutedR, mutedG, mutedB)
+                                                row.colRestLabel:Show()
+                                            end
+                                            if row.colRestBarBg then
+                                                row.colRestBarBg:Hide()
+                                            end
+                                        end
+                                    else
+                                        cell:SetText(col.fmt(char, t) or "")
+                                        cell:Show()
+                                    end
                                     rowXOffset = rowXOffset + colW
                                 else
                                     cell:SetText("")
@@ -5743,6 +5917,8 @@ function CLIAlts:Render()
                                 row.etaText:Show()
                             end
                         end
+                        if row.colRestBarBg then row.colRestBarBg:Hide() end
+                        if row.colRestLabel then row.colRestLabel:Hide() end
                         for idx = 1, 8 do
                             if row.cells and row.cells[idx] then
                                 row.cells[idx]:SetText("")
@@ -5756,6 +5932,8 @@ function CLIAlts:Render()
                         if row.restPercentText then row.restPercentText:Hide() end
                         if row.barBg then row.barBg:Hide() end
                         if row.etaText then row.etaText:Hide() end
+                        if row.colRestBarBg and activeTab ~= 3 then row.colRestBarBg:Hide() end
+                        if row.colRestLabel and activeTab ~= 3 then row.colRestLabel:Hide() end
 
                         local rowXOffset = 16
                         for idx = 1, 8 do
@@ -5770,8 +5948,60 @@ function CLIAlts:Render()
                                     cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
                                     cell:SetWidth(cellW)
                                     cell:SetJustifyH(col.align or "LEFT")
-                                    cell:SetText(col.fmt(char, t) or "")
-                                    cell:Show()
+
+                                    if col.key == "restBar" and row.colRestBarBg then
+                                        cell:SetText("")
+                                        cell:Hide()
+
+                                        row.colRestBarBg:ClearAllPoints()
+                                        row.colRestBarBg:SetPoint("LEFT", row, "LEFT", rowXOffset, -4)
+                                        row.colRestBarBg:SetWidth(cellW)
+
+                                        row.colRestLabel:ClearAllPoints()
+                                        row.colRestLabel:SetPoint("BOTTOMLEFT", row.colRestBarBg, "TOPLEFT", 0, 2)
+                                        row.colRestLabel:SetWidth(cellW)
+
+                                        local rested = self:GetRestedData(char)
+                                        if rested and not rested.isMaxLevel then
+                                            local ratio = math.min(1.0, math.max(0, rested.ratio or 0))
+                                            local barW = math.floor(cellW * ratio)
+                                            if row.colRestBarFill then
+                                                row.colRestBarFill:SetWidth(math.max(1, barW))
+                                                if rested.isFull then
+                                                    row.colRestBarFill:SetVertexColor(warnR, warnG, warnB, 1.0)
+                                                else
+                                                    row.colRestBarFill:SetVertexColor(fillR, fillG, fillB, 1.0)
+                                                end
+                                            end
+                                            row.colRestBarBg:Show()
+
+                                            if row.colRestLabel then
+                                                local est = rested.isEstimate and "~" or ""
+                                                local capPct = math.floor(ratio * 100)
+                                                if rested.isFull then
+                                                    local capPctVal = rested.maxPercent or 150
+                                                    row.colRestLabel:SetText(string.format("%d%%* [CAP]", capPctVal))
+                                                    row.colRestLabel:SetTextColor(warnR, warnG, warnB)
+                                                else
+                                                    row.colRestLabel:SetText(string.format("%s%d%% cap", est, capPct))
+                                                    row.colRestLabel:SetTextColor(textR, textG, textB)
+                                                end
+                                                row.colRestLabel:Show()
+                                            end
+                                        else
+                                            if row.colRestLabel then
+                                                row.colRestLabel:SetText("Max Level")
+                                                row.colRestLabel:SetTextColor(mutedR, mutedG, mutedB)
+                                                row.colRestLabel:Show()
+                                            end
+                                            if row.colRestBarBg then
+                                                row.colRestBarBg:Hide()
+                                            end
+                                        end
+                                    else
+                                        cell:SetText(col.fmt(char, t) or "")
+                                        cell:Show()
+                                    end
                                     rowXOffset = rowXOffset + colW
                                 else
                                     cell:SetText("")
@@ -5791,6 +6021,8 @@ function CLIAlts:Render()
                 if row.subLine then row.subLine:Hide() end
                 if row.restLabel then row.restLabel:Hide() end
                 if row.restBarBg then row.restBarBg:Hide() end
+                if row.colRestBarBg then row.colRestBarBg:Hide() end
+                if row.colRestLabel then row.colRestLabel:Hide() end
                 if row.statusPill then row.statusPill:Hide() end
                 if row.goldText then row.goldText:Hide() end
                 if row.levelText then row.levelText:Hide() end
@@ -5883,6 +6115,9 @@ function CLIAlts:ApplyTheme()
             for _, r in ipairs(rowFrames) do
                 if r.restBarBg and r.restBarBg.SetBackdropColor then
                     r.restBarBg:SetBackdropColor(lineR, lineG, lineB, 1.0)
+                end
+                if r.colRestBarBg and r.colRestBarBg.SetBackdropColor then
+                    r.colRestBarBg:SetBackdropColor(lineR, lineG, lineB, 1.0)
                 end
             end
         end

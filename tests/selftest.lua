@@ -579,6 +579,9 @@ function CLIAlts:RunSelfTest()
         Assert(r1.restLabel ~= nil, "RowList: Row 1 has restLabel")
         Assert(r1.restBarBg ~= nil, "RowList: Row 1 has restBarBg")
         Assert(r1.restBarFill ~= nil, "RowList: Row 1 has restBarFill")
+        Assert(r1.colRestBarBg ~= nil, "RowList: Row 1 has colRestBarBg")
+        Assert(r1.colRestBarFill ~= nil, "RowList: Row 1 has colRestBarFill")
+        Assert(r1.colRestLabel ~= nil, "RowList: Row 1 has colRestLabel")
         Assert(r1.statusPill ~= nil, "RowList: Row 1 has statusPill")
         Assert(r1.statusPillText ~= nil, "RowList: Row 1 has statusPillText")
         Assert(r1.goldText ~= nil, "RowList: Row 1 has goldText")
@@ -636,6 +639,13 @@ function CLIAlts:RunSelfTest()
         self.selectedCharKey = "Thor-Pyrewood"
         self:Render()
         Assert(self.selectedCharKey == "Thor-Pyrewood", "RowList: Selection persists across render")
+
+        -- Test Rested Tab (Tab 3) graphical progress bar
+        CLIAltsDB.settings.activeTab = 3
+        self:Render()
+        Assert(r1.colRestBarBg ~= nil and r1.colRestBarBg:IsShown(), "RestedTab: Row 1 shows graphical colRestBarBg on Tab 3")
+        Assert(r1.colRestBarFill ~= nil and (r1.colRestBarFill:GetWidth() or 0) > 0, "RestedTab: Row 1 colRestBarFill has non-zero width")
+        Assert(r1.colRestLabel ~= nil and r1.colRestLabel:IsShown() and r1.colRestLabel:GetText():find("CAP") ~= nil, "RestedTab: Row 1 colRestLabel displays cap status")
 
         -- Restore DB
         CLIAltsDB.characters = oldChars
