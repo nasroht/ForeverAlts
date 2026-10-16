@@ -12,7 +12,6 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 -- Constants & Terminal Configuration
 -- ----------------------------------------------------------------------------
 local FONT_MONO = "Interface\\AddOns\\" .. (addonName or "ForeverAlts") .. "\\media\\VT323-Regular.ttf"
-local FONT_PATH = FONT_MONO -- backward-compatibility alias
 local FONT_NORMAL = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
 local DEFAULT_FONT_SIZE = 18
 local LINE_WIDTH = 110
