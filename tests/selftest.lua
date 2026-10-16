@@ -3694,6 +3694,58 @@ function CLIAlts:RunSelfTest()
         Assert(betaRow1.betaRateText:IsShown() == false, "BetaTab: betaRateText is hidden on Tab 1 Overview")
     end
 
+    -- 38. Tab 9 Embedded Settings Navigation Panel Engine Tests
+    -- 38a. Tab 9 Sidebar Navigation Registration & Empty Columns
+    local foundNavTab9 = false
+    if mBetaFrame and mBetaFrame.sidebarNavButtons then
+        for _, btn in ipairs(mBetaFrame.sidebarNavButtons) do
+            if btn.tabId == 9 then
+                foundNavTab9 = true
+                break
+            end
+        end
+    end
+    Assert(foundNavTab9 == true, "SettingsTab: Tab 9 exists in modern sidebarNavButtons")
+
+    local tab9Cols = self:GetColumns(9)
+    Assert(tab9Cols ~= nil and #tab9Cols == 0, "SettingsTab: Tab 9 defines empty column list (embedded panel view)")
+
+    -- 38b. SwitchTab(9) Embeds Settings Dialog in mainFrame
+    self:SwitchTab(9)
+    Assert(CLIAltsDB.settings.activeTab == 9, "SettingsTab: SwitchTab(9) sets activeTab to 9")
+
+    local sdEmbed = _G["CLIAltsSettingsDialog"]
+    Assert(sdEmbed ~= nil, "SettingsTab: CLIAltsSettingsDialog exists")
+    Assert(sdEmbed:IsShown() == true, "SettingsTab: CLIAltsSettingsDialog is shown on Tab 9")
+    if mBetaFrame and mBetaFrame.detailPanel then
+        Assert(mBetaFrame.detailPanel:IsShown() == false, "SettingsTab: detailPanel is hidden on Tab 9")
+    end
+    if mBetaFrame and mBetaFrame.rowsContainer then
+        Assert(mBetaFrame.rowsContainer:IsShown() == false, "SettingsTab: rowsContainer is hidden on Tab 9")
+    end
+    if mBetaFrame and mBetaFrame.headerFrame then
+        Assert(mBetaFrame.headerFrame:IsShown() == false, "SettingsTab: headerFrame is hidden on Tab 9")
+    end
+
+    -- 38c. Close Button / SwitchTab(1) Reversibility
+    if sdEmbed and sdEmbed.btnClose and sdEmbed.btnClose:GetScript("OnClick") then
+        sdEmbed.btnClose:GetScript("OnClick")(sdEmbed.btnClose)
+        Assert(CLIAltsDB.settings.activeTab == 1, "SettingsTab: Clicking btnClose returns to Tab 1 Overview")
+        Assert(sdEmbed:IsShown() == false, "SettingsTab: CLIAltsSettingsDialog is hidden on Tab 1")
+        if mBetaFrame and mBetaFrame.detailPanel then
+            Assert(mBetaFrame.detailPanel:IsShown() == true, "SettingsTab: detailPanel is restored on Tab 1")
+        end
+        if mBetaFrame and mBetaFrame.rowsContainer then
+            Assert(mBetaFrame.rowsContainer:IsShown() == true, "SettingsTab: rowsContainer is restored on Tab 1")
+        end
+    end
+
+    -- 38d. ShowSettingsDialog() Activates Tab 9
+    self:ShowSettingsDialog()
+    Assert(CLIAltsDB.settings.activeTab == 9, "SettingsTab: ShowSettingsDialog() activates Tab 9")
+    Assert(sdEmbed:IsShown() == true, "SettingsTab: ShowSettingsDialog() shows embedded settings")
+    self:SwitchTab(1)
+
     -- Restore master state
     if masterState.db then
         CLIAltsDB = masterState.db
@@ -3716,7 +3768,7 @@ function CLIAlts:RunSelfTest()
     end
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine, Beta Tab & Consolidated Circular Gauges)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine, Beta Tab & Consolidated Circular Gauges, Tab 9 Embedded Settings Navigation Panel Engine)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do

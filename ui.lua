@@ -1712,6 +1712,7 @@ local COLS = {
         { key = "eta",        title = "STATUS",            w = 12, pw = 135, cpw = 120, mpw = 130, align = "CENTER", sort = "waste",    fmt = FmtETA },
         { key = "gold",       title = "WEALTH",            w = 12, pw = 145, cpw = 130, mpw = 135, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
     },
+    [9] = {}, -- 9: SETTINGS & PREFERENCES (Embedded Panel)
 }
 
 function CLIAlts:GetColumns(activeTab)
@@ -2060,6 +2061,7 @@ function CLIAlts:CreateLegacyMainFrame()
         { id = 6, text = "Cooldowns",   compact = "CDs",      viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 86 },
         { id = 7, text = "Mail Routes", compact = "Mail",     viewTitle = "MAIL ROUTING & SUPPLY CHAIN", stdWidth = 96 },
         { id = 8, text = "Beta Tab",    compact = "Beta",     viewTitle = "BETA: CONSOLIDATED METERS",   stdWidth = 84 },
+        { id = 9, text = "Settings",    compact = "Config",   viewTitle = "SETTINGS & PREFERENCES",     stdWidth = 80 },
     }
     frame.tabButtons = {}
     local prevTab = nil
@@ -3138,30 +3140,6 @@ function CLIAlts:CreateModernMainFrame()
     btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -8, 0)
     frame.btnHelp = btnHelp
 
-    local btnSettings = CreateRetroButton(topBar, "Settings", 66, 22, function()
-        CLIAlts:ShowSettingsDialog()
-    end)
-    btnSettings:SetPoint("RIGHT", btnHelp, "LEFT", -8, 0)
-    btnSettings:SetScript("OnEnter", function(self)
-        local curT = CLIAlts:GetTheme()
-        if self.SetBackdropColor then self:SetBackdropColor(curT.border[1], curT.border[2], curT.border[3], 0.25) end
-        if self.SetBackdropBorderColor then self:SetBackdropBorderColor(curT.primary[1], curT.primary[2], curT.primary[3], 1) end
-        self.label:SetTextColor(curT.highlight[1], curT.highlight[2], curT.highlight[3])
-        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
-        GameTooltip:AddLine("CLIAlts Settings & Preferences", 1, 0.82, 0)
-        GameTooltip:AddLine("Configure themes, font sizes, UI scale, and automations.", 0.8, 0.8, 0.8)
-        GameTooltip:Show()
-    end)
-    btnSettings:SetScript("OnLeave", function(self)
-        local curT = CLIAlts:GetTheme()
-        local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-        if self.SetBackdropColor then self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75) end
-        if self.SetBackdropBorderColor then self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.8) end
-        self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
-        GameTooltip:Hide()
-    end)
-    frame.btnSettings = btnSettings
-
     local initPerkRank = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
     local initLpData = CLIAlts:CalculateAccountLP()
     local initLpVal = (initLpData and initLpData.effectiveLP) or 0
@@ -3172,7 +3150,7 @@ function CLIAlts:CreateModernMainFrame()
         end
         CLIAlts:Render()
     end)
-    btnPerk:SetPoint("RIGHT", btnSettings, "LEFT", -8, 0)
+    btnPerk:SetPoint("RIGHT", btnHelp, "LEFT", -8, 0)
     btnPerk:SetScript("OnEnter", function(self)
         local curT = CLIAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
@@ -3225,6 +3203,7 @@ function CLIAlts:CreateModernMainFrame()
         { id = 6, text = "Cooldowns & Locks", badge = "3", isWarn = true },
         { id = 7, text = "Mail Routing", badge = "0", isMail = true },
         { id = 8, text = "Beta Tab", badge = "NEW", isBeta = true },
+        { id = 9, text = "Settings", badge = nil, isSettings = true },
     }
     frame.tabButtons = {}
     frame.sidebarNavButtons = {}
@@ -5112,6 +5091,7 @@ function CLIAlts:Render()
         [6] = "COOLDOWNS & INSTANCE LOCKS",
         [7] = "MAIL ROUTING & SUPPLY CHAIN",
         [8] = "BETA: CONSOLIDATED METERS",
+        [9] = "SETTINGS & PREFERENCES",
     }
     local curTabTitle = tabTitles[activeTab] or "OVERVIEW"
     if mainFrame.titleText then
@@ -5129,6 +5109,8 @@ function CLIAlts:Render()
             mainFrame.subViewFilters:SetText("CLICK ALT TO CONFIGURE ROUTING · SHIFT-CLICK TO CYCLE")
         elseif activeTab == 8 then
             mainFrame.subViewFilters:SetText("CONSOLIDATED DASHBOARD · DUAL CIRCULAR GAUGES (XP & RESTED)")
+        elseif activeTab == 9 then
+            mainFrame.subViewFilters:SetText("CONFIGURATION · CRT THEMES · SCALE · CHAT CLONER")
         elseif activeTab == 3 then
             local r = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)) or 0
             local lpData = self:CalculateAccountLP()
@@ -5211,6 +5193,10 @@ function CLIAlts:Render()
             mainFrame.rowsContainer:ClearAllPoints()
             mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame.filterBar, "BOTTOMLEFT", 0, -4)
             mainFrame.rowsContainer:SetPoint("BOTTOMRIGHT", mainFrame.mainCol, "BOTTOMRIGHT", 0, 0)
+            mainFrame.rowsContainer:Show()
+        elseif activeTab == 9 then
+            mainFrame.headerFrame:Hide()
+            mainFrame.rowsContainer:Hide()
         else
             mainFrame.headerFrame:ClearAllPoints()
             mainFrame.headerFrame:SetPoint("TOPLEFT", mainFrame.filterBar, "BOTTOMLEFT", 0, -4)
@@ -5219,12 +5205,20 @@ function CLIAlts:Render()
             mainFrame.rowsContainer:ClearAllPoints()
             mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame.headerFrame, "BOTTOMLEFT", 0, -4)
             mainFrame.rowsContainer:SetPoint("BOTTOMRIGHT", mainFrame.mainCol, "BOTTOMRIGHT", 0, 0)
+            mainFrame.rowsContainer:Show()
         end
     elseif mainFrame.headerFrame then
-        if activeTab == 1 then
+        if activeTab == 1 or activeTab == 9 then
             mainFrame.headerFrame:Hide()
         else
             mainFrame.headerFrame:Show()
+        end
+        if mainFrame.rowsContainer then
+            if activeTab == 9 then
+                mainFrame.rowsContainer:Hide()
+            else
+                mainFrame.rowsContainer:Show()
+            end
         end
     end
 
@@ -5265,6 +5259,14 @@ function CLIAlts:Render()
                 mainFrame.filterBar:ClearAllPoints()
                 mainFrame.filterBar:SetPoint("TOPLEFT", mainFrame.nextBanner, "BOTTOMLEFT", 0, -8)
                 mainFrame.filterBar:SetPoint("TOPRIGHT", mainFrame.nextBanner, "BOTTOMRIGHT", 0, -8)
+                mainFrame.filterBar:Show()
+            end
+        elseif activeTab == 9 then
+            if mainFrame.nextBanner then
+                mainFrame.nextBanner:Hide()
+            end
+            if mainFrame.filterBar then
+                mainFrame.filterBar:Hide()
             end
         else
             if mainFrame.nextBanner then
@@ -5274,11 +5276,17 @@ function CLIAlts:Render()
                 mainFrame.filterBar:ClearAllPoints()
                 mainFrame.filterBar:SetPoint("TOPLEFT", mainFrame.mainCol, "TOPLEFT", 0, 0)
                 mainFrame.filterBar:SetPoint("TOPRIGHT", mainFrame.mainCol, "TOPRIGHT", 0, 0)
+                mainFrame.filterBar:Show()
             end
         end
     else
-        if activeTab == 7 then
-        mainFrame.recChar = nil
+        if activeTab == 9 then
+            if mainFrame.recPanel then mainFrame.recPanel:Hide() end
+            if mainFrame.kpiContainer then mainFrame.kpiContainer:Hide() end
+        elseif activeTab == 7 then
+            if mainFrame.recPanel then mainFrame.recPanel:Show() end
+            if mainFrame.kpiContainer then mainFrame.kpiContainer:Show() end
+            mainFrame.recChar = nil
         if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
         if mainFrame.recBadge then
             mainFrame.recBadge:SetText("MAIL DISPATCH & SUPPLY CHAIN")
@@ -5328,6 +5336,8 @@ function CLIAlts:Render()
             end)
         end
     else
+        if mainFrame.recPanel then mainFrame.recPanel:Show() end
+        if mainFrame.kpiContainer then mainFrame.kpiContainer:Show() end
         if mainFrame.recBadge then
             mainFrame.recBadge:SetText("RECOMMENDED NEXT")
         end
@@ -5791,6 +5801,45 @@ function CLIAlts:Render()
 
     if self.UpdateFilterChips then
         self:UpdateFilterChips()
+    end
+
+    -- Tab 9: Settings & Preferences (Embedded Tab View)
+    if activeTab == 9 then
+        if settingsDialog == nil then
+            self:CreateSettingsPanel()
+        end
+        local sd = self:GetSettingsDialog()
+        if sd then
+            sd:SetParent(mainFrame)
+            sd:ClearAllPoints()
+            if not mainFrame.isLegacyUI then
+                sd:SetPoint("TOPLEFT", mainFrame.sidebar, "TOPRIGHT", 24, -8)
+                sd:SetSize(720, 680)
+            else
+                sd:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 20, -64)
+                sd:SetSize(700, 520)
+            end
+            sd:Show()
+            self:UpdateSettingsDialog()
+        end
+        if mainFrame.detailPanel then
+            mainFrame.detailPanel:Hide()
+        end
+        for _, r in ipairs(rowFrames) do
+            r.charData = nil
+            r:Hide()
+        end
+        self._cachedPriorityList = nil
+        self._cachedMailReadySummary = nil
+        return
+    else
+        local sd = self:GetSettingsDialog()
+        if sd and sd:IsShown() then
+            sd:Hide()
+        end
+        if not mainFrame.isLegacyUI and mainFrame.detailPanel then
+            mainFrame.detailPanel:Show()
+        end
     end
 
     -- Render Rows (Overview Phase 2 Component or Multi-Column Rows across Tabs)
@@ -6699,7 +6748,7 @@ end
 
 function CLIAlts:SwitchTab(tabId)
     tabId = tonumber(tabId)
-    if not tabId or tabId < 1 or tabId > 8 then return end
+    if not tabId or tabId < 1 or tabId > 9 then return end
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.activeTab = tabId
     end
@@ -6793,18 +6842,18 @@ function CLIAlts:ExecutePromptCommand(input)
     cmd = cmd:lower()
     args = args and args:match("^%s*(.-)%s*$") or ""
 
-    if cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" or cmd == "7" or cmd == "8" then
+    if cmd == "1" or cmd == "2" or cmd == "3" or cmd == "4" or cmd == "5" or cmd == "6" or cmd == "7" or cmd == "8" or cmd == "9" then
         local tNum = tonumber(cmd)
         self:SwitchTab(tNum)
         self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
 
     elseif cmd == "tab" then
         local tNum = tonumber(args)
-        if tNum and tNum >= 1 and tNum <= 8 then
+        if tNum and tNum >= 1 and tNum <= 9 then
             self:SwitchTab(tNum)
             self:SetPromptFeedback(string.format("Switched to Tab %d", tNum))
         else
-            self:SetPromptFeedback("Usage: tab <1-8>", true)
+            self:SetPromptFeedback("Usage: tab <1-9>", true)
         end
 
     elseif cmd == "sort" then
@@ -8737,50 +8786,46 @@ function CLIAlts:GetSettingsDialog()
     return settingsDialog
 end
 
-function CLIAlts:ShowSettingsDialog()
-    if not settingsDialog then
-        local sd = CreateFrame("Frame", "CLIAltsSettingsDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        sd:Hide()
-        sd:SetSize(680, 590)
-        sd:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-        sd:SetFrameStrata("DIALOG")
-        sd:EnableMouse(true)
-        sd:SetMovable(true)
-        sd:RegisterForDrag("LeftButton")
-        sd:SetScript("OnDragStart", function(self) self:StartMoving() end)
-        sd:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-        sd:SetScript("OnHide", function(self)
-            if self.chatDropdown then
-                self.chatDropdown:Hide()
-            end
-        end)
-        tinsert(UISpecialFrames, "CLIAltsSettingsDialog")
+function CLIAlts:CreateSettingsPanel()
+    if settingsDialog then return settingsDialog end
 
-        sd:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            edgeFile = "Interface\\Buttons\\WHITE8X8",
-            edgeSize = 2,
-            insets = { left = 2, right = 2, top = 2, bottom = 2 }
-        })
+    local parent = mainFrame or UIParent
+    local sd = CreateFrame("Frame", "CLIAltsSettingsDialog", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    sd:Hide()
+    sd:SetSize(680, 590)
+    sd:EnableMouse(true)
+    sd:SetScript("OnHide", function(self)
+        if self.chatDropdown then
+            self.chatDropdown:Hide()
+        end
+    end)
 
-        -- Title & Subtitle
-        local title = sd:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(title, 15, "OUTLINE")
-        title:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -16)
-        title:SetText("CLIALTS :: SETTINGS & PREFERENCES")
-        sd.title = title
+    sd:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
 
-        local sub = sd:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(sub, 12, "")
-        sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-        sub:SetText("Configure visual themes, typography size, UI scale, and addon automations.")
-        sd.sub = sub
+    -- Title & Subtitle
+    local title = sd:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(title, 15, "OUTLINE")
+    title:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -16)
+    title:SetText("CLIALTS :: SETTINGS & PREFERENCES")
+    sd.title = title
 
-        local topClose = CreateRetroButton(sd, "[X]", 32, 20, function()
-            sd:Hide()
-        end)
-        topClose:SetPoint("TOPRIGHT", sd, "TOPRIGHT", -16, -16)
-        sd.topClose = topClose
+    local sub = sd:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(sub, 12, "")
+    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+    sub:SetText("Configure visual themes, typography size, UI scale, and addon automations.")
+    sd.sub = sub
+
+    local topClose = CreateRetroButton(sd, "[X]", 32, 20, function()
+        CLIAlts:SwitchTab(1)
+    end)
+    topClose:SetPoint("TOPRIGHT", sd, "TOPRIGHT", -16, -16)
+    topClose:Hide()
+    sd.topClose = topClose
 
         -- Section 1: Themes
         local secTheme = sd:CreateFontString(nil, "OVERLAY")
@@ -9013,16 +9058,28 @@ function CLIAlts:ShowSettingsDialog()
         sd.btnReset = btnReset
 
         local btnClose = CreateRetroButton(sd, "[ Close ]", 90, 26, function()
-            sd:Hide()
+            CLIAlts:SwitchTab(1)
         end, 11)
-        btnClose:SetPoint("BOTTOMRIGHT", sd, "BOTTOMRIGHT", -20, 18)
+        btnClose:SetPoint("LEFT", btnReset, "RIGHT", 12, 0)
         sd.btnClose = btnClose
 
         settingsDialog = sd
+        return settingsDialog
     end
+    return settingsDialog
+end
 
-    self:UpdateSettingsDialog()
-    settingsDialog:Show()
+function CLIAlts:ShowSettingsDialog()
+    if not mainFrame then
+        self:Toggle(true)
+    elseif not mainFrame:IsShown() then
+        mainFrame:Show()
+    end
+    self:SwitchTab(9)
+    local sd = self:GetSettingsDialog() or self:CreateSettingsPanel()
+    if sd and sd.Show then
+        sd:Show()
+    end
 end
 
 function CLIAlts:UpdateSettingsDialog()
@@ -9030,10 +9087,16 @@ function CLIAlts:UpdateSettingsDialog()
     local t = self:GetTheme()
 
     if settingsDialog.SetBackdropColor then
-        settingsDialog:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+        if mainFrame and not mainFrame.isLegacyUI then
+            settingsDialog:SetBackdropColor(0, 0, 0, 0)
+            settingsDialog:SetBackdropBorderColor(0, 0, 0, 0)
+        else
+            settingsDialog:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
+            settingsDialog:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+        end
     end
-    if settingsDialog.SetBackdropBorderColor then
-        settingsDialog:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
+    if settingsDialog.topClose then
+        settingsDialog.topClose:Hide()
     end
 
     if settingsDialog.title then settingsDialog.title:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
