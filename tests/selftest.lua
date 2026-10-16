@@ -3650,15 +3650,20 @@ function CLIAlts:RunSelfTest()
 
     -- 37b. Tab 8 Column Definitions & Bounds
     local tab8Cols = self:GetColumns(8)
-    Assert(tab8Cols ~= nil and #tab8Cols == 6, "BetaTab: Tab 8 defines 6 consolidated columns")
+    Assert(tab8Cols ~= nil and #tab8Cols == 5, "BetaTab: Tab 8 defines 5 consolidated columns")
     local tab8TotalMpw = 0
     for _, col in ipairs(tab8Cols) do
         Assert(col.mpw and col.mpw > 0, string.format("BetaTab: col '%s' defines positive mpw", col.key or "unknown"))
         tab8TotalMpw = tab8TotalMpw + (col.mpw or 0)
     end
     Assert(tab8TotalMpw <= 850, string.format("BetaTab: total modern column width (%dpx) fits inside row bounds (<= 850px)", tab8TotalMpw))
-    Assert(tab8Cols[1].key == "name" and tab8Cols[2].key == "circleXP" and tab8Cols[3].key == "circleRest" and tab8Cols[4].key == "details",
-        "BetaTab: columns align with consolidated gauge architecture (name, circleXP, circleRest, details)")
+    Assert(tab8Cols[1].key == "name" and tab8Cols[2].key == "circleXP" and tab8Cols[3].key == "circleRest" and tab8Cols[4].key == "details" and tab8Cols[5].key == "gold",
+        "BetaTab: columns align with consolidated gauge architecture (name, circleXP, circleRest, details, gold)")
+
+    -- Test FormatCoins
+    local sampleCoins = self:FormatCoins(123456)
+    Assert(sampleCoins == "12|cffffd700g|r 34|cffc7c7cfs|r 56|cffeda55fc|r",
+        "BetaTab: FormatCoins formats copper into colored g, s, c tokens")
 
     -- 37c. SwitchTab(8) and Modern Rendering
     self:SwitchTab(8)
@@ -3681,6 +3686,12 @@ function CLIAlts:RunSelfTest()
         Assert(betaRow1.gaugeRest:IsShown() == true, "BetaTab: gaugeRest is shown on active character row")
         Assert(betaRow1.betaPoolText:IsShown() == true, "BetaTab: betaPoolText is shown on active character row")
         Assert(betaRow1.betaRateText:IsShown() == true, "BetaTab: betaRateText is shown on active character row")
+        if betaRow1.statusPill then
+            Assert(betaRow1.statusPill:IsShown() == false, "BetaTab: statusPill is hidden on Tab 8")
+        end
+        if betaRow1.goldText then
+            Assert(betaRow1.goldText:IsShown() == true, "BetaTab: goldText is shown on Tab 8")
+        end
     end
 
     -- 37d. Tab 8 Reversibility: Switching back to Tab 1 Overview restores linear layout

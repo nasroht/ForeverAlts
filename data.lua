@@ -1909,6 +1909,16 @@ function CLIAlts:FormatMoney(copper, colorize)
     end
 end
 
+function CLIAlts:FormatCoins(copper)
+    copper = tonumber(copper) or 0
+    local gold = math.floor(copper / 10000)
+    local silver = math.floor((copper % 10000) / 100)
+    local copperRem = math.floor(copper % 100)
+
+    return string.format("%s|cffffd700g|r %d|cffc7c7cfs|r %d|cffeda55fc|r",
+        self:FormatNumber(gold), silver, copperRem)
+end
+
 function CLIAlts:GetClassColor(classFile)
     local r, g, b = 1, 1, 1
     if RAID_CLASS_COLORS and classFile and RAID_CLASS_COLORS[classFile] then

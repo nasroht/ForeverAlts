@@ -1407,6 +1407,12 @@ local function FmtGoldLong(char, t)
     return formatted
 end
 
+local function FmtGoldCoins(char, t)
+    local money = char and char.money or 0
+    return CLIAlts:FormatCoins(money)
+end
+CLIAlts.FmtGoldCoins = FmtGoldCoins
+
 local function FmtWealthShare(char, t)
     t = t or CLIAlts:GetTheme()
     local summary = CLIAlts:GetAccountSummary()
@@ -1705,12 +1711,11 @@ local COLS = {
         { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 140, align = "RIGHT",  fmt = FmtMailPending },
     },
     [8] = { -- 8: BETA: CONSOLIDATED DASHBOARD
-        { key = "name",       title = "CHARACTER",         w = 20, pw = 250, cpw = 220, mpw = 250, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "name",       title = "CHARACTER",         w = 22, pw = 250, cpw = 220, mpw = 250, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "xp",       fmt = FmtCurXP },
         { key = "circleRest", title = "RESTED",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "rested",   fmt = FmtRested },
-        { key = "details",    title = "RESTED DETAILS",    w = 16, pw = 160, cpw = 150, mpw = 155, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
-        { key = "eta",        title = "STATUS",            w = 12, pw = 135, cpw = 120, mpw = 130, align = "CENTER", sort = "waste",    fmt = FmtETA },
-        { key = "gold",       title = "WEALTH",            w = 12, pw = 145, cpw = 130, mpw = 135, align = "RIGHT",  sort = "gold",     fmt = FmtGoldLong },
+        { key = "details",    title = "RESTED DETAILS",    w = 26, pw = 260, cpw = 230, mpw = 260, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
+        { key = "gold",       title = "WEALTH",            w = 16, pw = 160, cpw = 145, mpw = 160, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
     },
     [9] = {}, -- 9: SETTINGS & PREFERENCES (Embedded Panel)
 }
@@ -6057,7 +6062,7 @@ function CLIAlts:Render()
                         local xpData = self:GetLevelProgressData(char)
                         if row.gaugeXP then
                             row.gaugeXP:ClearAllPoints()
-                            row.gaugeXP:SetPoint("LEFT", row, "LEFT", 265, 3)
+                            row.gaugeXP:SetPoint("LEFT", row, "LEFT", 278, 3)
                             if xpData and not xpData.isMaxLevel then
                                 local xpRatio = xpData.ratio or 0
                                 row.gaugeXP:SetProgress(xpRatio, fillR, fillG, fillB, string.format("%d%%", xpData.percent))
@@ -6071,7 +6076,7 @@ function CLIAlts:Render()
                         local rested = self:GetRestedData(char)
                         if row.gaugeRest then
                             row.gaugeRest:ClearAllPoints()
-                            row.gaugeRest:SetPoint("LEFT", row, "LEFT", 325, 3)
+                            row.gaugeRest:SetPoint("LEFT", row, "LEFT", 338, 3)
                             if rested and not rested.isMaxLevel then
                                 local restRatio = rested.ratio or 0
                                 if rested.isFull then
@@ -6090,8 +6095,8 @@ function CLIAlts:Render()
                         -- 5. Rested Details Text (Pool & Rate / Time to Cap)
                         if row.betaPoolText then
                             row.betaPoolText:ClearAllPoints()
-                            row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 380, -10)
-                            row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 535, 0)
+                            row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 396, -10)
+                            row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 640, 0)
                             if rested and not rested.isMaxLevel then
                                 local curR = rested.currentRested or 0
                                 local maxR = rested.maxRested or 1
@@ -6111,8 +6116,8 @@ function CLIAlts:Render()
 
                         if row.betaRateText then
                             row.betaRateText:ClearAllPoints()
-                            row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 380, 10)
-                            row.betaRateText:SetPoint("RIGHT", row, "LEFT", 535, 0)
+                            row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 396, 10)
+                            row.betaRateText:SetPoint("RIGHT", row, "LEFT", 640, 0)
                             if rested and not rested.isMaxLevel then
                                 if rested.isFull then
                                     local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
@@ -6124,9 +6129,10 @@ function CLIAlts:Render()
                                         row.betaRateText:SetTextColor(fillR, fillG, fillB)
                                     end
                                 else
-                                    local rateStr = char.loggedOutInRestZone and "+5.0%/8h (Inn)" or "+1.25%/8h (Wild)"
+                                    local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
+                                    local locTag = char.loggedOutInRestZone and "Inn" or "Wild"
                                     local timeCap = rested.timeLeftStr or "---"
-                                    row.betaRateText:SetText(string.format("%s · %s to cap", rateStr, timeCap))
+                                    row.betaRateText:SetText(string.format("+%s XP/h (%s) · %s to cap", self:FormatNumber(xpPerHour), locTag, timeCap))
                                     row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
                                 end
                             else
@@ -6136,38 +6142,13 @@ function CLIAlts:Render()
                             row.betaRateText:Show()
                         end
 
-                        -- 6. Status Pill
-                        local statusText, statusStyle = self:FmtStatus(char, t)
-                        if row.statusPill and row.statusPillText then
-                            row.statusPill:ClearAllPoints()
-                            row.statusPill:SetPoint("LEFT", row, "LEFT", 545, 0)
-                            row.statusPill:SetSize(120, 24)
-                            row.statusPillText:SetText(statusText)
-                            if statusStyle == "warn_fill" or statusStyle == "warn" then
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(warnR, warnG, warnB, 1.0) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(warnR, warnG, warnB, 1.0) end
-                                row.statusPillText:SetTextColor(0.05, 0.04, 0.02)
-                            elseif statusStyle == "info_outline" or statusStyle == "info" then
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(fillR, fillG, fillB, 0.12) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(fillR, fillG, fillB, 0.85) end
-                                row.statusPillText:SetTextColor(fillR, fillG, fillB)
-                            elseif statusStyle == "dashed_muted" or statusStyle == "dashed" then
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(panelR, panelG, panelB, 0.35) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(lineR, lineG, lineB, 0.50) end
-                                row.statusPillText:SetTextColor(mutedR, mutedG, mutedB)
-                            else
-                                if row.statusPill.SetBackdropColor then row.statusPill:SetBackdropColor(panelR, panelG, panelB, 0.50) end
-                                if row.statusPill.SetBackdropBorderColor then row.statusPill:SetBackdropBorderColor(lineR, lineG, lineB, 0.75) end
-                                row.statusPillText:SetTextColor(mutedR, mutedG, mutedB)
-                            end
-                            row.statusPill:Show()
-                        end
+                        -- 6. Status Pill (Hidden on Tab 8)
+                        if row.statusPill then row.statusPill:Hide() end
 
-                        -- 7. Right-Aligned Gold Value
+                        -- 7. Right-Aligned Gold, Silver & Copper (Colored g/s/c)
                         if row.goldText then
                             local copper = char.money or 0
-                            local gold = math.floor(copper / 10000)
-                            row.goldText:SetText(self:FormatNumber(gold) .. "g")
+                            row.goldText:SetText(self:FormatCoins(copper))
                             row.goldText:SetTextColor(textR, textG, textB)
                             row.goldText:Show()
                         end
