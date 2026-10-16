@@ -4177,7 +4177,7 @@ function CLIAlts:RunSelfTest()
         local barStr = self.FmtRestedBar and self:FmtRestedBar(sampleAlt)
         Assert(barStr ~= nil and barStr:find("of Cap") ~= nil, "RestedMonitor: FmtRestedBar clearly defines progress toward Cap")
 
-        local dummyFrame = CreateDummyFrame("Frame", nil, nil)
+        local dummyFrame = CreateFrame("Frame", nil, UIParent)
         local ttOk = pcall(function()
             self:ShowRestedTooltip(dummyFrame, sampleAlt)
         end)
