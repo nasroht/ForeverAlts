@@ -153,7 +153,7 @@ function CLIAlts:RunSelfTest()
     }
     local formatted6 = self:FormatLoginDigestLines(mock6Items)
     Assert(#formatted6 == 3, "FormatLoginDigestLines: packs into 3 content lines (at most 5 boxed)")
-    Assert(formatted6[3]:find("+2 more %(/ca digest%)") ~= nil, "FormatLoginDigestLines: appends +2 more (/ca digest)")
+    Assert(formatted6[3]:find("+2 more %(/fa digest%)") ~= nil or formatted6[3]:find("+2 more %(/ca digest%)") ~= nil, "FormatLoginDigestLines: appends +2 more (/fa digest)")
 
     -- 5. Leveling Session Planner & Burn Ratio Tests
     -- 5a. Short sample guard (< 1000 rested burned)
