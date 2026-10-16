@@ -638,6 +638,20 @@ function CLIAlts:GetPlayerNames(force)
     return self:CacheCurrentPlayer()
 end
 
+function CLIAlts:GetCurrentPlayer()
+    if not self.curPlayerKey then
+        self:CacheCurrentPlayer()
+    end
+    if self.curPlayerKey and CLIAltsDB and CLIAltsDB.characters and CLIAltsDB.characters[self.curPlayerKey] then
+        return CLIAltsDB.characters[self.curPlayerKey]
+    end
+    if CLIAltsDB and CLIAltsDB.characters then
+        local first = next(CLIAltsDB.characters)
+        if first then return CLIAltsDB.characters[first] end
+    end
+    return nil
+end
+
 function CLIAlts:IsCurrentPlayer(char)
     if not char then return false end
     if not self.curPlayerKey then
