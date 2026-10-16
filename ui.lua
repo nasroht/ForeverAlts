@@ -571,26 +571,13 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
     if cd.SetDrawBling then cd:SetDrawBling(false) end
     if cd.SetHideCountdownNumbers then cd:SetHideCountdownNumbers(true) end
     if cd.SetDrawSwipe then cd:SetDrawSwipe(true) end
+    if cd.SetReverse then cd:SetReverse(true) end
     if cd.EnableMouse then cd:EnableMouse(false) end
     f.cd = cd
 
-    -- Center Disc (to cut out the donut gauge center)
-    local innerDisc = CreateFrame("Frame", nil, f, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    local discMargin = math.max(4, math.floor(size * 0.20))
-    innerDisc:SetPoint("TOPLEFT", f, "TOPLEFT", discMargin, -discMargin)
-    innerDisc:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -discMargin, discMargin)
-    innerDisc:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-        insets = { left = 0, right = 0, top = 0, bottom = 0 }
-    })
-    if innerDisc.SetBackdropColor then
-        innerDisc:SetBackdropColor(0.06, 0.08, 0.11, 0.96)
-    end
-    if innerDisc.SetBackdropBorderColor then
-        innerDisc:SetBackdropBorderColor(0.14, 0.18, 0.23, 0.8)
-    end
+    -- Center Container for the numeric readout (clean hollow donut center)
+    local innerDisc = CreateFrame("Frame", nil, f)
+    innerDisc:SetAllPoints(f)
     if innerDisc.EnableMouse then innerDisc:EnableMouse(false) end
     f.innerDisc = innerDisc
 
@@ -615,7 +602,7 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
     function f:SetProgress(ratio, r, g, b, textStr)
         ratio = math.min(1.0, math.max(0.0, ratio or 0))
         if self.cd then
-            if ratio <= 0 then
+            if ratio <= 0.005 then
                 if self.cd.Clear then self.cd:Clear() end
                 if self.cd.Hide then self.cd:Hide() end
             else
@@ -5551,7 +5538,11 @@ function CLIAlts:RenderCharRow(row, char, derived)
         row.gaugeXP:SetPoint("CENTER", row, "LEFT", 330, 4)
         if xpData and not xpData.isMaxLevel then
             local xpRatio = xpData.ratio or 0
-            row.gaugeXP:SetProgress(xpRatio, fillR, fillG, fillB, string.format("%d%%", xpData.percent))
+            if (xpData.curXP or 0) <= 0 then
+                row.gaugeXP:SetProgress(0, mutedR, mutedG, mutedB, "0%")
+            else
+                row.gaugeXP:SetProgress(xpRatio, fillR, fillG, fillB, string.format("%d%%", xpData.percent))
+            end
         else
             row.gaugeXP:SetProgress(1.0, mutedR, mutedG, mutedB, "MAX")
         end
@@ -5559,7 +5550,7 @@ function CLIAlts:RenderCharRow(row, char, derived)
     end
 
     -- 5. Gauge 2: Rested XP Circular Progress (Size 44, Font 12, centered at x=390)
-    -- Explicit Ring Meaning: % of rested cap (150%)
+    -- Explicit Ring Meaning: % of rested cap (150%+)
     if row.gaugeRest then
         row.gaugeRest:ClearAllPoints()
         row.gaugeRest:SetSize(44, 44)
@@ -5567,11 +5558,20 @@ function CLIAlts:RenderCharRow(row, char, derived)
         if rested and not rested.isMaxLevel then
             local restRatio = rested.ratio or 0
             if isCappedOrWasting then
-                row.gaugeRest:SetProgress(1.0, warnR, warnG, warnB, "CAP")
+                local wastedSec, wastedXP = self:GetRestedWaste(char)
+                if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+                    row.gaugeRest:SetProgress(1.0, dangerR, dangerG, dangerB, "CAP")
+                else
+                    row.gaugeRest:SetProgress(1.0, warnR, warnG, warnB, "CAP")
+                end
             else
                 local capPct = math.floor(restRatio * 100)
                 local est = rested.isEstimate and "~" or ""
-                row.gaugeRest:SetProgress(restRatio, brandR, brandG, brandB, string.format("%s%d%%", est, capPct))
+                if capPct == 0 and (rested.currentRested or 0) <= 0 then
+                    row.gaugeRest:SetProgress(0, mutedR, mutedG, mutedB, "0%")
+                else
+                    row.gaugeRest:SetProgress(restRatio, brandR, brandG, brandB, string.format("%s%d%%", est, capPct))
+                end
             end
         else
             row.gaugeRest:SetProgress(0, mutedR, mutedG, mutedB, "---")

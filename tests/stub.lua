@@ -94,6 +94,7 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:SetCooldown(...) end
     function frame:Clear(...) end
     function frame:Pause(...) end
+    function frame:SetReverse(...) end
     frame.lines = {}
     function frame:SetOwner(...) end
     function frame:AddLine(left, r, g, b)
