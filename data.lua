@@ -31,9 +31,15 @@ end
 -- ----------------------------------------------------------------------------
 local addonVersion = (C_AddOns and C_AddOns.GetAddOnMetadata and (C_AddOns.GetAddOnMetadata("ForeverAlts", "Version") or C_AddOns.GetAddOnMetadata("clialts", "Version") or C_AddOns.GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
     or (GetAddOnMetadata and (GetAddOnMetadata("ForeverAlts", "Version") or GetAddOnMetadata("clialts", "Version") or GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
-    or "1.2.1"
+    or "1.2.2"
 CLIAlts.VERSION = addonVersion
 ForeverAlts = CLIAlts
+
+function CLIAlts:PrintVersion()
+    local ver = tostring(self.VERSION or "1.2.2")
+    self:Print(string.format("ForeverAlts Version: |cff00ff66v%s|r (CurseForge Project #1747176)", ver))
+    return ver
+end
 CLIAlts.DB_VERSION = 3
 local CURRENT_DB_VERSION = 3
 local cachedCurrentChar = nil

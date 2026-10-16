@@ -39,6 +39,8 @@ function CLIAlts:RunSelfTest()
     -- 0. Version verification (dynamically read from TOC metadata)
     Assert(self.VERSION ~= nil and type(self.VERSION) == "string" and #self.VERSION > 0,
         "Version: CLIAlts.VERSION dynamically populated via GetAddOnMetadata: " .. tostring(self.VERSION))
+    local pVer = self:PrintVersion()
+    Assert(pVer == self.VERSION, "Version: CLIAlts:PrintVersion returns current version string")
 
     do -- 1. ProjectRested & 2. GetRestedWaste tests
     -- 1a. Rest zone accrual at rank 0 (5% of maxXP per 8 hours = 1000 XP on 20k maxXP)

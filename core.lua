@@ -498,6 +498,9 @@ local function SlashHandler(msg)
         CLIAlts:CollectCurrentCharacter()
         CLIAlts:Toggle()
 
+    elseif cmd == "version" or cmd == "ver" or cmd == "-v" or cmd == "--version" then
+        CLIAlts:PrintVersion()
+
     elseif cmd == "beta" or (cmd == "8" and not (cmd == "tab" and arg == "8")) then
         CLIAlts:Print("Beta dashboard has been integrated into Overview (Tab 1). Redirecting to Overview... (Settings is now Tab 8, use /fa settings)")
         CLIAlts:CollectCurrentCharacter()

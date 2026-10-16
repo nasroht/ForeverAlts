@@ -5,6 +5,21 @@ All notable changes to **ForeverAlts** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-10-16
+
+### Added
+- **`/fa version` Slash Command**: Instantly prints the installed ForeverAlts version (`v1.2.2`) and CurseForge project reference (`#1747176`) to the chat window (aliases: `/fa ver`, `/fa -v`, `/fa --version`).
+- **Interactive Terminal Command Prompt Support**: Added `version` to the bottom command bar and autocomplete list, with live feedback on the current build.
+- **`CLIAlts:PrintVersion()` API**: Programmatic helper for version inspection across modules and diagnostics.
+
+### Fixed & Improved
+- **Detail Panel Rested Card Boundaries**: Fixed unbounded FontStrings in the character detail dossier (`restedCard.perkLine` and `restedCard.rate`). Added strict right border anchors, disabled word wrap, and reduced secondary font size to 11pt, eliminating all text overflow past card borders across all addon UI scales (80%–145%).
+- **Rested XP Gauge Level Accuracy**: Gauge percentage now displays exact character level rested percentage (e.g. `12.6%` / `454 XP`) rather than the normalized cap ratio.
+- **Character Identity Isolation**: Resolved player identification collision where characters sharing a first name (e.g. "Nas Brother" vs "Nas Uncle") could cross-match live session rested data.
+- **Early Login Zero Guard**: Prevented early login client zeroes and wilderness logout uninitialized flags from overwriting saved rested XP or money pools.
+- **Sidebar Tab & Badge Explanations**: Added rich tooltips explaining each navigation tab and unassigned / alert badge counter.
+- **Play Next Session Cards**: Redesigned recommendation engine into modern "Next Session" priority cards with actionable leveling targets.
+
 ## [1.2.1] - 2026-10-15
 
 ### Changed

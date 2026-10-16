@@ -7842,6 +7842,11 @@ function CLIAlts:ExecutePromptCommand(input)
         self:ShowHelpPopup()
         self:SetPromptFeedback("Help manual opened.")
 
+    elseif cmd == "version" or cmd == "ver" then
+        local ver = tostring(self.VERSION or "1.2.2")
+        self:SetPromptFeedback(string.format("ForeverAlts Version: v%s", ver))
+        self:PrintVersion()
+
     elseif cmd == "exit" or cmd == "quit" or cmd == "close" then
         if mainFrame then mainFrame:Hide() end
 
@@ -7866,7 +7871,7 @@ function CLIAlts:AutoCompletePrompt(editBox)
         "backup", "restore", "tour", "onboarding", "tooltips", "inv",
         "core", "alt", "bank", "unassign", "prof", "milestones",
         "forever", "role",
-        "refresh", "help", "exit", "close"
+        "refresh", "version", "help", "exit", "close"
     }
 
     local cmd, arg = trimmed:match("^(%S+)%s+(.*)$")
@@ -9121,6 +9126,7 @@ function CLIAlts:ShowHelpPopup()
         string.format("|cff%s%s|r", t.borderHex or "f2c94c", sep),
         string.format("|cff%sSlash Commands:|r", t.primaryHex or "f2c94c"),
         "  /fa                 - Toggle the main TUI monitor",
+        "  /fa version         - Print installed addon version and build info",
         "  /fa [1-8]           - Open directly to specific tab (1-8)",
         "  /fa compact         - Toggle compact view (hide XP bar, slim)",
         "  /fa next            - Recommend top 3 alts with rested XP waste",

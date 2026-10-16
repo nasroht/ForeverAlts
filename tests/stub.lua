@@ -379,7 +379,7 @@ C_AddOns = C_AddOns or {
     UpdateAddOnMemoryUsage = function() end,
 }
 GetAddOnMetadata = GetAddOnMetadata or function(addon, field)
-    if field == "Version" then return "1.2.1" end
+    if field == "Version" then return "1.2.2" end
     return nil
 end
 if C_AddOns and not C_AddOns.GetAddOnMetadata then
