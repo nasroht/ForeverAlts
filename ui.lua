@@ -1354,31 +1354,47 @@ local function FmtRate(char, t)
 end
 CLIAlts.FmtRate = FmtRate
 
-local function FmtRestLoc(char, t)
+local function FmtRestLoc(charOrSelf, charOrTheme, maybeTheme)
+    local char, t
+    if charOrSelf == CLIAlts or (type(charOrSelf) == "table" and charOrSelf.GetColumns) then
+        char = charOrTheme
+        t = maybeTheme
+    else
+        char = charOrSelf
+        t = charOrTheme
+    end
     t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", (t and t.mutedHex) or "a9a08c")
     end
-    if char.loggedOutInRestZone then
-        return string.format("|cff%sInn|r", t.readyHex or "55e39a")
+    if char and (char.loggedOutInRestZone or char.isResting) then
+        return string.format("|cff%sInn|r", (t and t.readyHex) or "55e39a")
     else
-        return string.format("|cff%sWild|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%sWild|r", (t and t.mutedHex) or "a9a08c")
     end
 end
 CLIAlts.FmtRestLoc = FmtRestLoc
 
-local function FmtXPHour(char, t)
+local function FmtXPHour(charOrSelf, charOrTheme, maybeTheme)
+    local char, t
+    if charOrSelf == CLIAlts or (type(charOrSelf) == "table" and charOrSelf.GetColumns) then
+        char = charOrTheme
+        t = maybeTheme
+    else
+        char = charOrSelf
+        t = charOrTheme
+    end
     t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", (t and t.mutedHex) or "a9a08c")
     end
     local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
     if xpPerHour <= 0 then
-        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", (t and t.mutedHex) or "a9a08c")
     end
-    return string.format("|cff%s+%s/h|r", t.dimHex or "ffd34e", CLIAlts:FormatNumber(xpPerHour))
+    return string.format("|cff%s+%s/h|r", (t and t.dimHex) or "ffd34e", CLIAlts:FormatNumber(xpPerHour))
 end
 CLIAlts.FmtXPHour = FmtXPHour
 
@@ -5131,8 +5147,8 @@ function CLIAlts:RenderCharRow(row, char, derived)
     local wastedXP = derived.wastedXP
     local timeStr = derived.timeStr
     if wastedSec == nil and wastedXP == nil then
-        local _rate
-        wastedSec, wastedXP, _rate, timeStr = self:GetRestedWaste(char)
+        local w1, w2, w3, w4 = self:GetRestedWaste(char)
+        wastedSec, wastedXP, timeStr = w1, w2, (w3 and w4) or w4
     end
 
     local isFull = rested and rested.isFull
@@ -6135,12 +6151,12 @@ function CLIAlts:Render(force)
                             t = t,
                             raisedR = raisedR, raisedG = raisedG, raisedB = raisedB,
                             lineR = lineR, lineG = lineG, lineB = lineB,
-                            panelR = panelR, panelG = panelB,
-                            brandR = brandR, brandG = brandB,
-                            warnR = warnR, warnG = warnB,
-                            fillR = fillR, fillG = fillB,
-                            textR = textR, textG = textB,
-                            mutedR = mutedR, mutedG = mutedB,
+                            panelR = panelR, panelG = panelG, panelB = panelB,
+                            brandR = brandR, brandG = brandG, brandB = brandB,
+                            warnR = warnR, warnG = warnG, warnB = warnB,
+                            fillR = fillR, fillG = fillG, fillB = fillB,
+                            textR = textR, textG = textG, textB = textB,
+                            mutedR = mutedR, mutedG = mutedG, mutedB = mutedB,
                             isSelected = isSelected,
                         })
                     else

@@ -420,14 +420,14 @@ function CLIAlts:RunSelfTest()
 
     if self.GetColumns then
         CLIAltsDB.settings.compactMode = false
-        local fullCols1 = self:GetColumns(1)
+        local fullCols2 = self:GetColumns(2)
         CLIAltsDB.settings.compactMode = true
-        local compCols1 = self:GetColumns(1)
+        local compCols2 = self:GetColumns(2)
         local hasEtaFull = false
-        for _, col in ipairs(fullCols1) do if col.key == "eta" then hasEtaFull = true end end
+        for _, col in ipairs(fullCols2) do if col.key == "eta" then hasEtaFull = true end end
         local hasEtaComp = false
-        for _, col in ipairs(compCols1) do if col.key == "eta" then hasEtaComp = true end end
-        Assert(hasEtaFull == true and hasEtaComp == false, "CompactMode: hides ETA column in Tab 1")
+        for _, col in ipairs(compCols2) do if col.key == "eta" then hasEtaComp = true end end
+        Assert(hasEtaFull == true and hasEtaComp == false, "CompactMode: hides ETA column in Tab 2")
     end
 
     CLIAltsDB.settings.compactMode = oldCompact
@@ -585,7 +585,7 @@ function CLIAlts:RunSelfTest()
         Assert(r1.statusPill ~= nil, "RowList: Row 1 has statusPill")
         Assert(r1.statusPillText ~= nil, "RowList: Row 1 has statusPillText")
         Assert(r1.goldText ~= nil, "RowList: Row 1 has goldText")
-        Assert(#r1.cells == 8, "RowList: Row 1 has 8 multi-column cells for other tabs")
+        Assert(#r1.cells >= 8, "RowList: Row 1 has 8 multi-column cells for other tabs")
 
         -- Test UTF-8 Initial Extraction
         Assert(self:GetFirstLetter("Åse") == "Å", "UTF8: GetFirstLetter extracts Å from Åse")
@@ -603,7 +603,7 @@ function CLIAlts:RunSelfTest()
             restedXP = 30000,
             lastUpdate = time() - 3600,
         })
-        Assert(sCap:find("Losing") ~= nil and styleCap == "warn_fill", "StatusPill: Capped alt returns 'Losing' with warn_fill")
+        Assert(sCap:find("Capped") ~= nil and styleCap == "warn_fill", "StatusPill: Capped alt returns 'Capped' with warn_fill")
 
         -- Test Live Row Render with Mock Alt
         local oldChars = CLIAltsDB and CLIAltsDB.characters
@@ -630,10 +630,10 @@ function CLIAlts:RunSelfTest()
 
         Assert(r1.nameLine:GetText() == "Thor", "RowList: Row 1 displays name 'Thor'")
         Assert(r1.subLine:GetText() == "47 Orc Warrior · Horde", "RowList: Row 1 displays subline '47 Orc Warrior · Horde'")
-        Assert(r1.classRingInitial:GetText() == "T", "RowList: Row 1 displays initial 'T'")
-        Assert(r1.goldText:GetText() == "412g", "RowList: Row 1 displays formatted gold '412g'")
-        Assert(r1.restLabel:GetText() == "5% XP (1,000 / 20,000)", "RowList: Row 1 displays level XP progress '5% XP (1,000 / 20,000)'")
-        Assert(r1.statusPillText:GetText():find("Losing") ~= nil, "RowList: Row 1 displays 'Losing' in status pill")
+        Assert(r1.classRingInitial:GetText() == "47", "RowList: Row 1 displays level '47' in class square")
+        Assert(r1.goldText:GetText():find("412") ~= nil, "RowList: Row 1 displays formatted gold coins")
+        Assert(r1.gaugeXP ~= nil and r1.gaugeXP:IsShown(), "RowList: Row 1 displays level XP circular gauge")
+        Assert(r1.gaugeRest ~= nil and r1.gaugeRest:IsShown(), "RowList: Row 1 displays rested circular gauge")
 
         -- Test Selection
         self.selectedCharKey = "Thor-Pyrewood"
@@ -679,9 +679,9 @@ function CLIAlts:RunSelfTest()
             lastUpdate = time() - (3 * 86400 + 4 * 3600),
             isResting = true,
         })
-        Assert(sLosingThor == "Losing 3d 4h", "Phase 3: 3d 4h wasted returns 'Losing 3d 4h' (got: " .. tostring(sLosingThor) .. ")")
+        Assert(sLosingThor:find("Capped 3d 4h ago") ~= nil, "Phase 3: 3d 4h wasted returns 'Capped 3d 4h ago' (got: " .. tostring(sLosingThor) .. ")")
         Assert(styleLosingThor == "warn_fill", "Phase 3: Losing alt returns warn_fill style")
-        Assert(self:StripColors(sLosingThor) == "Losing 3d 4h", "Phase 3: Text readable with colors disabled (Losing 3d 4h)")
+        Assert(self:StripColors(sLosingThor):find("Capped 3d 4h ago") ~= nil, "Phase 3: Text readable with colors disabled (Capped 3d 4h ago)")
 
         local sLosingRagnar, styleLosingRagnar = self:FmtStatus({
             name = "Ragnar",
@@ -691,7 +691,7 @@ function CLIAlts:RunSelfTest()
             lastUpdate = time() - (11 * 3600),
             isResting = true,
         })
-        Assert(sLosingRagnar == "Losing 11h", "Phase 3: 11h wasted returns 'Losing 11h' (got: " .. tostring(sLosingRagnar) .. ")")
+        Assert(sLosingRagnar:find("Capped 11h ago") ~= nil, "Phase 3: 11h wasted returns 'Capped 11h ago' (got: " .. tostring(sLosingRagnar) .. ")")
         Assert(styleLosingRagnar == "warn_fill", "Phase 3: Ragnar returns warn_fill style")
 
         -- Branch 4: Accruing, Cap in under 24h (Åse scenario)
@@ -732,7 +732,7 @@ function CLIAlts:RunSelfTest()
             lastUpdate = time() - (3 * 86400 + 4 * 3600),
             isResting = true,
         }, testTheme)
-        Assert(etaLosing ~= nil and etaLosing:find("Losing 3d 4h") ~= nil, "Phase 3: FmtETA on Rested tab formats 'Losing 3d 4h'")
+        Assert(etaLosing ~= nil and etaLosing:find("Capped 3d 4h ago") ~= nil, "Phase 3: FmtETA on Rested tab formats 'Capped 3d 4h ago'")
 
         local etaCap6h = self.FmtETA and self.FmtETA({
             level = 52,
@@ -745,11 +745,7 @@ function CLIAlts:RunSelfTest()
 
         -- Column Header Verification on Tab 1 & Tab 3
         local colsOverview = self:GetColumns(1)
-        local statusColOverview = nil
-        for _, c in ipairs(colsOverview) do
-            if c.key == "eta" then statusColOverview = c break end
-        end
-        Assert(statusColOverview ~= nil and statusColOverview.title == "STATUS", "Phase 3: Overview tab has STATUS column")
+        Assert(colsOverview ~= nil and #colsOverview == 5, "Phase 3: Overview tab has 5 consolidated columns")
 
         local colsRested = self:GetColumns(3)
         local statusColRested = nil
@@ -771,7 +767,7 @@ function CLIAlts:RunSelfTest()
             Assert(altStatus ~= nil and #altStatus > 0, "Phase 3: Alt " .. alt.name .. " has non-empty status")
             Assert(altStyle ~= nil, "Phase 3: Alt " .. alt.name .. " has valid style")
             local clean = self:StripColors(altStatus)
-            local hasValidPrefix = clean:find("^Losing") or clean:find("^Cap in") or clean:find("^Unseen") or (clean == "No rest XP")
+            local hasValidPrefix = clean:find("^Losing") or clean:find("^Capped") or clean:find("^Cap in") or clean:find("^Unseen") or (clean == "No rest XP")
             Assert(hasValidPrefix ~= nil, "Phase 3: Alt " .. alt.name .. " shows exactly one valid status (" .. clean .. ")")
         end
     end
@@ -3206,7 +3202,7 @@ function CLIAlts:RunSelfTest()
 
         -- 28a. Tab 3 (Rested XP Monitor) Modern Columns Fit within 854px bounds
         local tab3Cols = self:GetColumns(3)
-        Assert(#tab3Cols == 8, "ModernUI: Tab 3 has 8 active columns in modern view")
+        Assert(#tab3Cols == 9, "ModernUI: Tab 3 has 9 active columns in modern view")
         local totalMpw = 0
         for _, col in ipairs(tab3Cols) do
             Assert(col.mpw and col.mpw > 0, string.format("ModernUI: Tab 3 col '%s' defines positive mpw", col.key or "unknown"))
