@@ -4998,6 +4998,7 @@ function CLIAlts:UpdateDetailPanel()
     if dp.restedCard then
         local rested = self:GetRestedData(char)
         local r = self:GetWellRestedRank(char)
+        local estRate = char.xpHour or 38000
         local charLP = self:CalculateCharacterLP(char)
         local lpData = self:CalculateAccountLP()
 

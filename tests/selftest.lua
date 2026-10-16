@@ -40,7 +40,7 @@ function CLIAlts:RunSelfTest()
     Assert(self.VERSION ~= nil and type(self.VERSION) == "string" and #self.VERSION > 0,
         "Version: CLIAlts.VERSION dynamically populated via GetAddOnMetadata: " .. tostring(self.VERSION))
 
-    -- 1. ProjectRested tests
+    do -- 1. ProjectRested & 2. GetRestedWaste tests
     -- 1a. Rest zone accrual at rank 0 (5% of maxXP per 8 hours = 1000 XP on 20k maxXP)
     local charInn = { maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true }
     local p1 = self:ProjectRested(charInn, T0 + 28800, 0)
@@ -75,8 +75,9 @@ function CLIAlts:RunSelfTest()
     local charCapped = { level = 20, maxXP = 20000, restedXP = 30000, lastUpdate = T0, loggedOutInRestZone = true }
     local wSec3, wXP3, _, timeStr3 = self:GetRestedWaste(charCapped, T0 + 86400)
     Assert(wSec3 == 86400 and wXP3 == 3000 and timeStr3 == "1d 0h", "GetRestedWaste: capped char 24h post-cap wastes 3000 XP with '1d 0h'")
+    end
 
-    -- 3. Calibration Input tests
+    do -- 3. Calibration Input tests
     local oldSnap = { cleanLogout = true, level = 20, maxXP = 20000, restedXP = 1000, lastUpdate = T0, loggedOutInRestZone = true }
 
     -- 3a. Level changed guard
@@ -104,8 +105,9 @@ function CLIAlts:RunSelfTest()
     -- 3f. Second consistent sample confirms rank change
     local infRank2, _, st6 = self:EvaluateCalibration(oldSnap, 6600, 20, T0 + 144000, 0, 3)
     Assert(infRank2 == 3 and st6 == "CONFIRMED", "EvaluateCalibration: confirms rank 3 on 2nd consistent sample")
+    end
 
-    -- 4. Login Digest & Alert Category Tests
+    do -- 4. Login Digest & Alert Category Tests
     -- 4a. IsAlertEnabled defaults to true
     Assert(self:IsAlertEnabled("cooldowns") == true, "Alerts: cooldowns category enabled by default")
     Assert(self:IsAlertEnabled("rested") == true, "Alerts: rested category enabled by default")
@@ -154,6 +156,7 @@ function CLIAlts:RunSelfTest()
     local formatted6 = self:FormatLoginDigestLines(mock6Items)
     Assert(#formatted6 == 3, "FormatLoginDigestLines: packs into 3 content lines (at most 5 boxed)")
     Assert(formatted6[3]:find("+2 more %(/fa digest%)") ~= nil or formatted6[3]:find("+2 more %(/ca digest%)") ~= nil, "FormatLoginDigestLines: appends +2 more (/fa digest)")
+    end
 
     -- 5. Leveling Session Planner & Burn Ratio Tests
     -- 5a. Short sample guard (< 1000 rested burned)
@@ -1792,7 +1795,7 @@ function CLIAlts:RunSelfTest()
     local altExplicitInn = { name = "ExplicitInnAlt", loggedOutInRestZone = true }
     Assert(self:IsCharacterResting(altExplicitInn) == true, "IsCharacterResting: respects loggedOutInRestZone = true")
 
-    -- 16. Retail Flavor Detection & Rested Math Guard Tests
+    do -- 16. Retail Flavor Detection & Rested Math Guard Tests
     -- 16a. Classic / Default Flavor
     Assert(self:IsRetail() == false, "IsRetail: defaults to false in test environment")
 
@@ -1805,6 +1808,7 @@ function CLIAlts:RunSelfTest()
     if CLIAltsDB and CLIAltsDB.settings then
         CLIAltsDB.settings.wellRestedRank = 5
     end
+    local charInn = { maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true }
     local restedRetail = self:GetRestedData(charInn, true, T0 + 28800)
     Assert(restedRetail.perkRank == 0, "IsRetail: enforces perkRank = 0 on Retail even if wellRestedRank is 5")
     Assert(restedRetail.maxPercent == 150, "IsRetail: enforces 150% rested cap on Retail")
@@ -1852,8 +1856,9 @@ function CLIAlts:RunSelfTest()
     Assert(charRank5.wellRestedRank == 5, "SetWellRestedRank: AltFive remains isolated at Rank 5")
 
     CLIAltsDB = oldLiveDB
+    end
 
-    -- 17. Cross-Character Inventory Scanner & Tooltip Summary Tests (Feature 6)
+    do -- 17. Cross-Character Inventory Scanner & Tooltip Summary Tests (Feature 6)
     local testInvDB = {
         settings = {
             showInventoryTooltips = true,
@@ -1975,6 +1980,7 @@ function CLIAlts:RunSelfTest()
     Assert(mergedInv[2447] and mergedInv[2447].bank == 20, "CollectInventory: preserves existing bank count for item 2447")
 
     CLIAltsDB = oldInvTestDB
+    end
 
     do -- 18. WoW Forever Cohort & Role Categorization Tests (Component 1)
     local testCohortDB = {
