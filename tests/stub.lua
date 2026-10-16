@@ -83,6 +83,15 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:GetPoint(...) return "CENTER", nil, "CENTER", 0, 0 end
     function frame:SetPropagateKeyboardInput(...) end
     function frame:EnableKeyboard(...) end
+    function frame:SetSwipeTexture(...) end
+    function frame:SetSwipeColor(...) end
+    function frame:SetDrawEdge(...) end
+    function frame:SetDrawBling(...) end
+    function frame:SetHideCountdownNumbers(...) end
+    function frame:SetDrawSwipe(...) end
+    function frame:SetCooldown(...) end
+    function frame:Clear(...) end
+    function frame:Pause(...) end
     frame.lines = {}
     function frame:SetOwner(...) end
     function frame:AddLine(left, r, g, b)

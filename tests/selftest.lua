@@ -3628,6 +3628,66 @@ function CLIAlts:RunSelfTest()
         Assert(mockCookAlt.routeFirstAid == false, "SlashCommand: /clialts firstaid ChefAlt toggles first aid off")
     end
 
+    -- ------------------------------------------------------------------------
+    -- 37. Beta Tab: Consolidated Dashboard & Circular Speedometer Gauges
+    -- ------------------------------------------------------------------------
+    Assert(self.CreateCircleMeter ~= nil, "BetaTab: CreateCircleMeter API exists on CLIAlts")
+
+    -- 37a. CreateCircleMeter initialization & SetProgress
+    local testMeter = self:CreateCircleMeter(UIParent, 36, "LVL XP")
+    Assert(testMeter ~= nil and testMeter.cd ~= nil and testMeter.valText ~= nil and testMeter.label ~= nil,
+        "BetaTab: CreateCircleMeter initializes Cooldown widget, innerDisc, valText, and label")
+    Assert(testMeter.label:GetText() == "LVL XP", "BetaTab: CreateCircleMeter correctly sets label text to 'LVL XP'")
+
+    testMeter:SetProgress(0.65, 0.2, 0.8, 0.4, "65%")
+    Assert(testMeter.valText:GetText() == "65%", "BetaTab: SetProgress updates percentage text to '65%'")
+
+    testMeter:SetProgress(1.0, 0.5, 0.5, 0.5, "MAX")
+    Assert(testMeter.valText:GetText() == "MAX", "BetaTab: SetProgress supports special readout 'MAX'")
+
+    testMeter:SetProgress(0.0, 0.8, 0.4, 0.2, "CAP")
+    Assert(testMeter.valText:GetText() == "CAP", "BetaTab: SetProgress supports special readout 'CAP'")
+
+    -- 37b. Tab 8 Column Definitions & Bounds
+    local tab8Cols = self:GetColumns(8)
+    Assert(tab8Cols ~= nil and #tab8Cols == 6, "BetaTab: Tab 8 defines 6 consolidated columns")
+    local tab8TotalMpw = 0
+    for _, col in ipairs(tab8Cols) do
+        Assert(col.mpw and col.mpw > 0, string.format("BetaTab: col '%s' defines positive mpw", col.key or "unknown"))
+        tab8TotalMpw = tab8TotalMpw + (col.mpw or 0)
+    end
+    Assert(tab8TotalMpw <= 850, string.format("BetaTab: total modern column width (%dpx) fits inside row bounds (<= 850px)", tab8TotalMpw))
+    Assert(tab8Cols[1].key == "name" and tab8Cols[2].key == "circleXP" and tab8Cols[3].key == "circleRest" and tab8Cols[4].key == "details",
+        "BetaTab: columns align with consolidated gauge architecture (name, circleXP, circleRest, details)")
+
+    -- 37c. SwitchTab(8) and Modern Rendering
+    self:SwitchTab(8)
+    Assert(CLIAltsDB.settings.activeTab == 8, "BetaTab: SwitchTab(8) switches activeTab to 8")
+
+    local mBetaFrame = self:CreateModernMainFrame()
+    self:Render()
+    Assert(mBetaFrame.subViewTitle:GetText():find("CONSOLIDATED METERS") ~= nil,
+        "BetaTab: subViewTitle shows 'BETA: CONSOLIDATED METERS'")
+    Assert(mBetaFrame.headerFrame:IsShown() == true,
+        "BetaTab: headerFrame is shown with column headers")
+
+    local betaRow1 = mBetaFrame.rowFrames and mBetaFrame.rowFrames[1]
+    Assert(betaRow1 ~= nil and betaRow1.gaugeXP ~= nil and betaRow1.gaugeRest ~= nil and betaRow1.betaPoolText ~= nil and betaRow1.betaRateText ~= nil,
+        "BetaTab: row contains gaugeXP, gaugeRest, betaPoolText, and betaRateText widgets")
+    Assert(betaRow1.gaugeXP:IsShown() == true, "BetaTab: gaugeXP is shown on active character row")
+    Assert(betaRow1.gaugeRest:IsShown() == true, "BetaTab: gaugeRest is shown on active character row")
+    Assert(betaRow1.betaPoolText:IsShown() == true, "BetaTab: betaPoolText is shown on active character row")
+    Assert(betaRow1.betaRateText:IsShown() == true, "BetaTab: betaRateText is shown on active character row")
+
+    -- 37d. Tab 8 Reversibility: Switching back to Tab 1 Overview restores linear layout
+    self:SwitchTab(1)
+    Assert(CLIAltsDB.settings.activeTab == 1, "BetaTab: SwitchTab(1) returns cleanly to Tab 1")
+    self:Render()
+    Assert(betaRow1.gaugeXP:IsShown() == false, "BetaTab: gaugeXP is hidden on Tab 1 Overview")
+    Assert(betaRow1.gaugeRest:IsShown() == false, "BetaTab: gaugeRest is hidden on Tab 1 Overview")
+    Assert(betaRow1.betaPoolText:IsShown() == false, "BetaTab: betaPoolText is hidden on Tab 1 Overview")
+    Assert(betaRow1.betaRateText:IsShown() == false, "BetaTab: betaRateText is hidden on Tab 1 Overview")
+
     -- Restore master state
     if masterState.db then
         CLIAltsDB = masterState.db
@@ -3650,7 +3710,7 @@ function CLIAlts:RunSelfTest()
     end
 
     if failed == 0 then
-        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine)", passed))
+        self:Print(string.format("|cff00ff66Self-test passed: all %d assertions OK.|r (ProjectRested, GetRestedWaste, Calibration, Digest & Alerts, Leveling Plan, Notes, Lockouts, Watchlist, Stale/Prune, LibDataBroker, Colorblind/Compact, LivePath, Backup/Restore, UI/Slash, Cross-Character Inventory & Tooltips, WoW Forever Cohorts & Roles, Smart Rotation, Profession Milestones, Dashboard Roster Summary, Navigation & Context Menu, Dungeon Quest Tracker & Attunements, Supply Chain & Mail Router, Legacy Point Tracker, Bag Auto-Sort & Consolidation Engine, Mail Supply Chain Auto-Fill Engine, Consumable & Mail Ignore Filter Engine, Modern UI Layout & Compact Rested XP Monitor, Self-Mailing Prevention Guard, Account Liquid Wealth & Dynamic Trend Engine, Phase 5 Sidebar Badges & Filter Chips Engine, Phase 6 Detail Panel & Keyboard Navigation Engine, Phase 7 Command Bar & Onboarding Tour Engine, Phase 8 Settings & Preferences Dialog Engine, Chat Layout Cloner Engine, Secondary Professions & Container Scanning Engine, Beta Tab & Consolidated Circular Gauges)", passed))
     else
         self:Print(string.format("|cffff3333Self-test FAILED: %d passed, %d failed!|r", passed, failed))
         for _, err in ipairs(errors) do
