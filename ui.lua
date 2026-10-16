@@ -1410,20 +1410,49 @@ local function FmtRestedPool(char, t)
     t = t or CLIAlts:GetTheme()
     local rested = CLIAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
-        return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
     end
-    local r = CLIAlts:GetWellRestedRank(char)
-    local perkTag = (r > 0) and string.format(" |cff%s(R%d)|r", t.readyHex or "55e39a", r) or ""
     if mainFrame and not mainFrame.isLegacyUI then
         local curK = (rested.currentRested or 0) >= 1000 and string.format("%.1fk", (rested.currentRested or 0) / 1000) or tostring(rested.currentRested or 0)
-        local capStr = rested.isFull and (string.format("|cff%s%d%%*|r", t.highlightHex, rested.maxPercent or 150)) or (string.format("%d%%", rested.percent or 0))
-        return string.format("|cff%s%s XP (%s)%s|r", t.textHex or t.primaryHex, curK, capStr, perkTag)
+        return string.format("|cff%s%s XP|r", t.textHex or t.primaryHex or "f4ead2", curK)
     end
-    local capStr = rested.isFull and (string.format("|cff%s%d%%*|r", t.highlightHex, rested.maxPercent or 150)) or (string.format("%d%%", rested.percent or 0))
-    return string.format("|cff%s%s|r |cff%s/ %s (%s)%s|r",
-        t.textHex or t.primaryHex, CLIAlts:FormatNumber(rested.currentRested),
-        t.dimHex, CLIAlts:FormatNumber(rested.maxRested), capStr, perkTag)
+    return string.format("|cff%s%s XP|r", t.textHex or t.primaryHex or "f4ead2", CLIAlts:FormatNumber(rested.currentRested or 0))
 end
+CLIAlts.FmtRestedPool = FmtRestedPool
+
+local function FmtRestedBonus(char, t)
+    t = t or CLIAlts:GetTheme()
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+    end
+    if CLIAlts:IsRetail() then
+        return string.format("|cff%s+0%%|r", t.mutedHex or "a9a08c")
+    end
+    local rank = rested.perkRank or CLIAlts:GetWellRestedRank(char)
+    local pct = rank * 4
+    if rank > 0 then
+        return string.format("|cff%s+%d%% (R%d)|r", t.readyHex or "55e39a", pct, rank)
+    else
+        return string.format("|cff%s+0%% (R0)|r", t.mutedHex or "a9a08c")
+    end
+end
+CLIAlts.FmtRestedBonus = FmtRestedBonus
+
+local function FmtRestedCap(char, t)
+    t = t or CLIAlts:GetTheme()
+    local rested = CLIAlts:GetRestedData(char)
+    if not rested or rested.isMaxLevel then
+        return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+    end
+    local capPct = rested.maxPercent or 150
+    if mainFrame and not mainFrame.isLegacyUI then
+        local capK = (rested.maxRested or 0) >= 1000 and string.format("%.1fk", (rested.maxRested or 0) / 1000) or tostring(rested.maxRested or 0)
+        return string.format("|cff%s%s (%d%%)|r", t.textHex or "f4ead2", capK, capPct)
+    end
+    return string.format("|cff%s%s (%d%%)|r", t.textHex or "f4ead2", CLIAlts:FormatNumber(rested.maxRested or 0), capPct)
+end
+CLIAlts.FmtRestedCap = FmtRestedCap
 
 local function FmtRestedBar(char, t)
     t = t or CLIAlts:GetTheme()
@@ -1440,20 +1469,77 @@ local function FmtRestedBar(char, t)
     local fillStr = string.rep(fillChar, fill)
     local emptyStr = string.rep(".", empty)
     local est = rested.isEstimate and "~" or ""
-    local capMark = isFull and "*" or ""
     local capPct = math.floor(ratio * 100)
-    local barColor = isFull and t.highlightHex or (t.accentHex or t.primaryHex)
-    local labelColor = isFull and t.highlightHex or (t.textHex or t.primaryHex)
+    local barColor = isFull and (t.pendingHex or "f59e0b") or (t.accentHex or t.primaryHex)
+    local labelColor = isFull and (t.pendingHex or "f59e0b") or (t.textHex or t.primaryHex)
 
-    if mainFrame and not mainFrame.isLegacyUI then
-        return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%%%s cap|r",
-            t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, est, capPct, capMark)
+    if isFull then
+        return string.format("|cff%s[|r|cff%s%s|r|cff%s]|r |cff%s100%% (Capped)|r",
+            t.dimHex, barColor, fillStr, t.dimHex, labelColor)
     end
 
-    local lvlPct = rested.percent or 0
-    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%%%s cap (%d%% lvl)|r",
-        t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, est, capPct, capMark, lvlPct)
+    return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%% of Cap|r",
+        t.dimHex, barColor, fillStr, t.dimHex, emptyStr, t.dimHex, labelColor, est, capPct)
 end
+CLIAlts.FmtRestedBar = FmtRestedBar
+
+local function FmtTimeToCap(char, t)
+    t = t or CLIAlts:GetTheme()
+    if not char then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
+
+    local maxLevel = CLIAlts.GetMaxLevel and CLIAlts:GetMaxLevel() or 60
+    local level = char.level or 1
+    if level >= maxLevel then
+        return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c")
+    end
+
+    local now = time()
+    local lastSeen = char.lastUpdate or char.logoutTime or char.lastSeen or now
+    local unseenDays = math.floor((now - lastSeen) / 86400)
+    local staleDays = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.staleDays)) or 30
+
+    if unseenDays >= staleDays or char.isStale then
+        return string.format("|cff%sUnseen %dd|r", t.mutedHex or "a9a08c", math.max(unseenDays, 1))
+    end
+
+    local rested = CLIAlts:GetRestedData(char, false, now)
+    local wastedSec, wastedXP = CLIAlts:GetRestedWaste(char, now, rested)
+
+    if rested and rested.isFull then
+        if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+            local wasteStr = CLIAlts:FormatWasteShort(wastedXP)
+            return string.format("|cff%s[+%s WASTED]|r", t.blockedHex or "ef4444", wasteStr)
+        else
+            return string.format("|cff%s[CAPPED]|r", t.pendingHex or "f59e0b")
+        end
+    end
+
+    if rested and not rested.isMaxLevel then
+        local est = rested.isEstimate and "~" or ""
+        local sec = rested.timeToFull or rested.timeLeftSec or 0
+        local dur
+        if sec > 0 then
+            local days = math.floor(sec / 86400)
+            local hours = math.floor((sec % 86400) / 3600)
+            local mins = math.floor((sec % 3600) / 60)
+            if days > 0 then
+                dur = string.format("%dd %dh", days, hours)
+            elseif hours > 0 then
+                dur = string.format("%dh %dm", hours, mins)
+            elseif mins > 0 then
+                dur = string.format("%dm", mins)
+            else
+                dur = "<1m"
+            end
+        else
+            dur = rested.timeLeftStr or "---"
+        end
+        return string.format("|cff%s%s%s|r", t.textHex or "f4ead2", est, dur)
+    end
+
+    return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
+end
+CLIAlts.FmtTimeToCap = FmtTimeToCap
 
 local function FmtRate(char, t)
     t = t or CLIAlts:GetTheme()
@@ -1831,16 +1917,17 @@ local COLS = {
         { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
         { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 370, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
     },
-    [3] = { -- 3: RESTED XP MONITOR (Analysis Table)
-        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 32,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 145, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "CENTER", sort = "level",    fmt = FmtLevel },
-        { key = "curXP",     title = "CURRENT XP",        w = 12, pw = 125, cpw = 0,   mpw = 95,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
-        { key = "pool",      title = "RESTED / CAP",      w = 14, pw = 145, cpw = 125, mpw = 120, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
-        { key = "restBar",   title = "RESTED PROGRESS",   w = 15, pw = 150, cpw = 120, mpw = 120, mpadRight = 8, align = "LEFT",   fmt = FmtRestedBar },
-        { key = "loc",       title = "REST LOC",          w = 7,  pw = 70,  cpw = 55,  mpw = 65,  align = "CENTER", sort = "resting",  fmt = FmtRestLoc },
-        { key = "xph",       title = "XP/H",              w = 8,  pw = 85,  cpw = 70,  mpw = 75,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xph",      fmt = FmtXPHour },
-        { key = "eta",       title = "STATUS",            w = 15, pw = 150, cpw = 120, mpw = 150, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtETA },
+    [3] = { -- 3: RESTED XP MONITOR (Simplified Numeric Analysis Table)
+        { key = "fac",       title = "FAC",         w = 3,  pw = 36,  cpw = 32,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",   w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",         w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "RIGHT",  sort = "level",    fmt = FmtLevel, padRight = 6, mpadRight = 6 },
+        { key = "curXP",     title = "CURRENT XP",  w = 12, pw = 120, cpw = 0,   mpw = 100, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP },
+        { key = "pool",      title = "RESTED POOL", w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool },
+        { key = "bonus",     title = "XP BONUS",    w = 8,  pw = 75,  cpw = 60,  mpw = 70,  padRight = 6,  mpadRight = 6, align = "RIGHT",  sort = "bonus",    fmt = FmtRestedBonus },
+        { key = "restBar",   title = "PROGRESS",    w = 14, pw = 130, cpw = 110, mpw = 115, mpadRight = 8, align = "LEFT",   sort = "progress", fmt = FmtRestedBar },
+        { key = "cap",       title = "RESTED CAP",  w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "cap",      fmt = FmtRestedCap },
+        { key = "loc",       title = "REST LOC",    w = 6,  pw = 65,  cpw = 50,  mpw = 55,  align = "CENTER", sort = "resting",  fmt = FmtRestLoc },
+        { key = "timeToCap", title = "TIME TO CAP", w = 12, pw = 130, cpw = 110, mpw = 115, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtTimeToCap },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
@@ -2070,6 +2157,93 @@ function CLIAlts:ApplyLayoutSize()
     end
 
     self:UpdateBorders()
+end
+
+-- ----------------------------------------------------------------------------
+-- Tab 3 Rested XP Calculation Tooltip
+-- ----------------------------------------------------------------------------
+function CLIAlts:ShowRestedTooltip(ownerOrChar, maybeChar)
+    local owner, char
+    if maybeChar ~= nil then
+        owner = ownerOrChar
+        char = maybeChar
+    else
+        owner = ownerOrChar
+        char = ownerOrChar and ownerOrChar.charData
+    end
+    if not char then return end
+
+    local rested = self:GetRestedData(char)
+    local xpData = self:GetLevelProgressData(char)
+
+    GameTooltip:SetOwner(owner, "ANCHOR_TOP")
+
+    local coloredName = self:ColorizePlayerName(char.fullName or char.name, char.classFile)
+    local lvlStr = string.format("Level %d %s", char.level or 1, char.className or char.class or "")
+    GameTooltip:AddLine(string.format("%s |cffa9a08c(%s)|r", coloredName, lvlStr), 1, 1, 1)
+
+    if char.location and char.location ~= "" then
+        GameTooltip:AddLine(string.format("Location: |cffffffff%s|r", char.location), 0.8, 0.8, 0.8)
+    end
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("|cffffd34e--- LEVEL PROGRESS ---|r")
+    if xpData and not xpData.isMaxLevel then
+        GameTooltip:AddDoubleLine("Current XP:", string.format("|cffffffff%s / %s (%d%%)|r", self:FormatNumber(xpData.curXP), self:FormatNumber(xpData.maxXP), xpData.percent or 0))
+        GameTooltip:AddDoubleLine("Needed to Level:", string.format("|cffffffff%s XP|r", self:FormatNumber(xpData.remainingXP)))
+    else
+        GameTooltip:AddLine("|cffa9a08cCharacter is at maximum level.|r")
+    end
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("|cffffd34e--- RESTED XP BREAKDOWN ---|r")
+    if rested and not rested.isMaxLevel then
+        GameTooltip:AddDoubleLine("Rested XP Pool:", string.format("|cffffffff%s XP|r (|cff57d6e8%d%% of level|r)", self:FormatNumber(rested.currentRested or 0), rested.percent or 0))
+        GameTooltip:AddDoubleLine("Rested XP Cap:", string.format("|cffffffff%s XP|r (|cff57d6e8%d%% max cap|r)", self:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150))
+
+        local ratio = math.min(1.0, math.max(0, rested.ratio or 0))
+        GameTooltip:AddDoubleLine("Cap Progress:", string.format("|cffffffff%d%% of Cap|r", math.floor(ratio * 100)))
+
+        local rank = rested.perkRank or self:GetWellRestedRank(char)
+        if not self:IsRetail() then
+            local speedBonus = rank * 4
+            GameTooltip:AddDoubleLine("Well Rested Perk:", string.format("|cff55e39aRank %d/5 (+%d%% speed, %d%% cap)|r", rank, speedBonus, rested.maxPercent or 150))
+        end
+
+        local locStr = (char.loggedOutInRestZone or char.isResting) and "|cff55e39aInn / City (+5.0%/8h)|r" or "|cffa9a08cWilderness (+1.25%/8h)|r"
+        GameTooltip:AddDoubleLine("Rest State:", locStr)
+
+        local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
+        if xpPerHour > 0 then
+            GameTooltip:AddDoubleLine("Accumulation Rate:", string.format("|cffffffff+%s XP/hour|r", self:FormatNumber(xpPerHour)))
+        end
+
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("|cffffd34e--- CAP & OVERFLOW ANALYSIS ---|r")
+        if rested.isFull then
+            local wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
+            if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+                GameTooltip:AddDoubleLine("Status:", "|cffff6b6b[OVERFLOWING / WASTING XP]|r")
+                GameTooltip:AddDoubleLine("Time Capped:", string.format("|cffffffff%s ago|r", timeStr or "0m"))
+                GameTooltip:AddDoubleLine("Wasted Rested XP:", string.format("|cffff6b6b~%s XP lost|r", self:FormatNumber(wastedXP)))
+            else
+                GameTooltip:AddDoubleLine("Status:", "|cffffb547[AT RESTED CAP]|r")
+                GameTooltip:AddDoubleLine("Action:", "|cff55e39aReady to play! Log in to consume rested XP.|r")
+            end
+        else
+            GameTooltip:AddDoubleLine("Status:", "|cff55e39a[ACCRUING RESTED XP]|r")
+            GameTooltip:AddDoubleLine("Time to Cap:", string.format("|cffffffff%s|r", rested.timeLeftStr or "---"))
+            if rested.fullDate and rested.fullDate ~= "N/A" and rested.fullDate ~= "Ready Now" then
+                GameTooltip:AddDoubleLine("Cap Date & Time:", string.format("|cffffffff%s|r", rested.fullDate))
+            end
+            local needed = math.max(0, (rested.maxRested or 0) - (rested.currentRested or 0))
+            GameTooltip:AddDoubleLine("XP Needed to Cap:", string.format("|cffffffff%s XP|r", self:FormatNumber(needed)))
+        end
+    else
+        GameTooltip:AddLine("|cffa9a08cRested XP does not accumulate at max level.|r")
+    end
+
+    GameTooltip:Show()
 end
 
 -- ----------------------------------------------------------------------------
@@ -2736,26 +2910,7 @@ function CLIAlts:CreateLegacyMainFrame()
         colRestBarBg:EnableMouse(true)
         colRestBarBg:SetScript("OnEnter", function(self)
             if row.charData then
-                local rested = CLIAlts:GetRestedData(row.charData)
-                GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                GameTooltip:AddLine(string.format("Rested XP: %s", CLIAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
-                if rested and not rested.isMaxLevel then
-                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Rested Cap: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150), 0.8, 0.8, 0.8)
-                    if rested.isFull then
-                        local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(row.charData)
-                        if wastedSec and wastedSec > 0 then
-                            GameTooltip:AddLine(string.format("|cffff4444Capped %s (~%s XP wasted)|r", timeStr or "", CLIAlts:FormatNumber(wastedXP or 0)), 1, 0.3, 0.3)
-                        else
-                            GameTooltip:AddLine("|cff55e39aAt Rested Cap (Ready now)|r", 0.3, 1, 0.3)
-                        end
-                    else
-                        GameTooltip:AddLine(string.format("Time to Cap: |cffffd700%s|r (%s)", rested.timeLeftStr or "---", rested.fullDate or ""), 0.8, 0.8, 0.8)
-                    end
-                else
-                    GameTooltip:AddLine("Level cap reached - Rested XP no longer accumulates.", 0.7, 0.7, 0.7)
-                end
-                GameTooltip:Show()
+                CLIAlts:ShowRestedTooltip(self, row.charData)
             end
         end)
         colRestBarBg:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -2802,6 +2957,11 @@ function CLIAlts:CreateLegacyMainFrame()
                 self.borderL:SetText(string.format("|cff%s>|r", t.primaryHex or "f2c94c"))
             end
             if self.charData then
+                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
+                if curTab == 3 then
+                    CLIAlts:ShowRestedTooltip(self, self.charData)
+                    return
+                end
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local coloredName = CLIAlts:ColorizePlayerName(self.charData.fullName or self.charData.name, self.charData.classFile)
                 GameTooltip:AddLine(string.format("%s - %s", coloredName, self.charData.location or "Unknown"), 1, 1, 1)
@@ -4745,26 +4905,7 @@ function CLIAlts:CreateModernMainFrame()
         colRestBarBg:EnableMouse(true)
         colRestBarBg:SetScript("OnEnter", function(self)
             if row.charData then
-                local rested = CLIAlts:GetRestedData(row.charData)
-                GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                GameTooltip:AddLine(string.format("Rested XP: %s", CLIAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
-                if rested and not rested.isMaxLevel then
-                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Rested Cap: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150), 0.8, 0.8, 0.8)
-                    if rested.isFull then
-                        local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(row.charData)
-                        if wastedSec and wastedSec > 0 then
-                            GameTooltip:AddLine(string.format("|cffff4444Capped %s (~%s XP wasted)|r", timeStr or "", CLIAlts:FormatNumber(wastedXP or 0)), 1, 0.3, 0.3)
-                        else
-                            GameTooltip:AddLine("|cff55e39aAt Rested Cap (Ready now)|r", 0.3, 1, 0.3)
-                        end
-                    else
-                        GameTooltip:AddLine(string.format("Time to Cap: |cffffd700%s|r (%s)", rested.timeLeftStr or "---", rested.fullDate or ""), 0.8, 0.8, 0.8)
-                    end
-                else
-                    GameTooltip:AddLine("Level cap reached - Rested XP no longer accumulates.", 0.7, 0.7, 0.7)
-                end
-                GameTooltip:Show()
+                CLIAlts:ShowRestedTooltip(self, row.charData)
             end
         end)
         colRestBarBg:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -4808,9 +4949,14 @@ function CLIAlts:CreateModernMainFrame()
                 if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
                 if self.SetBackdropBorderColor then self:SetBackdropBorderColor(lineR, lineG, lineB, 0.65) end
             end
+            local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
+            if curTab == 3 and self.charData then
+                CLIAlts:ShowRestedTooltip(self, self.charData)
+            end
         end)
 
         row:SetScript("OnLeave", function(self)
+            GameTooltip:Hide()
             local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
             if isSelected then
                 if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
@@ -6267,6 +6413,7 @@ function CLIAlts:Render(force)
     local fillR, fillG, fillB = self:Hex("fill")
     local textR, textG, textB = self:Hex("text")
     local mutedR, mutedG, mutedB = self:Hex("muted")
+    local dangerR, dangerG, dangerB = self:Hex("danger")
 
     for rowIndex = 1, #rowFrames do
         local row = rowFrames[rowIndex]
@@ -6369,7 +6516,12 @@ function CLIAlts:Render(force)
                                             if row.colRestBarFill then
                                                 row.colRestBarFill:SetWidth(math.max(1, barW))
                                                 if rested.isFull then
-                                                    row.colRestBarFill:SetVertexColor(warnR, warnG, warnB, 1.0)
+                                                    local wastedSec, wastedXP = self:GetRestedWaste(char)
+                                                    if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+                                                        row.colRestBarFill:SetVertexColor(dangerR, dangerG, dangerB, 1.0)
+                                                    else
+                                                        row.colRestBarFill:SetVertexColor(warnR, warnG, warnB, 1.0)
+                                                    end
                                                 else
                                                     row.colRestBarFill:SetVertexColor(fillR, fillG, fillB, 1.0)
                                                 end
@@ -6380,11 +6532,16 @@ function CLIAlts:Render(force)
                                                 local est = rested.isEstimate and "~" or ""
                                                 local capPct = math.floor(ratio * 100)
                                                 if rested.isFull then
-                                                    local capPctVal = rested.maxPercent or 150
-                                                    row.colRestLabel:SetText(string.format("%d%%* [CAP] (%d%% lvl)", capPctVal, rested.percent or capPctVal))
-                                                    row.colRestLabel:SetTextColor(warnR, warnG, warnB)
+                                                    local wastedSec, wastedXP = self:GetRestedWaste(char)
+                                                    if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+                                                        row.colRestLabel:SetText(string.format("100%% (+%s Wasted)", self:FormatWasteShort(wastedXP)))
+                                                        row.colRestLabel:SetTextColor(dangerR, dangerG, dangerB)
+                                                    else
+                                                        row.colRestLabel:SetText("100% (Capped)")
+                                                        row.colRestLabel:SetTextColor(warnR, warnG, warnB)
+                                                    end
                                                 else
-                                                    row.colRestLabel:SetText(string.format("%s%d%% cap (%d%% lvl)", est, capPct, rested.percent or 0))
+                                                    row.colRestLabel:SetText(string.format("%s%d%% of Cap", est, capPct))
                                                     row.colRestLabel:SetTextColor(textR, textG, textB)
                                                 end
                                                 row.colRestLabel:Show()
@@ -6544,7 +6701,12 @@ function CLIAlts:Render(force)
                                             if row.colRestBarFill then
                                                 row.colRestBarFill:SetWidth(math.max(1, barW))
                                                 if rested.isFull then
-                                                    row.colRestBarFill:SetVertexColor(warnR, warnG, warnB, 1.0)
+                                                    local wastedSec, wastedXP = self:GetRestedWaste(char)
+                                                    if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+                                                        row.colRestBarFill:SetVertexColor(dangerR, dangerG, dangerB, 1.0)
+                                                    else
+                                                        row.colRestBarFill:SetVertexColor(warnR, warnG, warnB, 1.0)
+                                                    end
                                                 else
                                                     row.colRestBarFill:SetVertexColor(fillR, fillG, fillB, 1.0)
                                                 end
@@ -6555,11 +6717,16 @@ function CLIAlts:Render(force)
                                                 local est = rested.isEstimate and "~" or ""
                                                 local capPct = math.floor(ratio * 100)
                                                 if rested.isFull then
-                                                    local capPctVal = rested.maxPercent or 150
-                                                    row.colRestLabel:SetText(string.format("%d%%* [CAP]", capPctVal))
-                                                    row.colRestLabel:SetTextColor(warnR, warnG, warnB)
+                                                    local wastedSec, wastedXP = self:GetRestedWaste(char)
+                                                    if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
+                                                        row.colRestLabel:SetText(string.format("100%% (+%s Wasted)", self:FormatWasteShort(wastedXP)))
+                                                        row.colRestLabel:SetTextColor(dangerR, dangerG, dangerB)
+                                                    else
+                                                        row.colRestLabel:SetText("100% (Capped)")
+                                                        row.colRestLabel:SetTextColor(warnR, warnG, warnB)
+                                                    end
                                                 else
-                                                    row.colRestLabel:SetText(string.format("%s%d%% cap", est, capPct))
+                                                    row.colRestLabel:SetText(string.format("%s%d%% of Cap", est, capPct))
                                                     row.colRestLabel:SetTextColor(textR, textG, textB)
                                                 end
                                                 row.colRestLabel:Show()

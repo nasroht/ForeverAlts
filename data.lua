@@ -2538,10 +2538,19 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     end
 
     local sortValues = {}
-    if sortBy == "rested" then
+    if sortBy == "rested" or sortBy == "pool" then
         for _, char in ipairs(list) do
             local r = self:GetRestedData(char)
-            sortValues[char] = (r and r.percent) or 0
+            sortValues[char] = (r and r.currentRested) or 0
+        end
+    elseif sortBy == "bonus" then
+        for _, char in ipairs(list) do
+            sortValues[char] = self:GetWellRestedRank(char)
+        end
+    elseif sortBy == "cap" then
+        for _, char in ipairs(list) do
+            local r = self:GetRestedData(char)
+            sortValues[char] = (r and r.maxRested) or 0
         end
     elseif sortBy == "xp" or sortBy == "progress" then
         for _, char in ipairs(list) do
@@ -2679,7 +2688,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 if sortAsc then return rA < rB else return rA > rB end
             end
             return (a.name or "") < (b.name or "")
-        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "waste" or sortBy == "rotation" or sortBy == "next" or sortBy == "xph" or sortBy == "rate" then
+        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "pool" or sortBy == "bonus" or sortBy == "cap" or sortBy == "waste" or sortBy == "rotation" or sortBy == "next" or sortBy == "xph" or sortBy == "rate" then
             local valA = sortValues[a] or 0
             local valB = sortValues[b] or 0
             if valA == valB then

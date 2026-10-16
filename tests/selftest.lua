@@ -761,9 +761,9 @@ function CLIAlts:RunSelfTest()
         local colsRested = self:GetColumns(3)
         local statusColRested = nil
         for _, c in ipairs(colsRested) do
-            if c.key == "eta" then statusColRested = c break end
+            if c.key == "timeToCap" or c.key == "eta" then statusColRested = c break end
         end
-        Assert(statusColRested ~= nil and statusColRested.title == "STATUS", "Phase 3: Rested tab has STATUS column")
+        Assert(statusColRested ~= nil and (statusColRested.title == "TIME TO CAP" or statusColRested.title == "STATUS"), "Phase 3: Rested tab has TIME TO CAP column")
 
         -- Branch 7: Exhaustive Roster Single-Status Assertion
         local sampleRoster = {
@@ -3273,7 +3273,7 @@ function CLIAlts:RunSelfTest()
 
         -- 28a. Tab 3 (Rested XP Monitor) Modern Columns Fit within 854px bounds
         local tab3Cols = self:GetColumns(3)
-        Assert(#tab3Cols == 9, "ModernUI: Tab 3 has 9 active columns in modern view")
+        Assert(#tab3Cols == 10, "ModernUI: Tab 3 has 10 active columns in modern view")
         local totalMpw = 0
         for _, col in ipairs(tab3Cols) do
             Assert(col.mpw and col.mpw > 0, string.format("ModernUI: Tab 3 col '%s' defines positive mpw", col.key or "unknown"))
@@ -3303,9 +3303,18 @@ function CLIAlts:RunSelfTest()
             elseif col.key == "pool" then
                 local str = col.fmt(mockAlt)
                 Assert(str:find("19%.2k XP") ~= nil, "ModernUI: FmtRestedPool produces concise k-notation string in modern view")
+            elseif col.key == "bonus" then
+                local str = col.fmt(mockAlt)
+                Assert(str ~= nil, "ModernUI: FmtRestedBonus produces formatted bonus string")
             elseif col.key == "restBar" then
                 local str = col.fmt(mockAlt)
                 Assert(str:find("cap") ~= nil and #str < 120, "ModernUI: FmtRestedBar produces compact cap string in modern view")
+            elseif col.key == "cap" then
+                local str = col.fmt(mockAlt)
+                Assert(str ~= nil and str:find("21%.6k") ~= nil, "ModernUI: FmtRestedCap produces formatted cap string")
+            elseif col.key == "timeToCap" or col.key == "eta" then
+                local str = col.fmt(mockAlt)
+                Assert(str ~= nil, "ModernUI: FmtTimeToCap produces standardized time to cap string")
             end
         end
 
@@ -3905,17 +3914,17 @@ function CLIAlts:RunSelfTest()
     end
 
     do
-        -- 37e. Rested XP (Tab 3) 9-Column Analysis Table & Formatters
+        -- 37e. Rested XP (Tab 3) 10-Column Analysis Table & Formatters
         local tab3Cols = self:GetColumns(3)
-        Assert(tab3Cols ~= nil and #tab3Cols == 9, "RestedAnalysis: Tab 3 defines 9 analysis columns")
+        Assert(tab3Cols ~= nil and #tab3Cols == 10, "RestedAnalysis: Tab 3 defines 10 analysis columns")
         local tab3TotalMpw = 0
         for _, col in ipairs(tab3Cols) do
             Assert(col.mpw and col.mpw > 0, string.format("RestedAnalysis: col '%s' defines positive mpw", col.key or "unknown"))
             tab3TotalMpw = tab3TotalMpw + (col.mpw or 0)
         end
         Assert(tab3TotalMpw <= 850, string.format("RestedAnalysis: total modern column width (%dpx) fits inside row bounds (<= 850px)", tab3TotalMpw))
-        Assert(tab3Cols[7].key == "loc" and tab3Cols[8].key == "xph" and tab3Cols[9].key == "eta",
-            "RestedAnalysis: columns include loc (Inn/Wild), xph (XP/h), and eta (Status)")
+        Assert(tab3Cols[9].key == "loc" and (tab3Cols[10].key == "timeToCap" or tab3Cols[10].key == "eta"),
+            "RestedAnalysis: columns include loc (Inn/Wild) and timeToCap (Time to Cap)")
 
         local innChar = { name = "InnAlt", level = 20, loggedOutInRestZone = true }
         local wildChar = { name = "WildAlt", level = 20, loggedOutInRestZone = false }
@@ -3934,6 +3943,10 @@ function CLIAlts:RunSelfTest()
 
         local xphList = self:GetCharactersList("xph", false)
         Assert(xphList ~= nil and #xphList > 0, "RestedAnalysis: GetCharactersList sorts by xph without error")
+        local bonusList = self:GetCharactersList("bonus", false)
+        Assert(bonusList ~= nil and #bonusList > 0, "RestedAnalysis: GetCharactersList sorts by bonus without error")
+        local capList = self:GetCharactersList("cap", false)
+        Assert(capList ~= nil and #capList > 0, "RestedAnalysis: GetCharactersList sorts by cap without error")
         local restList = self:GetCharactersList("resting", false)
         Assert(restList ~= nil and #restList > 0, "RestedAnalysis: GetCharactersList sorts by resting without error")
     end
@@ -4070,6 +4083,105 @@ function CLIAlts:RunSelfTest()
                     "TOC: tests/selftest.lua is excluded from ForeverAlts.toc production load order")
             end
         end
+    end
+
+    -- ------------------------------------------------------------------------
+    -- 40. Tab 3 (Rested XP Monitor): Simplified Table & Metric Alignment Suite
+    -- ------------------------------------------------------------------------
+    do
+        local tabCols = self:GetColumns(3)
+        Assert(#tabCols == 10, "RestedMonitor: Tab 3 defines exactly 10 streamlined columns")
+
+        -- 40a. Numeric columns are right-aligned
+        local numericKeys = { lvl = true, curXP = true, pool = true, bonus = true, cap = true, timeToCap = true }
+        for _, col in ipairs(tabCols) do
+            if numericKeys[col.key] then
+                Assert(col.align == "RIGHT", string.format("RestedMonitor: Numeric column '%s' is RIGHT aligned", col.key))
+            end
+        end
+
+        -- 40b. 5 Key Metrics are distinguished
+        local colKeys = {}
+        for _, col in ipairs(tabCols) do
+            colKeys[col.key] = col
+        end
+        Assert(colKeys["curXP"] ~= nil, "RestedMonitor: Current XP column exists")
+        Assert(colKeys["pool"] ~= nil, "RestedMonitor: Rested XP Pool column exists")
+        Assert(colKeys["bonus"] ~= nil, "RestedMonitor: Rested XP Bonus column exists")
+        Assert(colKeys["cap"] ~= nil, "RestedMonitor: Rested Cap column exists")
+        Assert(colKeys["timeToCap"] ~= nil, "RestedMonitor: Time to Cap column exists")
+
+        -- 40c. Formatter verification for 5 distinct metrics
+        local sampleAlt = {
+            name = "TestWarrior",
+            level = 20,
+            xp = 5000,
+            curXP = 5000,
+            maxXP = 10000,
+            restedXP = 12000,
+            wellRestedRank = 3,
+            isResting = true,
+            loggedOutInRestZone = true,
+            lastUpdate = time(),
+        }
+        local curXPStr = self.FmtCurXP and self:FmtCurXP(sampleAlt)
+        Assert(curXPStr ~= nil and (curXPStr:find("5%.0k/10%.0k") ~= nil or curXPStr:find("5,000") ~= nil), "RestedMonitor: FmtCurXP formats current level XP")
+
+        local poolStr = self.FmtRestedPool and self:FmtRestedPool(sampleAlt)
+        Assert(poolStr ~= nil and (poolStr:find("12%.0k XP") ~= nil or poolStr:find("12,000 XP") ~= nil), "RestedMonitor: FmtRestedPool formats pure accrued pool")
+
+        local bonusStr = self.FmtRestedBonus and self:FmtRestedBonus(sampleAlt)
+        Assert(bonusStr ~= nil and bonusStr:find("+12%%") ~= nil and bonusStr:find("R3") ~= nil, "RestedMonitor: FmtRestedBonus formats perk speed multiplier and rank")
+
+        local capStr = self.FmtRestedCap and self:FmtRestedCap(sampleAlt)
+        Assert(capStr ~= nil and capStr:find("168%%") ~= nil, "RestedMonitor: FmtRestedCap formats cap amount and percentage")
+
+        -- 40d. Standardized Cap States & Wasted-XP Indicators
+        local cappedZeroWaste = {
+            name = "CappedAlt",
+            level = 30,
+            xp = 1000,
+            maxXP = 20000,
+            restedXP = 30000,
+            wellRestedRank = 0,
+            lastUpdate = time(),
+            isResting = true,
+        }
+        local timeToCapStr = self.FmtTimeToCap and self:FmtTimeToCap(cappedZeroWaste)
+        Assert(timeToCapStr ~= nil and timeToCapStr:find("%[CAPPED%]") ~= nil, "RestedMonitor: FmtTimeToCap standardizes capped state to [CAPPED]")
+
+        local overflowingAlt = {
+            name = "WastingAlt",
+            level = 30,
+            xp = 1000,
+            maxXP = 20000,
+            restedXP = 30000,
+            wellRestedRank = 0,
+            lastUpdate = time() - 86400,
+            isResting = true,
+        }
+        local wastedStr = self.FmtTimeToCap and self:FmtTimeToCap(overflowingAlt)
+        Assert(wastedStr ~= nil and wastedStr:find("WASTED%]") ~= nil, "RestedMonitor: FmtTimeToCap standardizes overflow state to [+... WASTED]")
+
+        local maxLvlAlt = {
+            name = "MaxAlt",
+            level = 60,
+            xp = 0,
+            maxXP = 0,
+            restedXP = 0,
+        }
+        local maxLvlStr = self.FmtTimeToCap and self:FmtTimeToCap(maxLvlAlt)
+        Assert(maxLvlStr ~= nil and maxLvlStr:find("MAX LEVEL") ~= nil, "RestedMonitor: FmtTimeToCap standardizes max level to MAX LEVEL")
+
+        -- 40e. Progress bar text formatting & tooltip execution
+        local barStr = self.FmtRestedBar and self:FmtRestedBar(sampleAlt)
+        Assert(barStr ~= nil and barStr:find("of Cap") ~= nil, "RestedMonitor: FmtRestedBar clearly defines progress toward Cap")
+
+        local dummyFrame = CreateDummyFrame("Frame", nil, nil)
+        local ttOk = pcall(function()
+            self:ShowRestedTooltip(dummyFrame, sampleAlt)
+        end)
+        Assert(ttOk == true, "RestedMonitor: ShowRestedTooltip executes without error")
     end
 
     -- Restore master state
