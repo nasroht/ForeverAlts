@@ -54,6 +54,29 @@ local FALLBACK_CLASS_COLORS = {
 }
 CLIAlts.FALLBACK_CLASS_COLORS = FALLBACK_CLASS_COLORS
 
+local ALLIANCE_RACES = {
+    ["human"] = true, ["dwarf"] = true, ["nightelf"] = true, ["gnome"] = true,
+    ["draenei"] = true, ["worgen"] = true,
+}
+local HORDE_RACES = {
+    ["orc"] = true, ["scourge"] = true, ["undead"] = true, ["tauren"] = true,
+    ["troll"] = true, ["bloodelf"] = true, ["goblin"] = true,
+}
+
+local function InferFaction(char, maybeChar)
+    local target = (maybeChar ~= nil and maybeChar) or char
+    if not target or type(target) ~= "table" then return nil end
+    local fac = target.faction
+    if fac and fac ~= "" and fac ~= "Neutral" and fac ~= "Unknown" then
+        return fac
+    end
+    local race = (target.raceFile or target.race or ""):lower():gsub("%s+", "")
+    if ALLIANCE_RACES[race] then return "Alliance" end
+    if HORDE_RACES[race] then return "Horde" end
+    return nil
+end
+CLIAlts.InferFaction = InferFaction
+
 -- ----------------------------------------------------------------------------
 -- Client Flavor & Retail Detection Helper
 -- ----------------------------------------------------------------------------
@@ -2494,6 +2517,15 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     end
 
     table.sort(list, function(a, b)
+        -- Primary Grouping: Always group by faction (Alliance first, then Horde, then others)
+        local fStrA = (a.faction == "Alliance" or a.faction == "Horde") and a.faction or InferFaction(a) or a.faction
+        local fStrB = (b.faction == "Alliance" or b.faction == "Horde") and b.faction or InferFaction(b) or b.faction
+        local facA = (fStrA == "Alliance" and 1) or (fStrA == "Horde" and 2) or 3
+        local facB = (fStrB == "Alliance" and 1) or (fStrB == "Horde" and 2) or 3
+        if facA ~= facB then
+            return facA < facB
+        end
+
         if sortBy == "cohort" or sortBy == "tier" or sortBy == "role" then
             local rankA = (a.tier == "CORE" and 1) or (a.tier == "RESERVE" and 2) or (a.tier == "BANK" and 3) or 4
             local rankB = (b.tier == "CORE" and 1) or (b.tier == "RESERVE" and 2) or (b.tier == "BANK" and 3) or 4
@@ -3868,28 +3900,6 @@ function CLIAlts:ProfessionsMatch(p1, p2)
     local l2 = tostring(p2):lower()
     return l1 == l2 or l1:find(l2, 1, true) or l2:find(l1, 1, true)
 end
-
-local ALLIANCE_RACES = {
-    ["human"] = true, ["dwarf"] = true, ["nightelf"] = true, ["gnome"] = true,
-    ["draenei"] = true, ["worgen"] = true,
-}
-local HORDE_RACES = {
-    ["orc"] = true, ["scourge"] = true, ["undead"] = true, ["tauren"] = true,
-    ["troll"] = true, ["bloodelf"] = true, ["goblin"] = true,
-}
-
-local function InferFaction(char)
-    if not char then return nil end
-    local fac = char.faction
-    if fac and fac ~= "" and fac ~= "Neutral" and fac ~= "Unknown" then
-        return fac
-    end
-    local race = (char.raceFile or char.race or ""):lower():gsub("%s+", "")
-    if ALLIANCE_RACES[race] then return "Alliance" end
-    if HORDE_RACES[race] then return "Horde" end
-    return nil
-end
-CLIAlts.InferFaction = InferFaction
 
 function CLIAlts:IsMailCandidate(char)
     if not char or self:IsCurrentPlayer(char) then

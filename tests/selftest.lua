@@ -985,6 +985,10 @@ function CLIAlts:RunSelfTest()
         -- 1. Test GetCharactersList filter query additions
         local listAll = self:GetCharactersList()
         Assert(#listAll == 4, "Phase 5: GetCharactersList() returns all 4 alts")
+        Assert(listAll[1].faction == "Alliance" and listAll[2].faction == "Alliance",
+            "Phase 5: Alliance characters appear first in GetCharactersList")
+        Assert(listAll[3].faction == "Horde" and listAll[4].faction == "Horde",
+            "Phase 5: Horde characters appear after Alliance in GetCharactersList without mixing")
 
         local listCapped = self:GetCharactersList(nil, nil, "capped")
         Assert(#listCapped == 2, "Phase 5: GetCharactersList('capped') returns 2 capped alts")
@@ -3731,6 +3735,10 @@ function CLIAlts:RunSelfTest()
         "BetaTab: CreateCircleMeter initializes Cooldown widget, innerDisc, valText, and label")
     Assert(testMeter.label:GetText() == "LVL XP", "BetaTab: CreateCircleMeter correctly sets label text to 'LVL XP'")
 
+    local defaultMeter = self:CreateCircleMeter(UIParent, nil, "RESTED")
+    Assert(defaultMeter:GetWidth() == 44, "BetaTab: CreateCircleMeter default size is 44px")
+    Assert(defaultMeter.valText.fontSize == 12, "BetaTab: CreateCircleMeter default font size is 12 (+2 larger)")
+
     testMeter:SetProgress(0.65, 0.2, 0.8, 0.4, "65%")
     Assert(testMeter.valText:GetText() == "65%", "BetaTab: SetProgress updates percentage text to '65%'")
 
@@ -3776,6 +3784,19 @@ function CLIAlts:RunSelfTest()
     if betaRow1 and betaRow1.charData then
         Assert(betaRow1.gaugeXP:IsShown() == true, "BetaTab: gaugeXP is shown on active character row")
         Assert(betaRow1.gaugeRest:IsShown() == true, "BetaTab: gaugeRest is shown on active character row")
+        Assert(betaRow1.gaugeXP:GetWidth() == 44, "BetaTab: gaugeXP width is enlarged to 44px")
+        Assert(betaRow1.gaugeRest:GetWidth() == 44, "BetaTab: gaugeRest width is enlarged to 44px")
+        if betaRow1.gaugeXP.valText then
+            Assert(betaRow1.gaugeXP.valText.fontSize == 12, "BetaTab: gaugeXP valText font size is 12 (+2 larger)")
+        end
+        if betaRow1.gaugeRest.valText then
+            Assert(betaRow1.gaugeRest.valText.fontSize == 12, "BetaTab: gaugeRest valText font size is 12 (+2 larger)")
+        end
+        if betaRow1.classRingInitial then
+            Assert(betaRow1.classRingInitial:GetText() == tostring(betaRow1.charData.level or 1),
+                "BetaTab: classRingInitial displays character level")
+            Assert(betaRow1.classRingInitial.fontSize == 15, "BetaTab: classRingInitial font size is 15")
+        end
         Assert(betaRow1.betaPoolText:IsShown() == true, "BetaTab: betaPoolText is shown on active character row")
         Assert(betaRow1.betaRateText:IsShown() == true, "BetaTab: betaRateText is shown on active character row")
         if betaRow1.statusPill then
@@ -3797,6 +3818,30 @@ function CLIAlts:RunSelfTest()
         Assert(betaRow1.betaPoolText:IsShown() == false, "BetaTab: betaPoolText is hidden on Tab 1 Overview")
         Assert(betaRow1.betaRateText:IsShown() == false, "BetaTab: betaRateText is hidden on Tab 1 Overview")
     end
+
+    -- 37e. Faction Grouping Integrity: Alliance first, Horde second, never mixed
+    local testFactionDB = {
+        settings = { sortBy = "level", sortAsc = false },
+        characters = {
+            ["HordeLvl60"] = { name = "HordeLvl60", faction = "Horde", level = 60 },
+            ["AllyLvl10"]  = { name = "AllyLvl10",  faction = "Alliance", level = 10 },
+            ["HordeLvl20"] = { name = "HordeLvl20", faction = "Horde", level = 20 },
+            ["AllyLvl50"]  = { name = "AllyLvl50",  faction = "Alliance", level = 50 },
+            ["OrcWarrior"] = { name = "OrcWarrior", race = "Orc", level = 40 },
+            ["HumanPriest"]= { name = "HumanPriest", race = "Human", level = 5 },
+        }
+    }
+    local oldFacDB = CLIAltsDB
+    CLIAltsDB = testFactionDB
+    local facSorted = self:GetCharactersList("level", false)
+    Assert(#facSorted == 6, "FactionGrouping: returns all 6 alts across factions")
+    Assert(facSorted[1].name == "AllyLvl50", "FactionGrouping: 1st alt is AllyLvl50 (Alliance highest level)")
+    Assert(facSorted[2].name == "AllyLvl10", "FactionGrouping: 2nd alt is AllyLvl10 (Alliance)")
+    Assert(facSorted[3].name == "HumanPriest", "FactionGrouping: 3rd alt is HumanPriest (Alliance inferred)")
+    Assert(facSorted[4].name == "HordeLvl60", "FactionGrouping: 4th alt is HordeLvl60 (Horde highest level)")
+    Assert(facSorted[5].name == "OrcWarrior", "FactionGrouping: 5th alt is OrcWarrior (Horde inferred)")
+    Assert(facSorted[6].name == "HordeLvl20", "FactionGrouping: 6th alt is HordeLvl20 (Horde)")
+    CLIAltsDB = oldFacDB
 
     -- 38. Tab 9 Embedded Settings Navigation Panel Engine Tests
     -- 38a. Tab 9 Sidebar Navigation Registration & Empty Columns

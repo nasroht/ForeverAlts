@@ -518,7 +518,7 @@ end
 -- inner dark disc cutout and centered numeric percentage readout.
 -- ----------------------------------------------------------------------------
 function CLIAlts:CreateCircleMeter(parent, size, labelText)
-    size = size or 36
+    size = size or 44
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(size, size)
 
@@ -562,9 +562,10 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
     if innerDisc.EnableMouse then innerDisc:EnableMouse(false) end
     f.innerDisc = innerDisc
 
-    -- Centered Percentage Value String
+    -- Centered Percentage Value String (increased by +2 to 12)
     local valText = innerDisc:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(valText, math.max(9, math.floor(size * 0.30)), "OUTLINE")
+    local valFontSize = (size >= 42) and 12 or math.max(9, math.floor(size * 0.28))
+    self:SetWidgetFont(valText, valFontSize, "OUTLINE")
     valText:SetPoint("CENTER", innerDisc, "CENTER", 0, 0)
     valText:SetText("")
     f.valText = valText
@@ -573,7 +574,7 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
     if labelText then
         local label = f:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(label, 9, "OUTLINE")
-        label:SetPoint("TOP", f, "BOTTOM", 0, -2)
+        label:SetPoint("TOP", f, "BOTTOM", 0, -1)
         label:SetText(labelText)
         label:SetTextColor(0.55, 0.60, 0.68)
         f.label = label
@@ -1711,11 +1712,11 @@ local COLS = {
         { key = "pending",   title = "BAGS READY",          w = 15, pw = 205, cpw = 145, mpw = 140, align = "RIGHT",  fmt = FmtMailPending },
     },
     [8] = { -- 8: BETA: CONSOLIDATED DASHBOARD
-        { key = "name",       title = "CHARACTER",         w = 22, pw = 250, cpw = 220, mpw = 250, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "name",       title = "CHARACTER",         w = 30, pw = 300, cpw = 260, mpw = 300, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "xp",       fmt = FmtCurXP },
         { key = "circleRest", title = "RESTED",            w = 8,  pw = 65,  cpw = 60,  mpw = 60,  align = "CENTER", sort = "rested",   fmt = FmtRested },
-        { key = "details",    title = "RESTED DETAILS",    w = 26, pw = 260, cpw = 230, mpw = 260, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
-        { key = "gold",       title = "WEALTH",            w = 16, pw = 160, cpw = 145, mpw = 160, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
+        { key = "details",    title = "RESTED DETAILS",    w = 25, pw = 250, cpw = 220, mpw = 250, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
+        { key = "gold",       title = "WEALTH",            w = 15, pw = 150, cpw = 140, mpw = 150, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins },
     },
     [9] = {}, -- 9: SETTINGS & PREFERENCES (Embedded Panel)
 }
@@ -4435,20 +4436,20 @@ function CLIAlts:CreateModernMainFrame()
         row.goldText = goldText
 
         -- Beta Tab: Consolidated Dual Speedometer Gauges
-        local gaugeXP = self:CreateCircleMeter(row, 36, "LVL XP")
-        gaugeXP:SetPoint("LEFT", row, "LEFT", 265, 3)
+        local gaugeXP = self:CreateCircleMeter(row, 44, "LVL XP")
+        gaugeXP:SetPoint("CENTER", row, "LEFT", 330, 4)
         gaugeXP:Hide()
         row.gaugeXP = gaugeXP
 
-        local gaugeRest = self:CreateCircleMeter(row, 36, "RESTED")
-        gaugeRest:SetPoint("LEFT", row, "LEFT", 325, 3)
+        local gaugeRest = self:CreateCircleMeter(row, 44, "RESTED")
+        gaugeRest:SetPoint("CENTER", row, "LEFT", 390, 4)
         gaugeRest:Hide()
         row.gaugeRest = gaugeRest
 
         -- Rested Details text (Pool & Rate / Time to Cap)
         local betaPoolText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(betaPoolText, 13, "OUTLINE")
-        betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 396, -6)
+        betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 426, -6)
         betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
         betaPoolText:SetJustifyH("LEFT")
         betaPoolText:SetWordWrap(false)
@@ -4458,7 +4459,7 @@ function CLIAlts:CreateModernMainFrame()
 
         local betaRateText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(betaRateText, 15, "")
-        betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 396, 6)
+        betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 426, 6)
         betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
         betaRateText:SetJustifyH("LEFT")
         betaRateText:SetWordWrap(false)
@@ -6020,7 +6021,7 @@ function CLIAlts:Render()
                         local classFile = char.classFile or "WARRIOR"
                         local cr, cg, cb = self:GetClassColor(classFile)
 
-                        -- 1. 34px Class-Coloured Ring with Alt Initial
+                        -- 1. 34px Class-Coloured Square with Character Level
                         if row.classRing then
                             if row.classRing.SetBackdropBorderColor then
                                 row.classRing:SetBackdropBorderColor(cr, cg, cb, 0.95)
@@ -6029,18 +6030,18 @@ function CLIAlts:Render()
                                 row.classRing:SetBackdropColor(cr * 0.15, cg * 0.15, cb * 0.15, 0.70)
                             end
                             if row.classRingInitial then
-                                local initial = self:GetFirstLetter(char.name or "?")
-                                row.classRingInitial:SetText(initial)
+                                self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE")
+                                row.classRingInitial:SetText(tostring(char.level or 1))
                                 row.classRingInitial:SetTextColor(cr, cg, cb)
                             end
                             row.classRing:Show()
                         end
 
-                        -- 2. Name Line & Subline (bounded up to x=255 so they never overlap gauges)
+                        -- 2. Name Line & Subline (expanded to x=295 to accommodate long race/class names)
                         if row.nameLine then
                             row.nameLine:ClearAllPoints()
-                            row.nameLine:SetPoint("TOPLEFT", row.classRing, "TOPRIGHT", 12, 1)
-                            row.nameLine:SetPoint("RIGHT", row, "LEFT", 255, 0)
+                            row.nameLine:SetPoint("TOPLEFT", row.classRing, "TOPRIGHT", 10, 1)
+                            row.nameLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
                             row.nameLine:SetText(char.name or "Unknown")
                             row.nameLine:SetTextColor(cr, cg, cb)
                             row.nameLine:Show()
@@ -6048,21 +6049,22 @@ function CLIAlts:Render()
 
                         if row.subLine then
                             row.subLine:ClearAllPoints()
-                            row.subLine:SetPoint("BOTTOMLEFT", row.classRing, "BOTTOMRIGHT", 12, 0)
-                            row.subLine:SetPoint("RIGHT", row, "LEFT", 255, 0)
+                            row.subLine:SetPoint("BOTTOMLEFT", row.classRing, "BOTTOMRIGHT", 10, 0)
+                            row.subLine:SetPoint("RIGHT", row, "LEFT", 295, 0)
                             local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or "Unknown"
-                            local faction = char.faction or "Neutral"
+                            local faction = char.faction or (self.InferFaction and self:InferFaction(char)) or "Neutral"
                             local class = char.class or char.className or classFile
-                            row.subLine:SetText(string.format("%d %s %s · %s", char.level or 1, race, class, faction))
+                            row.subLine:SetText(string.format("%s %s · %s", race, class, faction))
                             row.subLine:SetTextColor(mutedR, mutedG, mutedB)
                             row.subLine:Show()
                         end
 
-                        -- 3. Gauge 1: Level XP Circular Progress (0% to 100%)
+                        -- 3. Gauge 1: Level XP Circular Progress (Size 44, Font 12, centered at x=330)
                         local xpData = self:GetLevelProgressData(char)
                         if row.gaugeXP then
                             row.gaugeXP:ClearAllPoints()
-                            row.gaugeXP:SetPoint("LEFT", row, "LEFT", 278, 3)
+                            row.gaugeXP:SetSize(44, 44)
+                            row.gaugeXP:SetPoint("CENTER", row, "LEFT", 330, 4)
                             if xpData and not xpData.isMaxLevel then
                                 local xpRatio = xpData.ratio or 0
                                 row.gaugeXP:SetProgress(xpRatio, fillR, fillG, fillB, string.format("%d%%", xpData.percent))
@@ -6072,11 +6074,12 @@ function CLIAlts:Render()
                             row.gaugeXP:Show()
                         end
 
-                        -- 4. Gauge 2: Rested XP Circular Progress (0% to 100% of 150% cap)
+                        -- 4. Gauge 2: Rested XP Circular Progress (Size 44, Font 12, centered at x=390)
                         local rested = self:GetRestedData(char)
                         if row.gaugeRest then
                             row.gaugeRest:ClearAllPoints()
-                            row.gaugeRest:SetPoint("LEFT", row, "LEFT", 338, 3)
+                            row.gaugeRest:SetSize(44, 44)
+                            row.gaugeRest:SetPoint("CENTER", row, "LEFT", 390, 4)
                             if rested and not rested.isMaxLevel then
                                 local restRatio = rested.ratio or 0
                                 if rested.isFull then
@@ -6092,10 +6095,10 @@ function CLIAlts:Render()
                             row.gaugeRest:Show()
                         end
 
-                        -- 5. Rested Details Text (Pool & Rate / Time to Cap)
+                        -- 5. Rested Details Text (Pool & Rate / Time to Cap, moved to x=426)
                         if row.betaPoolText then
                             row.betaPoolText:ClearAllPoints()
-                            row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 396, -6)
+                            row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 426, -6)
                             row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 670, 0)
                             if rested and not rested.isMaxLevel then
                                 local curR = rested.currentRested or 0
@@ -6117,7 +6120,7 @@ function CLIAlts:Render()
                         if row.betaRateText then
                             self:SetWidgetFont(row.betaRateText, 15, "")
                             row.betaRateText:ClearAllPoints()
-                            row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 396, 6)
+                            row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 426, 6)
                             row.betaRateText:SetPoint("RIGHT", row, "LEFT", 670, 0)
                             if rested and not rested.isMaxLevel then
                                 if rested.isFull then
