@@ -5097,14 +5097,22 @@ function CLIAlts:RenderCharRow(row, char, derived)
     if not row or not char then return end
 
     derived = derived or {}
-    local raisedR, raisedG, raisedB = derived.raisedR or self:Hex("raised")
-    local lineR, lineG, lineB = derived.lineR or self:Hex("line")
-    local panelR, panelG, panelB = derived.panelR or self:Hex("panel")
-    local brandR, brandG, brandB = derived.brandR or self:Hex("brand")
-    local warnR, warnG, warnB = derived.warnR or self:Hex("warn")
-    local fillR, fillG, fillB = derived.fillR or self:Hex("fill")
-    local textR, textG, textB = derived.textR or self:Hex("text")
-    local mutedR, mutedG, mutedB = derived.mutedR or self:Hex("muted")
+    local raisedR, raisedG, raisedB = self:Hex("raised")
+    local lineR, lineG, lineB = self:Hex("line")
+    local panelR, panelG, panelB = self:Hex("panel")
+    local brandR, brandG, brandB = self:Hex("brand")
+    local warnR, warnG, warnB = self:Hex("warn")
+    local fillR, fillG, fillB = self:Hex("fill")
+    local textR, textG, textB = self:Hex("text")
+    local mutedR, mutedG, mutedB = self:Hex("muted")
+    if derived.raisedR then raisedR, raisedG, raisedB = derived.raisedR, derived.raisedG, derived.raisedB end
+    if derived.lineR then lineR, lineG, lineB = derived.lineR, derived.lineG, derived.lineB end
+    if derived.panelR then panelR, panelG, panelB = derived.panelR, derived.panelG, derived.panelB end
+    if derived.brandR then brandR, brandG, brandB = derived.brandR, derived.brandG, derived.brandB end
+    if derived.warnR then warnR, warnG, warnB = derived.warnR, derived.warnG, derived.warnB end
+    if derived.fillR then fillR, fillG, fillB = derived.fillR, derived.fillG, derived.fillB end
+    if derived.textR then textR, textG, textB = derived.textR, derived.textG, derived.textB end
+    if derived.mutedR then mutedR, mutedG, mutedB = derived.mutedR, derived.mutedG, derived.mutedB end
 
     local classFile = derived.classFile or char.classFile or "WARRIOR"
     local cr, cg, cb = derived.cr, derived.cg, derived.cb
@@ -5123,7 +5131,8 @@ function CLIAlts:RenderCharRow(row, char, derived)
     local wastedXP = derived.wastedXP
     local timeStr = derived.timeStr
     if wastedSec == nil and wastedXP == nil then
-        wastedSec, wastedXP, _, timeStr = self:GetRestedWaste(char)
+        local _rate
+        wastedSec, wastedXP, _rate, timeStr = self:GetRestedWaste(char)
     end
 
     local isFull = rested and rested.isFull

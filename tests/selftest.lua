@@ -3197,137 +3197,147 @@ function CLIAlts:RunSelfTest()
     end
 
     -- ------------------------------------------------------------------------
+    -- ------------------------------------------------------------------------
     -- 28. Modern UI Column Widths & Compact Rested Formatters
     -- ------------------------------------------------------------------------
-    local modFrame = self:CreateModernMainFrame()
-    Assert(modFrame ~= nil and modFrame.isLegacyUI == false, "ModernUI: CreateModernMainFrame creates modern frame")
+    do
+        local modFrame = self:CreateModernMainFrame()
+        Assert(modFrame ~= nil and modFrame.isLegacyUI == false, "ModernUI: CreateModernMainFrame creates modern frame")
 
-    -- 28a. Tab 3 (Rested XP Monitor) Modern Columns Fit within 854px bounds
-    local tab3Cols = self:GetColumns(3)
-    Assert(#tab3Cols == 8, "ModernUI: Tab 3 has 8 active columns in modern view")
-    local totalMpw = 0
-    for _, col in ipairs(tab3Cols) do
-        Assert(col.mpw and col.mpw > 0, string.format("ModernUI: Tab 3 col '%s' defines positive mpw", col.key or "unknown"))
-        totalMpw = totalMpw + (col.mpw or 0)
-    end
-    Assert(totalMpw <= 850, string.format("ModernUI: Tab 3 total modern column width (%dpx) fits inside row bounds (<= 850px)", totalMpw))
-
-    -- 28b. Concise Modern XP & Rested Formatters
-    local mockAlt = {
-        name = "NasGuile",
-        fullName = "NasGuile-Forever",
-        class = "Rogue",
-        classFile = "ROGUE",
-        level = 15,
-        target_level = 15,
-        tier = "CORE",
-        xp = 6204,
-        curXP = 6204,
-        maxXP = 14400,
-        restedXP = 19178,
-        rested = 19178,
-    }
-    for _, col in ipairs(tab3Cols) do
-        if col.key == "curXP" then
-            local str = col.fmt(mockAlt)
-            Assert(str:find("6%.2k/14%.4k") ~= nil, "ModernUI: FmtCurXP produces concise k-notation string in modern view")
-        elseif col.key == "pool" then
-            local str = col.fmt(mockAlt)
-            Assert(str:find("19%.2k XP") ~= nil, "ModernUI: FmtRestedPool produces concise k-notation string in modern view")
-        elseif col.key == "restBar" then
-            local str = col.fmt(mockAlt)
-            Assert(str:find("cap") ~= nil and #str < 120, "ModernUI: FmtRestedBar produces compact cap string in modern view")
+        -- 28a. Tab 3 (Rested XP Monitor) Modern Columns Fit within 854px bounds
+        local tab3Cols = self:GetColumns(3)
+        Assert(#tab3Cols == 8, "ModernUI: Tab 3 has 8 active columns in modern view")
+        local totalMpw = 0
+        for _, col in ipairs(tab3Cols) do
+            Assert(col.mpw and col.mpw > 0, string.format("ModernUI: Tab 3 col '%s' defines positive mpw", col.key or "unknown"))
+            totalMpw = totalMpw + (col.mpw or 0)
         end
-    end
+        Assert(totalMpw <= 850, string.format("ModernUI: Tab 3 total modern column width (%dpx) fits inside row bounds (<= 850px)", totalMpw))
 
-    -- 28c. Exact Target Level Reached UI Wording Check
-    local tab2Cols = self:GetColumns(2)
-    for _, col in ipairs(tab2Cols) do
-        if col.key == "reason" then
-            local reasonStr = col.fmt(mockAlt)
-            Assert(reasonStr:find("Target Level Reached") ~= nil, "ModernUI: FmtRouteReason uses exact 'Target Level Reached' wording")
+        -- 28b. Concise Modern XP & Rested Formatters
+        local mockAlt = {
+            name = "NasGuile",
+            fullName = "NasGuile-Forever",
+            class = "Rogue",
+            classFile = "ROGUE",
+            level = 15,
+            target_level = 15,
+            tier = "CORE",
+            xp = 6204,
+            curXP = 6204,
+            maxXP = 14400,
+            restedXP = 19178,
+            rested = 19178,
+        }
+        for _, col in ipairs(tab3Cols) do
+            if col.key == "curXP" then
+                local str = col.fmt(mockAlt)
+                Assert(str:find("6%.2k/14%.4k") ~= nil, "ModernUI: FmtCurXP produces concise k-notation string in modern view")
+            elseif col.key == "pool" then
+                local str = col.fmt(mockAlt)
+                Assert(str:find("19%.2k XP") ~= nil, "ModernUI: FmtRestedPool produces concise k-notation string in modern view")
+            elseif col.key == "restBar" then
+                local str = col.fmt(mockAlt)
+                Assert(str:find("cap") ~= nil and #str < 120, "ModernUI: FmtRestedBar produces compact cap string in modern view")
+            end
+        end
+
+        -- 28c. Exact Target Level Reached UI Wording Check
+        local tab2Cols = self:GetColumns(2)
+        for _, col in ipairs(tab2Cols) do
+            if col.key == "reason" then
+                local reasonStr = col.fmt(mockAlt)
+                Assert(reasonStr:find("Target Level Reached") ~= nil, "ModernUI: FmtRouteReason uses exact 'Target Level Reached' wording")
+            end
         end
     end
 
     -- ------------------------------------------------------------------------
     -- 29. Self-Mailing Prevention Guard (Never Route Mail to Current Character)
     -- ------------------------------------------------------------------------
-    local savedPrimary = self.curPlayerPrimary
-    local savedFull = self.curPlayerFullName
-    local savedKey = self.curPlayerKey
+    do
+        local savedPrimary = self.curPlayerPrimary
+        local savedFull = self.curPlayerFullName
+        local savedKey = self.curPlayerKey
 
-    -- 29a. IsCurrentPlayer matches direct, stripped realm, and table
-    self.curPlayerPrimary = "TestPlayer"
-    self.curPlayerFullName = "TestPlayer-ClassicBeta"
-    self.curPlayerKey = "TestPlayer-ClassicBeta"
+        -- 29a. IsCurrentPlayer matches direct, stripped realm, and table
+        self.curPlayerPrimary = "TestPlayer"
+        self.curPlayerFullName = "TestPlayer-ClassicBeta"
+        self.curPlayerKey = "TestPlayer-ClassicBeta"
 
-    Assert(self:IsCurrentPlayer("TestPlayer") == true, "SelfMailGuard: IsCurrentPlayer matches primary name")
-    Assert(self:IsCurrentPlayer("TestPlayer-ClassicBeta") == true, "SelfMailGuard: IsCurrentPlayer matches full name with realm")
-    Assert(self:IsCurrentPlayer({ name = "TestPlayer" }) == true, "SelfMailGuard: IsCurrentPlayer matches character table")
-    Assert(self:IsCurrentPlayer("OtherAlt") == false, "SelfMailGuard: IsCurrentPlayer returns false for other characters")
+        Assert(self:IsCurrentPlayer("TestPlayer") == true, "SelfMailGuard: IsCurrentPlayer matches primary name")
+        Assert(self:IsCurrentPlayer("TestPlayer-ClassicBeta") == true, "SelfMailGuard: IsCurrentPlayer matches full name with realm")
+        Assert(self:IsCurrentPlayer({ name = "TestPlayer" }) == true, "SelfMailGuard: IsCurrentPlayer matches character table")
+        Assert(self:IsCurrentPlayer("OtherAlt") == false, "SelfMailGuard: IsCurrentPlayer returns false for other characters")
 
-    -- 29b. Crafter lookup skips current character
-    local oldDB = CLIAltsDB
-    CLIAltsDB = {
-        settings = {
-            ignoredMailItems = {},
-            autoMailConsumables = false,
-        },
-        characters = {
-            ["CrafterOne-Forever"] = {
-                name = "CrafterOne",
-                fullName = "CrafterOne-Forever",
-                classFile = "MAGE",
-                level = 35,
-                tier = "CORE",
-                professions = { primary = { { name = "Tailoring", rank = 150, maxRank = 150 } } },
+        -- 29b. Crafter lookup skips current character
+        local oldDB = CLIAltsDB
+        CLIAltsDB = {
+            settings = {
+                ignoredMailItems = {},
+                autoMailConsumables = false,
             },
-            ["CrafterTwo-Forever"] = {
-                name = "CrafterTwo",
-                fullName = "CrafterTwo-Forever",
-                classFile = "PRIEST",
-                level = 20,
-                tier = "RESERVE",
-                professions = { primary = { { name = "Tailoring", rank = 75, maxRank = 150 } } },
+            characters = {
+                ["CrafterOne-Forever"] = {
+                    name = "CrafterOne",
+                    fullName = "CrafterOne-Forever",
+                    classFile = "MAGE",
+                    level = 35,
+                    tier = "CORE",
+                    professions = { primary = { { name = "Tailoring", rank = 150, maxRank = 150 } } },
+                },
+                ["CrafterTwo-Forever"] = {
+                    name = "CrafterTwo",
+                    fullName = "CrafterTwo-Forever",
+                    classFile = "PRIEST",
+                    level = 20,
+                    tier = "RESERVE",
+                    professions = { primary = { { name = "Tailoring", rank = 75, maxRank = 150 } } },
+                },
+                ["BankMule-Forever"] = {
+                    name = "BankMule",
+                    fullName = "BankMule-Forever",
+                    classFile = "WARRIOR",
+                    level = 1,
+                    tier = "BANK",
+                },
             },
-            ["BankMule-Forever"] = {
-                name = "BankMule",
-                fullName = "BankMule-Forever",
-                classFile = "WARRIOR",
-                level = 1,
-                tier = "BANK",
-            },
-        },
-    }
+        }
 
-    -- When logged in as CrafterOne (the primary Tailor), cloth should route to CrafterTwo, NOT CrafterOne!
-    self.curPlayerPrimary = "CrafterOne"
-    self.curPlayerFullName = "CrafterOne-Forever"
-    self.curPlayerKey = "CrafterOne-Forever"
+        -- When logged in as CrafterOne (the primary Tailor), cloth should route to CrafterTwo, NOT CrafterOne!
+        self.curPlayerPrimary = "CrafterOne"
+        self.curPlayerFullName = "CrafterOne-Forever"
+        self.curPlayerKey = "CrafterOne-Forever"
 
-    local bestTailor = self:FindBestCrafterForTrade("Tailoring")
-    Assert(bestTailor ~= nil and bestTailor.name == "CrafterTwo", "SelfMailGuard: FindBestCrafterForTrade skips logged-in CrafterOne and routes to CrafterTwo")
+        local bestTailor = self:FindBestCrafterForTrade("Tailoring")
+        Assert(bestTailor ~= nil and bestTailor.name == "CrafterTwo", "SelfMailGuard: FindBestCrafterForTrade skips logged-in CrafterOne and routes to CrafterTwo")
 
-    local clothDest = self:GetMaterialDestination(nil, nil, 7, 5)
-    Assert(clothDest ~= nil and clothDest.destName == "CrafterTwo", "SelfMailGuard: Cloth routes to CrafterTwo, not self")
+        local clothDest = self:GetMaterialDestination(nil, nil, 7, 5)
+        Assert(clothDest ~= nil and clothDest.destName == "CrafterTwo", "SelfMailGuard: Cloth routes to CrafterTwo, not self")
 
-    -- When logged in as BankMule, BankMule is never returned by FindBankMule or GetMaterialDestination
-    self.curPlayerPrimary = "BankMule"
-    self.curPlayerFullName = "BankMule-Forever"
-    self.curPlayerKey = "BankMule-Forever"
+        -- When logged in as BankMule, BankMule is never returned by FindBankMule or GetMaterialDestination
+        self.curPlayerPrimary = "BankMule"
+        self.curPlayerFullName = "BankMule-Forever"
+        self.curPlayerKey = "BankMule-Forever"
 
-    local muleDest = self:FindBankMule()
-    Assert(muleDest == nil, "SelfMailGuard: FindBankMule returns nil when logged in as BankMule")
-    local miscDest = self:GetMaterialDestination(nil, nil, 7, 10)
-    Assert(miscDest == nil, "SelfMailGuard: Unmatched item destination is nil when logged into BankMule (no self-mail)")
+        local muleDest = self:FindBankMule()
+        Assert(muleDest == nil, "SelfMailGuard: FindBankMule returns nil when logged in as BankMule")
+        local miscDest = self:GetMaterialDestination(nil, nil, 7, 10)
+        Assert(miscDest == nil, "SelfMailGuard: Unmatched item destination is nil when logged into BankMule (no self-mail)")
 
-    -- 29c. Pending mail check returns 0 for current player
-    local pendingCount, pendingReason = self:GetCharacterPendingMail(CLIAltsDB.characters["BankMule-Forever"])
-    Assert(pendingCount == 0 and pendingReason == "Logged in", "SelfMailGuard: GetCharacterPendingMail returns 0 and 'Logged in' for active character")
+        -- 29c. Pending mail check returns 0 for current player
+        local pendingCount, pendingReason = self:GetCharacterPendingMail(CLIAltsDB.characters["BankMule-Forever"])
+        Assert(pendingCount == 0 and pendingReason == "Logged in", "SelfMailGuard: GetCharacterPendingMail returns 0 and 'Logged in' for active character")
 
-    -- 29d. FillSendMailNextBatch rejects targeting self
-    local fillOk, fillErr = self:FillSendMailNextBatch("BankMule")
-    Assert(fillOk == false and fillErr == "Recipient is current player", "SelfMailGuard: FillSendMailNextBatch rejects self-mailing explicitly")
+        -- 29d. FillSendMailNextBatch rejects targeting self
+        local fillOk, fillErr = self:FillSendMailNextBatch("BankMule")
+        Assert(fillOk == false and fillErr == "Recipient is current player", "SelfMailGuard: FillSendMailNextBatch rejects self-mailing explicitly")
+
+        self.curPlayerPrimary = savedPrimary
+        self.curPlayerFullName = savedFull
+        self.curPlayerKey = savedKey
+        CLIAltsDB = oldDB
+    end
 
     -- 29e. Cross-Faction & Cross-Realm Mail Isolation Guard
     do
@@ -3748,7 +3758,9 @@ function CLIAlts:RunSelfTest()
 
         testMeter:SetProgress(0.0, 0.8, 0.4, 0.2, "CAP")
         Assert(testMeter.valText:GetText() == "CAP", "ConsolidatedOverview: SetProgress supports special readout 'CAP'")
+    end
 
+    do
         -- 37b. Tab 1 Column Definitions & FormatCoins
         local tab1Cols = self:GetColumns(1)
         Assert(tab1Cols ~= nil and #tab1Cols == 5, "ConsolidatedOverview: Tab 1 defines 5 consolidated columns")
@@ -3764,7 +3776,9 @@ function CLIAlts:RunSelfTest()
         local sampleCoins = self:FormatCoins(123456)
         Assert(sampleCoins == "12|cffffd700g|r 34|cffc7c7cfs|r 56|cffeda55fc|r",
             "ConsolidatedOverview: FormatCoins formats copper into colored g, s, c tokens")
+    end
 
+    do
         -- 37c. Overview Rendering with Play Next Banner & Rings
         self:SwitchTab(1)
         Assert(CLIAltsDB.settings.activeTab == 1, "ConsolidatedOverview: activeTab is 1")
@@ -3799,8 +3813,12 @@ function CLIAlts:RunSelfTest()
             end
             Assert(row1.betaRateText.fontSize == 15, "ConsolidatedOverview: betaRateText font size is 15")
         end
+    end
 
+    do
         -- 37d. Shared RenderCharRow Engine: Dimming & Urgency Highlighting
+        local mFrame = self:CreateModernMainFrame()
+        local row1 = mFrame.rowFrames and mFrame.rowFrames[1]
         local dimChar = { name = "FreshAlt", level = 1, xp = 0, maxXP = 400, classFile = "MAGE", faction = "Alliance" }
         self:RenderCharRow(row1, dimChar, {
             xpData = { curXP = 0, maxXP = 400, percent = 0, ratio = 0, isMaxLevel = false },
@@ -3817,7 +3835,9 @@ function CLIAlts:RunSelfTest()
         })
         Assert(row1.alpha == 1.0, "ConsolidatedOverview: active capped alt is fully opaque")
         Assert(row1.backdropBorderColor ~= nil, "ConsolidatedOverview: row has backdrop border set")
+    end
 
+    do
         -- 37e. Rested XP (Tab 3) 9-Column Analysis Table & Formatters
         local tab3Cols = self:GetColumns(3)
         Assert(tab3Cols ~= nil and #tab3Cols == 9, "RestedAnalysis: Tab 3 defines 9 analysis columns")
@@ -3849,7 +3869,9 @@ function CLIAlts:RunSelfTest()
         Assert(xphList ~= nil and #xphList > 0, "RestedAnalysis: GetCharactersList sorts by xph without error")
         local restList = self:GetCharactersList("resting", false)
         Assert(restList ~= nil and #restList > 0, "RestedAnalysis: GetCharactersList sorts by resting without error")
+    end
 
+    do
         -- 37f. Faction Grouping Integrity: Alliance first, Horde second, never mixed
         local testFactionDB = {
             settings = { sortBy = "level", sortAsc = false },
@@ -3986,13 +4008,11 @@ function CLIAlts:RunSelfTest()
     -- Restore master state
     if masterState.db then
         CLIAltsDB = masterState.db
-    else
-        CLIAltsDB = oldDB
     end
-    self.curPlayerPrimary = masterState.primary or savedPrimary
+    self.curPlayerPrimary = masterState.primary
     self.curPlayerSecondary = masterState.secondary
-    self.curPlayerFullName = masterState.fullName or savedFull
-    self.curPlayerKey = masterState.key or savedKey
+    self.curPlayerFullName = masterState.fullName
+    self.curPlayerKey = masterState.key
     self.curPlayerRealm = masterState.realm
     self.curPlayerName = masterState.name or self.curPlayerPrimary
     self.selectedCharKey = masterState.selected
