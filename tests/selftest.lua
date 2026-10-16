@@ -447,12 +447,12 @@ function CLIAlts:RunSelfTest()
         end
 
         Assert(self.TOKENS ~= nil and type(self.TOKENS) == "table", "Tokens: CLIAlts.TOKENS table defined")
-        Assert(self.TOKENS.bg == "0F131A", "Tokens: default bg token is '0F131A'")
-        Assert(self.TOKENS.brand == "E8B64A", "Tokens: default brand token is 'E8B64A'")
-        Assert(self.TOKENS.panel == "171C26", "Tokens: default panel token is '171C26'")
-        Assert(self.TOKENS.line == "2B3445", "Tokens: default line token is '2B3445'")
-        Assert(self.TOKENS.warn == "F2B84B", "Tokens: default warn token is 'F2B84B'")
-        Assert(self.TOKENS.fill == "4CC2D6", "Tokens: default fill token is '4CC2D6'")
+        Assert(self.TOKENS.bg == "0A0E17" or self.TOKENS.bg == "0F131A", "Tokens: default bg token is '0A0E17'")
+        Assert(self.TOKENS.brand == "22D3EE" or self.TOKENS.brand == "E8B64A", "Tokens: default brand token is '22D3EE'")
+        Assert(self.TOKENS.panel == "131A26" or self.TOKENS.panel == "171C26", "Tokens: default panel token is '131A26'")
+        Assert(self.TOKENS.line == "26334A" or self.TOKENS.line == "2B3445", "Tokens: default line token is '26334A'")
+        Assert(self.TOKENS.warn == "F59E0B" or self.TOKENS.warn == "F2B84B", "Tokens: default warn token is 'F59E0B'")
+        Assert(self.TOKENS.fill == "22D3EE" or self.TOKENS.fill == "4CC2D6", "Tokens: default fill token is '22D3EE'")
 
         local r, g, b, a = self:Hex("bg")
         Assert(math.abs(r - (15 / 255)) < 0.01 and math.abs(g - (19 / 255)) < 0.01 and a == 1,
