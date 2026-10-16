@@ -1808,7 +1808,7 @@ function CLIAlts:GetRestedData(char, force, nowOverride)
     end
 
     -- Percentage of current level's max XP
-    local percent = (maxXP > 0) and math.floor((currentRested / maxXP) * 100) or 0
+    local percent = (maxXP > 0) and math.floor(((currentRested / maxXP) * 100) + 0.5) or 0
     local isFull = (currentRested >= maxRested)
 
     local timeToFull = 0

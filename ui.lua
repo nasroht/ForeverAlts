@@ -620,7 +620,15 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
             end
         end
         if self.valText then
-            self.valText:SetText(textStr or string.format("%d%%", math.floor(ratio * 100)))
+            local str = textStr or string.format("%d%%", math.floor(ratio * 100))
+            if #str >= 5 then
+                CLIAlts:SetWidgetFont(self.valText, 10, "OUTLINE")
+            elseif #str >= 4 then
+                CLIAlts:SetWidgetFont(self.valText, 11, "OUTLINE")
+            else
+                CLIAlts:SetWidgetFont(self.valText, 12, "OUTLINE")
+            end
+            self.valText:SetText(str)
             if r and g and b then
                 self.valText:SetTextColor(r, g, b)
             end
@@ -5016,7 +5024,11 @@ function CLIAlts:CreateModernMainFrame()
                 GameTooltip:SetOwner(s, "ANCHOR_TOP")
                 GameTooltip:AddLine(string.format("Rested XP: %s", CLIAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
                 if rested and not rested.isMaxLevel then
-                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.8, 0.8, 0.8)
+                    local curR = rested.currentRested or 0
+                    local charMaxXP = (row.charData and row.charData.maxXP and row.charData.maxXP > 0) and row.charData.maxXP or 1
+                    local lvlPct = (curR / charMaxXP) * 100
+                    local capRatioPct = (rested.maxRested and rested.maxRested > 0) and ((curR / rested.maxRested) * 100) or 0
+                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (|cff00ff66%.1f%% of level|r · %d%% of cap)", CLIAlts:FormatNumber(curR), lvlPct, math.floor(capRatioPct + 0.5)), 0.8, 0.8, 0.8)
                     GameTooltip:AddLine(string.format("Rested Cap: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150), 0.8, 0.8, 0.8)
                     if rested.isFull then
                         local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(row.charData)
@@ -5729,12 +5741,28 @@ function CLIAlts:RenderCharRow(row, char, derived)
                     row.gaugeRest:SetProgress(1.0, warnR, warnG, warnB, "CAP")
                 end
             else
-                local capPct = math.floor(restRatio * 100)
                 local est = rested.isEstimate and "~" or ""
-                if capPct == 0 and (rested.currentRested or 0) <= 0 then
+                local curR = rested.currentRested or 0
+                local charMaxXP = (char and char.maxXP and char.maxXP > 0 and char.maxXP) or (row.charData and row.charData.maxXP and row.charData.maxXP > 0 and row.charData.maxXP) or 1
+                local rawLvlPct = (curR / charMaxXP) * 100
+                if curR <= 0 then
                     row.gaugeRest:SetProgress(0, mutedR, mutedG, mutedB, "0%")
                 else
-                    row.gaugeRest:SetProgress(restRatio, brandR, brandG, brandB, string.format("%s%d%%", est, capPct))
+                    local pctStr
+                    if rawLvlPct >= 100 then
+                        pctStr = string.format("%s%d%%", est, math.floor(rawLvlPct + 0.5))
+                    else
+                        local floored = math.floor(rawLvlPct)
+                        local frac = math.floor((rawLvlPct - floored) * 10 + 0.5)
+                        if frac > 0 and frac < 10 then
+                            pctStr = string.format("%s%d.%d%%", est, floored, frac)
+                        elseif frac >= 10 then
+                            pctStr = string.format("%s%d%%", est, floored + 1)
+                        else
+                            pctStr = string.format("%s%d%%", est, floored)
+                        end
+                    end
+                    row.gaugeRest:SetProgress(restRatio, brandR, brandG, brandB, pctStr)
                 end
             end
         else
