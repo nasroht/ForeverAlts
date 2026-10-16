@@ -9065,8 +9065,6 @@ function CLIAlts:CreateSettingsPanel()
 
         settingsDialog = sd
         return settingsDialog
-    end
-    return settingsDialog
 end
 
 function CLIAlts:ShowSettingsDialog()
