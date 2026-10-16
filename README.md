@@ -24,7 +24,7 @@ ForeverAlts is designed around the custom progression systems and mechanics of *
 - **Well Rested Legacy Perk Integration**:
   - Real-time offline rest accrual calculations calibrated for WoW Forever's **Well Rested** legacy perk (Ranks 0–5).
   - Accurately models accelerated accumulation (+4% rate per rank) and expanded rested pools (+6% capacity per rank, up to **180% maximum rested XP**).
-  - Displays time spent sitting at cap and calculates wasted XP to help prioritize which character to play next.
+  - Displays time sitting at cap with precise wasted XP tracking (`Capped 1h 46m ago (≈500 wasted)`), dropping generic and confusing status text.
 - **Custom Legacy Point (LP) Progress Tracker**:
   - Automatically calculates account and individual character Legacy Point contributions toward account unlock tiers:
     - **Tier 1** (10 LP)
@@ -43,10 +43,39 @@ ForeverAlts is designed around the custom progression systems and mechanics of *
 
 ---
 
+## Consolidated Overview & Rested Analytics Architecture
+
+ForeverAlts provides a focused, streamlined **Two-Screen Architecture**:
+
+### 1. Consolidated Overview Dashboard (`/fa 1`)
+- **"Play Next" Recommendation Banner**: Instant top-of-dashboard intelligence surfacing which characters need attention first, complete with an optimal 2-hour leveling rotation schedule.
+- **Class-Colored Level Squares**: 34px retro square displaying the character's level styled in their official class color.
+- **Dual Circular Speedometer Gauges**:
+  - **Level XP Meter**: Circular progress gauge showing progress through the current level (`% of lvl`).
+  - **Rested XP Meter**: Circular speedometer gauge calibrated to the Well Rested perk cap (`% of cap`).
+- **Rested Details Subline**: Real-time pool and accrual telemetry (`+... XP/h (Wild · 4x in Inn) · ... to cap`), offering actionable park suggestions when characters log out in the wilderness.
+- **In-Row Urgency Highlighting**: Capped and wasting alts are highlighted directly with glowing warning borders and alert backdrops—eliminating clutter from redundant chip columns.
+- **Level 1 Dimming**: Fresh level 1 alts with 0% XP and 0% rested are dimmed automatically (`alpha = 0.55`) to prioritize characters with active progression.
+- **Strict Faction Grouping**: Characters are organized cleanly by faction—Alliance first, followed by Horde—guaranteeing rosters are never mixed.
+- **Retro Coin Wealth**: Formatted liquid gold, silver, and copper tokens (`FormatCoins`).
+
+### 2. Rested XP Analysis Table (`/fa 3`)
+- **9 Dedicated Analysis Columns**: Total width fitted within 820px ($\le 850$px row bounds):
+  `FAC` · `CHARACTER` · `LVL` · `CURRENT XP` · `RESTED / CAP` · `RESTED PROGRESS` · `REST LOC` · `XP/H` · `STATUS`
+- **Clickable Header Sorting**: Sort your entire roster by faction, character name, level, current XP, rested pool, rest location (`REST LOC` - Inn vs Wild), hourly rest rate (`XP/H`), or status.
+- **Precise Status Telemetry**: Shows exact time-to-cap or waste duration (`Capped ... ago (≈N wasted)`).
+
+---
+
 ## Inter-Alt Mail & Supply Chain Router
 
 Keep your crafting alts fueled without manual inventory sorting:
 
+- **Cross-Faction & Cross-Realm Isolation Guard**:
+  - Strictly prevents attempting to route or auto-fill mail between opposing factions (Alliance vs Horde) or across realm boundaries.
+  - Detects explicit faction tags as well as race-based inference to guarantee safe mail routing.
+- **Self-Mailing Prevention Guard**:
+  - Automatically excludes the currently logged-in character from recipient suggestion lists and auto-fill batches.
 - **Automatic Material Routing**:
   - **Cloth** → Tailor alts (or designated First Aid alts)
   - **Herbs** → Alchemy alts
@@ -113,6 +142,19 @@ Access settings via `[CONFIG]`, the sidebar/header tab, `/fa config`, or `/fa se
 
 ---
 
+## Performance & Event Coalescing Engine
+
+Built for zero perceptible frame drops and minimal memory overhead:
+
+- **Active Render Benchmark (`/fa perf`)**: Real-time render profiling using WoW's `debugprofilestop()` hardware timer to display active `Render()` execution time (min, max, average) alongside addon memory consumption.
+- **Smart Event Coalescing**:
+  - `ZONE_CHANGED`, `ZONE_CHANGED_INDOORS`, and `ZONE_CHANGED_NEW_AREA` events coalesce over a 0.75-second frame bucket.
+  - `QUEST_LOG_UPDATE` events coalesce over a 1.25-second frame bucket.
+  - Prevents burst events from triggering redundant full-dashboard re-renders.
+- **Sub-Millisecond Execution**: Average full-table render takes under **0.5 ms**, eliminating the need for complex row-cache invalidation.
+
+---
+
 ## Retro CRT Phosphor Themes
 
 | Theme Key | Name | Palette Description |
@@ -136,14 +178,15 @@ Type into the dashboard terminal prompt (`> `) or in standard chat (`/fa` or `/f
 | `/fa` | Toggle the main alt monitor dashboard |
 | `/fa [1-8]` | Switch directly to a specific tab (Overview, Route, Rested, Profs, Economy, CDs, Mail, Settings) |
 | `/fa config` | Open the integrated Settings & Preferences view (Tab 8) |
+| `/fa beta` / `/fa 8` | Overview alias (Beta dashboard integrated into Tab 1) |
 | `/fa tour` | Launch the interactive first-run onboarding tour |
 | `/fa compact` | Toggle 680px compact mode |
-| `/fa theme [name]` | Cycle or set phosphor theme |
+| `/fa theme [name]` | Cycle or set phosphor theme (`AMBER`, `GREEN`, `CYAN`, `MONO`, `SAFE`, `SYNTHWAVE`, `DRACULA`) |
 | `/fa scale <val>` | Adjust UI scale (`0.8` to `1.45`) |
 | `/fa font <size>` | Set monospace font size (`12` to `24`) |
 | `/fa perf` | Run active benchmark of `Render()` with `debugprofilestop()` and print memory usage |
 | `/fa copychat <alt>` | Copy chat window layout and channels from another character |
-| `/fa sort <col>` | Sort table by column key (`role`, `prof`, `name`, `level`, `gold`, `rested`, `waste`, `xp`) |
+| `/fa sort <col>` | Sort table by column key (`role`, `prof`, `name`, `level`, `gold`, `rested`, `waste`, `xp`, `loc`, `xph`) |
 | `/fa filter <query>`| Filter characters by faction, level, class, or profession |
 | `/fa clear` | Clear the active filter |
 | `/fa next` | Recommend top alts losing rested XP |
