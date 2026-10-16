@@ -416,6 +416,11 @@ function CLIAlts:InitDB()
     CLIAltsDB.settings.sortBy = CLIAltsDB.settings.sortBy or "name"
     CLIAltsDB.settings.sortAsc = (CLIAltsDB.settings.sortAsc == true)
     CLIAltsDB.settings.activeTab = CLIAltsDB.settings.activeTab or 1
+    if CLIAltsDB.settings.activeTab == 2 or CLIAltsDB.settings.activeTab == 3 then
+        CLIAltsDB.settings.activeTab = 1
+    elseif CLIAltsDB.settings.activeTab == 5 then
+        CLIAltsDB.settings.activeTab = 6
+    end
     CLIAltsDB.settings.wellRestedRank = tonumber(CLIAltsDB.settings.wellRestedRank) or 0
     CLIAltsDB.settings.alerts = CLIAltsDB.settings.alerts or {}
     if CLIAltsDB.settings.alerts.cooldowns == nil then CLIAltsDB.settings.alerts.cooldowns = true end

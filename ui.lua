@@ -2033,12 +2033,14 @@ local COLS = {
         { key = "location",  title = "LAST ZONE",         w = 18, pw = 310, cpw = 220, mpw = 205, align = "LEFT",   sort = "location", fmt = FmtLocation },
         { key = "hearth",    title = "HEARTHSTONE",       w = 18, pw = 330, cpw = 230, mpw = 210, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
-    [6] = { -- 6: COOLDOWNS & INSTANCE LOCKS
-        { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",         w = 16, pw = 160, cpw = 135, mpw = 155, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",               w = 3,  pw = 50,  cpw = 40,  mpw = 40,  align = "CENTER", sort = "level",    fmt = FmtLevel, mono = true },
-        { key = "tradeCd",   title = "TRADE COOLDOWNS",   w = 26, pw = 425, cpw = 310, mpw = 295, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns, mono = true },
-        { key = "raidLocks", title = "SAVED INSTANCES / LOCKS", w = 26, pw = 425, cpw = 310, mpw = 295, align = "LEFT", sort = "cooldown", fmt = FmtRaidLocks },
+    [6] = { -- 6: WORLD & INSTANCE LOCKS (Consolidated Cooldowns, Locks, Zones & Hearths)
+        { key = "fac",       title = "FAC",               w = 3,  pw = 36,  cpw = 32,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, mpw = 135, align = "LEFT",   sort = "name",     fmt = FmtName },
+        { key = "lvl",       title = "LVL",               w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "CENTER", sort = "level",    fmt = FmtLevel, mono = true },
+        { key = "tradeCd",   title = "COOLDOWNS",         w = 18, pw = 220, cpw = 160, mpw = 175, align = "LEFT",   sort = "cooldown", fmt = FmtTradeCooldowns, mono = true },
+        { key = "raidLocks", title = "RAID LOCKS",        w = 18, pw = 220, cpw = 160, mpw = 175, align = "LEFT",   sort = "cooldown", fmt = FmtRaidLocks },
+        { key = "location",  title = "LAST ZONE",         w = 16, pw = 200, cpw = 150, mpw = 140, align = "LEFT",   sort = "location", fmt = FmtLocation },
+        { key = "hearth",    title = "HEARTHSTONE",       w = 15, pw = 190, cpw = 140, mpw = 130, align = "LEFT",   sort = "hearth",   fmt = FmtHearth },
     },
     [7] = { -- 7: MAIL ROUTING & SUPPLY CHAIN
         { key = "fac",       title = "FAC",                 w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
@@ -2477,14 +2479,11 @@ function CLIAlts:CreateLegacyMainFrame()
 
     -- 2. Modern Navigation Tab Strip (Clean text links with active amber box pill)
     local tabs = {
-        { id = 1, text = "Overview",    compact = "Overview", viewTitle = "OVERVIEW",                 stdWidth = 82 },
-        { id = 2, text = "Route",       compact = "Route",    viewTitle = "FOREVER ROUTE",          stdWidth = 64 },
-        { id = 3, text = "Rested XP",   compact = "Rested",   viewTitle = "RESTED XP MONITOR",       stdWidth = 84 },
-        { id = 4, text = "Professions", compact = "Profs",    viewTitle = "PROFESSIONS & MILESTONES", stdWidth = 96 },
-        { id = 5, text = "Economy",     compact = "Econ",     viewTitle = "ECONOMY & WEALTH",        stdWidth = 76 },
-        { id = 6, text = "Cooldowns",   compact = "CDs",      viewTitle = "COOLDOWNS & LOCKS",       stdWidth = 86 },
-        { id = 7, text = "Mail Routes", compact = "Mail",     viewTitle = "MAIL ROUTING & SUPPLY CHAIN", stdWidth = 96 },
-        { id = 8, text = "Settings",    compact = "Config",   viewTitle = "SETTINGS & PREFERENCES",     stdWidth = 80 },
+        { id = 1, text = "Overview",       compact = "Overview", viewTitle = "OVERVIEW",                     stdWidth = 90 },
+        { id = 4, text = "Professions",    compact = "Profs",    viewTitle = "PROFESSIONS & MILESTONES",     stdWidth = 100 },
+        { id = 6, text = "World & Locks",  compact = "Locks",    viewTitle = "WORLD & INSTANCE LOCKS",       stdWidth = 105 },
+        { id = 7, text = "Mail Logistics", compact = "Mail",     viewTitle = "MAIL LOGISTICS & SUPPLY CHAIN", stdWidth = 105 },
+        { id = 8, text = "Settings",       compact = "Config",   viewTitle = "SETTINGS & PREFERENCES",         stdWidth = 85 },
     }
     frame.tabButtons = {}
     local prevTab = nil
@@ -3619,11 +3618,9 @@ function CLIAlts:CreateModernMainFrame()
 
     local navDefs = {
         { id = 1, text = "Overview", badge = "7", isOverview = true },
-        { id = 3, text = "Rested XP", badge = "2", isWarn = true },
         { id = 4, text = "Professions", badge = nil },
-        { id = 5, text = "Economy", badge = nil },
-        { id = 6, text = "Cooldowns & Locks", badge = "3", isWarn = true },
-        { id = 7, text = "Mail Routing", badge = "0", isMail = true },
+        { id = 6, text = "World & Locks", badge = "3", isWarn = true },
+        { id = 7, text = "Mail Logistics", badge = "0", isMail = true },
         { id = 8, text = "Settings", badge = nil, isSettings = true },
     }
     frame.tabButtons = {}
@@ -3632,11 +3629,11 @@ function CLIAlts:CreateModernMainFrame()
     for _, def in ipairs(navDefs) do
         local thisTabId = def.id
         local navBtn = CreateFrame("Button", nil, sidebar, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        navBtn:SetSize(190, 34)
+        navBtn:SetSize(190, 36)
         if not prevNavBtn then
             navBtn:SetPoint("TOPLEFT", sidebar, "TOPLEFT", 10, -14)
         else
-            navBtn:SetPoint("TOPLEFT", prevNavBtn, "BOTTOMLEFT", 0, -6)
+            navBtn:SetPoint("TOPLEFT", prevNavBtn, "BOTTOMLEFT", 0, -8)
         end
         navBtn:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -3702,21 +3699,15 @@ function CLIAlts:CreateModernMainFrame()
                 local bCount = self.badge and self.badge.text and self.badge.text:GetText()
                 if self.tabId == 1 then
                     GameTooltip:AddLine(string.format("Overview (%s Characters)", bCount or "0"), 1, 1, 1)
-                    GameTooltip:AddLine("Total active characters tracked across all realms and factions.", 0.8, 0.8, 0.8, true)
-                elseif self.tabId == 3 then
-                    GameTooltip:AddLine(string.format("Rested XP (%s Capped Alts)", bCount or "0"), 1, 1, 1)
-                    GameTooltip:AddLine("Number of alts currently sitting at maximum Rested XP cap and losing potential gains.", 0.8, 0.8, 0.8, true)
+                    GameTooltip:AddLine("Total active characters tracked across all realms and factions with rested XP & wealth.", 0.8, 0.8, 0.8, true)
                 elseif self.tabId == 4 then
                     GameTooltip:AddLine("Professions", 1, 1, 1)
                     GameTooltip:AddLine("Track primary and secondary profession skills, skill caps, and recipe discovery.", 0.8, 0.8, 0.8, true)
-                elseif self.tabId == 5 then
-                    GameTooltip:AddLine("Economy", 1, 1, 1)
-                    GameTooltip:AddLine("View liquid gold, inventory wealth, and trade supplies across your roster.", 0.8, 0.8, 0.8, true)
                 elseif self.tabId == 6 then
-                    GameTooltip:AddLine(string.format("Cooldowns & Locks (%s Ready)", bCount or "0"), 1, 1, 1)
-                    GameTooltip:AddLine("Trade skill crafting cooldowns ready to use and available raid resets.", 0.8, 0.8, 0.8, true)
+                    GameTooltip:AddLine(string.format("World & Locks (%s Ready)", bCount or "0"), 1, 1, 1)
+                    GameTooltip:AddLine("Trade crafting cooldowns, raid lockouts, last active zones, and hearthstone binds.", 0.8, 0.8, 0.8, true)
                 elseif self.tabId == 7 then
-                    GameTooltip:AddLine(string.format("Mail Routing (%s Packages)", bCount or "0"), 1, 1, 1)
+                    GameTooltip:AddLine(string.format("Mail Logistics (%s Packages)", bCount or "0"), 1, 1, 1)
                     GameTooltip:AddLine("Pending mail packages and supply shipments queued across your alts.", 0.8, 0.8, 0.8, true)
                 elseif self.tabId == 8 then
                     GameTooltip:AddLine("Settings & Preferences", 1, 1, 1)
@@ -5365,7 +5356,8 @@ function CLIAlts:UpdateDetailPanel(charArg)
         local classStr = char.class or ""
         local facStr = char.faction or ""
         local tierStr = (char.tier == "CORE" and "Core") or (char.tier == "RESERVE" and "Alt") or (char.tier == "BANK" and "Bank Mule") or "Alt"
-        dp.sub:SetText(string.format("%d %s %s · %s (%s)", char.level or 1, raceStr, classStr, facStr, tierStr))
+        local moneyStr = self:FormatCoins(char.money or 0)
+        dp.sub:SetText(string.format("%d %s %s · %s (%s) · %s", char.level or 1, raceStr, classStr, facStr, tierStr, moneyStr))
         dp.sub:SetTextColor(mutedR, mutedG, mutedB)
     end
 
@@ -5906,9 +5898,9 @@ function CLIAlts:Render(force)
         [3] = "RESTED XP MONITOR",
         [4] = "PROFESSIONS & MILESTONES",
         [5] = "ECONOMY & WEALTH",
-        [6] = "COOLDOWNS & INSTANCE LOCKS",
-        [7] = "MAIL ROUTING & SUPPLY CHAIN",
-        [8] = "BETA: CONSOLIDATED METERS",
+        [6] = "WORLD & INSTANCE LOCKS",
+        [7] = "MAIL LOGISTICS & SUPPLY CHAIN",
+        [8] = "SETTINGS & PREFERENCES",
         [9] = "SETTINGS & PREFERENCES",
     }
     local curTabTitle = tabTitles[activeTab] or "OVERVIEW"
@@ -5927,6 +5919,10 @@ function CLIAlts:Render(force)
             mainFrame.subViewFilters:SetText("CLICK ALT TO CONFIGURE ROUTING · SHIFT-CLICK TO CYCLE")
         elseif activeTab == 8 then
             mainFrame.subViewFilters:SetText("CONFIGURATION · CRT THEMES · SCALE · CHAT CLONER")
+        elseif activeTab == 6 then
+            mainFrame.subViewFilters:SetText("COOLDOWNS · RAID LOCKOUTS · LAST ACTIVE ZONES · HEARTHSTONE BINDS")
+        elseif activeTab == 4 then
+            mainFrame.subViewFilters:SetText("PRIMARY & SECONDARY PROFESSIONS · RECIPE MILESTONES · SKILL CAPS")
         elseif activeTab == 3 then
             local selChar = self:GetSelectedOrCurChar()
             local r = self:GetWellRestedRank(selChar)
@@ -5938,7 +5934,7 @@ function CLIAlts:Render(force)
         elseif activeTab == 1 then
             mainFrame.subViewFilters:SetText("CONSOLIDATED DASHBOARD · DUAL CIRCULAR GAUGES (XP & RESTED)")
         else
-            mainFrame.subViewFilters:SetText("RESTED XP    PROFESSIONS    ECONOMY")
+            mainFrame.subViewFilters:SetText("FOREVERALTS · CHARACTER MANAGEMENT")
         end
     end
 
@@ -7308,6 +7304,8 @@ end
 function CLIAlts:SwitchTab(tabId)
     tabId = tonumber(tabId)
     if not tabId then return end
+    if tabId == 2 or tabId == 3 then tabId = 1 end
+    if tabId == 5 then tabId = 6 end
     if tabId == 9 then tabId = 8 end
     if tabId < 1 or tabId > 8 then return end
     if CLIAltsDB and CLIAltsDB.settings then
