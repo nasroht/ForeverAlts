@@ -1,5 +1,5 @@
 -- ============================================================================
--- CLIAlts: Minimal WoW API Stubs & Plain Lua 5.1 CI Test Runner
+-- ForeverAlts: Minimal WoW API Stubs & Plain Lua 5.1 CI Test Runner
 -- File: tests/stub.lua
 -- ============================================================================
 
@@ -20,6 +20,11 @@ local function CreateDummyFrame(frameType, name, parent)
     }
     if name then
         _G[name] = frame
+        if name:find("^ForeverAlts") then
+            _G[(name:gsub("^ForeverAlts", "CLIAlts"))] = frame
+        elseif name:find("^CLIAlts") then
+            _G[(name:gsub("^CLIAlts", "ForeverAlts"))] = frame
+        end
     end
     function frame:SetScript(handler, fn) self.scripts[handler] = fn end
     function frame:GetScript(handler) return self.scripts[handler] end
@@ -390,12 +395,12 @@ C_Timer = C_Timer or {
     NewTicker = function(sec, cb) return { Cancel = function() end } end,
 }
 
--- 4. Load CLIAlts Addon Files in TOC order
+-- 4. Load ForeverAlts Addon Files in TOC order
 local addon = {}
 local files = { "data.lua", "theme.lua", "minimap.lua", "ui.lua", "core.lua", "tests/selftest.lua" }
 
 print("============================================================")
-print("CLIAlts CI Test Runner: Loading files under plain Lua 5.1...")
+print("ForeverAlts CI Test Runner: Loading files under plain Lua 5.1...")
 print("============================================================")
 
 for _, file in ipairs(files) do
@@ -420,7 +425,7 @@ end
 
 -- 6. Execute Full Self-Test Verification Suite
 print("============================================================")
-print("Executing CLIAlts:RunSelfTest()...")
+print("Executing ForeverAlts:RunSelfTest()...")
 print("============================================================")
 
 local success, passed, failed = addon:RunSelfTest()

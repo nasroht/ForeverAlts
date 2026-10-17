@@ -1,13 +1,16 @@
 -- ============================================================================
--- CLIAlts: Automated Verification Suite (229 Assertions)
+-- ForeverAlts: Automated Verification Suite (229 Assertions)
 -- File: tests/selftest.lua
 -- ============================================================================
-local _, CLIAlts = ...
-CLIAlts = CLIAlts or _G.CLIAlts or {}
+local _, ForeverAlts = ...
+ForeverAlts = ForeverAlts or _G.ForeverAlts or _G.CLIAlts or {}
+local CLIAlts = ForeverAlts
+_G.ForeverAlts = ForeverAlts
+_G.CLIAlts = ForeverAlts
 
-function CLIAlts:RunSelfTest()
+function ForeverAlts:RunSelfTest()
     local masterState = {
-        db = CLIAltsDB,
+        db = ForeverAltsDB,
         primary = self.curPlayerPrimary,
         secondary = self.curPlayerSecondary,
         fullName = self.curPlayerFullName,
@@ -38,9 +41,9 @@ function CLIAlts:RunSelfTest()
 
     -- 0. Version verification (dynamically read from TOC metadata)
     Assert(self.VERSION ~= nil and type(self.VERSION) == "string" and #self.VERSION > 0,
-        "Version: CLIAlts.VERSION dynamically populated via GetAddOnMetadata: " .. tostring(self.VERSION))
+        "Version: ForeverAlts.VERSION dynamically populated via GetAddOnMetadata: " .. tostring(self.VERSION))
     local pVer = self:PrintVersion()
-    Assert(pVer == self.VERSION, "Version: CLIAlts:PrintVersion returns current version string")
+    Assert(pVer == self.VERSION, "Version: ForeverAlts:PrintVersion returns current version string")
 
     do -- 1. ProjectRested & 2. GetRestedWaste tests
     -- 1a. Rest zone accrual at rank 0 (5% of maxXP per 8 hours = 1000 XP on 20k maxXP)
@@ -126,8 +129,8 @@ function CLIAlts:RunSelfTest()
         classFile = "MAGE",
         tradeCooldowns = { ["Mooncloth"] = T0 - 100 }
     }
-    local oldChars = CLIAltsDB and CLIAltsDB.characters
-    CLIAltsDB.characters = { ["TestCrafter"] = testCharCD }
+    local oldChars = ForeverAltsDB and ForeverAltsDB.characters
+    ForeverAltsDB.characters = { ["TestCrafter"] = testCharCD }
     local digestItems = self:GetLoginDigestItems(T0)
     local foundCD = false
     for _, it in ipairs(digestItems) do
@@ -144,7 +147,7 @@ function CLIAlts:RunSelfTest()
     end
     Assert(foundCDOff == false, "LoginDigest: disabled category omitted from digest")
     self:ToggleAlert("cooldowns", true)
-    CLIAltsDB.characters = oldChars
+    ForeverAltsDB.characters = oldChars
 
     -- 4e. FormatLoginDigestLines appends +N more (/ca digest) when items > 4
     local mock6Items = {
@@ -211,17 +214,17 @@ function CLIAlts:RunSelfTest()
 
     -- 6. Per-Alt Notes Tests
     local testNoteChar = { name = "Thorin", classFile = "WARRIOR", level = 60 }
-    local oldCharsN = CLIAltsDB and CLIAltsDB.characters
-    CLIAltsDB.characters = CLIAltsDB.characters or {}
-    CLIAltsDB.characters["Thorin"] = testNoteChar
+    local oldCharsN = ForeverAltsDB and ForeverAltsDB.characters
+    ForeverAltsDB.characters = ForeverAltsDB.characters or {}
+    ForeverAltsDB.characters["Thorin"] = testNoteChar
     local _, okN1 = self:SetCharacterNote("thor", "farm mooncloth", false)
     Assert(okN1 == true and testNoteChar.note == "farm mooncloth", "SetCharacterNote: sets note using prefix match 'thor'")
     local msgN2, okN2 = self:SetCharacterNote("Thorin", nil, false)
     Assert(okN2 == true and msgN2:find("farm mooncloth", 1, true) ~= nil, "SetCharacterNote: queries existing note")
     local _, okN3 = self:SetCharacterNote("thor", "clear", false)
     Assert(okN3 == true and testNoteChar.note == nil, "SetCharacterNote: clears note with 'clear'")
-    CLIAltsDB.characters["Thorin"] = nil
-    CLIAltsDB.characters = oldCharsN
+    ForeverAltsDB.characters["Thorin"] = nil
+    ForeverAltsDB.characters = oldCharsN
 
     -- 7. Lockout Gap Finder Tests
     local mockLockAlts = {
@@ -272,13 +275,13 @@ function CLIAlts:RunSelfTest()
     Assert(resolvedNum == 14047 and type(resolvedNum) == "number", "ResolveWatchItem: parses numeric string '14047' to number")
 
     -- 8c. AddWatchItem stores item ID
-    local oldWatchlist = CLIAltsDB and CLIAltsDB.watchlist
-    local oldCharsW = CLIAltsDB and CLIAltsDB.characters
-    CLIAltsDB.watchlist = {}
-    CLIAltsDB.characters = {}
+    local oldWatchlist = ForeverAltsDB and ForeverAltsDB.watchlist
+    local oldCharsW = ForeverAltsDB and ForeverAltsDB.characters
+    ForeverAltsDB.watchlist = {}
+    ForeverAltsDB.characters = {}
 
     local okAdd1, itemAdd1 = self:AddWatchItem(rawLink)
-    Assert(okAdd1 == true and itemAdd1 == 14047 and CLIAltsDB.watchlist[1] == 14047, "AddWatchItem: stores item ID 14047 in watchlist")
+    Assert(okAdd1 == true and itemAdd1 == 14047 and ForeverAltsDB.watchlist[1] == 14047, "AddWatchItem: stores item ID 14047 in watchlist")
 
     -- 8d. Duplicate check matches ID vs link
     local okAddDup, _ = self:AddWatchItem(14047)
@@ -290,7 +293,7 @@ function CLIAlts:RunSelfTest()
         classFile = "MAGE",
         watchlistCounts = { [14047] = 80, ["Iron Ore"] = 25 }
     }
-    CLIAltsDB.characters["TailorAlt"] = mockAltW
+    ForeverAltsDB.characters["TailorAlt"] = mockAltW
 
     -- Before removal, CollectWatchlistCounts preserves 14047 but drops untracked "Iron Ore"
     local collectedCounts = self:CollectWatchlistCounts(mockAltW.watchlistCounts)
@@ -298,11 +301,11 @@ function CLIAlts:RunSelfTest()
 
     -- Remove 14047: drops from watchlist and wipes count from mockAltW
     local okRem1, _ = self:RemoveWatchItem(rawLink)
-    Assert(okRem1 == true and #CLIAltsDB.watchlist == 0, "RemoveWatchItem: removes item using link")
+    Assert(okRem1 == true and #ForeverAltsDB.watchlist == 0, "RemoveWatchItem: removes item using link")
     Assert(mockAltW.watchlistCounts[14047] == nil, "CleanWatchlistCounts: dropped removed item 14047 from character record")
 
-    CLIAltsDB.watchlist = oldWatchlist
-    CLIAltsDB.characters = oldCharsW
+    ForeverAltsDB.watchlist = oldWatchlist
+    ForeverAltsDB.characters = oldCharsW
 
     -- 9. Hearthstone Location, Stale Flag & Prune Tests
     -- 9a. Inactive calculation
@@ -323,21 +326,21 @@ function CLIAlts:RunSelfTest()
     Assert(isStaleLive == false, "IsCharStale: current player is NEVER flagged stale")
 
     -- 9d. Bulk prune identification
-    local oldCharsP = CLIAltsDB and CLIAltsDB.characters
-    CLIAltsDB.characters = { ["OldAlt"] = charOld, ["LiveChar"] = charLive }
+    local oldCharsP = ForeverAltsDB and ForeverAltsDB.characters
+    ForeverAltsDB.characters = { ["OldAlt"] = charOld, ["LiveChar"] = charLive }
     local pruneCount, pruneList = self:GetPrunableCharacters(30, T0)
     Assert(pruneCount == 1 and pruneList[1] == "OldAlt", "GetPrunableCharacters: identifies only OldAlt for pruning")
 
     -- 9e. Bulk prune execution
     local prunedCount, prunedNames = self:PruneCharacters(30, T0)
     Assert(prunedCount == 1 and prunedNames[1] == "OldAlt", "PruneCharacters: prunes OldAlt")
-    Assert(CLIAltsDB.characters["OldAlt"] == nil and CLIAltsDB.characters["LiveChar"] ~= nil, "PruneCharacters: removes OldAlt while preserving current player LiveChar")
+    Assert(ForeverAltsDB.characters["OldAlt"] == nil and ForeverAltsDB.characters["LiveChar"] ~= nil, "PruneCharacters: removes OldAlt while preserving current player LiveChar")
 
     -- 9f. Hearthstone location field
     local mockCharH = { name = "HearthAlt", bindLocation = "The Crossroads" }
     Assert(mockCharH.bindLocation == "The Crossroads", "Hearthstone: preserves bindLocation field")
 
-    CLIAltsDB.characters = oldCharsP
+    ForeverAltsDB.characters = oldCharsP
     self.curPlayerKey = nil
 
     -- 10. LibDataBroker Tests
@@ -425,16 +428,16 @@ function CLIAlts:RunSelfTest()
     end
 
     -- 11b. Compact Mode Toggle & Column Filtering
-    local oldCompact = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.compactMode
-    CLIAltsDB.settings.compactMode = false
+    local oldCompact = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.compactMode
+    ForeverAltsDB.settings.compactMode = false
     Assert(self:IsCompact() == false, "CompactMode: IsCompact reports false when disabled")
     self:ToggleCompact()
     Assert(self:IsCompact() == true, "CompactMode: ToggleCompact flips state to true")
 
     if self.GetColumns then
-        CLIAltsDB.settings.compactMode = false
+        ForeverAltsDB.settings.compactMode = false
         local fullCols2 = self:GetColumns(2)
-        CLIAltsDB.settings.compactMode = true
+        ForeverAltsDB.settings.compactMode = true
         local compCols2 = self:GetColumns(2)
         local hasEtaFull = false
         for _, col in ipairs(fullCols2) do if col.key == "eta" then hasEtaFull = true end end
@@ -443,15 +446,15 @@ function CLIAlts:RunSelfTest()
         Assert(hasEtaFull == true and hasEtaComp == false, "CompactMode: hides ETA column in Tab 2")
     end
 
-    CLIAltsDB.settings.compactMode = oldCompact
+    ForeverAltsDB.settings.compactMode = oldCompact
 
     do -- 11c. Phase 1: Design Tokens & Modern Frame Shell
-        local oldTheme = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.theme = "DARK"
+        local oldTheme = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.theme
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.theme = "DARK"
         end
 
-        Assert(self.TOKENS ~= nil and type(self.TOKENS) == "table", "Tokens: CLIAlts.TOKENS table defined")
+        Assert(self.TOKENS ~= nil and type(self.TOKENS) == "table", "Tokens: ForeverAlts.TOKENS table defined")
         Assert(self.TOKENS.bg == "0A0E17" or self.TOKENS.bg == "0F131A", "Tokens: default bg token is '0A0E17'")
         Assert(self.TOKENS.brand == "22D3EE" or self.TOKENS.brand == "E8B64A", "Tokens: default brand token is '22D3EE'")
         Assert(self.TOKENS.panel == "131A26" or self.TOKENS.panel == "171C26", "Tokens: default panel token is '131A26'")
@@ -461,7 +464,7 @@ function CLIAlts:RunSelfTest()
 
         local r, g, b, a = self:Hex("bg")
         Assert(math.abs(r - (15 / 255)) < 0.01 and math.abs(g - (19 / 255)) < 0.01 and a == 1,
-            "Hex: CLIAlts:Hex('bg') converts '0F131A' to correct RGBA floats")
+            "Hex: ForeverAlts:Hex('bg') converts '0F131A' to correct RGBA floats")
 
         -- Modern Main Frame Construction
         local modernFrame = self:RecreateMainFrame()
@@ -477,24 +480,24 @@ function CLIAlts:RunSelfTest()
         Assert(modernFrame.wealthWidget ~= nil, "ModernUI: wealth widget created in sidebar")
 
         -- Legacy UI Deprecation Verification: RecreateMainFrame always enforces Modern v2
-        CLIAltsDB.settings.legacyUI = true
+        ForeverAltsDB.settings.legacyUI = true
         local restoredModern = self:RecreateMainFrame()
         Assert(restoredModern ~= nil and restoredModern.isLegacyUI == false, "ModernUI: legacyUI setting deprecated; always creates modern frame")
         Assert(restoredModern:GetWidth() == 1440 and restoredModern:GetHeight() == 800,
             "ModernUI: base dimensions remain 1440x800")
-        Assert(CLIAltsDB.settings.legacyUI == nil, "ModernUI: legacyUI setting purged from CLIAltsDB")
+        Assert(ForeverAltsDB.settings.legacyUI == nil, "ModernUI: legacyUI setting purged from ForeverAltsDB")
         local rf = self:GetRowFrames()
         Assert(rf ~= nil and #rf == 12, "ModernUI: RecreateMainFrame preserves all 12 pooled rowFrames")
         Assert(restoredModern.rowFrames ~= nil and #restoredModern.rowFrames == 12, "ModernUI: restoredModern maintains rowFrames table")
 
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.theme = oldTheme
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.theme = oldTheme
         end
     end
 
     do -- 11d. Modern UI Mail Routing Management & Detail Panel
-        local oldChars = CLIAltsDB and CLIAltsDB.characters
-        CLIAltsDB.characters = CLIAltsDB.characters or {}
+        local oldChars = ForeverAltsDB and ForeverAltsDB.characters
+        ForeverAltsDB.characters = ForeverAltsDB.characters or {}
         local mockMule = {
             name = "ModernMule",
             fullName = "ModernMule-Forever",
@@ -507,7 +510,7 @@ function CLIAlts:RunSelfTest()
             supply_role = "Cloth (Tailor)",
             professions = { primary = { { name = "Tailoring", rank = 150 } } },
         }
-        CLIAltsDB.characters["ModernMule-Forever"] = mockMule
+        ForeverAltsDB.characters["ModernMule-Forever"] = mockMule
         self.selectedCharKey = "ModernMule-Forever"
 
         local mFrame = self:CreateMainFrame()
@@ -543,8 +546,8 @@ function CLIAlts:RunSelfTest()
         Assert(mFrame.detailPanel.mailCard.modeBadge ~= nil, "ModernMailUI: mailCard has modeBadge fontstring")
 
         -- Test Tab 7 Switch & Header/Action Bar visibility
-        local oldTab = CLIAltsDB.settings.activeTab
-        CLIAltsDB.settings.activeTab = 7
+        local oldTab = ForeverAltsDB.settings.activeTab
+        ForeverAltsDB.settings.activeTab = 7
         mFrame:Show()
         self:Render()
 
@@ -560,7 +563,7 @@ function CLIAlts:RunSelfTest()
         Assert(totalMpw <= 850, "ModernMailUI: Tab 7 columns total mpw fits in 854px container")
 
         -- Test switching back to Tab 1
-        CLIAltsDB.settings.activeTab = 1
+        ForeverAltsDB.settings.activeTab = 1
         self:Render()
         Assert(not mFrame.mailActionBar:IsShown(), "ModernMailUI: mailActionBar is hidden on Tab 1")
         Assert(mFrame.headerFrame:IsShown(), "ModernMailUI: headerFrame is shown on Tab 1")
@@ -571,8 +574,8 @@ function CLIAlts:RunSelfTest()
         Assert(dlg ~= nil and dlg:IsShown(), "ModernMailUI: ShowMailRouteDialog displays dialog")
         dlg:Hide()
 
-        CLIAltsDB.settings.activeTab = oldTab
-        CLIAltsDB.characters = oldChars
+        ForeverAltsDB.settings.activeTab = oldTab
+        ForeverAltsDB.characters = oldChars
         self.selectedCharKey = nil
     end
 
@@ -619,9 +622,9 @@ function CLIAlts:RunSelfTest()
         Assert(sCap:find("Capped") ~= nil and styleCap == "warn_fill", "StatusPill: Capped alt returns 'Capped' with warn_fill")
 
         -- Test Live Row Render with Mock Alt
-        local oldChars = CLIAltsDB and CLIAltsDB.characters
-        local oldTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
-        CLIAltsDB.characters = {
+        local oldChars = ForeverAltsDB and ForeverAltsDB.characters
+        local oldTab = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab
+        ForeverAltsDB.characters = {
             ["Thor-Pyrewood"] = {
                 name = "Thor",
                 fullName = "Thor-Pyrewood",
@@ -637,7 +640,7 @@ function CLIAlts:RunSelfTest()
                 lastUpdate = time() - 3600,
             }
         }
-        CLIAltsDB.settings.activeTab = 1
+        ForeverAltsDB.settings.activeTab = 1
         mFrame:Show()
         self:Render()
 
@@ -654,15 +657,15 @@ function CLIAlts:RunSelfTest()
         Assert(self.selectedCharKey == "Thor-Pyrewood", "RowList: Selection persists across render")
 
         -- Test Rested Tab (Tab 3) graphical progress bar
-        CLIAltsDB.settings.activeTab = 3
+        ForeverAltsDB.settings.activeTab = 3
         self:Render()
         Assert(r1.colRestBarBg ~= nil and r1.colRestBarBg:IsShown(), "RestedTab: Row 1 shows graphical colRestBarBg on Tab 3")
         Assert(r1.colRestBarFill ~= nil and (r1.colRestBarFill:GetWidth() or 0) > 0, "RestedTab: Row 1 colRestBarFill has non-zero width")
         Assert(r1.colRestLabel ~= nil and r1.colRestLabel:IsShown() and (r1.colRestLabel:GetText():find("CAP") ~= nil or r1.colRestLabel:GetText():lower():find("cap") ~= nil), "RestedTab: Row 1 colRestLabel displays cap status")
 
         -- Restore DB
-        CLIAltsDB.characters = oldChars
-        CLIAltsDB.settings.activeTab = oldTab
+        ForeverAltsDB.characters = oldChars
+        ForeverAltsDB.settings.activeTab = oldTab
         self.selectedCharKey = nil
     end
 
@@ -797,11 +800,11 @@ function CLIAlts:RunSelfTest()
         Assert(banner.emptyText ~= nil, "Phase 4: banner.emptyText exists")
 
         -- 1. Full 3-alt scenario matching Artboard B (Thor, Ragnar, Åse)
-        local oldChars = CLIAltsDB and CLIAltsDB.characters
-        local oldSettings = CLIAltsDB and CLIAltsDB.settings
+        local oldChars = ForeverAltsDB and ForeverAltsDB.characters
+        local oldSettings = ForeverAltsDB and ForeverAltsDB.settings
         local now = time()
 
-        CLIAltsDB.characters = {
+        ForeverAltsDB.characters = {
             ["Thor-Pyrewood"] = {
                 name = "Thor",
                 fullName = "Thor-Pyrewood",
@@ -839,7 +842,7 @@ function CLIAlts:RunSelfTest()
                 isResting = true,
             },
         }
-        CLIAltsDB.settings = { activeTab = 1, compact = false }
+        ForeverAltsDB.settings = { activeTab = 1, compact = false }
         mFrame:Show()
         self:Render()
 
@@ -876,7 +879,7 @@ function CLIAlts:RunSelfTest()
         Assert(self.selectedCharKey == "Ragnar-Pyrewood", "Phase 4: Clicking card 2 selects Ragnar-Pyrewood")
 
         -- 4. Headline Hides When n is 0
-        CLIAltsDB.characters = {
+        ForeverAltsDB.characters = {
             ["Ase-Pyrewood"] = {
                 name = "Åse",
                 fullName = "Ase-Pyrewood",
@@ -895,7 +898,7 @@ function CLIAlts:RunSelfTest()
         Assert(banner.cards[1]:IsShown() == true, "Phase 4: Card 1 still shown when n=0")
 
         -- 5. Empty State ("Nothing is being wasted")
-        CLIAltsDB.characters = {}
+        ForeverAltsDB.characters = {}
         self:Render()
         Assert(banner.emptyText:IsShown() == true, "Phase 4: Empty state text is shown when roster empty")
         Assert(banner.emptyText:GetText() == "Nothing is being wasted", "Phase 4: Empty state shows 'Nothing is being wasted'")
@@ -903,8 +906,8 @@ function CLIAlts:RunSelfTest()
         Assert(banner.headline:IsShown() == false, "Phase 4: Headline hidden in empty state")
 
         -- Restore DB
-        CLIAltsDB.characters = oldChars
-        CLIAltsDB.settings = oldSettings
+        ForeverAltsDB.characters = oldChars
+        ForeverAltsDB.settings = oldSettings
         self.selectedCharKey = nil
     end
 
@@ -912,8 +915,8 @@ function CLIAlts:RunSelfTest()
         local mFrame = self:CreateModernMainFrame()
         mFrame:Show()
 
-        local oldChars = CLIAltsDB and CLIAltsDB.characters
-        local oldSettings = CLIAltsDB and CLIAltsDB.settings
+        local oldChars = ForeverAltsDB and ForeverAltsDB.characters
+        local oldSettings = ForeverAltsDB and ForeverAltsDB.settings
         local now = time()
 
         -- Mock dataset: 4 alts
@@ -921,7 +924,7 @@ function CLIAlts:RunSelfTest()
         -- Alt 2 (Horde, level 60, max level, 1 reset raid lockout)
         -- Alt 3 (Alliance, level 41, capped & losing XP, no note)
         -- Alt 4 (Alliance, level 25, accruing, no note)
-        CLIAltsDB.characters = {
+        ForeverAltsDB.characters = {
             ["HordeAlpha"] = {
                 name = "HordeAlpha",
                 fullName = "HordeAlpha-Realm",
@@ -980,7 +983,7 @@ function CLIAlts:RunSelfTest()
                 isResting = true,
             },
         }
-        CLIAltsDB.settings = { activeTab = 1, compact = false, sortBy = "rested" }
+        ForeverAltsDB.settings = { activeTab = 1, compact = false, sortBy = "rested" }
 
         -- 1. Test GetCharactersList filter query additions
         local listAll = self:GetCharactersList()
@@ -1087,13 +1090,13 @@ function CLIAlts:RunSelfTest()
         -- 8. Test Sort Button
         Assert(mFrame.btnSort ~= nil, "Phase 5: Sort button exists")
         Assert(mFrame.btnSort.label:GetText():find("Sort:") ~= nil, "Phase 5: Sort button displays 'Sort: ...'")
-        local initSort = CLIAltsDB.settings.sortBy
+        local initSort = ForeverAltsDB.settings.sortBy
         mFrame.btnSort:GetScript("OnClick")(mFrame.btnSort)
-        Assert(CLIAltsDB.settings.sortBy ~= initSort, "Phase 5: Clicking Sort button cycles sort")
+        Assert(ForeverAltsDB.settings.sortBy ~= initSort, "Phase 5: Clicking Sort button cycles sort")
 
         -- Restore DB & State
-        CLIAltsDB.characters = oldChars
-        CLIAltsDB.settings = oldSettings
+        ForeverAltsDB.characters = oldChars
+        ForeverAltsDB.settings = oldSettings
         self.activeFilter = nil
         self._cachedSidebarBadges = nil
         mFrame.searchBox:SetText("")
@@ -1103,8 +1106,8 @@ function CLIAlts:RunSelfTest()
         local mFrame = self:CreateModernMainFrame()
         mFrame:Show()
 
-        local oldChars = CLIAltsDB and CLIAltsDB.characters
-        local oldSettings = CLIAltsDB and CLIAltsDB.settings
+        local oldChars = ForeverAltsDB and ForeverAltsDB.characters
+        local oldSettings = ForeverAltsDB and ForeverAltsDB.settings
         local oldSelected = self.selectedCharKey
         local now = time()
 
@@ -1112,7 +1115,7 @@ function CLIAlts:RunSelfTest()
         -- Alt 1 (Horde, level 47, capped rested XP with 2d waste, has note, Alchemy 300, First Aid 300, ready transmute CD)
         -- Alt 2 (Alliance, level 60, max level, Molten Core lockout, no note)
         -- Alt 3 (Alliance, level 25, accruing rested XP, wild logout, no professions)
-        CLIAltsDB.characters = {
+        ForeverAltsDB.characters = {
             ["HordeAlpha"] = {
                 name = "HordeAlpha",
                 fullName = "HordeAlpha-Realm",
@@ -1178,7 +1181,7 @@ function CLIAlts:RunSelfTest()
             },
         }
         self:InvalidateRestedCache()
-        CLIAltsDB.settings = { activeTab = 1, compact = false, foreverMode = false, sortBy = "name", sortAsc = true }
+        ForeverAltsDB.settings = { activeTab = 1, compact = false, foreverMode = false, sortBy = "name", sortAsc = true }
 
         -- 1. Verify detailPanel and its component cards exist
         local dp = mFrame.detailPanel
@@ -1248,7 +1251,7 @@ function CLIAlts:RunSelfTest()
         -- 5. Test Action Buttons on detailPanel
         -- 5a. Plan session button executes 'plan 2'
         dp.btnPlan:GetScript("OnClick")(dp.btnPlan)
-        local hist = CLIAltsDB.commandHistory or {}
+        local hist = ForeverAltsDB.commandHistory or {}
         Assert(hist[#hist] == "plan 2", "Phase 6: btnPlan executed 'plan 2'")
 
         -- 5b. Edit note button sets promptBox text and focuses
@@ -1337,35 +1340,35 @@ function CLIAlts:RunSelfTest()
         -- Standard mode: ShowDossierPopup updates selection & detail panel without opening popup
         local curDossier = self.GetDossierPopup and self:GetDossierPopup()
         if curDossier then curDossier:Hide() end
-        self:ShowDossierPopup(CLIAltsDB.characters["HordeAlpha"])
+        self:ShowDossierPopup(ForeverAltsDB.characters["HordeAlpha"])
         Assert(self.selectedCharKey == "HordeAlpha-Realm" or self.selectedCharKey == "HordeAlpha", "Phase 6: ShowDossierPopup in standard mode updates selectedCharKey")
         Assert(dp.name:GetText():find("HordeAlpha") ~= nil, "Phase 6: ShowDossierPopup in standard mode updates detail panel")
         Assert(curDossier == nil or curDossier:IsShown() == false, "Phase 6: ShowDossierPopup in standard mode does NOT show floating dossierPopup")
 
         -- Compact mode: ShowDossierPopup opens floating dossierPopup
-        CLIAltsDB.settings.compact = true
-        self:ShowDossierPopup(CLIAltsDB.characters["AllyBeta"])
+        ForeverAltsDB.settings.compact = true
+        self:ShowDossierPopup(ForeverAltsDB.characters["AllyBeta"])
         local compDossier = self.GetDossierPopup and self:GetDossierPopup()
         Assert(compDossier ~= nil and compDossier:IsShown() == true, "Phase 6: ShowDossierPopup in compact mode opens floating dossierPopup")
         compDossier:Hide()
 
         -- Restore DB & State
-        CLIAltsDB.characters = oldChars
-        CLIAltsDB.settings = oldSettings
+        ForeverAltsDB.characters = oldChars
+        ForeverAltsDB.settings = oldSettings
         self.selectedCharKey = oldSelected
     end
 
     -- 11j. Phase 7: Command Bar & Onboarding Tour Engine Tests
     do
-        local oldSettings = CLIAltsDB.settings
-        local oldChars = CLIAltsDB.characters
-        CLIAltsDB.settings = {
+        local oldSettings = ForeverAltsDB.settings
+        local oldChars = ForeverAltsDB.characters
+        ForeverAltsDB.settings = {
             theme = "BLIZZARD",
             tourDone = nil,
             activeTab = 1,
             sortAsc = true,
         }
-        CLIAltsDB.characters = {
+        ForeverAltsDB.characters = {
             ["TestAlt"] = {
                 name = "TestAlt",
                 realm = "Realm",
@@ -1417,7 +1420,7 @@ function CLIAlts:RunSelfTest()
         onFocusLost(mFrame.promptBox)
 
         -- History UP/DOWN arrows in promptBox
-        CLIAltsDB.commandHistory = { "first_cmd", "second_cmd", "third_cmd" }
+        ForeverAltsDB.commandHistory = { "first_cmd", "second_cmd", "third_cmd" }
         local onArrowScript = mFrame.promptBox:GetScript("OnArrowPressed")
         Assert(type(onArrowScript) == "function", "Phase 7: promptBox has OnArrowPressed handler")
         onArrowScript(mFrame.promptBox, "UP")
@@ -1437,10 +1440,10 @@ function CLIAlts:RunSelfTest()
         Assert(mFrame.promptBox:GetText() == "digest ", "Phase 7: AutoCompletePrompt autocompletes 'dig' to 'digest '")
 
         -- 3. Onboarding Tour Engine: StartTour and Stepping
-        CLIAltsDB.settings.tourDone = nil
+        ForeverAltsDB.settings.tourDone = nil
         self:StartTour()
         Assert(self.currentTourStep == 1, "Phase 7: StartTour initializes at step 1")
-        Assert(CLIAltsDB.settings.tourDone == true, "Phase 7: StartTour flags CLIAltsDB.settings.tourDone = true")
+        Assert(ForeverAltsDB.settings.tourDone == true, "Phase 7: StartTour flags ForeverAltsDB.settings.tourDone = true")
 
         local hl = self:GetTourHighlight()
         local card = self:GetTourCard()
@@ -1479,7 +1482,7 @@ function CLIAlts:RunSelfTest()
         Assert(self.currentTourStep == nil, "Phase 7: Clicking Finish on step 3 completes tour and clears currentTourStep")
         Assert(hl:IsShown() == false, "Phase 7: Tour highlight hides upon finishing")
         Assert(card:IsShown() == false, "Phase 7: Tour card hides upon finishing")
-        Assert(CLIAltsDB.settings.tourDone == true, "Phase 7: tourDone remains true after finish")
+        Assert(ForeverAltsDB.settings.tourDone == true, "Phase 7: tourDone remains true after finish")
 
         -- 4. Tour Replay via /ca tour slash command
         SlashCmdList["CLIALTS"]("tour")
@@ -1510,14 +1513,14 @@ function CLIAlts:RunSelfTest()
         mFrame:Show()
 
         -- Restore State
-        CLIAltsDB.settings = oldSettings
-        CLIAltsDB.characters = oldChars
+        ForeverAltsDB.settings = oldSettings
+        ForeverAltsDB.characters = oldChars
     end
 
     -- 11k. Dedicated Settings Dialog Tests
     do
-        local oldSettings = CLIAltsDB.settings
-        CLIAltsDB.settings = {
+        local oldSettings = ForeverAltsDB.settings
+        ForeverAltsDB.settings = {
             theme = "BLIZZARD",
             fontSize = 18,
             scale = 1.0,
@@ -1562,29 +1565,29 @@ function CLIAlts:RunSelfTest()
         end
         Assert(btnAmber ~= nil, "SettingsUI: Found Amber theme button")
         btnAmber:GetScript("OnClick")(btnAmber)
-        Assert(CLIAltsDB.settings.theme == "AMBER", "SettingsUI: Clicking theme button updates theme to AMBER")
+        Assert(ForeverAltsDB.settings.theme == "AMBER", "SettingsUI: Clicking theme button updates theme to AMBER")
         Assert(btnAmber.isSelected == true, "SettingsUI: Selected theme button has isSelected = true")
 
         -- Test clicking font button (e.g. 20px)
         local btnFont20 = sd.fontButtons[5]
         btnFont20:GetScript("OnClick")(btnFont20)
-        Assert(CLIAltsDB.settings.fontSize == 20, "SettingsUI: Clicking font button updates fontSize to 20")
-        Assert(CLIAltsDB.settings.scale >= 1.15, "SettingsUI: Increasing font size increases panel scale")
+        Assert(ForeverAltsDB.settings.fontSize == 20, "SettingsUI: Clicking font button updates fontSize to 20")
+        Assert(ForeverAltsDB.settings.scale >= 1.15, "SettingsUI: Increasing font size increases panel scale")
 
         -- Test clicking scale button (e.g. 115%)
         local btnScale115 = sd.scaleButtons[4]
         btnScale115:GetScript("OnClick")(btnScale115)
-        Assert(math.abs(CLIAltsDB.settings.scale - 1.15) < 0.01, "SettingsUI: Clicking scale button updates scale to 1.15")
+        Assert(math.abs(ForeverAltsDB.settings.scale - 1.15) < 0.01, "SettingsUI: Clicking scale button updates scale to 1.15")
 
         -- Test Audio SFX toggle
         sd.btnAudio:GetScript("OnClick")(sd.btnAudio)
-        Assert(CLIAltsDB.settings.soundDisabled == true, "SettingsUI: Audio toggle disables sound")
+        Assert(ForeverAltsDB.settings.soundDisabled == true, "SettingsUI: Audio toggle disables sound")
 
         -- Test Reset Defaults
         sd.btnReset:GetScript("OnClick")(sd.btnReset)
-        Assert(CLIAltsDB.settings.theme == "DEFAULT", "SettingsUI: Reset defaults restores theme to DEFAULT")
-        Assert(CLIAltsDB.settings.fontSize == 18, "SettingsUI: Reset defaults restores font to 18")
-        Assert(math.abs(CLIAltsDB.settings.scale - 1.0) < 0.01, "SettingsUI: Reset defaults restores scale to 1.0")
+        Assert(ForeverAltsDB.settings.theme == "DEFAULT", "SettingsUI: Reset defaults restores theme to DEFAULT")
+        Assert(ForeverAltsDB.settings.fontSize == 18, "SettingsUI: Reset defaults restores font to 18")
+        Assert(math.abs(ForeverAltsDB.settings.scale - 1.0) < 0.01, "SettingsUI: Reset defaults restores scale to 1.0")
 
         -- Test Close button
         sd.btnClose:GetScript("OnClick")(sd.btnClose)
@@ -1595,14 +1598,14 @@ function CLIAlts:RunSelfTest()
         Assert(sd:IsShown() == true, "SettingsUI: /clialts settings opens settings dialog")
         sd:Hide()
 
-        CLIAltsDB.settings = oldSettings
+        ForeverAltsDB.settings = oldSettings
     end
 
-    -- 12. Live Path Integration Test (Fake CLIAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
-    local backupDB = CLIAltsDB
+    -- 12. Live Path Integration Test (Fake ForeverAltsDB: GetCharactersList -> GetRestedData -> GenerateLevelingPlan)
+    local backupDB = ForeverAltsDB
     local liveTestOk, liveTestErr = pcall(function()
         local testTime = 1700000000
-        CLIAltsDB = {
+        ForeverAltsDB = {
             settings = {
                 restedBurnRatio = 0.5,
                 wellRestedRank = 0,
@@ -1663,7 +1666,7 @@ function CLIAlts:RunSelfTest()
         }
 
         local list = self:GetCharactersList()
-        Assert(#list == 3, "LivePath: GetCharactersList retrieves all 3 characters from fake CLIAltsDB")
+        Assert(#list == 3, "LivePath: GetCharactersList retrieves all 3 characters from fake ForeverAltsDB")
 
         local thorChar = list[3]
         local restedThor = self:GetRestedData(thorChar, false, testTime)
@@ -1683,7 +1686,7 @@ function CLIAlts:RunSelfTest()
         end
         Assert(aseFound ~= nil and aseFound.isFallbackRate == true, "LivePath: Unobserved alt marked as fallback rate (~)")
     end)
-    CLIAltsDB = backupDB
+    ForeverAltsDB = backupDB; ForeverAltsDB = ForeverAltsDB
     if not liveTestOk then
         Assert(false, "LivePath: Exception during live path integration test: " .. tostring(liveTestErr))
     end
@@ -1696,26 +1699,26 @@ function CLIAlts:RunSelfTest()
         settings = { theme = "AMBER" },
         dbVersion = 3,
     }
-    local oldLiveDB = CLIAltsDB
-    CLIAltsDB = testBackupDB
+    local oldLiveDB = ForeverAltsDB
+    ForeverAltsDB = testBackupDB; ForeverAltsDB = ForeverAltsDB
 
     -- 13a. Create backup
     local okB1, _ = self:BackupDB("test")
-    Assert(okB1 == true and CLIAltsDB.backup ~= nil, "BackupDB: creates backup slot in CLIAltsDB.backup")
-    Assert(CLIAltsDB.backup.characters ~= nil and CLIAltsDB.backup.characters["TestHero"] ~= nil, "BackupDB: backup contains copy of character data")
+    Assert(okB1 == true and ForeverAltsDB.backup ~= nil, "BackupDB: creates backup slot in ForeverAltsDB.backup")
+    Assert(ForeverAltsDB.backup.characters ~= nil and ForeverAltsDB.backup.characters["TestHero"] ~= nil, "BackupDB: backup contains copy of character data")
 
     -- 13b. Modifying live DB does not mutate backup slot (deep copy isolation)
-    CLIAltsDB.characters["TestHero"].level = 25
-    CLIAltsDB.characters["NewAlt"] = { name = "NewAlt", level = 1 }
-    Assert(CLIAltsDB.backup.characters["TestHero"].level == 20, "BackupDB: deep copy isolates backup from live character mutation")
-    Assert(CLIAltsDB.backup.characters["NewAlt"] == nil, "BackupDB: deep copy isolates backup from new alt additions")
+    ForeverAltsDB.characters["TestHero"].level = 25
+    ForeverAltsDB.characters["NewAlt"] = { name = "NewAlt", level = 1 }
+    Assert(ForeverAltsDB.backup.characters["TestHero"].level == 20, "BackupDB: deep copy isolates backup from live character mutation")
+    Assert(ForeverAltsDB.backup.characters["NewAlt"] == nil, "BackupDB: deep copy isolates backup from new alt additions")
 
     -- 13c. RestoreDB restores previous state and preserves backup slot
     local okR1, _ = self:RestoreDB()
     Assert(okR1 == true, "RestoreDB: executes restore cleanly")
-    Assert(CLIAltsDB.characters["TestHero"].level == 20, "RestoreDB: character restored to backup level 20")
-    Assert(CLIAltsDB.characters["NewAlt"] == nil, "RestoreDB: removed unbacked alt upon restore")
-    Assert(CLIAltsDB.backup ~= nil, "RestoreDB: preserves one-slot backup after restore")
+    Assert(ForeverAltsDB.characters["TestHero"].level == 20, "RestoreDB: character restored to backup level 20")
+    Assert(ForeverAltsDB.characters["NewAlt"] == nil, "RestoreDB: removed unbacked alt upon restore")
+    Assert(ForeverAltsDB.backup ~= nil, "RestoreDB: preserves one-slot backup after restore")
 
     -- 14. UI & Slash Command Integration Tests (/clialts, /clialts help, minimap click)
     if SlashCmdList and SlashCmdList["CLIALTS"] then
@@ -1732,14 +1735,14 @@ function CLIAlts:RunSelfTest()
         Assert(helpOk == true, "SlashCommand: /clialts help opens help popup without error")
 
         -- 14c. Slash command with 'theme synthwave' sets theme cleanly
-        local oldTheme = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme
+        local oldTheme = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.theme
         local synOk, synErr = pcall(function()
             SlashCmdList["CLIALTS"]("theme synthwave")
         end)
         Assert(synOk == true, "SlashCommand: /clialts theme synthwave executes cleanly: " .. tostring(synErr))
-        Assert(CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme == "SYNTHWAVE", "SlashCommand: /clialts theme synthwave sets theme to SYNTHWAVE")
-        if oldTheme and CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.theme = oldTheme
+        Assert(ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.theme == "SYNTHWAVE", "SlashCommand: /clialts theme synthwave sets theme to SYNTHWAVE")
+        if oldTheme and ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.theme = oldTheme
             if self.ApplyTheme then self:ApplyTheme() end
         end
     end
@@ -1797,9 +1800,9 @@ function CLIAlts:RunSelfTest()
     Assert(self:IsRetail() == true, "IsRetail: returns true when isRetailOverride is true")
     Assert(self:GetClientFlavor() == "Retail", "GetClientFlavor: returns 'Retail' when overridden")
 
-    local oldR = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.wellRestedRank
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.wellRestedRank = 5
+    local oldR = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.wellRestedRank
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.wellRestedRank = 5
     end
     local charInn = { maxXP = 20000, restedXP = 0, lastUpdate = T0, loggedOutInRestZone = true }
     local restedRetail = self:GetRestedData(charInn, true, T0 + 28800)
@@ -1809,10 +1812,10 @@ function CLIAlts:RunSelfTest()
 
     -- 16c. Guard against perk rank modification in Retail
     self:SetWellRestedRank(3)
-    Assert(CLIAltsDB.settings.wellRestedRank == 5, "SetWellRestedRank: guards against modifying perk rank on Retail")
+    Assert(ForeverAltsDB.settings.wellRestedRank == 5, "SetWellRestedRank: guards against modifying perk rank on Retail")
 
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.wellRestedRank = oldR
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.wellRestedRank = oldR
     end
     self.isRetailOverride = nil
     Assert(self:IsRetail() == false, "IsRetail: resets cleanly when isRetailOverride is cleared")
@@ -1848,7 +1851,7 @@ function CLIAlts:RunSelfTest()
     Assert(charRank0.wellRestedRank == 4, "SetWellRestedRank: sets AltZero directly to Rank 4")
     Assert(charRank5.wellRestedRank == 5, "SetWellRestedRank: AltFive remains isolated at Rank 5")
 
-    CLIAltsDB = oldLiveDB
+    ForeverAltsDB = oldLiveDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 17. Cross-Character Inventory Scanner & Tooltip Summary Tests (Feature 6)
@@ -1887,8 +1890,8 @@ function CLIAlts:RunSelfTest()
             },
         },
     }
-    local oldInvTestDB = CLIAltsDB
-    CLIAltsDB = testInvDB
+    local oldInvTestDB = ForeverAltsDB
+    ForeverAltsDB = testInvDB; ForeverAltsDB = ForeverAltsDB
 
     -- 17a. GetItemInventorySummary aggregates all alts
     local totRune, breakRune, idRune = self:GetItemInventorySummary(14047)
@@ -1936,7 +1939,7 @@ function CLIAlts:RunSelfTest()
         Assert(#mockTooltip.lines == 4, "AddInventoryInfoToTooltip: prevents duplicate lines on re-entry")
 
         -- 17f. Settings toggle showInventoryTooltips = false disables tooltip lines
-        CLIAltsDB.settings.showInventoryTooltips = false
+        ForeverAltsDB.settings.showInventoryTooltips = false
         local mockTooltip2 = {
             lines = {},
             shown = false,
@@ -1947,7 +1950,7 @@ function CLIAlts:RunSelfTest()
         }
         self:AddInventoryInfoToTooltip(mockTooltip2, 14047)
         Assert(#mockTooltip2.lines == 0, "AddInventoryInfoToTooltip: does not add lines when showInventoryTooltips is false")
-        CLIAltsDB.settings.showInventoryTooltips = true
+        ForeverAltsDB.settings.showInventoryTooltips = true
 
         -- Verify internal scan tooltips are ignored to prevent C stack overflow recursion
         local scanTipMock = {
@@ -1972,7 +1975,7 @@ function CLIAlts:RunSelfTest()
     Assert(mergedInv[14047] and mergedInv[14047].bank == 80, "CollectInventory: preserves existing bank count for item 14047")
     Assert(mergedInv[2447] and mergedInv[2447].bank == 20, "CollectInventory: preserves existing bank count for item 2447")
 
-    CLIAltsDB = oldInvTestDB
+    ForeverAltsDB = oldInvTestDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 18. WoW Forever Cohort & Role Categorization Tests (Component 1)
@@ -1989,8 +1992,8 @@ function CLIAlts:RunSelfTest()
             ["New-Realm"]  = { name = "New",  level = 10, tier = "UNASSIGNED", target_level = 60 },
         },
     }
-    local oldCohortDB = CLIAltsDB
-    CLIAltsDB = testCohortDB
+    local oldCohortDB = ForeverAltsDB
+    ForeverAltsDB = testCohortDB; ForeverAltsDB = ForeverAltsDB
 
     -- 18a. IsForeverMode and ToggleForeverMode
     Assert(self:IsForeverMode() == true, "Cohort: IsForeverMode returns true when enabled")
@@ -2057,7 +2060,7 @@ function CLIAlts:RunSelfTest()
         "Cohort: SetCharacterCohort 'unassign' alias maps to UNASSIGNED with default target level 60")
     testCohortDB.characters["Arthas-Forever"] = nil
 
-    CLIAltsDB = oldCohortDB
+    ForeverAltsDB = oldCohortDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 19. WoW Forever Smart Rotation Recommendation & Usable Rested Ranking Tests (Component 2)
@@ -2074,8 +2077,8 @@ function CLIAlts:RunSelfTest()
             ["BankMule"]     = { name = "BankMule",     level = 1,  maxXP = 400,   restedXP = 600,   lastUpdate = 1000000, tier = "BANK", target_level = 1, isResting = true },
         },
     }
-    local oldRotDB = CLIAltsDB
-    CLIAltsDB = testRotDB
+    local oldRotDB = ForeverAltsDB
+    ForeverAltsDB = testRotDB; ForeverAltsDB = ForeverAltsDB
 
     -- 19a. CalculateRotationScore classifications
     local scoreBank = self:CalculateRotationScore(testRotDB.characters["BankMule"], 1000000)
@@ -2112,8 +2115,8 @@ function CLIAlts:RunSelfTest()
 
     -- 19e. Dossier Popup modal rendering resilience
     if self.ShowDossierPopup then
-        local savedCompact = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.compact
-        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.compact = true end
+        local savedCompact = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.compact
+        if ForeverAltsDB and ForeverAltsDB.settings then ForeverAltsDB.settings.compact = true end
         self:ShowDossierPopup(testRotDB.characters["CoreLeveling"])
         local dp = self.GetDossierPopup and self:GetDossierPopup()
         Assert(dp ~= nil, "Dossier: dossierPopup frame created")
@@ -2140,10 +2143,10 @@ function CLIAlts:RunSelfTest()
             dp:Hide()
             Assert(dp:IsShown() == false, "Dossier: popup successfully closed")
         end
-        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.compact = savedCompact end
+        if ForeverAltsDB and ForeverAltsDB.settings then ForeverAltsDB.settings.compact = savedCompact end
     end
 
-    CLIAltsDB = oldRotDB
+    ForeverAltsDB = oldRotDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do
@@ -2198,7 +2201,7 @@ function CLIAlts:RunSelfTest()
 
     do
     -- 21. Main Dashboard Redesign: Roster Summary Metrics and Profession Sorting
-    local oldDashDB = CLIAltsDB
+    local oldDashDB = ForeverAltsDB
     local testDashDB = {
         settings = {
             sortBy = "level",
@@ -2242,7 +2245,7 @@ function CLIAlts:RunSelfTest()
             },
         },
     }
-    CLIAltsDB = testDashDB
+    ForeverAltsDB = testDashDB; ForeverAltsDB = ForeverAltsDB
 
     -- 21a. GetRosterSummaryMetrics calculation accuracy
     local metrics = self:GetRosterSummaryMetrics()
@@ -2300,11 +2303,11 @@ function CLIAlts:RunSelfTest()
         end
     end
 
-    CLIAltsDB = oldDashDB
+    ForeverAltsDB = oldDashDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 22. WoW Forever Automated Dungeon Quest Tracker Tests (Component 4)
-    local oldDngDB = CLIAltsDB
+    local oldDngDB = ForeverAltsDB
     local testDngDB = {
         settings = {
             foreverMode = true,
@@ -2374,7 +2377,7 @@ function CLIAlts:RunSelfTest()
             },
         },
     }
-    CLIAltsDB = testDngDB
+    ForeverAltsDB = testDngDB; ForeverAltsDB = ForeverAltsDB
 
     -- 22a. Dungeon static data structure
     Assert(self.DUNGEON_DATA ~= nil, "Dungeons: DUNGEON_DATA table defined")
@@ -2434,11 +2437,11 @@ function CLIAlts:RunSelfTest()
     local fbAll, okAll = self:PrintDungeonReadiness("")
     Assert(okAll == true and fbAll == "Dungeon overview printed.", "Dungeons: PrintDungeonReadiness('') prints general overview")
 
-    CLIAltsDB = oldDngDB
+    ForeverAltsDB = oldDngDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 23. WoW Forever Inter-Alt Mail & Supply Chain Router Tests (Component 5)
-    local oldMailDB = CLIAltsDB
+    local oldMailDB = ForeverAltsDB
     local testMailDB = {
         settings = {
             foreverMode = true,
@@ -2507,7 +2510,7 @@ function CLIAlts:RunSelfTest()
             },
         },
     }
-    CLIAltsDB = testMailDB
+    ForeverAltsDB = testMailDB; ForeverAltsDB = ForeverAltsDB
 
     -- 23a. Crafter lookup
     local tailor = self:FindBestCrafterForTrade("Tailoring")
@@ -2764,11 +2767,11 @@ function CLIAlts:RunSelfTest()
     self.GetNumContainerSlots = oldGetNumSlots
     self.GetItemInfo = nil
 
-    CLIAltsDB = oldMailDB
+    ForeverAltsDB = oldMailDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 24. WoW Forever Legacy Point (LP) Progress Tracker Tests (Component 6)
-    local oldLpDB = CLIAltsDB
+    local oldLpDB = ForeverAltsDB
     local testLpDB = {
         settings = {
             foreverMode = true,
@@ -2832,7 +2835,7 @@ function CLIAlts:RunSelfTest()
             },
         },
     }
-    CLIAltsDB = testLpDB
+    ForeverAltsDB = testLpDB; ForeverAltsDB = ForeverAltsDB
 
     -- 24a. Character LP calculations
     local novPts, _ = self:CalculateCharacterLP(testLpDB.characters["Novice-Forever"])
@@ -2891,18 +2894,18 @@ function CLIAlts:RunSelfTest()
     local expChar = self:FindCharacter("Expert")
     Assert(self:GetWellRestedRank(expChar) == 0, "LP: Expert remains at Rank 0 when Journeyman is set to Rank 3")
 
-    CLIAltsDB = oldLpDB
+    ForeverAltsDB = oldLpDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 25. Bag Auto-Sort & Consolidation Engine Tests
-    local oldSortDB = CLIAltsDB
+    local oldSortDB = ForeverAltsDB
     local testSortDB = {
         settings = {
             showBagSortButton = true,
         },
         characters = {},
     }
-    CLIAltsDB = testSortDB
+    ForeverAltsDB = testSortDB; ForeverAltsDB = ForeverAltsDB
 
     do -- 25a. Item sorting scores and categories
         local _, _, emptyScore = self:GetItemSortScore(nil, 0)
@@ -2996,11 +2999,11 @@ function CLIAlts:RunSelfTest()
     Assert(sortBtn.label ~= nil, "InitBagSortButton: Button contains label fontstring")
 
     local toggleOff = self:ToggleBagSortButton(false)
-    Assert(toggleOff == false and CLIAltsDB.settings.showBagSortButton == false, "ToggleBagSortButton(false) disables setting")
+    Assert(toggleOff == false and ForeverAltsDB.settings.showBagSortButton == false, "ToggleBagSortButton(false) disables setting")
     Assert(sortBtn:IsShown() == false, "ToggleBagSortButton(false) hides button")
 
     local toggleOn = self:ToggleBagSortButton(true)
-    Assert(toggleOn == true and CLIAltsDB.settings.showBagSortButton == true, "ToggleBagSortButton(true) enables setting")
+    Assert(toggleOn == true and ForeverAltsDB.settings.showBagSortButton == true, "ToggleBagSortButton(true) enables setting")
     Assert(sortBtn:IsShown() == true, "ToggleBagSortButton(true) shows button")
 
     -- 25e. Bag Sort Button anchor switching between Combined Bags and Separate Bags
@@ -3032,11 +3035,11 @@ function CLIAlts:RunSelfTest()
     end
 
     -- Clean up mocks
-    CLIAltsDB = oldSortDB
+    ForeverAltsDB = oldSortDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 26. Mail Supply Chain Auto-Fill Engine Tests
-    local oldMailDB = CLIAltsDB
+    local oldMailDB = ForeverAltsDB
     local testMailDB = {
         settings = {
             showMailAutoFillButton = true,
@@ -3063,7 +3066,7 @@ function CLIAlts:RunSelfTest()
             },
         },
     }
-    CLIAltsDB = testMailDB
+    ForeverAltsDB = testMailDB; ForeverAltsDB = ForeverAltsDB
     self.curPlayerFullName = "Sender-Forever"
 
     -- Mock items in bags: Wool Cloth (itemID 2592) in bag 0 slot 1
@@ -3107,7 +3110,7 @@ function CLIAlts:RunSelfTest()
     Assert(fillWho == "TailorAlt-Forever", "MailAutoFill: Filled recipient TailorAlt-Forever")
     Assert(fillCount == 1, "MailAutoFill: Attached 1 item")
     Assert(SendMailNameEditBox:GetText() == "TailorAlt-Forever", "MailAutoFill: SendMailNameEditBox contains TailorAlt-Forever")
-    Assert(SendMailSubjectEditBox:GetText():find("ForeverAlts:") ~= nil or SendMailSubjectEditBox:GetText():find("CLIAlts:") ~= nil, "MailAutoFill: SendMailSubjectEditBox set with ForeverAlts prefix")
+    Assert(SendMailSubjectEditBox:GetText():find("ForeverAlts:") ~= nil or SendMailSubjectEditBox:GetText():find("ForeverAlts:") ~= nil, "MailAutoFill: SendMailSubjectEditBox set with ForeverAlts prefix")
 
     -- 26b2. Live mode attachment test via PickupContainerItem and ClickSendMailItemButton
     local pickedBag, pickedSlot, clickedSlot
@@ -3134,11 +3137,11 @@ function CLIAlts:RunSelfTest()
     Assert(mailBtn.label ~= nil, "InitMailAutoFillButton: Button has label fontstring")
 
     local toggleOff = self:ToggleMailAutoFillButton(false)
-    Assert(toggleOff == false and CLIAltsDB.settings.showMailAutoFillButton == false, "ToggleMailAutoFillButton(false) disables setting")
+    Assert(toggleOff == false and ForeverAltsDB.settings.showMailAutoFillButton == false, "ToggleMailAutoFillButton(false) disables setting")
     Assert(mailBtn:IsShown() == false, "ToggleMailAutoFillButton(false) hides button")
 
     local toggleOn = self:ToggleMailAutoFillButton(true)
-    Assert(toggleOn == true and CLIAltsDB.settings.showMailAutoFillButton == true, "ToggleMailAutoFillButton(true) enables setting")
+    Assert(toggleOn == true and ForeverAltsDB.settings.showMailAutoFillButton == true, "ToggleMailAutoFillButton(true) enables setting")
     Assert(mailBtn:IsShown() == true, "ToggleMailAutoFillButton(true) shows button")
 
     -- Clean up mocks
@@ -3146,11 +3149,11 @@ function CLIAlts:RunSelfTest()
     self.GetNumContainerSlots = oldGetNumSlots
     self.GetItemInfo = nil
     SendMailFrame:Hide()
-    CLIAltsDB = oldMailDB
+    ForeverAltsDB = oldMailDB; ForeverAltsDB = ForeverAltsDB
     end
 
     do -- 27. Consumable Filtering & Mail Ignore List Engine Tests
-    local oldIgnoreDB = CLIAltsDB
+    local oldIgnoreDB = ForeverAltsDB
     local testIgnoreDB = {
         settings = {
             ignoredMailItems = {},
@@ -3184,7 +3187,7 @@ function CLIAlts:RunSelfTest()
             },
         },
     }
-    CLIAltsDB = testIgnoreDB
+    ForeverAltsDB = testIgnoreDB; ForeverAltsDB = ForeverAltsDB
     self.curPlayerFullName = "SenderMain"
 
     self.GetItemInfo = function(selfOrID, id)
@@ -3247,13 +3250,13 @@ function CLIAlts:RunSelfTest()
 
     -- 27h. ToggleAutoMailConsumables
     local enabled = self:ToggleAutoMailConsumables(true)
-    Assert(enabled == true and CLIAltsDB.settings.autoMailConsumables == true, "ToggleAutoMailConsumables(true) enables setting")
+    Assert(enabled == true and ForeverAltsDB.settings.autoMailConsumables == true, "ToggleAutoMailConsumables(true) enables setting")
     local disabled = self:ToggleAutoMailConsumables(false)
-    Assert(disabled == false and CLIAltsDB.settings.autoMailConsumables == false, "ToggleAutoMailConsumables(false) disables setting")
+    Assert(disabled == false and ForeverAltsDB.settings.autoMailConsumables == false, "ToggleAutoMailConsumables(false) disables setting")
 
     -- Clean up mocks
     self.GetItemInfo = nil
-    CLIAltsDB = oldIgnoreDB
+    ForeverAltsDB = oldIgnoreDB; ForeverAltsDB = ForeverAltsDB
     end
 
     -- ------------------------------------------------------------------------
@@ -3340,8 +3343,8 @@ function CLIAlts:RunSelfTest()
         Assert(self:IsCurrentPlayer("OtherAlt") == false, "SelfMailGuard: IsCurrentPlayer returns false for other characters")
 
         -- 29b. Crafter lookup skips current character
-        local oldDB = CLIAltsDB
-        CLIAltsDB = {
+        local oldDB = ForeverAltsDB
+        ForeverAltsDB = {
             settings = {
                 ignoredMailItems = {},
                 autoMailConsumables = false,
@@ -3395,7 +3398,7 @@ function CLIAlts:RunSelfTest()
         Assert(miscDest == nil, "SelfMailGuard: Unmatched item destination is nil when logged into BankMule (no self-mail)")
 
         -- 29c. Pending mail check returns 0 for current player
-        local pendingCount, pendingReason = self:GetCharacterPendingMail(CLIAltsDB.characters["BankMule-Forever"])
+        local pendingCount, pendingReason = self:GetCharacterPendingMail(ForeverAltsDB.characters["BankMule-Forever"])
         Assert(pendingCount == 0 and pendingReason == "Logged in", "SelfMailGuard: GetCharacterPendingMail returns 0 and 'Logged in' for active character")
 
         -- 29d. FillSendMailNextBatch rejects targeting self
@@ -3405,7 +3408,7 @@ function CLIAlts:RunSelfTest()
         self.curPlayerPrimary = savedPrimary
         self.curPlayerFullName = savedFull
         self.curPlayerKey = savedKey
-        CLIAltsDB = oldDB
+        ForeverAltsDB = oldDB; ForeverAltsDB = ForeverAltsDB
     end
 
     -- 29e. Cross-Faction & Cross-Realm Mail Isolation Guard
@@ -3463,12 +3466,12 @@ function CLIAlts:RunSelfTest()
                 ["AllianceOtherRealm-Different"] = crossRealmChar,
             },
         }
-        local savedDB = CLIAltsDB
+        local savedDB = ForeverAltsDB
         local savedCurKey = self.curPlayerKey
         local savedCurFull = self.curPlayerFullName
         local savedCurPrim = self.curPlayerPrimary
 
-        CLIAltsDB = factionDB
+        ForeverAltsDB = factionDB; ForeverAltsDB = ForeverAltsDB
         self.curPlayerKey = "AllianceCrafter-Forever"
         self.curPlayerFullName = "AllianceCrafter-Forever"
         self.curPlayerPrimary = "AllianceCrafter"
@@ -3494,7 +3497,7 @@ function CLIAlts:RunSelfTest()
         local uninitAlliance = { name = "UninitAlliance", raceFile = "Gnome" }
         Assert(self:IsMailCandidate(uninitAlliance) == true, "FactionMailGuard: IsMailCandidate accepts uninitialized Alliance character via racial inference")
 
-        CLIAltsDB = savedDB
+        ForeverAltsDB = savedDB; ForeverAltsDB = ForeverAltsDB
         self.curPlayerKey = savedCurKey
         self.curPlayerFullName = savedCurFull
         self.curPlayerPrimary = savedCurPrim
@@ -3535,7 +3538,7 @@ function CLIAlts:RunSelfTest()
             },
             goldHistory = {},
         }
-        CLIAltsDB = testWealthDB
+        ForeverAltsDB = testWealthDB; ForeverAltsDB = ForeverAltsDB
 
         local sum = self:GetAccountSummary()
         Assert(sum.totalGold == 1004532, "Wealth: GetAccountSummary strictly sums char.money (liquid currency: 100g 45s 32c)")
@@ -3550,7 +3553,7 @@ function CLIAlts:RunSelfTest()
 
         -- 30d. Dynamic weekly gold history delta calculation
         local now = time()
-        CLIAltsDB.goldHistory = {
+        ForeverAltsDB.goldHistory = {
             { date = "2026-10-07", time = now - (8 * 86400), gold = 80, copper = 800000 },
             { date = "2026-10-14", time = now - (1 * 86400), gold = 95, copper = 950000 },
             { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
@@ -3565,7 +3568,7 @@ function CLIAlts:RunSelfTest()
         Assert(mFrame.wealthWidget.delta:GetText():find("%+210g") == nil, "Wealth: wealthWidget.delta does NOT show hardcoded +210g")
 
         -- 30e. Dynamic negative weekly delta
-        CLIAltsDB.goldHistory = {
+        ForeverAltsDB.goldHistory = {
             { date = "2026-10-07", time = now - (8 * 86400), gold = 150, copper = 1500000 },
             { date = "2026-10-15", time = now, gold = 100, copper = 1004532 },
         }
@@ -3591,7 +3594,7 @@ function CLIAlts:RunSelfTest()
     do
         -- 31a. CaptureChatSettings captures current chat frames into DB
         local testCharKey = self:GetCharacterKey()
-        CLIAltsDB.characters[testCharKey] = CLIAltsDB.characters[testCharKey] or {
+        ForeverAltsDB.characters[testCharKey] = ForeverAltsDB.characters[testCharKey] or {
             name = "SelftestHero",
             fullName = "SelftestHero-Forever",
             class = "Warrior",
@@ -3601,7 +3604,7 @@ function CLIAlts:RunSelfTest()
         local capOk, capWins = self:CaptureChatSettings(testCharKey)
         Assert(capOk == true, "ChatCloner: CaptureChatSettings succeeds for valid character")
         Assert(capWins >= 2, "ChatCloner: CaptureChatSettings captures at least 2 default mock chat windows")
-        local capturedChar = CLIAltsDB.characters[testCharKey]
+        local capturedChar = ForeverAltsDB.characters[testCharKey]
         Assert(capturedChar.chatSettings ~= nil, "ChatCloner: chatSettings table created on character")
         Assert(capturedChar.chatSettings.windows ~= nil, "ChatCloner: windows table populated")
         Assert(capturedChar.chatSettings.windows[1] ~= nil, "ChatCloner: Window 1 (General) exists in snapshot")
@@ -3611,7 +3614,7 @@ function CLIAlts:RunSelfTest()
 
         -- 31b. GetChatProfilesList returns sorted snapshots with other alts prioritized
         local altKey = "MageAlt-Forever"
-        CLIAltsDB.characters[altKey] = {
+        ForeverAltsDB.characters[altKey] = {
             name = "MageAlt",
             fullName = altKey,
             class = "Mage",
@@ -3744,11 +3747,11 @@ function CLIAlts:RunSelfTest()
             professions = { primary = { { name = "Tailoring", rank = 120 } } },
             tier = "CORE",
         }
-        CLIAltsDB.characters["TailorLearner-Forever"] = mockLearner
+        ForeverAltsDB.characters["TailorLearner-Forever"] = mockLearner
         self.curPlayerFullName = "CurrentPlayer-Forever"
         self.curPlayerPrimary = "CurrentPlayer"
         self.curPlayerKey = "CurrentPlayer-Forever"
-        CLIAltsDB.characters["CurrentPlayer-Forever"] = {
+        ForeverAltsDB.characters["CurrentPlayer-Forever"] = {
             name = "CurrentPlayer",
             fullName = "CurrentPlayer-Forever",
             faction = "Alliance",
@@ -3770,7 +3773,7 @@ function CLIAlts:RunSelfTest()
             professions = { secondary = { { name = "Cooking", rank = 75 } } },
             routeCooking = false,
         }
-        CLIAltsDB.characters["ChefAlt-Forever"] = mockCookAlt
+        ForeverAltsDB.characters["ChefAlt-Forever"] = mockCookAlt
 
         -- Raw Stringy Meat (Trade goods subclass 8)
         local meatDestDefault = self:GetMaterialDestination(2679, nil, 7, 8, 1, nil)
@@ -3850,7 +3853,7 @@ function CLIAlts:RunSelfTest()
     do
         -- 37c. Overview Rendering with Play Next Banner & Rings
         self:SwitchTab(1)
-        Assert(CLIAltsDB.settings.activeTab == 1, "ConsolidatedOverview: activeTab is 1")
+        Assert(ForeverAltsDB.settings.activeTab == 1, "ConsolidatedOverview: activeTab is 1")
 
         local mFrame = self:CreateModernMainFrame()
         self:Render()
@@ -3957,8 +3960,8 @@ function CLIAlts:RunSelfTest()
                 ["HumanPriest"]= { name = "HumanPriest", race = "Human", level = 5 },
             }
         }
-        local oldFacDB = CLIAltsDB
-        CLIAltsDB = testFactionDB
+        local oldFacDB = ForeverAltsDB
+        ForeverAltsDB = testFactionDB; ForeverAltsDB = ForeverAltsDB
         local facSorted = self:GetCharactersList("level", false)
         Assert(#facSorted == 6, "FactionGrouping: returns all 6 alts across factions")
         Assert(facSorted[1].name == "AllyLvl50", "FactionGrouping: 1st alt is AllyLvl50 (Alliance highest level)")
@@ -3967,7 +3970,7 @@ function CLIAlts:RunSelfTest()
         Assert(facSorted[4].name == "HordeLvl60", "FactionGrouping: 4th alt is HordeLvl60 (Horde highest level)")
         Assert(facSorted[5].name == "OrcWarrior", "FactionGrouping: 5th alt is OrcWarrior (Horde inferred)")
         Assert(facSorted[6].name == "HordeLvl20", "FactionGrouping: 6th alt is HordeLvl20 (Horde)")
-        CLIAltsDB = oldFacDB
+        ForeverAltsDB = oldFacDB; ForeverAltsDB = ForeverAltsDB
     end
 
     -- 38. Tab 8 Embedded Settings Navigation Panel Engine Tests
@@ -3993,7 +3996,7 @@ function CLIAlts:RunSelfTest()
 
         -- 38b. SwitchTab(8) Embeds Settings Dialog in mainFrame
         self:SwitchTab(8)
-        Assert(CLIAltsDB.settings.activeTab == 8, "SettingsTab: SwitchTab(8) sets activeTab to 8")
+        Assert(ForeverAltsDB.settings.activeTab == 8, "SettingsTab: SwitchTab(8) sets activeTab to 8")
 
         local sdEmbed = _G["CLIAltsSettingsDialog"]
         Assert(sdEmbed ~= nil, "SettingsTab: CLIAltsSettingsDialog exists")
@@ -4011,7 +4014,7 @@ function CLIAlts:RunSelfTest()
         -- 38c. Close Button / SwitchTab(1) Reversibility
         if sdEmbed and sdEmbed.btnClose and sdEmbed.btnClose:GetScript("OnClick") then
             sdEmbed.btnClose:GetScript("OnClick")(sdEmbed.btnClose)
-            Assert(CLIAltsDB.settings.activeTab == 1, "SettingsTab: Clicking btnClose returns to Tab 1 Overview")
+            Assert(ForeverAltsDB.settings.activeTab == 1, "SettingsTab: Clicking btnClose returns to Tab 1 Overview")
             Assert(sdEmbed:IsShown() == false, "SettingsTab: CLIAltsSettingsDialog is hidden on Tab 1")
             if mFrame and mFrame.detailPanel then
                 Assert(mFrame.detailPanel:IsShown() == true, "SettingsTab: detailPanel is restored on Tab 1")
@@ -4023,11 +4026,11 @@ function CLIAlts:RunSelfTest()
 
         -- 38d. ShowSettingsDialog() Activates Tab 8 & Tab 9 Backward Compatibility
         self:ShowSettingsDialog()
-        Assert(CLIAltsDB.settings.activeTab == 8, "SettingsTab: ShowSettingsDialog() activates Tab 8")
+        Assert(ForeverAltsDB.settings.activeTab == 8, "SettingsTab: ShowSettingsDialog() activates Tab 8")
         Assert(sdEmbed:IsShown() == true, "SettingsTab: ShowSettingsDialog() shows embedded settings")
 
         self:SwitchTab(9)
-        Assert(CLIAltsDB.settings.activeTab == 8, "SettingsTab: SwitchTab(9) redirects to Tab 8 for backwards compatibility")
+        Assert(ForeverAltsDB.settings.activeTab == 8, "SettingsTab: SwitchTab(9) redirects to Tab 8 for backwards compatibility")
         self:SwitchTab(1)
     end
 
@@ -4179,7 +4182,7 @@ function CLIAlts:RunSelfTest()
 
     -- Restore master state
     if masterState.db then
-        CLIAltsDB = masterState.db
+        ForeverAltsDB = masterState.db; ForeverAltsDB = ForeverAltsDB
     end
     self.curPlayerPrimary = masterState.primary
     self.curPlayerSecondary = masterState.secondary
@@ -4212,4 +4215,4 @@ function CLIAlts:RunSelfTest()
     return failed == 0, passed, failed
 end
 
-CLIAlts.ExecuteSelfTest = CLIAlts.RunSelfTest
+ForeverAlts.ExecuteSelfTest = ForeverAlts.RunSelfTest

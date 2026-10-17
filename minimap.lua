@@ -1,22 +1,28 @@
 -- ============================================================================
--- CLIAlts: Retro Alt Tracker
+-- ForeverAlts: Retro Alt Tracker
 -- File: minimap.lua
 -- Moveable minimap button with retro ASCII quick-status tooltip.
 -- Anchors dynamically to the outside of the minimap circle with smooth dragging.
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable or _G["CLIAlts"] or {}
+local ForeverAlts = addonTable or _G["ForeverAlts"] or _G["CLIAlts"] or {}
+_G["ForeverAlts"] = ForeverAlts
+_G["foreveralts"] = ForeverAlts
+_G["CLIAlts"] = ForeverAlts
+_G["clialts"] = ForeverAlts
+local CLIAlts = ForeverAlts
 
 local minimapBtn = nil
 
-function CLIAlts:CreateMinimapButton()
+function ForeverAlts:CreateMinimapButton()
     if self.InitLDB then
         self:InitLDB()
     end
     if minimapBtn then return minimapBtn end
 
-    minimapBtn = CreateFrame("Button", "CLIAltsMinimapButton", Minimap)
+    minimapBtn = CreateFrame("Button", "ForeverAltsMinimapButton", Minimap)
+    _G["CLIAltsMinimapButton"] = minimapBtn
     minimapBtn:SetFrameStrata("HIGH")
     minimapBtn:SetSize(32, 32)
     minimapBtn:SetFrameLevel(25)
@@ -26,7 +32,7 @@ function CLIAlts:CreateMinimapButton()
     minimapBtn:RegisterForDrag("LeftButton")
     minimapBtn:SetClampedToScreen(true)
 
-    local t = (CLIAlts.GetTheme and CLIAlts:GetTheme()) or {
+    local t = (ForeverAlts.GetTheme and ForeverAlts:GetTheme()) or {
         bg = { 0.04, 0.08, 0.06 },
         barFill = "|cff00ff66"
     }
@@ -99,11 +105,11 @@ function CLIAlts:CreateMinimapButton()
                 if dist < minRadius then dist = minRadius end
                 if dist > maxRadius then dist = maxRadius end
 
-                if CLIAltsDB and CLIAltsDB.settings then
-                    CLIAltsDB.settings.minimapPos = angle
-                    CLIAltsDB.settings.minimapDist = dist
+                if ForeverAltsDB and ForeverAltsDB.settings then
+                    ForeverAltsDB.settings.minimapPos = angle
+                    ForeverAltsDB.settings.minimapDist = dist
                 end
-                CLIAlts:UpdateMinimapPosition()
+                ForeverAlts:UpdateMinimapPosition()
             end
         end)
     end)
@@ -127,12 +133,12 @@ function CLIAlts:CreateMinimapButton()
 
         local ok, err = pcall(function()
             if button == "RightButton" then
-                CLIAlts:Refresh()
-                local summary = CLIAlts:GetAccountSummary()
+                ForeverAlts:Refresh()
+                local summary = ForeverAlts:GetAccountSummary()
                 DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00ff66[ForeverAlts]|r Data refreshed. Tracked alts: %d.", summary.totalAlts))
             else
-                CLIAlts:CollectCurrentCharacter()
-                CLIAlts:Toggle()
+                ForeverAlts:CollectCurrentCharacter()
+                ForeverAlts:Toggle()
             end
         end)
         if not ok then
@@ -145,10 +151,10 @@ function CLIAlts:CreateMinimapButton()
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:ClearLines()
 
-        local summary = CLIAlts:GetAccountSummary()
-        local moneyStr = CLIAlts:FormatMoney(summary.totalGold, true)
+        local summary = ForeverAlts:GetAccountSummary()
+        local moneyStr = ForeverAlts:FormatMoney(summary.totalGold, true)
 
-        local themeData = (CLIAlts.GetTheme and CLIAlts:GetTheme())
+        local themeData = (CLIAlts.GetTheme and ForeverAlts:GetTheme())
         local br = themeData and themeData.border[1] or 0
         local bgCol = themeData and themeData.border[2] or 1
         local bb = themeData and themeData.border[3] or 0.4
@@ -162,13 +168,13 @@ function CLIAlts:CreateMinimapButton()
         GameTooltip:AddDoubleLine("| Total Tracked Alts:", string.format("%d alts |", summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)
         GameTooltip:AddDoubleLine("| Total Account Wealth:", string.format("%s |", moneyStr), 0.7, 0.7, 0.7, 1, 1, 1)
 
-        local maxCap = (CLIAlts.IsRetail and not CLIAlts:IsRetail()) and (150 + ((CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank) or 0) * 6)) or 150
+        local maxCap = (CLIAlts.IsRetail and not ForeverAlts:IsRetail()) and (150 + ((ForeverAltsDB and ForeverAltsDB.settings and tonumber(ForeverAltsDB.settings.wellRestedRank) or 0) * 6)) or 150
         local fullyStr = summary.fullyRested > 0 and string.format("%d of %d [*] |", summary.fullyRested, summary.totalAlts) or string.format("%d of %d |", summary.fullyRested, summary.totalAlts)
         local frR, frG, frB = summary.fullyRested > 0 and 1.0 or 0.7, summary.fullyRested > 0 and 0.85 or 0.7, summary.fullyRested > 0 and 0.2 or 0.7
         GameTooltip:AddDoubleLine(string.format("| Fully Rested (%d%%):", maxCap), fullyStr, 0.7, 0.7, 0.7, frR, frG, frB)
 
         if summary.nextFullAlt then
-            local coloredName = CLIAlts:ColorizePlayerName(summary.nextFullAlt.name, summary.nextFullAlt.classFile)
+            local coloredName = ForeverAlts:ColorizePlayerName(summary.nextFullAlt.name, summary.nextFullAlt.classFile)
             GameTooltip:AddDoubleLine("| Next Full Alt:", string.format("%s (%s) |", coloredName, summary.nextFullAlt.timeLeftStr), 0.7, 0.7, 0.7, 1, 0.85, 0.2)
         end
 
@@ -185,12 +191,12 @@ function CLIAlts:CreateMinimapButton()
         GameTooltip:Hide()
     end)
 
-    CLIAlts:UpdateMinimapPosition()
+    ForeverAlts:UpdateMinimapPosition()
     if CLIAlts.ApplyTheme then
-        CLIAlts:ApplyTheme()
+        ForeverAlts:ApplyTheme()
     end
 
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.minimapShow == false then
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.minimapShow == false then
         minimapBtn:Hide()
     else
         minimapBtn:Show()
@@ -199,12 +205,12 @@ function CLIAlts:CreateMinimapButton()
     return minimapBtn
 end
 
-function CLIAlts:UpdateMinimapPosition()
+function ForeverAlts:UpdateMinimapPosition()
     if not minimapBtn then return end
 
     local angle = 45
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.minimapPos then
-        angle = CLIAltsDB.settings.minimapPos
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.minimapPos then
+        angle = ForeverAltsDB.settings.minimapPos
     end
 
     local mWidth = (Minimap and Minimap.GetWidth and Minimap:GetWidth()) or 140
@@ -212,8 +218,8 @@ function CLIAlts:UpdateMinimapPosition()
     local defaultRadius = (math.max(mWidth, mHeight) / 2) + 12
 
     local radius = defaultRadius
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.minimapDist then
-        radius = CLIAltsDB.settings.minimapDist
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.minimapDist then
+        radius = ForeverAltsDB.settings.minimapDist
     end
 
     -- Safeguard: Ensure button is never placed inside the minimap
@@ -230,9 +236,9 @@ function CLIAlts:UpdateMinimapPosition()
     minimapBtn:SetPoint("CENTER", Minimap, "CENTER", x, y)
 end
 
-function CLIAlts:UpdateMinimapTheme()
+function ForeverAlts:UpdateMinimapTheme()
     if not minimapBtn then return end
-    local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
+    local t = (CLIAlts.GetTheme and ForeverAlts:GetTheme())
     if not t then return end
     if minimapBtn.bg and t.bg then
         minimapBtn.bg:SetVertexColor(t.bg[1], t.bg[2], t.bg[3], 1)
@@ -242,24 +248,24 @@ function CLIAlts:UpdateMinimapTheme()
     end
 end
 
-function CLIAlts:ToggleMinimap(show)
+function ForeverAlts:ToggleMinimap(show)
     if not minimapBtn then
         self:CreateMinimapButton()
     end
     if show == nil then
         if minimapBtn:IsShown() then
             minimapBtn:Hide()
-            CLIAltsDB.settings.minimapShow = false
+            ForeverAltsDB.settings.minimapShow = false
         else
             minimapBtn:Show()
-            CLIAltsDB.settings.minimapShow = true
+            ForeverAltsDB.settings.minimapShow = true
         end
     elseif show then
         minimapBtn:Show()
-        CLIAltsDB.settings.minimapShow = true
+        ForeverAltsDB.settings.minimapShow = true
     else
         minimapBtn:Hide()
-        CLIAltsDB.settings.minimapShow = false
+        ForeverAltsDB.settings.minimapShow = false
     end
 end
 
@@ -268,7 +274,7 @@ end
 -- Optional data broker plugin for display bars (Titan Panel, Bazooka, ChocolateBar).
 -- Guarded with LibStub("LibDataBroker-1.1", true) so zero cost if absent.
 -- ============================================================================
-function CLIAlts:InitLDB()
+function ForeverAlts:InitLDB()
     if self.ldbObject then return self.ldbObject end
     local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
     if not LDB then return nil end
@@ -280,25 +286,25 @@ function CLIAlts:InitLDB()
         label = "ForeverAlts",
         OnClick = function(clickedframe, button)
             if button == "LeftButton" then
-                if CLIAlts.Toggle then CLIAlts:Toggle() end
+                if CLIAlts.Toggle then ForeverAlts:Toggle() end
             elseif button == "RightButton" then
-                if CLIAlts.CycleTheme then CLIAlts:CycleTheme() end
+                if CLIAlts.CycleTheme then ForeverAlts:CycleTheme() end
             end
         end,
         OnTooltipShow = function(tooltip)
             if not tooltip or not tooltip.AddLine then return end
-            local t = (CLIAlts.GetTheme and CLIAlts:GetTheme())
+            local t = (CLIAlts.GetTheme and ForeverAlts:GetTheme())
             local hr, hg, hb = t and t.highlight[1] or 0.2, t and t.highlight[2] or 1, t and t.highlight[3] or 0.6
             tooltip:AddLine("ForeverAlts", hr, hg, hb)
             local cappedCount, totalWastedXP
             if CLIAlts.GetLDBText then
                 local _
-                _, cappedCount, totalWastedXP = CLIAlts:GetLDBText()
+                _, cappedCount, totalWastedXP = ForeverAlts:GetLDBText()
             end
-            local summary = CLIAlts.GetAccountSummary and CLIAlts:GetAccountSummary()
+            local summary = CLIAlts.GetAccountSummary and ForeverAlts:GetAccountSummary()
             if summary then
                 tooltip:AddDoubleLine("Total Alts:", tostring(summary.totalAlts), 0.7, 0.7, 0.7, 1, 1, 1)
-                tooltip:AddDoubleLine("Total Gold:", CLIAlts:FormatMoney(summary.totalGold, true), 0.7, 0.7, 0.7, 1, 1, 1)
+                tooltip:AddDoubleLine("Total Gold:", ForeverAlts:FormatMoney(summary.totalGold, true), 0.7, 0.7, 0.7, 1, 1, 1)
             end
             if cappedCount then
                 local cappedStr = cappedCount > 0 and string.format("%d [!]", cappedCount) or string.format("%d", cappedCount)
@@ -306,7 +312,7 @@ function CLIAlts:InitLDB()
                 tooltip:AddDoubleLine("Capped Alts:", cappedStr, 0.7, 0.7, 0.7, cr, cg, cb)
             end
             if totalWastedXP and totalWastedXP > 0 then
-                tooltip:AddDoubleLine("XP Wasted:", string.format("!%s XP", CLIAlts:FormatNumber(totalWastedXP)), 0.7, 0.7, 0.7, 1.0, 0.65, 0.0)
+                tooltip:AddDoubleLine("XP Wasted:", string.format("!%s XP", ForeverAlts:FormatNumber(totalWastedXP)), 0.7, 0.7, 0.7, 1.0, 0.65, 0.0)
             end
             tooltip:AddLine(" ")
             tooltip:AddLine("|cff888888Left-Click:|r Toggle window", 0.8, 0.8, 0.8)
@@ -320,7 +326,7 @@ function CLIAlts:InitLDB()
         if C_Timer and C_Timer.NewTicker then
             C_Timer.NewTicker(30, function()
                 if CLIAlts.ldbObject and CLIAlts.UpdateLDB then
-                    CLIAlts:UpdateLDB()
+                    ForeverAlts:UpdateLDB()
                 end
             end)
         else
@@ -331,7 +337,7 @@ function CLIAlts:InitLDB()
                 if ldbElapsed >= 30 then
                     ldbElapsed = 0
                     if CLIAlts.ldbObject and CLIAlts.UpdateLDB then
-                        CLIAlts:UpdateLDB()
+                        ForeverAlts:UpdateLDB()
                     end
                 end
             end)
@@ -341,7 +347,7 @@ function CLIAlts:InitLDB()
     return self.ldbObject
 end
 
-function CLIAlts:UpdateLDB()
+function ForeverAlts:UpdateLDB()
     if not self.ldbObject then
         self:InitLDB()
     end

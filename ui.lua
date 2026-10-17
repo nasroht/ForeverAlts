@@ -1,5 +1,5 @@
 -- ============================================================================
--- CLIAlts: Retro Alt Tracker
+-- ForeverAlts: Retro Alt Tracker
 -- File: ui.lua
 -- Pure Monospace ASCII / TUI Terminal Interface with data-driven columns,
 -- single FontString rows, VT323 CRT terminal typography, and SetScale support.
@@ -14,10 +14,8 @@ local CLIAlts = addonTable or _G["CLIAlts"] or {}
 local FONT_MONO = "Interface\\AddOns\\" .. (addonName or "ForeverAlts") .. "\\media\\VT323-Regular.ttf"
 local FONT_NORMAL = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
 local DEFAULT_FONT_SIZE = 18
-local LINE_WIDTH = 110
-local BORDER_LINE   = "+" .. string.rep("-", LINE_WIDTH - 2) .. "+"
 
-local ROWS_COUNT = 8
+local ROWS_COUNT = 12
 local rowFrames = {}
 local headerButtons = {}
 local currentPage = 1
@@ -35,7 +33,7 @@ local renderDirty = false
 -- ----------------------------------------------------------------------------
 -- CRT Theme Definitions (With Syntax Coloring Hex Codes)
 -- ----------------------------------------------------------------------------
-CLIAlts.THEMES = {
+ForeverAlts.THEMES = {
     ["DEFAULT"] = {
         name = "Default",
         tag = "DEF",
@@ -330,7 +328,7 @@ CLIAlts.THEMES = {
     },
 }
 
-CLIAlts.THEME_MAP = {
+ForeverAlts.THEME_MAP = {
     default = "DEFAULT",
     def = "DEFAULT",
     blizzard = "BLIZZARD",
@@ -357,8 +355,8 @@ CLIAlts.THEME_MAP = {
 local THEME_ORDER = { "DEFAULT", "BLIZZARD", "AMBER", "GREEN", "CYAN", "MONO", "COLORBLIND", "SYNTHWAVE", "DRACULA" }
 local SCALES = { 0.8, 0.9, 1.0, 1.15, 1.3, 1.45 }
 
-function CLIAlts:GetTheme()
-    local key = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
+function ForeverAlts:GetTheme()
+    local key = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.theme) or "DEFAULT"
     local t = self.THEMES[key] or self.THEMES["DEFAULT"] or self.THEMES["BLIZZARD"] or self.THEMES["AMBER"]
     -- Ensure non-nil fallbacks for design tokens
     t.text = t.text or { 0.886, 0.910, 0.941 }
@@ -377,8 +375,8 @@ function CLIAlts:GetTheme()
     return t
 end
 
-function CLIAlts:CycleTheme()
-    local current = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
+function ForeverAlts:CycleTheme()
+    local current = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.theme) or "DEFAULT"
     local nextTheme = "DEFAULT"
     for i, name in ipairs(THEME_ORDER) do
         if name == current then
@@ -386,8 +384,8 @@ function CLIAlts:CycleTheme()
             break
         end
     end
-    CLIAltsDB.settings.theme = nextTheme
-    CLIAltsDB.settings.themeExplicit = true
+    ForeverAltsDB.settings.theme = nextTheme
+    ForeverAltsDB.settings.themeExplicit = true
     self:ApplyTheme()
     self:Render()
 end
@@ -395,28 +393,26 @@ end
 -- ----------------------------------------------------------------------------
 -- Typography & Monospace Helpers
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetFontPath(isMono)
+function ForeverAlts:GetFontPath(isMono)
     if isMono then
         return FONT_MONO
     end
     return _G["STANDARD_TEXT_FONT"] or FONT_NORMAL or "Fonts\\FRIZQT__.TTF"
 end
 
-function CLIAlts:SetMonoFont(fontString, size, flags)
+function ForeverAlts:SetMonoFont(fontString, size, flags)
     self:SetWidgetFont(fontString, size, flags, "mono")
 end
 
-function CLIAlts:SetWidgetFont(fontString, size, flags, fontType)
+function ForeverAlts:SetWidgetFont(fontString, size, flags, fontType)
     if not fontString or not fontString.SetFont then return end
-    size = size or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+    size = size or (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     if not flags or type(flags) ~= "string" or flags == "BOLD" then
         flags = ""
     end
 
     local useMono = false
     if fontType == "mono" or fontType == true then
-        useMono = true
-    elseif mainFrame and mainFrame.isLegacyUI then
         useMono = true
     end
 
@@ -450,8 +446,8 @@ function CLIAlts:SetWidgetFont(fontString, size, flags, fontType)
     end
 end
 
-function CLIAlts:GetCharWidth(fontSize)
-    local sz = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+function ForeverAlts:GetCharWidth(fontSize)
+    local sz = fontSize or (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     if not probeString and mainFrame then
         probeString = mainFrame:CreateFontString(nil, "BACKGROUND")
         probeString:Hide()
@@ -470,9 +466,9 @@ function CLIAlts:GetCharWidth(fontSize)
     return sz * 0.54
 end
 
-function CLIAlts:GetBarString(charPattern, targetPixelWidth, fontSize)
+function ForeverAlts:GetBarString(charPattern, targetPixelWidth, fontSize)
     targetPixelWidth = targetPixelWidth or (mainFrame and (mainFrame:GetWidth() - 24)) or 1126
-    local sz = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+    local sz = fontSize or (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
     local charW = self:GetCharWidth(sz)
     if not charW or charW < 4 or charW > 25 then
         charW = sz * 0.54
@@ -486,7 +482,7 @@ end
 -- Audio & Button Helpers
 -- ----------------------------------------------------------------------------
 local function PlayRetroSound()
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.soundDisabled then return end
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.soundDisabled then return end
     pcall(function()
         if SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON then
             PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
@@ -506,7 +502,7 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
         edgeSize = 1,
         insets = { left = 1, right = 1, top = 1, bottom = 1 }
     })
-    local t = CLIAlts:GetTheme()
+    local t = ForeverAlts:GetTheme()
     local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
     if btn.SetBackdropColor then
         btn:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.75)
@@ -516,14 +512,14 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
     end
 
     local label = btn:CreateFontString(nil, "OVERLAY")
-    CLIAlts:SetWidgetFont(label, fontSz or 12, "")
+    ForeverAlts:SetWidgetFont(label, fontSz or 12, "")
     label:SetPoint("CENTER", 0, 0)
     label:SetText(text or "")
     label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     btn.label = label
 
     btn:SetScript("OnEnter", function(self)
-        local curT = CLIAlts:GetTheme()
+        local curT = ForeverAlts:GetTheme()
         if self.SetBackdropColor then
             self:SetBackdropColor(curT.border[1], curT.border[2], curT.border[3], 0.25)
         end
@@ -534,7 +530,7 @@ local function CreateRetroButton(parent, text, width, height, onClick, fontSz)
     end)
 
     btn:SetScript("OnLeave", function(self)
-        local curT = CLIAlts:GetTheme()
+        local curT = ForeverAlts:GetTheme()
         local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
         if self.isSelected then
             if self.SetBackdropColor then
@@ -570,7 +566,7 @@ end
 -- Uses CooldownFrameTemplate for hardware-accelerated radial swipe with
 -- inner dark disc cutout and centered numeric percentage readout.
 -- ----------------------------------------------------------------------------
-function CLIAlts:CreateCircleMeter(parent, size, labelText)
+function ForeverAlts:CreateCircleMeter(parent, size, labelText)
     size = size or 44
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(size, size)
@@ -643,13 +639,13 @@ function CLIAlts:CreateCircleMeter(parent, size, labelText)
         if self.valText then
             local str = textStr or string.format("%d%%", math.floor(ratio * 100))
             if #str >= 6 then
-                CLIAlts:SetWidgetFont(self.valText, 12, "OUTLINE", "mono")
+                ForeverAlts:SetWidgetFont(self.valText, 12, "OUTLINE", "mono")
             elseif #str == 5 then
-                CLIAlts:SetWidgetFont(self.valText, 13, "OUTLINE", "mono")
+                ForeverAlts:SetWidgetFont(self.valText, 13, "OUTLINE", "mono")
             elseif #str == 4 then
-                CLIAlts:SetWidgetFont(self.valText, 14, "OUTLINE", "mono")
+                ForeverAlts:SetWidgetFont(self.valText, 14, "OUTLINE", "mono")
             else
-                CLIAlts:SetWidgetFont(self.valText, 15, "OUTLINE", "mono")
+                ForeverAlts:SetWidgetFont(self.valText, 15, "OUTLINE", "mono")
             end
             self.valText:SetText(str)
             if r and g and b then
@@ -665,7 +661,7 @@ end
 -- UTF-8 Initial Extraction Helper
 -- Handles multi-byte characters such as Å in Åse, ö in östen
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetFirstLetter(name)
+function ForeverAlts:GetFirstLetter(name)
     if not name or name == "" then return "?" end
     local b = name:byte(1)
     if not b then return "?" end
@@ -685,7 +681,7 @@ end
 -- Status Pill Formatter (Phase 2/3 Modern Rows)
 -- Returns text and style ("warn_fill", "info_outline", "muted_outline", "dashed_muted")
 -- ----------------------------------------------------------------------------
-function CLIAlts:FmtStatus(char, t)
+function ForeverAlts:FmtStatus(char, t)
     -- Allow call with either dot or colon syntax
     if self ~= CLIAlts and char == nil and type(self) == "table" and (self.name or self.level) then
         char = self
@@ -701,7 +697,7 @@ function CLIAlts:FmtStatus(char, t)
     local now = time()
     local lastSeen = char.lastUpdate or char.logoutTime or char.lastSeen or now
     local unseenDays = math.floor((now - lastSeen) / 86400)
-    local staleDays = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.staleDays)) or 30
+    local staleDays = (ForeverAltsDB and ForeverAltsDB.settings and tonumber(ForeverAltsDB.settings.staleDays)) or 30
 
     if unseenDays >= staleDays or char.isStale then
         return string.format("Unseen %dd", math.max(unseenDays, 1)), "dashed_muted"
@@ -754,18 +750,15 @@ end
 -- ----------------------------------------------------------------------------
 -- Rows Per Page Helper
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetRowsPerPage()
-    if mainFrame and mainFrame.isLegacyUI then
-        return 8
-    end
-    local activeTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
+function ForeverAlts:GetRowsPerPage()
+    local activeTab = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab) or 1
     if activeTab > 1 then
         return 10
     end
     return 8
 end
 
-function CLIAlts:GetRowFrames()
+function ForeverAlts:GetRowFrames()
     if (not rowFrames or #rowFrames == 0) and mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
         rowFrames = mainFrame.rowFrames
     end
@@ -775,7 +768,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Play Next Banner (Phase 4 Modern Overview)
 -- ----------------------------------------------------------------------------
-function CLIAlts:UpdatePlayNextBanner()
+function ForeverAlts:UpdatePlayNextBanner()
     local banner = mainFrame and mainFrame.nextBanner
     if not banner or not banner:IsShown() then return end
 
@@ -945,7 +938,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Sidebar Badges Engine (Phase 5)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetSidebarBadgeCounts(nowOverride)
+function ForeverAlts:GetSidebarBadgeCounts(nowOverride)
     if self._cachedSidebarBadges then
         return self._cachedSidebarBadges
     end
@@ -968,8 +961,8 @@ end
 -- ----------------------------------------------------------------------------
 local SORT_CYCLE = { "rested", "level", "name", "waste", "gold" }
 
-function CLIAlts:CycleSort()
-    local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "rested"
+function ForeverAlts:CycleSort()
+    local cur = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "rested"
     local nextKey = "rested"
     for i, k in ipairs(SORT_CYCLE) do
         if k == cur then
@@ -980,10 +973,10 @@ function CLIAlts:CycleSort()
     self:ToggleSortKey(nextKey)
 end
 
-function CLIAlts:UpdateFilterChips()
+function ForeverAlts:UpdateFilterChips()
     if not mainFrame or not mainFrame.filterChips then return end
 
-    local activeTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
+    local activeTab = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab) or 1
     if activeTab == 7 then
         if mainFrame.filterChipsBar then mainFrame.filterChipsBar:Hide() end
         if mainFrame.mailActionBar then mainFrame.mailActionBar:Show() end
@@ -1067,7 +1060,7 @@ function CLIAlts:UpdateFilterChips()
 
     -- Update Sort Button Text
     if mainFrame.btnSort and mainFrame.btnSort.label then
-        local curSort = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "Rested"
+        local curSort = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "Rested"
         local sortTitle = curSort:sub(1,1):upper() .. curSort:sub(2)
         mainFrame.btnSort.label:SetText(string.format("Sort: %s ▾", sortTitle))
     end
@@ -1076,15 +1069,15 @@ end
 -- ----------------------------------------------------------------------------
 -- Window Position Persistence
 -- ----------------------------------------------------------------------------
-function CLIAlts:SaveWindowPosition(frame)
+function ForeverAlts:SaveWindowPosition(frame)
     frame = frame or mainFrame
     if not frame then return end
-    if not CLIAltsDB then return end
-    CLIAltsDB.settings = CLIAltsDB.settings or {}
+    if not ForeverAltsDB then return end
+    ForeverAltsDB.settings = ForeverAltsDB.settings or {}
 
     local point, _, relPoint, x, y = frame:GetPoint(1)
     if point and x and y then
-        CLIAltsDB.settings.windowPos = {
+        ForeverAltsDB.settings.windowPos = {
             point = point,
             relPoint = relPoint or point,
             x = math.floor(x + 0.5),
@@ -1093,12 +1086,12 @@ function CLIAlts:SaveWindowPosition(frame)
     end
 end
 
-function CLIAlts:RestoreWindowPosition(frame)
+function ForeverAlts:RestoreWindowPosition(frame)
     frame = frame or mainFrame
     if not frame then return end
 
     frame:ClearAllPoints()
-    local pos = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.windowPos
+    local pos = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.windowPos
     local valid = false
     if pos and type(pos) == "table" and pos.point and type(pos.x) == "number" and type(pos.y) == "number" then
         if pos.x == pos.x and pos.y == pos.y and math.abs(pos.x) < 5000 and math.abs(pos.y) < 5000 then
@@ -1136,7 +1129,7 @@ local SCALE_TO_FONT = {
     [1.45] = 24,
 }
 
-function CLIAlts:GetScaleForFontSize(size)
+function ForeverAlts:GetScaleForFontSize(size)
     size = tonumber(size) or DEFAULT_FONT_SIZE
     size = math.min(24, math.max(12, size))
     if FONT_TO_SCALE[size] then
@@ -1149,7 +1142,7 @@ function CLIAlts:GetScaleForFontSize(size)
     end
 end
 
-function CLIAlts:GetFontSizeForScale(scale)
+function ForeverAlts:GetFontSizeForScale(scale)
     scale = tonumber(scale) or 1.0
     scale = math.min(1.45, math.max(0.8, scale))
     local bestFont = 18
@@ -1164,16 +1157,16 @@ function CLIAlts:GetFontSizeForScale(scale)
     return bestFont
 end
 
-function CLIAlts:SetScale(scale, skipFont)
+function ForeverAlts:SetScale(scale, skipFont)
     scale = tonumber(scale) or 1.0
     scale = math.min(1.8, math.max(0.7, scale))
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.scale = scale
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.scale = scale
     end
     if not skipFont then
         local matchedFont = self:GetFontSizeForScale(scale)
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.fontSize = matchedFont
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.fontSize = matchedFont
         end
     end
     if mainFrame then
@@ -1184,8 +1177,8 @@ function CLIAlts:SetScale(scale, skipFont)
     end
 end
 
-function CLIAlts:CycleScale()
-    local cur = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+function ForeverAlts:CycleScale()
+    local cur = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.scale) or 1.0
     local nextScale = 1.0
     for i, s in ipairs(SCALES) do
         if math.abs(s - cur) < 0.05 then
@@ -1197,11 +1190,11 @@ function CLIAlts:CycleScale()
     self:Render()
 end
 
-function CLIAlts:SetFontSize(size, skipScale)
+function ForeverAlts:SetFontSize(size, skipScale)
     size = tonumber(size) or DEFAULT_FONT_SIZE
     size = math.min(24, math.max(12, size))
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.fontSize = size
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.fontSize = size
     end
     if not skipScale then
         local targetScale = self:GetScaleForFontSize(size)
@@ -1213,53 +1206,26 @@ function CLIAlts:SetFontSize(size, skipScale)
     end
 end
 
-function CLIAlts:UpdateAllFonts(fontSize)
+function ForeverAlts:UpdateAllFonts(fontSize)
     if not mainFrame then return end
-    fontSize = fontSize or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
+    fontSize = fontSize or (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
 
-    if mainFrame.isLegacyUI then
-        self:SetWidgetFont(mainFrame.topAscii, fontSize)
-        self:SetWidgetFont(mainFrame.titleText, fontSize + 1, "OUTLINE")
-        self:SetWidgetFont(mainFrame.midAscii1, fontSize)
-        self:SetWidgetFont(mainFrame.statusBarText, fontSize)
-        self:SetWidgetFont(mainFrame.midAscii2, fontSize)
-        self:SetWidgetFont(mainFrame.tableTopAscii, fontSize)
-        if mainFrame.headerBorderL then self:SetWidgetFont(mainFrame.headerBorderL, fontSize) end
-        if mainFrame.headerBorderR then self:SetWidgetFont(mainFrame.headerBorderR, fontSize) end
-        for _, hCell in ipairs(mainFrame.headerCells or {}) do
-            self:SetWidgetFont(hCell, fontSize)
-        end
-        self:SetWidgetFont(mainFrame.tableSepAscii, fontSize)
-        self:SetWidgetFont(mainFrame.tableBotAscii, fontSize)
-        self:SetWidgetFont(mainFrame.botAscii, fontSize)
-        self:SetWidgetFont(mainFrame.pageText, fontSize)
-        self:SetWidgetFont(mainFrame.statusTip, fontSize)
-
-        for _, row in ipairs(rowFrames) do
-            if row.borderL then self:SetWidgetFont(row.borderL, fontSize) end
-            if row.borderR then self:SetWidgetFont(row.borderR, fontSize) end
-            for _, cell in ipairs(row.cells or {}) do
-                self:SetWidgetFont(cell, fontSize)
+    -- Modern UI: Keep fonts proportional and bound within column widths
+    for _, row in ipairs(rowFrames) do
+        if row.cells then
+            for _, cell in ipairs(row.cells) do
+                self:SetWidgetFont(cell, 13, "", "normal")
             end
         end
-    else
-        -- Modern UI: Keep fonts proportional and bound within column widths
-        for _, row in ipairs(rowFrames) do
-            if row.cells then
-                for _, cell in ipairs(row.cells) do
-                    self:SetWidgetFont(cell, 13, "", "normal")
-                end
-            end
-            if row.nameLine then self:SetWidgetFont(row.nameLine, 16, "OUTLINE", "normal") end
-            if row.subLine then self:SetWidgetFont(row.subLine, 13, "", "normal") end
-            if row.goldText then self:SetWidgetFont(row.goldText, 16, "OUTLINE", "mono") end
-            if row.restLabel then self:SetWidgetFont(row.restLabel, 13, "OUTLINE", "mono") end
-            if row.colRestLabel then self:SetWidgetFont(row.colRestLabel, 12, "OUTLINE", "mono") end
-            if row.statusPillText then self:SetWidgetFont(row.statusPillText, 12, "OUTLINE", "mono") end
-            if row.betaPoolText then self:SetWidgetFont(row.betaPoolText, 13, "OUTLINE", "mono") end
-            if row.betaRateText then self:SetWidgetFont(row.betaRateText, 15, "", "mono") end
-            if row.classRingInitial then self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE", "mono") end
-        end
+        if row.nameLine then self:SetWidgetFont(row.nameLine, 16, "OUTLINE", "normal") end
+        if row.subLine then self:SetWidgetFont(row.subLine, 13, "", "normal") end
+        if row.goldText then self:SetWidgetFont(row.goldText, 16, "OUTLINE", "mono") end
+        if row.restLabel then self:SetWidgetFont(row.restLabel, 13, "OUTLINE", "mono") end
+        if row.colRestLabel then self:SetWidgetFont(row.colRestLabel, 12, "OUTLINE", "mono") end
+        if row.statusPillText then self:SetWidgetFont(row.statusPillText, 12, "OUTLINE", "mono") end
+        if row.betaPoolText then self:SetWidgetFont(row.betaPoolText, 13, "OUTLINE", "mono") end
+        if row.betaRateText then self:SetWidgetFont(row.betaRateText, 15, "", "mono") end
+        if row.classRingInitial then self:SetWidgetFont(row.classRingInitial, 15, "OUTLINE", "mono") end
     end
 end
 
@@ -1267,7 +1233,7 @@ end
 -- Data-Driven Column Formatters (fmt)
 -- ----------------------------------------------------------------------------
 local function FmtFaction(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local fac = char.faction or "Neutral"
     if fac == "Alliance" then
         return string.format("|cff%s[A]|r", t.accentHex or "57d6e8")
@@ -1279,11 +1245,11 @@ local function FmtFaction(char, t)
 end
 
 local function FmtName(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local name = char.name or char.fullName or "Unknown"
-    local _, _, _, hex = CLIAlts:GetClassColor(char.classFile)
-    local isStale = CLIAlts.IsCharStale and CLIAlts:IsCharStale(char)
-    local isCur = (char.fullName and char.fullName == CLIAlts.curPlayerFullName) or (char.name and char.name == CLIAlts.curPlayerName)
+    local _, _, _, hex = ForeverAlts:GetClassColor(char.classFile)
+    local isStale = ForeverAlts.IsCharStale and ForeverAlts:IsCharStale(char)
+    local isCur = (char.fullName and char.fullName == ForeverAlts.curPlayerFullName) or (char.name and char.name == ForeverAlts.curPlayerName)
     local curPrefix = isCur and string.format("|cff%s*|r", t.accentHex or "57d6e8") or ""
     local classTag = ""
     if char.class and char.class ~= "" and (#name + #char.class <= 15) then
@@ -1296,9 +1262,9 @@ local function FmtName(char, t)
 end
 
 local function FmtLevel(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local lvl = char.level or 1
-    local isMax = lvl >= CLIAlts:GetMaxLevel()
+    local isMax = lvl >= ForeverAlts:GetMaxLevel()
     if isMax then
         return string.format("|cff%s%d|r", t.highlightHex or "ffd34e", lvl)
     end
@@ -1307,13 +1273,13 @@ end
 
 local function FmtGold(char)
     local gold = math.floor((char.money or 0) / 10000)
-    return "|cffffd700" .. CLIAlts:FormatNumber(gold) .. "g|r"
+    return "|cffffd700" .. ForeverAlts:FormatNumber(gold) .. "g|r"
 end
-CLIAlts.FmtGold = FmtGold
+ForeverAlts.FmtGold = FmtGold
 
 local function FmtRested(char, t)
-    t = t or CLIAlts:GetTheme()
-    local rested = CLIAlts:GetRestedData(char)
+    t = t or ForeverAlts:GetTheme()
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
     if rested.isMaxLevel then return string.format("|cff%sMAX|r", t.mutedHex or "a9a08c") end
 
@@ -1326,8 +1292,8 @@ local function FmtRested(char, t)
 end
 
 local function FmtETA(char, t)
-    t = t or CLIAlts:GetTheme()
-    local text, style = CLIAlts:FmtStatus(char, t)
+    t = t or ForeverAlts:GetTheme()
+    local text, style = ForeverAlts:FmtStatus(char, t)
     if style == "warn_fill" or style == "warn" then
         return string.format("|cff%s%s|r", t.pendingHex or "ffb547", text)
     elseif style == "info_outline" or style == "info" then
@@ -1336,12 +1302,12 @@ local function FmtETA(char, t)
         return string.format("|cff%s%s|r", t.mutedHex or "a9a08c", text)
     end
 end
-CLIAlts.FmtETA = FmtETA
+ForeverAlts.FmtETA = FmtETA
 
 -- Tab 2 Forever Route & Rotation Formatters
 local function FmtRouteOrder(char, t)
-    t = t or CLIAlts:GetTheme()
-    local priorityList = CLIAlts._cachedPriorityList or CLIAlts:GetNextAltsPriority()
+    t = t or ForeverAlts:GetTheme()
+    local priorityList = ForeverAlts._cachedPriorityList or ForeverAlts:GetNextAltsPriority()
     local charKey = char.fullName or char.name
     for idx, item in ipairs(priorityList) do
         local k = item.char and (item.char.fullName or item.char.name)
@@ -1358,7 +1324,7 @@ local function FmtRouteOrder(char, t)
     if char.tier == "BANK" then
         return string.format("|cff%s[B]|r", t.dimHex or "736953")
     end
-    local maxLvl = CLIAlts:GetMaxLevel()
+    local maxLvl = ForeverAlts:GetMaxLevel()
     local tgt = char.target_level or (char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or maxLvl
     if (char.level or 1) >= tgt then
         return string.format("|cff%s[OK]|r", t.readyHex or "55e39a")
@@ -1367,70 +1333,52 @@ local function FmtRouteOrder(char, t)
 end
 
 local function FmtRotationScore(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     if char.tier == "BANK" then
         return string.format("|cff%sEXCLUDED|r", t.dimHex or "736953")
     end
-    local score = CLIAlts:CalculateRotationScore(char)
+    local score = ForeverAlts:CalculateRotationScore(char)
     if score < -400000 and score > -600000 then
         return string.format("|cff%sTARGET HIT|r", t.readyHex or "55e39a")
     elseif score < -900000 then
         return string.format("|cff%sBANK MULE|r", t.dimHex or "736953")
     elseif score >= 1000000 then
         local kScore = math.floor(score / 1000)
-        return string.format("|cff%s+%sk|r", t.highlightHex or "ffd34e", CLIAlts:FormatNumber(kScore))
+        return string.format("|cff%s+%sk|r", t.highlightHex or "ffd34e", ForeverAlts:FormatNumber(kScore))
     elseif score > 0 then
         local kScore = math.floor(score / 1000)
-        return string.format("|cff%s+%sk|r", t.primaryHex or "f2c94c", CLIAlts:FormatNumber(kScore))
+        return string.format("|cff%s+%sk|r", t.primaryHex or "f2c94c", ForeverAlts:FormatNumber(kScore))
     else
         return string.format("|cff%s%d|r", t.mutedHex or "a9a08c", score)
     end
 end
 
 local function FmtRouteReason(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     if char.tier == "BANK" then
-        if mainFrame and not mainFrame.isLegacyUI then
-            return string.format("|cff%sBank Mule (Excluded)|r", t.dimHex or "736953")
-        end
-        return string.format("|cff%sDesignated Bank Mule (Excluded from leveling)|r", t.dimHex or "736953")
+        return string.format("|cff%sBank Mule (Excluded)|r", t.dimHex or "736953")
     end
-    local maxLvl = CLIAlts:GetMaxLevel()
+    local maxLvl = ForeverAlts:GetMaxLevel()
     local defaultTgt = (char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or maxLvl
     local tgt = char.target_level or defaultTgt
     if (char.level or 1) >= tgt then
-        if mainFrame and not mainFrame.isLegacyUI then
-            return string.format("|cff%sTarget Level Reached (L%d >= %d)|r", t.readyHex or "55e39a", char.level or 1, tgt)
-        end
-        return string.format("|cff%sTarget Level Reached (Lvl %d >= %d) - rotation complete|r", t.readyHex or "55e39a", char.level or 1, tgt)
+        return string.format("|cff%sTarget Level Reached (L%d >= %d)|r", t.readyHex or "55e39a", char.level or 1, tgt)
     end
 
-    local rested = CLIAlts:GetRestedData(char)
-    local _, wastedXP = CLIAlts:GetRestedWaste(char, nil, rested)
+    local rested = ForeverAlts:GetRestedData(char)
+    local _, wastedXP = ForeverAlts:GetRestedWaste(char, nil, rested)
     if rested and rested.isFull then
         if wastedXP and wastedXP > 0 then
-            if mainFrame and not mainFrame.isLegacyUI then
-                return string.format("|cff%s! CAPPED: +%s XP waste!|r", t.pendingHex or "ffb547", CLIAlts:FormatNumber(wastedXP))
-            end
-            return string.format("|cff%s! CAPPED: Overflowing (+%s XP waste) - Play now!|r", t.pendingHex or "ffb547", CLIAlts:FormatNumber(wastedXP))
+            return string.format("|cff%s! CAPPED: +%s XP waste!|r", t.pendingHex or "ffb547", ForeverAlts:FormatNumber(wastedXP))
         else
-            if mainFrame and not mainFrame.isLegacyUI then
-                return string.format("|cff%s* CAPPED: %d%% Rested pool ready|r", t.highlightHex or "ffd34e", rested.maxPercent or 150)
-            end
-            return string.format("|cff%s* CAPPED: %d%% Rested pool ready for double XP|r", t.highlightHex or "ffd34e", rested.maxPercent or 150)
+            return string.format("|cff%s* CAPPED: %d%% Rested pool ready|r", t.highlightHex or "ffd34e", rested.maxPercent or 150)
         end
     elseif char.tier == "CORE" then
-        local xpStr = rested and CLIAlts:FormatNumber(rested.currentRested) or "0"
-        if mainFrame and not mainFrame.isLegacyUI then
-            return string.format("|cff%sCORE: ~%s Rested (Caps: %s)|r", t.primaryHex or "f2c94c", xpStr, rested and rested.timeLeftStr or "---")
-        end
-        return string.format("|cff%sCORE PRIORITY: ~%s Rested XP (Caps in %s)|r", t.primaryHex or "f2c94c", xpStr, rested and rested.timeLeftStr or "---")
+        local xpStr = rested and ForeverAlts:FormatNumber(rested.currentRested) or "0"
+        return string.format("|cff%sCORE: ~%s Rested (Caps: %s)|r", t.primaryHex or "f2c94c", xpStr, rested and rested.timeLeftStr or "---")
     else
-        local xpStr = rested and CLIAlts:FormatNumber(rested.currentRested) or "0"
-        if mainFrame and not mainFrame.isLegacyUI then
-            return string.format("|cff%sRESERVE: ~%s Rested XP|r", t.mutedHex or "a9a08c", xpStr)
-        end
-        return string.format("|cff%sRESERVE ALT: ~%s Rested XP (Accruing toward cap)|r", t.mutedHex or "a9a08c", xpStr)
+        local xpStr = rested and ForeverAlts:FormatNumber(rested.currentRested) or "0"
+        return string.format("|cff%sRESERVE: ~%s Rested XP|r", t.mutedHex or "a9a08c", xpStr)
     end
 end
 
@@ -1445,7 +1393,7 @@ local function ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
         t = charOrTheme
     end
     if type(t) ~= "table" or (not t.textHex and not t.primaryHex and not t.dimHex) then
-        t = (CLIAlts.GetTheme and CLIAlts:GetTheme()) or {}
+        t = (ForeverAlts.GetTheme and ForeverAlts:GetTheme()) or {}
     end
     return char, t
 end
@@ -1454,23 +1402,17 @@ local function FmtCurXP(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
     local mutedHex = (t and t.mutedHex) or "a9a08c"
     local textHex = (t and t.textHex) or "f4ead2"
-    local dimHex = (t and t.dimHex) or "736953"
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local xpData = CLIAlts:GetLevelProgressData(char)
+    local xpData = ForeverAlts:GetLevelProgressData(char)
     if not xpData or xpData.isMaxLevel then
         return string.format("|cff%sMAX LEVEL|r", mutedHex)
     end
-    if mainFrame and not mainFrame.isLegacyUI then
-        local curK = (xpData.curXP or 0) >= 1000 and string.format("%.1fk", (xpData.curXP or 0) / 1000) or tostring(xpData.curXP or 0)
-        local maxK = (xpData.maxXP or 0) >= 1000 and string.format("%.1fk", (xpData.maxXP or 0) / 1000) or tostring(xpData.maxXP or 0)
-        return string.format("|cff%s%s/%s (%d%%)|r", textHex, curK, maxK, xpData.percent or 0)
-    end
-    return string.format("|cff%s%s|r |cff%s/ %s (%d%%)|r",
-        textHex, CLIAlts:FormatNumber(xpData.curXP or 0),
-        dimHex, CLIAlts:FormatNumber(xpData.maxXP or 0), xpData.percent or 0)
+    local curK = (xpData.curXP or 0) >= 1000 and string.format("%.1fk", (xpData.curXP or 0) / 1000) or tostring(xpData.curXP or 0)
+    local maxK = (xpData.maxXP or 0) >= 1000 and string.format("%.1fk", (xpData.maxXP or 0) / 1000) or tostring(xpData.maxXP or 0)
+    return string.format("|cff%s%s/%s (%d%%)|r", textHex, curK, maxK, xpData.percent or 0)
 end
-CLIAlts.FmtCurXP = FmtCurXP
+ForeverAlts.FmtCurXP = FmtCurXP
 
 local function FmtRestedPool(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1478,17 +1420,14 @@ local function FmtRestedPool(charOrSelf, charOrTheme, maybeTheme)
     local textHex = (t and (t.textHex or t.primaryHex)) or "f4ead2"
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s---|r", mutedHex)
     end
-    if mainFrame and not mainFrame.isLegacyUI then
-        local curK = (rested.currentRested or 0) >= 1000 and string.format("%.1fk", (rested.currentRested or 0) / 1000) or tostring(rested.currentRested or 0)
-        return string.format("|cff%s%s XP|r", textHex, curK)
-    end
-    return string.format("|cff%s%s XP|r", textHex, CLIAlts:FormatNumber(rested.currentRested or 0))
+    local curK = (rested.currentRested or 0) >= 1000 and string.format("%.1fk", (rested.currentRested or 0) / 1000) or tostring(rested.currentRested or 0)
+    return string.format("|cff%s%s XP|r", textHex, curK)
 end
-CLIAlts.FmtRestedPool = FmtRestedPool
+ForeverAlts.FmtRestedPool = FmtRestedPool
 
 local function FmtRestedBonus(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1496,14 +1435,14 @@ local function FmtRestedBonus(charOrSelf, charOrTheme, maybeTheme)
     local readyHex = (t and t.readyHex) or "55e39a"
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s---|r", mutedHex)
     end
-    if CLIAlts.IsRetail and CLIAlts:IsRetail() then
+    if ForeverAlts.IsRetail and ForeverAlts:IsRetail() then
         return string.format("|cff%s+0%%|r", mutedHex)
     end
-    local rank = (rested and rested.perkRank) or (CLIAlts.GetWellRestedRank and CLIAlts:GetWellRestedRank(char)) or 0
+    local rank = (rested and rested.perkRank) or (ForeverAlts.GetWellRestedRank and ForeverAlts:GetWellRestedRank(char)) or 0
     local pct = rank * 4
     if rank > 0 then
         return string.format("|cff%s+%d%% (R%d)|r", readyHex, pct, rank)
@@ -1511,7 +1450,7 @@ local function FmtRestedBonus(charOrSelf, charOrTheme, maybeTheme)
         return string.format("|cff%s+0%% (R0)|r", mutedHex)
     end
 end
-CLIAlts.FmtRestedBonus = FmtRestedBonus
+ForeverAlts.FmtRestedBonus = FmtRestedBonus
 
 local function FmtRestedCap(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1519,18 +1458,15 @@ local function FmtRestedCap(charOrSelf, charOrTheme, maybeTheme)
     local textHex = (t and (t.textHex or t.primaryHex)) or "f4ead2"
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s---|r", mutedHex)
     end
     local capPct = (rested and rested.maxPercent) or 150
-    if mainFrame and not mainFrame.isLegacyUI then
-        local capK = (rested.maxRested or 0) >= 1000 and string.format("%.1fk", (rested.maxRested or 0) / 1000) or tostring(rested.maxRested or 0)
-        return string.format("|cff%s%s (%d%%)|r", textHex, capK, capPct)
-    end
-    return string.format("|cff%s%s (%d%%)|r", textHex, CLIAlts:FormatNumber(rested.maxRested or 0), capPct)
+    local capK = (rested.maxRested or 0) >= 1000 and string.format("%.1fk", (rested.maxRested or 0) / 1000) or tostring(rested.maxRested or 0)
+    return string.format("|cff%s%s (%d%%)|r", textHex, capK, capPct)
 end
-CLIAlts.FmtRestedCap = FmtRestedCap
+ForeverAlts.FmtRestedCap = FmtRestedCap
 
 local function FmtRestedBar(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1539,7 +1475,7 @@ local function FmtRestedBar(charOrSelf, charOrTheme, maybeTheme)
     local mutedHex = (t and t.mutedHex) or "a9a08c"
     if not char then return string.format("|cff%s[==========]|r |cff%s---|r", dimHex, mutedHex) end
 
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s[==========]|r |cff%sMAX|r", dimHex, highlightHex)
     end
@@ -1564,7 +1500,7 @@ local function FmtRestedBar(charOrSelf, charOrTheme, maybeTheme)
     return string.format("|cff%s[|r|cff%s%s|r|cff%s%s|r|cff%s]|r |cff%s%s%d%% of Cap|r",
         dimHex, barColor, fillStr, dimHex, emptyStr, dimHex, labelColor, est, capPct)
 end
-CLIAlts.FmtRestedBar = FmtRestedBar
+ForeverAlts.FmtRestedBar = FmtRestedBar
 
 local function FmtTimeToCap(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1575,7 +1511,7 @@ local function FmtTimeToCap(charOrSelf, charOrTheme, maybeTheme)
 
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local maxLevel = CLIAlts.GetMaxLevel and CLIAlts:GetMaxLevel() or 60
+    local maxLevel = ForeverAlts.GetMaxLevel and ForeverAlts:GetMaxLevel() or 60
     local level = char.level or 1
     if level >= maxLevel then
         return string.format("|cff%sMAX LEVEL|r", mutedHex)
@@ -1584,18 +1520,18 @@ local function FmtTimeToCap(charOrSelf, charOrTheme, maybeTheme)
     local now = time()
     local lastSeen = char.lastUpdate or char.logoutTime or char.lastSeen or now
     local unseenDays = math.floor((now - lastSeen) / 86400)
-    local staleDays = (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.staleDays)) or 30
+    local staleDays = (ForeverAltsDB and ForeverAltsDB.settings and tonumber(ForeverAltsDB.settings.staleDays)) or 30
 
     if unseenDays >= staleDays or char.isStale then
         return string.format("|cff%sUnseen %dd|r", mutedHex, math.max(unseenDays, 1))
     end
 
-    local rested = CLIAlts:GetRestedData(char, false, now)
-    local wastedSec, wastedXP = CLIAlts:GetRestedWaste(char, now, rested)
+    local rested = ForeverAlts:GetRestedData(char, false, now)
+    local wastedSec, wastedXP = ForeverAlts:GetRestedWaste(char, now, rested)
 
     if rested and rested.isFull then
         if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
-            local wasteStr = CLIAlts:FormatWasteShort(wastedXP)
+            local wasteStr = ForeverAlts:FormatWasteShort(wastedXP)
             return string.format("|cff%s[+%s WASTED]|r", blockedHex, wasteStr)
         else
             return string.format("|cff%s[CAPPED]|r", pendingHex)
@@ -1631,7 +1567,7 @@ local function FmtTimeToCap(charOrSelf, charOrTheme, maybeTheme)
 
     return string.format("|cff%s---|r", mutedHex)
 end
-CLIAlts.FmtTimeToCap = FmtTimeToCap
+ForeverAlts.FmtTimeToCap = FmtTimeToCap
 
 local function FmtRate(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1639,14 +1575,14 @@ local function FmtRate(charOrSelf, charOrTheme, maybeTheme)
     local dimHex = (t and t.dimHex) or "8896ab"
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s---|r", mutedHex)
     end
     local s = rested.isResting and "+5.0%/8h" or "+1.25%/8h"
     return string.format("|cff%s%s|r", dimHex, s)
 end
-CLIAlts.FmtRate = FmtRate
+ForeverAlts.FmtRate = FmtRate
 
 local function FmtRestLoc(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1654,7 +1590,7 @@ local function FmtRestLoc(charOrSelf, charOrTheme, maybeTheme)
     local readyHex = (t and t.readyHex) or "55e39a"
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s---|r", mutedHex)
     end
@@ -1664,7 +1600,7 @@ local function FmtRestLoc(charOrSelf, charOrTheme, maybeTheme)
         return string.format("|cff%sWild|r", mutedHex)
     end
 end
-CLIAlts.FmtRestLoc = FmtRestLoc
+ForeverAlts.FmtRestLoc = FmtRestLoc
 
 local function FmtXPHour(charOrSelf, charOrTheme, maybeTheme)
     local char, t = ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
@@ -1672,7 +1608,7 @@ local function FmtXPHour(charOrSelf, charOrTheme, maybeTheme)
     local dimHex = (t and t.dimHex) or "ffd34e"
     if not char then return string.format("|cff%s---|r", mutedHex) end
 
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested or rested.isMaxLevel then
         return string.format("|cff%s---|r", mutedHex)
     end
@@ -1680,17 +1616,17 @@ local function FmtXPHour(charOrSelf, charOrTheme, maybeTheme)
     if xpPerHour <= 0 then
         return string.format("|cff%s---|r", mutedHex)
     end
-    return string.format("|cff%s+%s/h|r", dimHex, CLIAlts:FormatNumber(xpPerHour))
+    return string.format("|cff%s+%s/h|r", dimHex, ForeverAlts:FormatNumber(xpPerHour))
 end
-CLIAlts.FmtXPHour = FmtXPHour
+ForeverAlts.FmtXPHour = FmtXPHour
 
 -- Tab 4 Profession Formatters
 local function FmtProf1(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local profs = char.professions and char.professions.primary
     local p = profs and profs[1]
     if not p then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
-    local m = CLIAlts:GetProfessionMilestoneInfo(char, p)
+    local m = ForeverAlts:GetProfessionMilestoneInfo(char, p)
     if m and m.canTrainNext and m.isCappedAtCurrentRank then
         return string.format("|cff%s%s: %d / %d [TRAIN]|r", t.readyHex or "55e39a", p.name or "Prof", p.rank or 0, p.maxRank or 0)
     elseif m and m.levelBottleneck then
@@ -1703,11 +1639,11 @@ local function FmtProf1(char, t)
 end
 
 local function FmtProf2(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local profs = char.professions and char.professions.primary
     local p = profs and profs[2]
     if not p then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
-    local m = CLIAlts:GetProfessionMilestoneInfo(char, p)
+    local m = ForeverAlts:GetProfessionMilestoneInfo(char, p)
     if m and m.canTrainNext and m.isCappedAtCurrentRank then
         return string.format("|cff%s%s: %d / %d [TRAIN]|r", t.readyHex or "55e39a", p.name or "Prof", p.rank or 0, p.maxRank or 0)
     elseif m and m.levelBottleneck then
@@ -1720,7 +1656,7 @@ local function FmtProf2(char, t)
 end
 
 local function FmtSecProf(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local secs = char.professions and char.professions.secondary
     if not secs or #secs == 0 then return string.format("|cff%s---|r", t.mutedHex or "a9a08c") end
     local parts = {}
@@ -1733,10 +1669,10 @@ end
 
 -- Tab 5 Economy & Location Formatters
 local function FmtGoldLong(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local money = char.money or 0
-    local isStale = CLIAlts.IsCharStale and CLIAlts:IsCharStale(char)
-    local formatted = CLIAlts:FormatMoney(money, true)
+    local isStale = ForeverAlts.IsCharStale and ForeverAlts:IsCharStale(char)
+    local formatted = ForeverAlts:FormatMoney(money, true)
     if isStale then
         return string.format("%s |cff%s[STALE]|r", formatted, t.blockedHex or "ff6b6b")
     end
@@ -1745,35 +1681,35 @@ end
 
 local function FmtGoldCoins(char, t)
     local money = char and char.money or 0
-    return CLIAlts:FormatCoins(money)
+    return ForeverAlts:FormatCoins(money)
 end
-CLIAlts.FmtGoldCoins = FmtGoldCoins
+ForeverAlts.FmtGoldCoins = FmtGoldCoins
 
 local function FmtWealthShare(char, t)
-    t = t or CLIAlts:GetTheme()
-    local summary = CLIAlts:GetAccountSummary()
+    t = t or ForeverAlts:GetTheme()
+    local summary = ForeverAlts:GetAccountSummary()
     local total = summary.totalGold or 0
     local money = char.money or 0
     local pct = total > 0 and (money / total * 100) or 0
     return string.format("|cff%s%.1f%%|r", t.primaryHex, pct)
 end
-CLIAlts.FmtWealthShare = FmtWealthShare
+ForeverAlts.FmtWealthShare = FmtWealthShare
 
 local function FmtLocation(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local loc = char.location or "Unknown"
     return string.format("|cff%s%s|r", t.dimHex, loc)
 end
 
 local function FmtHearth(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local bind = char.bindLocation or "Unknown"
     return string.format("|cff%s%s|r", t.textHex or t.highlightHex, bind)
 end
 
 -- Tab 6 Cooldowns & Lockouts Formatters
 local function FmtTradeCooldowns(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local cds = char.tradeCooldowns
     if not cds or not next(cds) then
         return string.format("|cff%sNO TRADE CDS|r", t.mutedHex or "a9a08c")
@@ -1806,7 +1742,7 @@ local function FmtTradeCooldowns(char, t)
 end
 
 local function FmtRaidLocks(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local locks = char.lockouts
     if not locks or not next(locks) then
         return string.format("|cff%sNO ACTIVE LOCKS|r", t.mutedHex or "a9a08c")
@@ -1831,7 +1767,7 @@ end
 
 -- Tab 1 WoW Forever Route Formatters
 local function FmtTier(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local tier = char.tier or "UNASSIGNED"
     if tier == "CORE" then
         return string.format("|cff%s[CORE]|r", t.highlightHex or "ffd34e")
@@ -1845,7 +1781,7 @@ local function FmtTier(char, t)
 end
 
 local function FmtLevelTarget(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local lvl = char.level or 1
     local tgt = char.target_level or ((char.tier == "CORE" and 35) or (char.tier == "RESERVE" and 25) or (char.tier == "BANK" and 1) or 60)
     if lvl >= tgt then
@@ -1856,13 +1792,13 @@ local function FmtLevelTarget(char, t)
 end
 
 local function FmtProfessionsAuto(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     if char.tier == "BANK" then
         return string.format("|cff%sBank Mule|r", t.pendingHex or "ffb547")
     end
 
     local alertTag = ""
-    local alerts = CLIAlts:GetCharacterProfessionAlerts(char)
+    local alerts = ForeverAlts:GetCharacterProfessionAlerts(char)
     if #alerts > 0 then
         for _, a in ipairs(alerts) do
             if a.type == "TRAIN" then
@@ -1880,7 +1816,7 @@ local function FmtProfessionsAuto(char, t)
     if profs and #profs > 0 then
         local parts = {}
         for _, p in ipairs(profs) do
-            local m = CLIAlts:GetProfessionMilestoneInfo(char, p)
+            local m = ForeverAlts:GetProfessionMilestoneInfo(char, p)
             if m then
                 if m.canTrainNext and m.isCappedAtCurrentRank then
                     table.insert(parts, string.format("|cff%s%s %d/%d [TRAIN]|r", t.readyHex or "55e39a", m.abbr, m.rank, m.maxRank))
@@ -1898,10 +1834,10 @@ local function FmtProfessionsAuto(char, t)
     end
     return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
 end
-CLIAlts.FmtProfessionsAuto = FmtProfessionsAuto
+ForeverAlts.FmtProfessionsAuto = FmtProfessionsAuto
 
 local function FmtForeverStatus(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     if char.tier == "BANK" then
         return string.format("|cff%sBank Mule|r", t.pendingHex or "ffb547")
     end
@@ -1910,14 +1846,14 @@ local function FmtForeverStatus(char, t)
     if lvl >= tgt then
         return string.format("|cff%sTarget Met (%d)|r", t.readyHex or "55e39a", tgt)
     end
-    local rested = CLIAlts:GetRestedData(char)
+    local rested = ForeverAlts:GetRestedData(char)
     if not rested then return string.format("|cff%sAccruing|r", t.mutedHex or "a9a08c") end
     if rested.isMaxLevel then return string.format("|cff%sMAX LEVEL|r", t.mutedHex or "a9a08c") end
     if rested.isFull then
         local capPct = rested.maxPercent or 150
-        local _, wastedXP = CLIAlts:GetRestedWaste(char, nil, rested)
+        local _, wastedXP = ForeverAlts:GetRestedWaste(char, nil, rested)
         if wastedXP and wastedXP > 0 then
-            return string.format("|cff%s%d%% Capped* (+%s)|r", t.pendingHex or "ffb547", capPct, CLIAlts:FormatWasteShort(wastedXP))
+            return string.format("|cff%s%d%% Capped* (+%s)|r", t.pendingHex or "ffb547", capPct, ForeverAlts:FormatWasteShort(wastedXP))
         else
             return string.format("|cff%s%d%% Capped*|r", t.highlightHex, capPct)
         end
@@ -1926,11 +1862,11 @@ local function FmtForeverStatus(char, t)
     local est = rested.isEstimate and "~" or ""
     return string.format("|cff%s%d%%%s Rested|r", t.primaryHex, pct, est)
 end
-CLIAlts.FmtForeverStatus = FmtForeverStatus
+ForeverAlts.FmtForeverStatus = FmtForeverStatus
 
 -- Tab 7 Mail Routing & Supply Chain Formatters
 local function FmtMailProfessions(char, t)
-    t = t or CLIAlts:GetTheme()
+    t = t or ForeverAlts:GetTheme()
     local profs = char.professions and char.professions.primary
     if not profs or #profs == 0 then
         return string.format("|cff%sNo Primary Skills|r", t.mutedHex or "a9a08c")
@@ -1942,11 +1878,11 @@ local function FmtMailProfessions(char, t)
     end
     return table.concat(parts, " · ")
 end
-CLIAlts.FmtMailProfessions = FmtMailProfessions
+ForeverAlts.FmtMailProfessions = FmtMailProfessions
 
 local function FmtMailRoute(char, t)
-    t = t or CLIAlts:GetTheme()
-    local role, isOverride, autoRole = CLIAlts:GetCharacterEffectiveSupplyRole(char)
+    t = t or ForeverAlts:GetTheme()
+    local role, isOverride, autoRole = ForeverAlts:GetCharacterEffectiveSupplyRole(char)
     local base = isOverride and string.format("|cff%s%s|r", t.highlightHex or "ffd34e", role) or string.format("|cff%s%s|r", t.textHex or "f4ead2", autoRole)
     local tags = {}
     if char.routeCooking then
@@ -1960,32 +1896,32 @@ local function FmtMailRoute(char, t)
     end
     return base
 end
-CLIAlts.FmtMailRoute = FmtMailRoute
+ForeverAlts.FmtMailRoute = FmtMailRoute
 
 local function FmtMailMode(char, t)
-    t = t or CLIAlts:GetTheme()
-    local _, isOverride = CLIAlts:GetCharacterEffectiveSupplyRole(char)
+    t = t or ForeverAlts:GetTheme()
+    local _, isOverride = ForeverAlts:GetCharacterEffectiveSupplyRole(char)
     if isOverride then
         return string.format("|cff%s[OVERRIDE]|r", t.pendingHex or "ffb547")
     else
         return string.format("|cff%s[AUTO]|r", t.accentHex or "57d6e8")
     end
 end
-CLIAlts.FmtMailMode = FmtMailMode
+ForeverAlts.FmtMailMode = FmtMailMode
 
 local function FmtMailPending(char, t)
-    t = t or CLIAlts:GetTheme()
-    if CLIAlts:IsCurrentPlayer(char) then
+    t = t or ForeverAlts:GetTheme()
+    if ForeverAlts:IsCurrentPlayer(char) then
         return string.format("|cff%s(Logged In)|r", t.mutedHex or "a9a08c")
     end
-    local count, detail = CLIAlts:GetCharacterPendingMail(char)
+    local count, detail = ForeverAlts:GetCharacterPendingMail(char)
     if count > 0 then
         return string.format("|cff%s%d items (%s)|r", t.readyHex or "55e39a", count, detail)
     else
         return string.format("|cff%s---|r", t.mutedHex or "a9a08c")
     end
 end
-CLIAlts.FmtMailPending = FmtMailPending
+ForeverAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
     [1] = { -- 1: OVERVIEW (Consolidated Dashboard with Dual Circular Gauges)
@@ -2054,17 +1990,16 @@ local COLS = {
     [8] = {}, -- 8: SETTINGS & PREFERENCES (Embedded Panel)
 }
 
-function CLIAlts:GetColumns(activeTab)
+function ForeverAlts:GetColumns(activeTab)
     activeTab = tonumber(activeTab) or 1
     local tabCols = COLS[activeTab] or COLS[1]
-    local isModern = (mainFrame and not mainFrame.isLegacyUI)
-    if not self:IsCompact() and not isModern then
+    if not self:IsCompact() and not mainFrame then
         return tabCols
     end
 
     local filtered = {}
     for _, col in ipairs(tabCols) do
-        if isModern then
+        if mainFrame then
             if col.mpw and col.mpw > 0 then
                 table.insert(filtered, col)
             elseif col.mpw == nil and (col.cpw == nil or col.cpw > 0) then
@@ -2081,7 +2016,7 @@ function CLIAlts:GetColumns(activeTab)
     return filtered
 end
 
-function CLIAlts:GetLineWidth()
+function ForeverAlts:GetLineWidth()
     local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 876 or 1126)
     local charW = self:GetCharWidth()
     if not charW or charW < 4 or charW > 25 then
@@ -2090,169 +2025,28 @@ function CLIAlts:GetLineWidth()
     return math.max(20, math.floor(targetW / charW))
 end
 
-function CLIAlts:GetBorderLine(isDouble)
+function ForeverAlts:GetBorderLine(isDouble)
     local char = isDouble and "=" or "-"
     local targetW = (mainFrame and (mainFrame:GetWidth() - 24)) or (self:IsCompact() and 876 or 1126)
     return self:GetBarString(char, targetW)
 end
 
-function CLIAlts:UpdateBorders()
-    if not mainFrame then return end
-    local doubleBar = self:GetBorderLine(true)
-    local singleBar = self:GetBorderLine(false)
-
-    if mainFrame.topAscii then mainFrame.topAscii:SetText(doubleBar) end
-    if mainFrame.midAscii1 then mainFrame.midAscii1:SetText("") end
-    if mainFrame.midAscii2 then mainFrame.midAscii2:SetText("") end
-    if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetText("") end
-    if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetText(singleBar) end
-    if mainFrame.tableBotAscii then mainFrame.tableBotAscii:SetText(singleBar) end
-    if mainFrame.promptSepAscii then mainFrame.promptSepAscii:SetText("") end
-    if mainFrame.botAscii then mainFrame.botAscii:SetText(singleBar) end
+function ForeverAlts:UpdateBorders()
+    -- Deprecated in Modern UI v2
 end
 
 -- ----------------------------------------------------------------------------
--- Compact Mode Layout & Width Adjustment
+-- Modern Frame Layout & Sizing
 -- ----------------------------------------------------------------------------
-function CLIAlts:ApplyLayoutSize()
+function ForeverAlts:ApplyLayoutSize()
     if not mainFrame then return end
-    if not mainFrame.isLegacyUI then
-        mainFrame:SetSize(1440, 800)
-        return
-    end
-    local isComp = self:IsCompact()
-    local targetWidth = isComp and 900 or 1150
-    mainFrame:SetWidth(targetWidth)
-    mainFrame:SetHeight(600)
-
-    -- Top bar layout
-    if mainFrame.titleText then
-        mainFrame.titleText:SetText("ForeverAlts")
-    end
-    if mainFrame.subTitleText then
-        mainFrame.subTitleText:SetText("/ ALT MONITOR")
-    end
-    if mainFrame.subtitleText then
-        mainFrame.subtitleText:SetText("/ ALT MONITOR")
-    end
-    if mainFrame.btnCompact then
-        mainFrame.btnCompact.label:SetText(isComp and "[ COMPACT* ]" or "[ COMPACT ]")
-    end
-
-    -- Tab buttons: Clean Nav Bar at Y = -56
-    local tabCount = #(mainFrame.tabButtons or {})
-    local tabW = math.floor((targetWidth - 36 - ((tabCount - 1) * 8)) / math.max(1, tabCount))
-    local prevTab = nil
-    for _, tabBtn in ipairs(mainFrame.tabButtons or {}) do
-        local w = isComp and tabW or (tabBtn.stdWidth or 80)
-        tabBtn:SetWidth(w)
-        tabBtn:ClearAllPoints()
-        if not prevTab then
-            tabBtn:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, -56)
-        else
-            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 8, 0)
-        end
-        prevTab = tabBtn
-    end
-
-    -- Hero Recommendation Card geometry (recPanel)
-    local recY = -84
-    if mainFrame.recPanel then
-        mainFrame.recPanel:ClearAllPoints()
-        mainFrame.recPanel:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 14, recY)
-        mainFrame.recPanel:SetSize(targetWidth - 28, 74)
-    end
-    if mainFrame.summaryBar then
-        mainFrame.summaryBar:SetWidth(targetWidth - 28)
-    end
-
-    -- 3 KPI Metric Cards
-    if mainFrame.kpiContainer then
-        mainFrame.kpiContainer:ClearAllPoints()
-        mainFrame.kpiContainer:SetPoint("TOPLEFT", mainFrame.recPanel, "BOTTOMLEFT", 0, -8)
-        mainFrame.kpiContainer:SetSize(targetWidth - 28, 52)
-        local cardW = math.floor((targetWidth - 28 - 16) / 3)
-        for _, card in pairs(mainFrame.kpiCards or {}) do
-            card:SetWidth(cardW)
-        end
-    end
-
-    -- Sub-header view bar
-    local subY = -226
-    if mainFrame.subViewTitle then
-        mainFrame.subViewTitle:ClearAllPoints()
-        mainFrame.subViewTitle:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 18, subY)
-    end
-    if mainFrame.subViewFilters then
-        mainFrame.subViewFilters:ClearAllPoints()
-        mainFrame.subViewFilters:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -18, subY)
-    end
-
-    -- Table header & rows geometry
-    local headerY = -246
-    if mainFrame.headerFrame then
-        mainFrame.headerFrame:ClearAllPoints()
-        mainFrame.headerFrame:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, headerY)
-        mainFrame.headerFrame:SetWidth(targetWidth - 24)
-    end
-    if mainFrame.tableSepAscii then
-        mainFrame.tableSepAscii:ClearAllPoints()
-        mainFrame.tableSepAscii:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, headerY - 18)
-    end
-    local rowsY = headerY - 22
-    if mainFrame.rowsContainer then
-        mainFrame.rowsContainer:ClearAllPoints()
-        mainFrame.rowsContainer:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, rowsY)
-        mainFrame.rowsContainer:SetWidth(targetWidth - 24)
-        mainFrame.rowsContainer:SetHeight(ROWS_COUNT * 36)
-    end
-    local lvlCenter = isComp and 340 or 416
-    local restLeft = isComp and 385 or 470
-    local barWidth = isComp and 190 or 280
-    for _, row in ipairs(rowFrames) do
-        row:SetWidth(targetWidth - 24)
-        row:SetHeight(34)
-        if row.levelText then
-            row.levelText:ClearAllPoints()
-            row.levelText:SetPoint("CENTER", row, "LEFT", lvlCenter, 0)
-        end
-        if row.restPercentText then
-            row.restPercentText:ClearAllPoints()
-            row.restPercentText:SetPoint("LEFT", row, "LEFT", restLeft, 0)
-        end
-        if row.barBg then
-            row.barBg:SetWidth(barWidth)
-        end
-    end
-    if mainFrame.tableBotAscii then
-        mainFrame.tableBotAscii:ClearAllPoints()
-        mainFrame.tableBotAscii:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 12, rowsY - (ROWS_COUNT * 36) - 4)
-    end
-
-    -- Footer elements
-    if mainFrame.btnPrev then
-        mainFrame.btnPrev:ClearAllPoints()
-        mainFrame.btnPrev:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", 18, 12)
-    end
-    if mainFrame.statusTip then
-        mainFrame.statusTip:ClearAllPoints()
-        mainFrame.statusTip:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -18, 14)
-    end
-
-    -- Bottom prompt box width adjustment
-    if mainFrame.promptBox and mainFrame.promptLabel then
-        mainFrame.promptBox:ClearAllPoints()
-        mainFrame.promptBox:SetPoint("LEFT", mainFrame.promptLabel, "RIGHT", 4, 0)
-        mainFrame.promptBox:SetPoint("RIGHT", mainFrame, "RIGHT", isComp and -280 or -420, 0)
-    end
-
-    self:UpdateBorders()
+    mainFrame:SetSize(1440, 800)
 end
 
 -- ----------------------------------------------------------------------------
 -- Tab 3 Rested XP Calculation Tooltip
 -- ----------------------------------------------------------------------------
-function CLIAlts:ShowRestedTooltip(ownerOrChar, maybeChar)
+function ForeverAlts:ShowRestedTooltip(ownerOrChar, maybeChar)
     local owner, char
     if maybeChar ~= nil then
         owner = ownerOrChar
@@ -2339,1070 +2133,26 @@ end
 -- ----------------------------------------------------------------------------
 -- Legacy Main Frame Construction (ASCII Table UI)
 -- ----------------------------------------------------------------------------
-function CLIAlts:CreateLegacyMainFrame()
-    if mainFrame then return mainFrame end
-    if _G["CLIAltsMainFrame"] then
-        mainFrame = _G["CLIAltsMainFrame"]
-        self.mainFrame = mainFrame
-        return mainFrame
-    end
-
-    local frame = CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    frame.isLegacyUI = true
-    frame:Hide()
-    frame:SetSize(1150, 600)
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetClampedToScreen(true)
-    frame:SetFrameStrata("HIGH")
-    tinsert(UISpecialFrames, "CLIAltsMainFrame")
-
-    -- Restore saved window scale & position
-    local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
-    frame:SetScale(s)
-    self:RestoreWindowPosition(frame)
-
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        CLIAlts:SaveWindowPosition(self)
-    end)
-
-    frame:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-        insets = { left = 1, right = 1, top = 1, bottom = 1 }
-    })
-
-    mainFrame = frame
-    self.mainFrame = frame
-    _G["CLIAltsMainFrame"] = frame
-
-    local fontSize = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
-
-    -- Top border ASCII line (kept empty for clean modern border)
-    local topAscii = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(topAscii, fontSize)
-    topAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -8)
-    topAscii:SetText("")
-    frame.topAscii = topAscii
-
-    -- 1. Modern Header Title & Subtitle Block (Side-by-side title and subtitle)
-    local titleText = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(titleText, 17, "OUTLINE")
-    titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -14)
-    titleText:SetText("ForeverAlts")
-    frame.titleText = titleText
-
-    local subtitleText = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(subtitleText, 11, "OUTLINE")
-    subtitleText:SetPoint("LEFT", titleText, "RIGHT", 8, -1)
-    subtitleText:SetText("/ ALT MONITOR")
-    frame.subtitleText = subtitleText
-    frame.subTitleText = subtitleText
-
-    local metaText = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(metaText, 10, "")
-    metaText:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -35)
-    metaText:SetText("4 characters · Forever · Updated recently")
-    frame.metaText = metaText
-
-    -- Window Controls on Title Bar (Close, Help, Theme, Scale, Compact)
-    local btnClose = CreateRetroButton(frame, "[ X ]", 28, 18, function()
-        CLIAlts:Toggle(false)
-    end)
-    btnClose:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -15)
-
-    local btnHelp = CreateRetroButton(frame, "[ ? ]", 28, 18, function()
-        CLIAlts:ShowHelpPopup()
-    end)
-    btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -5, 0)
-
-    local curTag = (self.GetTheme and self:GetTheme().tag) or "AMB"
-    local btnTheme = CreateRetroButton(frame, string.format("[ THEME: %s ]", curTag), 92, 18, function()
-        CLIAlts:CycleTheme()
-    end)
-    btnTheme:SetPoint("RIGHT", btnHelp, "LEFT", -5, 0)
-    frame.btnTheme = btnTheme
-
-    local btnScale = CreateRetroButton(frame, string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)), 88, 18, function()
-        CLIAlts:CycleScale()
-    end)
-    btnScale:SetPoint("RIGHT", btnTheme, "LEFT", -5, 0)
-    frame.btnScale = btnScale
-
-    local btnCompact = CreateRetroButton(frame, "[ COMPACT ]", 85, 18, function()
-        CLIAlts:ToggleCompact()
-    end)
-    btnCompact:SetPoint("RIGHT", btnScale, "LEFT", -5, 0)
-    btnCompact:SetScript("OnEnter", function(self)
-        local t = CLIAlts:GetTheme()
-        if self.SetBackdropColor then self:SetBackdropColor(t.rowHover[1], t.rowHover[2], t.rowHover[3], 0.8) end
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine("Compact Mode", 1, 1, 1)
-        GameTooltip:AddLine("Hides XP bar columns for narrow windows or high scales.", 0.8, 0.8, 0.8)
-        local isComp = CLIAlts:IsCompact()
-        GameTooltip:AddLine(string.format("Status: %s", isComp and "|cff00ff66ENABLED|r" or "|cff888888DISABLED|r"), 0.7, 0.7, 0.7)
-        GameTooltip:AddLine("Command: Type |cffffd700compact|r or |cffffd700c|r in prompt.", 0.4, 0.8, 0.5)
-        GameTooltip:Show()
-    end)
-    btnCompact:SetScript("OnLeave", function(self)
-        if self.SetBackdropColor then self:SetBackdropColor(0, 0, 0, 0.6) end
-        GameTooltip:Hide()
-    end)
-    frame.btnCompact = btnCompact
-
-    -- Status Pill Badge in Top Right
-    local badgeTracking = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    badgeTracking:SetSize(82, 18)
-    badgeTracking:SetPoint("RIGHT", btnCompact, "LEFT", -8, 0)
-    badgeTracking:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-        insets = { left = 1, right = 1, top = 1, bottom = 1 }
-    })
-    if badgeTracking.SetBackdropColor then
-        badgeTracking:SetBackdropColor(0.04, 0.14, 0.08, 0.90)
-    end
-    if badgeTracking.SetBackdropBorderColor then
-        badgeTracking:SetBackdropBorderColor(0.0, 0.8, 0.35, 0.8)
-    end
-    local badgeText = badgeTracking:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(badgeText, 10, "OUTLINE")
-    badgeText:SetPoint("CENTER", 0, 0)
-    badgeText:SetText("|cff00ff66TRACKING|r")
-    badgeTracking.text = badgeText
-    frame.badgeTracking = badgeTracking
-
-    -- 2. Modern Navigation Tab Strip (Clean text links with active amber box pill)
-    local tabs = {
-        { id = 1, text = "Overview",       compact = "Overview", viewTitle = "OVERVIEW",                     stdWidth = 90 },
-        { id = 4, text = "Professions",    compact = "Profs",    viewTitle = "PROFESSIONS & MILESTONES",     stdWidth = 100 },
-        { id = 6, text = "World & Locks",  compact = "Locks",    viewTitle = "WORLD & INSTANCE LOCKS",       stdWidth = 105 },
-        { id = 7, text = "Mail Logistics", compact = "Mail",     viewTitle = "MAIL LOGISTICS & SUPPLY CHAIN", stdWidth = 105 },
-        { id = 8, text = "Settings",       compact = "Config",   viewTitle = "SETTINGS & PREFERENCES",         stdWidth = 85 },
-    }
-    frame.tabButtons = {}
-    local prevTab = nil
-    for _, tabData in ipairs(tabs) do
-        local thisTabId = tabData.id
-        local tabBtn = CreateRetroButton(frame, tabData.text, tabData.stdWidth, 20, function()
-            CLIAlts:SwitchTab(thisTabId)
-        end)
-        if not prevTab then
-            tabBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -56)
-        else
-            tabBtn:SetPoint("LEFT", prevTab, "RIGHT", 8, 0)
-        end
-        tabBtn.tabId = tabData.id
-        tabBtn.baseText = tabData.text
-        tabBtn.compactText = tabData.compact
-        tabBtn.viewTitle = tabData.viewTitle
-        tabBtn.stdWidth = tabData.stdWidth
-
-        tabBtn:SetScript("OnEnter", function(self)
-            if self.tabId ~= (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) then
-                local curT = CLIAlts:GetTheme()
-                self.label:SetTextColor(curT.primary[1], curT.primary[2], curT.primary[3])
-                if self.SetBackdropBorderColor then
-                    self:SetBackdropBorderColor(curT.dim[1], curT.dim[2], curT.dim[3], 0.4)
-                end
-            end
-        end)
-        tabBtn:SetScript("OnLeave", function(self)
-            if self.tabId ~= (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) then
-                local curT = CLIAlts:GetTheme()
-                self.label:SetTextColor(curT.muted[1], curT.muted[2], curT.muted[3])
-                if self.SetBackdropBorderColor then
-                    self:SetBackdropBorderColor(0, 0, 0, 0)
-                end
-                if self.SetBackdropColor then
-                    self:SetBackdropColor(0, 0, 0, 0)
-                end
-            end
-        end)
-
-        table.insert(frame.tabButtons, tabBtn)
-        prevTab = tabBtn
-    end
-
-    -- Subheader border ASCII line (empty for clean breathing room)
-    local midAscii1 = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(midAscii1, fontSize)
-    midAscii1:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -90)
-    midAscii1:SetText("")
-    frame.midAscii1 = midAscii1
-
-    local t = self:GetTheme()
-    local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-
-    -- Level 1: Modern Hero Recommendation Card (RECOMMENDED NEXT)
-    local recPanel = CreateFrame("Frame", "CLIAltsRecPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    recPanel:SetSize(1122, 74)
-    recPanel:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -94)
-    recPanel:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-        insets = { left = 1, right = 1, top = 1, bottom = 1 }
-    })
-    if recPanel.SetBackdropColor then
-        recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
-        recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.55)
-    end
-    frame.recPanel = recPanel
-
-    local recBadge = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recBadge, 10, "OUTLINE")
-    recBadge:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -8)
-    recBadge:SetText("RECOMMENDED NEXT")
-    recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-    frame.recBadge = recBadge
-
-    -- Cohort Pill Badge on top right of Hero card (e.g. CORE, ALT, BANK)
-    local recCohortBadge = CreateFrame("Frame", nil, recPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    recCohortBadge:SetSize(54, 18)
-    recCohortBadge:SetPoint("TOPRIGHT", recPanel, "TOPRIGHT", -12, -7)
-    recCohortBadge:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-        insets = { left = 1, right = 1, top = 1, bottom = 1 }
-    })
-    if recCohortBadge.SetBackdropColor then
-        recCohortBadge:SetBackdropColor(0.22, 0.11, 0.05, 0.90)
-        recCohortBadge:SetBackdropBorderColor(0.85, 0.45, 0.20, 0.8)
-    end
-    local recCohortBadgeText = recCohortBadge:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recCohortBadgeText, 10, "OUTLINE")
-    recCohortBadgeText:SetPoint("CENTER", 0, 0)
-    recCohortBadgeText:SetText("|cffffb547CORE|r")
-    recCohortBadge.text = recCohortBadgeText
-    frame.recCohortBadge = recCohortBadge
-    frame.recCohortBadgeText = recCohortBadgeText
-
-    local recBtnDossier = CreateRetroButton(recPanel, "[ DOSSIER ]", 78, 18, function()
-        if frame.recChar then
-            CLIAlts:ShowDossierPopup(frame.recChar)
-        end
-    end)
-    recBtnDossier:SetPoint("RIGHT", recCohortBadge, "LEFT", -8, 0)
-    frame.recBtnDossier = recBtnDossier
-
-    local recBtnSetup = CreateRetroButton(recPanel, "[ GUIDE ]", 74, 18, function()
-        CLIAlts:ShowHelpPopup()
-    end)
-    recBtnSetup:SetPoint("RIGHT", recBtnDossier, "LEFT", -6, 0)
-    recBtnSetup:Hide()
-    frame.recBtnSetup = recBtnSetup
-
-    -- Hero Alt Name & Level (Line 1)
-    local recHeroTitle = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recHeroTitle, 15, "OUTLINE")
-    recHeroTitle:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -24)
-    recHeroTitle:SetText("No characters tracked")
-    recHeroTitle:SetTextColor(t.text[1], t.text[2], t.text[3])
-    frame.recHeroTitle = recHeroTitle
-
-    -- Hero Alt Professions / Roles (Line 2)
-    local recProfLine = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recProfLine, 11, "")
-    recProfLine:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -42)
-    recProfLine:SetText("")
-    recProfLine:SetTextColor(t.text[1], t.text[2], t.text[3])
-    frame.recProfLine = recProfLine
-
-    -- Hero Alt Rested Opportunity & Countdown (Line 3)
-    local recRestLine = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recRestLine, 11, "")
-    recRestLine:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 12, -56)
-    recRestLine:SetText("")
-    recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-    frame.recRestLine = recRestLine
-
-    -- Recommendation Rationale Note (Bottom Right)
-    local recReasonLine = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recReasonLine, 10, "")
-    recReasonLine:SetPoint("BOTTOMRIGHT", recPanel, "BOTTOMRIGHT", -12, 6)
-    recReasonLine:SetJustifyH("RIGHT")
-    recReasonLine:SetText("Suggested by your current route and rested XP rules")
-    recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-    frame.recReasonLine = recReasonLine
-
-    -- Backward compatibility aliases
-    local summaryBar = CreateFrame("Frame", "CLIAltsSummaryBar", recPanel, BackdropTemplateMixin and "BackdropTemplate" or nil)
-    summaryBar:SetPoint("TOPLEFT", recPanel, "TOPLEFT", 0, 0)
-    summaryBar:SetPoint("BOTTOMRIGHT", recPanel, "BOTTOMRIGHT", 0, 0)
-    frame.summaryBar = summaryBar
-
-    local summaryText = summaryBar:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(summaryText, fontSize, "")
-    summaryText:SetPoint("TOPRIGHT", recBtnDossier, "LEFT", -10, -1)
-    summaryText:SetText("")
-    summaryText:Hide()
-    frame.summaryText = summaryText
-    frame.statusBarText = summaryText
-
-    local recPrimary = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recPrimary, fontSize, "")
-    recPrimary:SetText("")
-    recPrimary:Hide()
-    frame.recPrimary = recPrimary
-
-    local recDetail = recPanel:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(recDetail, fontSize - 1, "")
-    recDetail:SetText("")
-    recDetail:Hide()
-    frame.recDetail = recDetail
-
-    -- Well Rested Perk quick toggle button
-    local selChar = CLIAlts:GetSelectedOrCurChar()
-    local initPerkRank = CLIAlts:GetWellRestedRank(selChar)
-    local btnPerk = CreateRetroButton(recPanel, string.format("[ PERK: R%d (+%d%%) ]", initPerkRank, initPerkRank * 4), 130, 18, function(self)
-        local curChar = CLIAlts:GetSelectedOrCurChar()
-        CLIAlts:CycleWellRestedPerk(curChar)
-        if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
-            self:GetScript("OnEnter")(self)
-        end
-        CLIAlts:Render()
-    end)
-    btnPerk:SetPoint("RIGHT", recBtnSetup, "LEFT", -6, 0)
-    btnPerk:SetScript("OnEnter", function(self)
-        local curT = CLIAlts:GetTheme()
-        if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        local curChar = CLIAlts:GetSelectedOrCurChar()
-        local cName = (curChar and (curChar.fullName or curChar.name)) or "Character"
-        GameTooltip:AddLine(string.format("%s: Well Rested Perk", cName), 1, 1, 1)
-        local r = CLIAlts:GetWellRestedRank(curChar)
-        local charLP = CLIAlts:CalculateCharacterLP(curChar)
-        GameTooltip:AddLine(string.format("Current Rank: |cffffffff%d / 5|r", r), 0.8, 0.8, 0.8)
-        GameTooltip:AddLine(string.format("Rest Speed: |cff00ff66+%d%%|r", r * 4), 0.8, 0.8, 0.8)
-        GameTooltip:AddLine(string.format("Rested Cap: |cff00ff66%d%%|r", 150 + (r * 6)), 0.8, 0.8, 0.8)
-        GameTooltip:AddLine(string.format("Character LP: |cffe8b64a%.1f LP|r", charLP), 1, 1, 1)
-        GameTooltip:AddLine("Click to cycle this alt's rank (0-5).", 1, 0.82, 0)
-        GameTooltip:AddLine("Slash cmd: |cff00ff66/fa perk [alt] <0-5>|r", 0.7, 0.7, 0.7)
-        GameTooltip:Show()
-    end)
-    btnPerk:SetScript("OnLeave", function(self)
-        if self.SetBackdropColor then self:SetBackdropColor(0, 0, 0, 0.6) end
-        GameTooltip:Hide()
-    end)
-    if CLIAlts:IsRetail() then
-        btnPerk:Hide()
-    end
-    frame.btnPerk = btnPerk
-
-    -- 3. Modern KPI Metric Cards Grid (RESTED | PROFESSIONS | GOLD)
-    local kpiContainer = CreateFrame("Frame", "CLIAltsKPIContainer", frame)
-    kpiContainer:SetSize(1122, 52)
-    kpiContainer:SetPoint("TOPLEFT", recPanel, "BOTTOMLEFT", 0, -8)
-    frame.kpiContainer = kpiContainer
-
-    local cardDefs = {
-        { key = "rested", title = "RESTED", sub = "Characters" },
-        { key = "profs",  title = "PROFESSIONS", sub = "Tracked roles" },
-        { key = "gold",   title = "GOLD", sub = "Combined wealth" },
-    }
-    frame.kpiCards = {}
-    local cardW = math.floor((1122 - 16) / 3)
-    local prevCard = nil
-    for _, def in ipairs(cardDefs) do
-        local card = CreateFrame("Frame", nil, kpiContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        card:SetSize(cardW, 52)
-        if not prevCard then
-            card:SetPoint("TOPLEFT", kpiContainer, "TOPLEFT", 0, 0)
-        else
-            card:SetPoint("LEFT", prevCard, "RIGHT", 8, 0)
-        end
-        card:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            edgeFile = "Interface\\Buttons\\WHITE8X8",
-            edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 }
-        })
-        if card.SetBackdropColor then
-            card:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
-            card:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
-        end
-
-        local title = card:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(title, 10, "")
-        title:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -6)
-        title:SetText(def.title)
-        title:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        card.title = title
-
-        local val = card:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(val, 18, "OUTLINE")
-        val:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
-        val:SetText("0")
-        val:SetTextColor(t.text[1], t.text[2], t.text[3])
-        card.val = val
-
-        local sub = card:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(sub, 9, "")
-        sub:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 6)
-        sub:SetText(def.sub)
-        sub:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        card.sub = sub
-
-        frame.kpiCards[def.key] = card
-        prevCard = card
-    end
-
-    -- 4. Sub-Header & Sub-Navigation Strip (OVERVIEW | RESTED XP PROFESSIONS ECONOMY)
-    local subViewTitle = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(subViewTitle, 11, "OUTLINE")
-    subViewTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -236)
-    subViewTitle:SetText("OVERVIEW")
-    subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-    frame.subViewTitle = subViewTitle
-
-    local subViewFilters = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(subViewFilters, 10, "")
-    subViewFilters:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -236)
-    subViewFilters:SetText("RESTED XP    PROFESSIONS    ECONOMY")
-    subViewFilters:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-    frame.subViewFilters = subViewFilters
-
-    local midAscii2 = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(midAscii2, fontSize)
-    midAscii2:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -246)
-    midAscii2:SetText("")
-    frame.midAscii2 = midAscii2
-
-    local tableTopAscii = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(tableTopAscii, fontSize)
-    tableTopAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -248)
-    tableTopAscii:SetText("")
-    frame.tableTopAscii = tableTopAscii
-
-    -- Column Header Line (Individual Cells) & Clickable Hit Frame
-    local headerFrame = CreateFrame("Frame", nil, frame)
-    headerFrame:SetSize(1126, 18)
-    headerFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -252)
-    frame.headerFrame = headerFrame
-
-    local headerBorderL = headerFrame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(headerBorderL, fontSize)
-    headerBorderL:SetPoint("LEFT", headerFrame, "LEFT", 4, 0)
-    headerBorderL:SetText("")
-    frame.headerBorderL = headerBorderL
-
-    local headerBorderR = headerFrame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(headerBorderR, fontSize)
-    headerBorderR:SetPoint("RIGHT", headerFrame, "RIGHT", -4, 0)
-    headerBorderR:SetText("")
-    frame.headerBorderR = headerBorderR
-
-    frame.headerCells = {}
-    for i = 1, 12 do
-        local hCell = headerFrame:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(hCell, fontSize)
-        hCell:SetWordWrap(false)
-        hCell:SetHeight(18)
-        frame.headerCells[i] = hCell
-
-        local btn = CreateFrame("Button", nil, headerFrame)
-        btn:SetHeight(18)
-        btn:EnableMouse(true)
-        btn:SetScript("OnClick", function(self)
-            if self.sortKey then
-                CLIAlts:ToggleSortKey(self.sortKey)
-            end
-        end)
-        btn:SetScript("OnEnter", function(self)
-            if self.colTitle then
-                GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                GameTooltip:AddLine(string.format("Sort by %s", self.colTitle), 1, 1, 1)
-                GameTooltip:AddLine("Click to toggle ascending / descending.", 0.8, 0.8, 0.8)
-                GameTooltip:Show()
-            end
-        end)
-        btn:SetScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-        btn:Hide()
-        headerButtons[i] = btn
-    end
-
-    -- Header separator ASCII line
-    local tableSepAscii = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(tableSepAscii, fontSize)
-    tableSepAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -248)
-    tableSepAscii:SetText(BORDER_LINE)
-    frame.tableSepAscii = tableSepAscii
-
-    -- Rows Container
-    local rowsContainer = CreateFrame("Frame", nil, frame)
-    rowsContainer:SetSize(1126, ROWS_COUNT * 36)
-    rowsContainer:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -268)
-    frame.rowsContainer = rowsContainer
-
-    -- Mousewheel pagination
-    rowsContainer:EnableMouseWheel(true)
-    rowsContainer:SetScript("OnMouseWheel", function(self, delta)
-        if delta > 0 then
-            if currentPage > 1 then
-                currentPage = currentPage - 1
-                PlayRetroSound()
-                CLIAlts:Render()
-            end
-        else
-            if currentPage < totalPages then
-                currentPage = currentPage + 1
-                PlayRetroSound()
-                CLIAlts:Render()
-            end
-        end
-    end)
-
-    -- Create 8 Modern 2-Line Row Buttons (with graphic status bars)
-    for i = 1, ROWS_COUNT do
-        local row = CreateFrame("Button", nil, rowsContainer, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        row:SetSize(1126, 34)
-        row:SetPoint("TOPLEFT", rowsContainer, "TOPLEFT", 0, -((i - 1) * 36))
-        row.rowIndex = i
-
-        row:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            edgeFile = "Interface\\Buttons\\WHITE8X8",
-            edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 }
-        })
-        local t = CLIAlts:GetTheme()
-        local rowBg = (i % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
-        if row.SetBackdropColor then
-            row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
-        end
-        if row.SetBackdropBorderColor then
-            row:SetBackdropBorderColor(0, 0, 0, 0)
-        end
-
-        local borderL = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(borderL, fontSize)
-        borderL:SetPoint("LEFT", row, "LEFT", 4, 0)
-        borderL:SetText("")
-        row.borderL = borderL
-
-        local borderR = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(borderR, fontSize)
-        borderR:SetPoint("RIGHT", row, "RIGHT", -4, 0)
-        borderR:SetText("")
-        row.borderR = borderR
-
-        -- Modern Tab 1 (Overview) Two-Line Elements:
-        local nameLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(nameLine, fontSize + 1, "OUTLINE")
-        nameLine:SetPoint("TOPLEFT", row, "TOPLEFT", 16, -4)
-        nameLine:SetJustifyH("LEFT")
-        nameLine:SetText("")
-        row.nameLine = nameLine
-
-        local subLine = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(subLine, fontSize - 2, "")
-        subLine:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 16, 4)
-        subLine:SetJustifyH("LEFT")
-        subLine:SetText("")
-        row.subLine = subLine
-
-        local levelText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(levelText, fontSize + 1, "OUTLINE")
-        levelText:SetPoint("CENTER", row, "LEFT", 416, 0)
-        levelText:SetJustifyH("CENTER")
-        levelText:SetText("")
-        row.levelText = levelText
-
-        local restPercentText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(restPercentText, fontSize, "OUTLINE")
-        restPercentText:SetPoint("LEFT", row, "LEFT", 470, 0)
-        restPercentText:SetJustifyH("RIGHT")
-        restPercentText:SetWidth(46)
-        restPercentText:SetText("")
-        row.restPercentText = restPercentText
-
-        local barBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        barBg:SetSize(280, 8)
-        barBg:SetPoint("LEFT", restPercentText, "RIGHT", 10, 0)
-        barBg:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            edgeFile = "Interface\\Buttons\\WHITE8X8",
-            edgeSize = 1,
-            insets = { left = 1, right = 1, top = 1, bottom = 1 }
-        })
-        if barBg.SetBackdropColor then
-            barBg:SetBackdropColor(0.04, 0.03, 0.02, 0.8)
-        end
-        if barBg.SetBackdropBorderColor then
-            barBg:SetBackdropBorderColor(0.3, 0.25, 0.15, 0.5)
-        end
-        row.barBg = barBg
-
-        local barFill = barBg:CreateTexture(nil, "ARTWORK")
-        barFill:SetTexture("Interface\\TargetingFrame\\UI-StatusBar")
-        barFill:SetPoint("TOPLEFT", barBg, "TOPLEFT", 1, -1)
-        barFill:SetPoint("BOTTOMLEFT", barBg, "BOTTOMLEFT", 1, 1)
-        barFill:SetWidth(0)
-        row.barFill = barFill
-
-        local etaText = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(etaText, fontSize - 1, "")
-        etaText:SetPoint("RIGHT", row, "RIGHT", -24, 0)
-        etaText:SetJustifyH("RIGHT")
-        etaText:SetText("")
-        row.etaText = etaText
-
-        -- Multi-column cells for Tabs 2 to 7
-        row.cells = {}
-        for j = 1, 12 do
-            local cell = row:CreateFontString(nil, "OVERLAY")
-            self:SetWidgetFont(cell, fontSize)
-            cell:SetWordWrap(false)
-            cell:SetHeight(18)
-            cell:SetText("")
-            row.cells[j] = cell
-        end
-
-        -- Column Progress Bar for Multi-Column Tabs (e.g. Tab 3: Rested XP Monitor)
-        local colRestBarBg = CreateFrame("Frame", nil, row, BackdropTemplateMixin and "BackdropTemplate" or nil)
-        colRestBarBg:SetHeight(7)
-        colRestBarBg:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            edgeFile = "Interface\\Buttons\\WHITE8X8",
-            edgeSize = 1,
-            insets = { left = 0, right = 0, top = 0, bottom = 0 }
-        })
-        if colRestBarBg.SetBackdropColor then colRestBarBg:SetBackdropColor(0.17, 0.20, 0.27, 1.0) end
-        if colRestBarBg.SetBackdropBorderColor then colRestBarBg:SetBackdropBorderColor(0, 0, 0, 0) end
-        row.colRestBarBg = colRestBarBg
-
-        local colRestBarFill = colRestBarBg:CreateTexture(nil, "ARTWORK")
-        colRestBarFill:SetTexture("Interface\\Buttons\\WHITE8X8")
-        colRestBarFill:SetPoint("TOPLEFT", colRestBarBg, "TOPLEFT", 0, 0)
-        colRestBarFill:SetPoint("BOTTOMLEFT", colRestBarBg, "BOTTOMLEFT", 0, 0)
-        colRestBarFill:SetWidth(0)
-        row.colRestBarFill = colRestBarFill
-
-        local colRestLabel = row:CreateFontString(nil, "OVERLAY")
-        self:SetWidgetFont(colRestLabel, fontSize - 1, "OUTLINE")
-        colRestLabel:SetJustifyH("LEFT")
-        colRestLabel:SetWordWrap(false)
-        colRestLabel:SetText("")
-        row.colRestLabel = colRestLabel
-
-        colRestBarBg:EnableMouse(true)
-        colRestBarBg:SetScript("OnEnter", function(self)
-            if row.charData then
-                CLIAlts:ShowRestedTooltip(self, row.charData)
-            end
-        end)
-        colRestBarBg:SetScript("OnLeave", function() GameTooltip:Hide() end)
-        colRestBarBg:SetScript("OnMouseDown", function(_, button)
-            if row.GetScript and row:GetScript("OnClick") then
-                row:GetScript("OnClick")(row, button)
-            end
-        end)
-
-        row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-        row:SetScript("OnClick", function(self, button)
-            if self.charData then
-                CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
-                if mainFrame and mainFrame.detailPanel then
-                    mainFrame.detailPanel.currentChar = self.charData
-                end
-                CLIAlts:Render()
-                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
-                if button == "RightButton" then
-                    CLIAlts:ShowRowContextMenu(self, self.charData)
-                elseif curTab == 7 then
-                    if IsShiftKeyDown and IsShiftKeyDown() then
-                        CLIAlts:CycleCharacterSupplyRole(self.charData)
-                        CLIAlts:RequestRender()
-                    else
-                        CLIAlts:ShowMailRouteDialog(self.charData)
-                    end
-                elseif IsShiftKeyDown and IsShiftKeyDown() and CLIAlts:IsForeverMode() then
-                    CLIAlts:CycleCharacterTier(self.charData)
-                    CLIAlts:RequestRender()
-                else
-                    CLIAlts:ShowDossierPopup(self.charData)
-                end
-            end
-        end)
-
-        row:SetScript("OnEnter", function(self)
-            local t = CLIAlts:GetTheme()
-            local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-            if self.SetBackdropColor then
-                self:SetBackdropColor(hov[1], hov[2], hov[3], 0.45)
-            end
-            if self.SetBackdropBorderColor then
-                self:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 0.6)
-            end
-            if self.borderL then
-                self.borderL:SetText(string.format("|cff%s>|r", t.primaryHex or "f2c94c"))
-            end
-            if self.charData then
-                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
-                if curTab == 3 then
-                    CLIAlts:ShowRestedTooltip(self, self.charData)
-                    return
-                end
-                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                local coloredName = CLIAlts:ColorizePlayerName(self.charData.fullName or self.charData.name, self.charData.classFile)
-                GameTooltip:AddLine(string.format("%s - %s", coloredName, self.charData.location or "Unknown"), 1, 1, 1)
-                if self.charData.realm and self.charData.realm ~= "" and self.charData.realm ~= "Forever" then
-                    GameTooltip:AddLine(string.format("Realm: |cffffffff%s|r", self.charData.realm), 0.8, 0.8, 0.8)
-                end
-                if self.charData.bindLocation and self.charData.bindLocation ~= "" then
-                    GameTooltip:AddLine(string.format("Hearth: |cffffffff%s|r", self.charData.bindLocation), 0.8, 0.8, 0.8)
-                end
-                local isStale, daysInactive = CLIAlts:IsCharStale(self.charData)
-                if isStale then
-                    GameTooltip:AddLine(string.format("|cff%s[STALE]|r Inactive for %d days", t.blockedHex or "ff6b6b", daysInactive), 1, 0.3, 0.3)
-                end
-
-                local xpData = CLIAlts:GetLevelProgressData(self.charData)
-                if xpData and not xpData.isMaxLevel then
-                    GameTooltip:AddLine(string.format("Level %d Progress: |cffffffff%s / %s XP|r (%5.1f%%)",
-                        self.charData.level or 1, CLIAlts:FormatNumber(xpData.curXP), CLIAlts:FormatNumber(xpData.maxXP), xpData.percentExact), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("XP to Level %d: |cff%s%s XP needed|r",
-                        (self.charData.level or 1) + 1, t.readyHex or "55e39a", CLIAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
-                else
-                    local maxLvl = (self.charData and self.charData.level) or CLIAlts:GetMaxLevel()
-                    GameTooltip:AddLine(string.format("Level: |cff%s%d (MAX LEVEL)|r", t.readyHex or "55e39a", maxLvl), 0.8, 0.8, 0.8)
-                end
-
-                local rested = CLIAlts:GetRestedData(self.charData)
-                if rested and not rested.isMaxLevel then
-                    local est = rested.isEstimate and "~" or ""
-                    local capTarget = rested.maxPercent or 150
-                    GameTooltip:AddLine(string.format("Rested Pool: |cffffffff%s%s XP|r (%s%d%% of level, %s)",
-                        est, CLIAlts:FormatNumber(rested.currentRested), est, rested.percent, rested.statusStr), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Time to Capped (%d%%): |cffffffff%s|r (%s)", capTarget, rested.timeLeftStr, rested.fullDate), 0.8, 0.8, 0.8)
-                    if rested.isEstimate then
-                        GameTooltip:AddLine(string.format("|cff%s* Rested values are estimated (~disconnect / crash)|r", t.pendingHex or "ffb547"), 1, 0.8, 0)
-                    end
-                end
-
-                if self.charData.note and self.charData.note ~= "" then
-                    GameTooltip:AddLine(string.format("Note: |cffffd700%s|r", self.charData.note), 1, 0.85, 0.2)
-                end
-
-                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
-                if curTab == 7 then
-                    local role, isOv, autoRole = CLIAlts:GetCharacterEffectiveSupplyRole(self.charData)
-                    GameTooltip:AddLine(" ")
-                    GameTooltip:AddLine("Mail Routing & Material Stream:", 1, 0.82, 0)
-                    GameTooltip:AddLine(string.format("Assigned Stream: |cffffffff%s|r (%s)", role, isOv and "|cffffb547OVERRIDE|r" or "|cff57d6e8AUTO|r"), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Auto Suggestion: |cffa9a08c%s|r", autoRole), 0.7, 0.7, 0.7)
-                    local pCount, pDetail = CLIAlts:GetCharacterPendingMail(self.charData)
-                    if pCount > 0 then
-                        GameTooltip:AddLine(string.format("Pending in Bags: |cff55e39a%d items (%s)|r", pCount, pDetail), 0.8, 0.8, 0.8)
-                    end
-                    GameTooltip:AddLine("Left-Click: Configure Route | Shift-Click: Cycle Stream | Right-Click: Menu", 0.7, 0.7, 0.7)
-                elseif CLIAlts:IsForeverMode() then
-                    local pAlerts = CLIAlts:GetCharacterProfessionAlerts(self.charData)
-                    for _, a in ipairs(pAlerts) do
-                        if a.type == "TRAIN" then
-                            GameTooltip:AddLine(string.format("|cff%s* %s|r", t.readyHex or "55e39a", a.text), 1, 1, 1)
-                        elseif a.type == "BOTTLENECK" then
-                            GameTooltip:AddLine(string.format("|cff%s* %s|r", t.pendingHex or "ffb547", a.text), 1, 0.8, 0)
-                        end
-                    end
-                    GameTooltip:AddLine("Left-Click: Dossier | Shift-Click: Cycle Role | Right-Click: Context Menu", 0.7, 0.7, 0.7)
-                else
-                    GameTooltip:AddLine("Left-Click: Open Alt Dossier | Right-Click: Context Menu", 0.7, 0.7, 0.7)
-                end
-                GameTooltip:Show()
-            end
-        end)
-
-        row:SetScript("OnLeave", function(self)
-            local t = CLIAlts:GetTheme()
-            local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
-            if isSelected then
-                local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-                if self.SetBackdropColor then
-                    self:SetBackdropColor(hov[1], hov[2], hov[3], 0.35)
-                end
-                if self.SetBackdropBorderColor then
-                    self:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
-                end
-                if self.borderL then
-                    self.borderL:SetText(string.format("|cff%s>|r", t.highlightHex or "ffd34e"))
-                end
-            else
-                local rowBg = (self.rowIndex and self.rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
-                if self.SetBackdropColor then
-                    self:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4])
-                end
-                if self.SetBackdropBorderColor then
-                    self:SetBackdropBorderColor(0, 0, 0, 0)
-                end
-                if self.borderL then
-                    self.borderL:SetText("")
-                end
-            end
-            GameTooltip:Hide()
-        end)
-
-        rowFrames[i] = row
-    end
-    frame.rowFrames = rowFrames
-
-    -- Bottom border ASCII line
-    local tableBotAscii = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(tableBotAscii, fontSize)
-    tableBotAscii:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -558)
-    tableBotAscii:SetText(BORDER_LINE)
-    frame.tableBotAscii = tableBotAscii
-
-    -- Footer: Pagination controls and helper tips
-    local btnPrev = CreateRetroButton(frame, "[<< PREV]", 75, 18, function()
-        if currentPage > 1 then
-            currentPage = currentPage - 1
-            CLIAlts:Render()
-        end
-    end)
-    btnPrev:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 12)
-    frame.btnPrev = btnPrev
-
-    local btnNext = CreateRetroButton(frame, "[NEXT >>]", 75, 18, function()
-        if currentPage < totalPages then
-            currentPage = currentPage + 1
-            CLIAlts:Render()
-        end
-    end)
-    btnNext:SetPoint("LEFT", btnPrev, "RIGHT", 6, 0)
-    frame.btnNext = btnNext
-
-    local pageText = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(pageText, fontSize)
-    pageText:SetPoint("LEFT", btnNext, "RIGHT", 10, 0)
-    pageText:SetText("PAGE 1 OF 1")
-    frame.pageText = pageText
-
-    local statusTip = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(statusTip, fontSize - 1)
-    statusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 14)
-    statusTip:SetJustifyH("RIGHT")
-    statusTip:SetText("|cff888888Select a character for details · Right-click for management|r")
-    frame.statusTip = statusTip
-
-    -- Command Prompt Separator Line (empty)
-    local promptSepAscii = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(promptSepAscii, fontSize)
-    promptSepAscii:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 24)
-    promptSepAscii:SetText("")
-    frame.promptSepAscii = promptSepAscii
-
-    -- Interactive Command Prompt (EditBox with > prompt)
-    local promptLabel = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(promptLabel, fontSize, "")
-    promptLabel:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 12)
-    promptLabel:SetText("> ")
-    promptLabel:Hide()
-    frame.promptLabel = promptLabel
-
-    local promptBox = CreateFrame("EditBox", "CLIAltsPromptEditBox", frame)
-    self:SetWidgetFont(promptBox, fontSize)
-    promptBox:SetPoint("LEFT", promptLabel, "RIGHT", 2, 0)
-    promptBox:SetPoint("RIGHT", frame, "RIGHT", -340, 0)
-    promptBox:SetHeight(16)
-    promptBox:SetAutoFocus(false)
-    promptBox:EnableMouse(true)
-    promptBox:SetTextInsets(2, 2, 2, 2)
-    promptBox:Hide()
-    frame.promptBox = promptBox
-
-    local historyIndex = 0
-
-    promptBox:SetScript("OnEnterPressed", function(self)
-        local text = self:GetText() or ""
-        self:SetText("")
-        historyIndex = 0
-        self:ClearFocus()
-        CLIAlts:ExecutePromptCommand(text)
-    end)
-
-    promptBox:SetScript("OnEscapePressed", function(self)
-        self:SetText("")
-        self:ClearFocus()
-    end)
-
-    promptBox:SetScript("OnTabPressed", function(self)
-        CLIAlts:AutoCompletePrompt(self)
-    end)
-
-    promptBox:SetScript("OnArrowPressed", function(self, key)
-        local hist = (CLIAltsDB and CLIAltsDB.commandHistory) or {}
-        if #hist == 0 then return end
-        if key == "UP" then
-            if historyIndex == 0 then
-                historyIndex = #hist
-            elseif historyIndex > 1 then
-                historyIndex = historyIndex - 1
-            end
-            self:SetText(hist[historyIndex] or "")
-            self:SetCursorPosition(string.len(self:GetText()))
-        elseif key == "DOWN" then
-            if historyIndex > 0 and historyIndex < #hist then
-                historyIndex = historyIndex + 1
-                self:SetText(hist[historyIndex] or "")
-                self:SetCursorPosition(string.len(self:GetText()))
-            else
-                historyIndex = 0
-                self:SetText("")
-            end
-        end
-    end)
-
-    -- Prompt Hint & Feedback Line
-    local promptStatusTip = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(promptStatusTip, fontSize - 2)
-    promptStatusTip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 14)
-    promptStatusTip:SetJustifyH("RIGHT")
-    promptStatusTip:SetText("|cff888888[Type: sort <col>, filter <text>, role <tier>, next, export, help]|r")
-    promptStatusTip:Hide()
-    frame.promptStatusTip = promptStatusTip
-
-    -- Hook ChatEdit_InsertLink so Shift-clicking items into prompt works
-    if hooksecurefunc then
-        pcall(hooksecurefunc, "ChatEdit_InsertLink", function(text)
-            if InCombatLockdown and InCombatLockdown() then return end
-            if text and promptBox:HasFocus() then
-                promptBox:Insert(text)
-            end
-        end)
-    end
-
-    -- Hidden Buttons for Enter and / keyboard overrides
-    -- Passes through to standard WoW chat when the mouse is NOT hovering over CLIAlts
-    local btnFocusEnter = CreateFrame("Button", "CLIAltsFocusEnterBtn", frame)
-    btnFocusEnter:SetScript("OnClick", function()
-        if MouseIsOver and MouseIsOver(frame) then
-            if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
-                frame.promptLabel:Show()
-                frame.promptBox:Show()
-                if frame.statusTip then frame.statusTip:Hide() end
-                if frame.promptStatusTip then frame.promptStatusTip:Show() end
-                frame.promptBox:SetFocus()
-            end
-        else
-            if ChatFrame_OpenChat then
-                ChatFrame_OpenChat("")
-            end
-        end
-    end)
-
-    local btnFocusSlash = CreateFrame("Button", "CLIAltsFocusSlashBtn", frame)
-    btnFocusSlash:SetScript("OnClick", function()
-        if MouseIsOver and MouseIsOver(frame) then
-            if frame:IsShown() and frame.promptBox and not frame.promptBox:HasFocus() then
-                frame.promptLabel:Show()
-                frame.promptBox:Show()
-                if frame.statusTip then frame.statusTip:Hide() end
-                if frame.promptStatusTip then frame.promptStatusTip:Show() end
-                frame.promptBox:SetFocus()
-                frame.promptBox:SetText("")
-            end
-        else
-            if ChatFrame_OpenChat then
-                ChatFrame_OpenChat("/")
-            end
-        end
-    end)
-
-    promptBox:SetScript("OnEditFocusGained", function()
-        pcall(function()
-            if InCombatLockdown and InCombatLockdown() then return end
-            if ClearOverrideBindings then
-                ClearOverrideBindings(frame)
-            end
-        end)
-    end)
-    promptBox:SetScript("OnEditFocusLost", function(self)
-        pcall(function()
-            if InCombatLockdown and InCombatLockdown() then return end
-            if frame:IsShown() and SetOverrideBindingClick then
-                SetOverrideBindingClick(frame, false, "ENTER", "CLIAltsFocusEnterBtn")
-                SetOverrideBindingClick(frame, false, "/", "CLIAltsFocusSlashBtn")
-            end
-        end)
-        self:Hide()
-        if frame.promptLabel then frame.promptLabel:Hide() end
-        if frame.promptStatusTip then frame.promptStatusTip:Hide() end
-        if frame.statusTip then frame.statusTip:Show() end
-    end)
-
-    local botAscii = frame:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(botAscii, fontSize)
-    botAscii:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 1)
-    botAscii:SetText(BORDER_LINE)
-    frame.botAscii = botAscii
-
-    -- 60s Periodic Refresh Ticker: Runs ONLY while mainFrame is visible
-    local tickerElapsed = 0
-    frame:SetScript("OnUpdate", function(self, elapsed)
-        tickerElapsed = tickerElapsed + (elapsed or 0)
-        if tickerElapsed >= 60 then
-            tickerElapsed = 0
-            CLIAlts:Render()
-        end
-    end)
-    frame:SetScript("OnShow", function(self)
-        tickerElapsed = 0
-        pcall(function()
-            if InCombatLockdown and InCombatLockdown() then return end
-            if SetOverrideBindingClick then
-                SetOverrideBindingClick(self, false, "ENTER", "CLIAltsFocusEnterBtn")
-                SetOverrideBindingClick(self, false, "/", "CLIAltsFocusSlashBtn")
-            end
-        end)
-        CLIAlts:ApplyLayoutSize()
-        if renderDirty then
-            CLIAlts:Render()
-        end
-    end)
-    frame:SetScript("OnHide", function(self)
-        pcall(function()
-            if InCombatLockdown and InCombatLockdown() then return end
-            if ClearOverrideBindings then
-                ClearOverrideBindings(self)
-            end
-        end)
-        if frame.promptBox then
-            frame.promptBox:ClearFocus()
-        end
-        if CLIAlts.EndTour then
-            CLIAlts:EndTour()
-        end
-    end)
-
-    return frame
+function ForeverAlts:CreateLegacyMainFrame()
+    return self:CreateModernMainFrame()
 end
 
 -- ============================================================================
 -- Modern v2 Main Frame Construction (Design System v2: 1440x800)
 -- ============================================================================
-function CLIAlts:CreateModernMainFrame()
+function ForeverAlts:CreateModernMainFrame()
     if mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
         rowFrames = mainFrame.rowFrames
         return mainFrame
     end
-    if _G["CLIAltsMainFrame"] and _G["CLIAltsMainFrame"].rowFrames and #_G["CLIAltsMainFrame"].rowFrames > 0 then
-        mainFrame = _G["CLIAltsMainFrame"]
+    if _G["ForeverAltsMainFrame"] and _G["ForeverAltsMainFrame"].rowFrames and #_G["ForeverAltsMainFrame"].rowFrames > 0 then
+        mainFrame = _G["ForeverAltsMainFrame"]
         self.mainFrame = mainFrame
         rowFrames = mainFrame.rowFrames
         return mainFrame
     end
 
-    local frame = _G["CLIAltsMainFrame"] or CreateFrame("Frame", "CLIAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local frame = _G["ForeverAltsMainFrame"] or CreateFrame("Frame", "ForeverAltsMainFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     frame.isLegacyUI = false
     frame:Hide()
     frame:SetSize(1440, 800)
@@ -3411,17 +2161,17 @@ function CLIAlts:CreateModernMainFrame()
     frame:RegisterForDrag("LeftButton")
     frame:SetClampedToScreen(true)
     frame:SetFrameStrata("HIGH")
-    tinsert(UISpecialFrames, "CLIAltsMainFrame")
+    tinsert(UISpecialFrames, "ForeverAltsMainFrame")
 
     -- Restore saved window scale & position
-    local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+    local s = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.scale) or 1.0
     frame:SetScale(s)
     self:RestoreWindowPosition(frame)
 
     frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        CLIAlts:SaveWindowPosition(self)
+        ForeverAlts:SaveWindowPosition(self)
     end)
 
     -- Keyboard Navigation (Phase 6: Up/Down arrow selection and Enter)
@@ -3433,15 +2183,15 @@ function CLIAlts:CreateModernMainFrame()
         end
 
         if key == "UP" or key == "DOWN" then
-            CLIAlts:NavigateSelection(key == "UP" and -1 or 1)
+            ForeverAlts:NavigateSelection(key == "UP" and -1 or 1)
         elseif key == "ENTER" then
-            local char = CLIAlts:GetSelectedOrCurChar()
+            local char = ForeverAlts:GetSelectedOrCurChar()
             if char then
-                if CLIAlts:IsCompact() then
-                    CLIAlts:ShowDossierPopup(char)
+                if ForeverAlts:IsCompact() then
+                    ForeverAlts:ShowDossierPopup(char)
                 else
-                    CLIAlts:UpdateDetailPanel(char)
-                    CLIAlts:Render()
+                    ForeverAlts:UpdateDetailPanel(char)
+                    ForeverAlts:Render()
                 end
             end
         end
@@ -3468,10 +2218,10 @@ function CLIAlts:CreateModernMainFrame()
 
     mainFrame = frame
     self.mainFrame = frame
-    _G["CLIAltsMainFrame"] = frame
+    _G["ForeverAltsMainFrame"] = frame
 
     -- 1. Top Bar (48px)
-    local topBar = CreateFrame("Frame", "CLIAltsTopBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local topBar = CreateFrame("Frame", "ForeverAltsTopBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
     topBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
     topBar:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
     topBar:SetHeight(48)
@@ -3495,7 +2245,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.titleText = logoText
 
     -- Search EditBox
-    local searchBox = CreateFrame("EditBox", "CLIAltsSearchEditBox", topBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local searchBox = CreateFrame("EditBox", "ForeverAltsSearchEditBox", topBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
     searchBox:SetSize(340, 28)
     searchBox:SetPoint("LEFT", logoText, "RIGHT", 24, 0)
     searchBox:SetAutoFocus(false)
@@ -3525,15 +2275,15 @@ function CLIAlts:CreateModernMainFrame()
         else
             self.placeholder:Show()
         end
-        if CLIAlts.SetFilter then
-            CLIAlts:SetFilter(text)
+        if ForeverAlts.SetFilter then
+            ForeverAlts:SetFilter(text)
         end
     end)
     searchBox:SetScript("OnEscapePressed", function(self)
         self:SetText("")
         self:ClearFocus()
-        if CLIAlts.SetFilter then
-            CLIAlts:SetFilter("")
+        if ForeverAlts.SetFilter then
+            ForeverAlts:SetFilter("")
         end
     end)
     searchBox:SetScript("OnEnterPressed", function(self)
@@ -3543,39 +2293,39 @@ function CLIAlts:CreateModernMainFrame()
 
     -- Top Bar Action Buttons
     local btnClose = CreateRetroButton(topBar, "[ X ]", 28, 22, function()
-        CLIAlts:Toggle(false)
+        ForeverAlts:Toggle(false)
     end)
     btnClose:SetPoint("RIGHT", topBar, "RIGHT", -14, 0)
     frame.btnClose = btnClose
 
     local btnHelp = CreateRetroButton(topBar, "Help", 50, 22, function()
-        CLIAlts:ShowHelpPopup()
+        ForeverAlts:ShowHelpPopup()
     end)
     btnHelp:SetPoint("RIGHT", btnClose, "LEFT", -8, 0)
     frame.btnHelp = btnHelp
 
-    local selChar = CLIAlts:GetSelectedOrCurChar()
-    local initPerkRank = CLIAlts:GetWellRestedRank(selChar)
-    local initCharLp = CLIAlts:CalculateCharacterLP(selChar)
+    local selChar = ForeverAlts:GetSelectedOrCurChar()
+    local initPerkRank = ForeverAlts:GetWellRestedRank(selChar)
+    local initCharLp = ForeverAlts:CalculateCharacterLP(selChar)
     local btnPerk = CreateRetroButton(topBar, string.format("[ WELL RESTED: R%d · %.1f LP ]", initPerkRank, initCharLp), 170, 22, function(self)
-        local curChar = CLIAlts:GetSelectedOrCurChar()
-        CLIAlts:CycleWellRestedPerk(curChar)
+        local curChar = ForeverAlts:GetSelectedOrCurChar()
+        ForeverAlts:CycleWellRestedPerk(curChar)
         if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
-        CLIAlts:Render()
+        ForeverAlts:Render()
     end)
     btnPerk:SetPoint("RIGHT", btnHelp, "LEFT", -8, 0)
     btnPerk:SetScript("OnEnter", function(self)
-        local curT = CLIAlts:GetTheme()
+        local curT = ForeverAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
-        local curChar = CLIAlts:GetSelectedOrCurChar()
+        local curChar = ForeverAlts:GetSelectedOrCurChar()
         local cName = (curChar and (curChar.fullName or curChar.name)) or "Character"
         GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
-        local r = CLIAlts:GetWellRestedRank(curChar)
-        local charLP, lpReasons = CLIAlts:CalculateCharacterLP(curChar)
-        local lpData = CLIAlts:CalculateAccountLP()
+        local r = ForeverAlts:GetWellRestedRank(curChar)
+        local charLP, lpReasons = ForeverAlts:CalculateCharacterLP(curChar)
+        local lpData = ForeverAlts:CalculateAccountLP()
         GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
@@ -3591,18 +2341,18 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:Show()
     end)
     btnPerk:SetScript("OnLeave", function(self)
-        local curT = CLIAlts:GetTheme()
+        local curT = ForeverAlts:GetTheme()
         local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
         if self.SetBackdropColor then self:SetBackdropColor(curBg[1], curBg[2], curBg[3], 0.75) end
         GameTooltip:Hide()
     end)
-    if CLIAlts:IsRetail() then
+    if ForeverAlts:IsRetail() then
         btnPerk:Hide()
     end
     frame.btnPerk = btnPerk
 
     -- 2. Left Sidebar (210px)
-    local sidebar = CreateFrame("Frame", "CLIAltsSidebar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local sidebar = CreateFrame("Frame", "ForeverAltsSidebar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
     sidebar:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -48)
     sidebar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 34)
     sidebar:SetWidth(210)
@@ -3689,7 +2439,7 @@ function CLIAlts:CreateModernMainFrame()
         end
 
         navBtn:SetScript("OnClick", function()
-            CLIAlts:SwitchTab(thisTabId)
+            ForeverAlts:SwitchTab(thisTabId)
         end)
         navBtn:SetScript("OnEnter", function(self)
             if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.6) end
@@ -3720,7 +2470,7 @@ function CLIAlts:CreateModernMainFrame()
         end)
         navBtn:SetScript("OnLeave", function(self)
             if GameTooltip then GameTooltip:Hide() end
-            local curTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
+            local curTab = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab) or 1
             local active = (curTab == self.tabId)
             if self.SetBackdropColor then
                 self:SetBackdropColor(active and raisedR or 0, active and raisedG or 0, active and raisedB or 0, active and 0.85 or 0)
@@ -3737,7 +2487,7 @@ function CLIAlts:CreateModernMainFrame()
     end
 
     -- Pinned Account Wealth Widget at bottom of sidebar
-    local wealthWidget = CreateFrame("Frame", "CLIAltsWealthWidget", sidebar)
+    local wealthWidget = CreateFrame("Frame", "ForeverAltsWealthWidget", sidebar)
     wealthWidget:SetSize(186, 68)
     wealthWidget:SetPoint("BOTTOMLEFT", sidebar, "BOTTOMLEFT", 12, 16)
     wealthWidget:EnableMouse(true)
@@ -3773,28 +2523,28 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:AddLine("Does NOT include inventory or item valuation.", 0.45, 0.75, 1, true)
         GameTooltip:AddLine(" ")
 
-        local chars = CLIAlts:GetCharactersList()
+        local chars = ForeverAlts:GetCharactersList()
         for _, c in ipairs(chars) do
             local cMoney = c.money or 0
-            local cName = CLIAlts:ColorizePlayerName(c.name, c.classFile)
-            local moneyStr = CLIAlts:FormatMoney(cMoney, true)
+            local cName = ForeverAlts:ColorizePlayerName(c.name, c.classFile)
+            local moneyStr = ForeverAlts:FormatMoney(cMoney, true)
             local lvlInfo = c.level and string.format(" |cffa9a08c(L%d)|r", c.level) or ""
             GameTooltip:AddDoubleLine(cName .. lvlInfo, moneyStr, 1, 1, 1, 1, 1, 1)
         end
 
         GameTooltip:AddLine(" ")
-        local summary = CLIAlts:GetAccountSummary()
-        GameTooltip:AddDoubleLine("Total Combined:", CLIAlts:FormatMoney(summary.totalGold or 0, true), 1, 0.82, 0, 1, 1, 1)
+        local summary = ForeverAlts:GetAccountSummary()
+        GameTooltip:AddDoubleLine("Total Combined:", ForeverAlts:FormatMoney(summary.totalGold or 0, true), 1, 0.82, 0, 1, 1, 1)
 
-        local d1, d7, d30 = CLIAlts:GetGoldHistoryDeltas()
+        local d1, d7, d30 = ForeverAlts:GetGoldHistoryDeltas()
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Gold Trend History:", 0.85, 0.85, 0.85)
 
         local function formatDelta(val)
             if val > 0 then
-                return string.format("|cff55e39a+%sg|r", CLIAlts:FormatNumber(val))
+                return string.format("|cff55e39a+%sg|r", ForeverAlts:FormatNumber(val))
             elseif val < 0 then
-                return string.format("|cffff4444-%sg|r", CLIAlts:FormatNumber(math.abs(val)))
+                return string.format("|cffff4444-%sg|r", ForeverAlts:FormatNumber(math.abs(val)))
             else
                 return "|cffa9a08c±0g|r"
             end
@@ -3811,7 +2561,7 @@ function CLIAlts:CreateModernMainFrame()
     end)
 
     -- 3. Bottom Command Bar (34px)
-    local cmdBar = CreateFrame("Frame", "CLIAltsCmdBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local cmdBar = CreateFrame("Frame", "ForeverAltsCmdBar", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
     cmdBar:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
     cmdBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
     cmdBar:SetHeight(34)
@@ -3842,7 +2592,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.hintChips = {}
     for _, hc in ipairs(hintChips) do
         local chip = CreateRetroButton(cmdBar, hc.text, #hc.text * 8 + 14, 20, function()
-            CLIAlts:ExecutePromptCommand(hc.cmd)
+            ForeverAlts:ExecutePromptCommand(hc.cmd)
         end)
         chip.cmd = hc.cmd
         chip.text = hc.text
@@ -3862,7 +2612,7 @@ function CLIAlts:CreateModernMainFrame()
     legendText:SetTextColor(mutedR, mutedG, mutedB)
     frame.legendText = legendText
 
-    local promptBox = CreateFrame("EditBox", "CLIAltsPromptEditBox", cmdBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local promptBox = CreateFrame("EditBox", "ForeverAltsPromptEditBox", cmdBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
     self:SetWidgetFont(promptBox, 13, "", "mono")
     promptBox:SetPoint("LEFT", prevChip, "RIGHT", 10, 0)
     promptBox:SetPoint("RIGHT", legendText, "LEFT", -14, 0)
@@ -3898,17 +2648,17 @@ function CLIAlts:CreateModernMainFrame()
         self:SetText("")
         historyIndex = 0
         self:ClearFocus()
-        CLIAlts:ExecutePromptCommand(text)
+        ForeverAlts:ExecutePromptCommand(text)
     end)
     promptBox:SetScript("OnEscapePressed", function(self)
         self:SetText("")
         self:ClearFocus()
     end)
     promptBox:SetScript("OnTabPressed", function(self)
-        CLIAlts:AutoCompletePrompt(self)
+        ForeverAlts:AutoCompletePrompt(self)
     end)
     promptBox:SetScript("OnArrowPressed", function(self, key)
-        local hist = (CLIAltsDB and CLIAltsDB.commandHistory) or {}
+        local hist = (ForeverAltsDB and ForeverAltsDB.commandHistory) or {}
         if #hist == 0 then return end
         if key == "UP" then
             if historyIndex == 0 then
@@ -3931,7 +2681,7 @@ function CLIAlts:CreateModernMainFrame()
     end)
 
     -- 4. Right Detail Panel (340px)
-    local detailPanel = CreateFrame("Frame", "CLIAltsDetailPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local detailPanel = CreateFrame("Frame", "ForeverAltsDetailPanel", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
     detailPanel:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -56)
     detailPanel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 42)
     detailPanel:SetWidth(340)
@@ -4062,15 +2812,15 @@ function CLIAlts:CreateModernMainFrame()
 
     restedCard:EnableMouse(true)
     restedCard:SetScript("OnEnter", function(self)
-        local curT = CLIAlts:GetTheme()
+        local curT = ForeverAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.45) end
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        local selChar = CLIAlts:GetSelectedOrCurChar()
+        local selChar = ForeverAlts:GetSelectedOrCurChar()
         local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
         GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
-        local r = CLIAlts:GetWellRestedRank(selChar)
-        local charLP, lpReasons = CLIAlts:CalculateCharacterLP(selChar)
-        local lpData = CLIAlts:CalculateAccountLP()
+        local r = ForeverAlts:GetWellRestedRank(selChar)
+        local charLP, lpReasons = ForeverAlts:CalculateCharacterLP(selChar)
+        local lpData = ForeverAlts:CalculateAccountLP()
         GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
@@ -4090,13 +2840,13 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:Hide()
     end)
     restedCard:SetScript("OnMouseDown", function(self)
-        local selChar = CLIAlts:GetSelectedOrCurChar()
-        CLIAlts:CycleWellRestedPerk(selChar)
-        CLIAlts:UpdateDetailPanel(selChar)
+        local selChar = ForeverAlts:GetSelectedOrCurChar()
+        ForeverAlts:CycleWellRestedPerk(selChar)
+        ForeverAlts:UpdateDetailPanel(selChar)
         if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
-        CLIAlts:Render()
+        ForeverAlts:Render()
     end)
 
     -- 2b. Location, Hearth, Last Seen, Note Card (Phase 6)
@@ -4281,61 +3031,61 @@ function CLIAlts:CreateModernMainFrame()
     mailCard.pending = mcPending
 
     local btnConfigRoute = CreateRetroButton(mailCard, "Configure", 100, 22, function()
-        local char = CLIAlts:GetSelectedOrCurChar()
+        local char = ForeverAlts:GetSelectedOrCurChar()
         if char then
-            CLIAlts:ShowMailRouteDialog(char)
+            ForeverAlts:ShowMailRouteDialog(char)
         end
     end)
     btnConfigRoute:SetPoint("BOTTOMLEFT", mailCard, "BOTTOMLEFT", 10, 8)
     mailCard.btnConfig = btnConfigRoute
 
     local btnCycleRoute = CreateRetroButton(mailCard, "Cycle", 46, 22, function()
-        local char = CLIAlts:GetSelectedOrCurChar()
+        local char = ForeverAlts:GetSelectedOrCurChar()
         if char then
-            CLIAlts:CycleCharacterSupplyRole(char)
-            CLIAlts:Render()
+            ForeverAlts:CycleCharacterSupplyRole(char)
+            ForeverAlts:Render()
         end
     end)
     btnCycleRoute:SetPoint("LEFT", btnConfigRoute, "RIGHT", 5, 0)
     mailCard.btnCycle = btnCycleRoute
 
     local btnCookRoute = CreateRetroButton(mailCard, "Cook: OFF", 74, 22, function()
-        local char = CLIAlts:GetSelectedOrCurChar()
+        local char = ForeverAlts:GetSelectedOrCurChar()
         if char then
-            CLIAlts:ToggleCharacterCooking(char)
-            CLIAlts:Render()
+            ForeverAlts:ToggleCharacterCooking(char)
+            ForeverAlts:Render()
         end
     end)
     btnCookRoute:SetPoint("LEFT", btnCycleRoute, "RIGHT", 5, 0)
     mailCard.btnCook = btnCookRoute
 
     local btnFARoute = CreateRetroButton(mailCard, "FA: OFF", 58, 22, function()
-        local char = CLIAlts:GetSelectedOrCurChar()
+        local char = ForeverAlts:GetSelectedOrCurChar()
         if char then
-            CLIAlts:ToggleCharacterFirstAid(char)
-            CLIAlts:Render()
+            ForeverAlts:ToggleCharacterFirstAid(char)
+            ForeverAlts:Render()
         end
     end)
     btnFARoute:SetPoint("LEFT", btnCookRoute, "RIGHT", 5, 0)
     mailCard.btnFA = btnFARoute
 
     local btnRemove = CreateRetroButton(detailPanel, "Remove", 76, 24, function()
-        local char = CLIAlts:GetSelectedOrCurChar()
+        local char = ForeverAlts:GetSelectedOrCurChar()
         if char then
-            CLIAlts:ShowConfirmDelete(char)
+            ForeverAlts:ShowConfirmDelete(char)
         end
     end)
     btnRemove:SetPoint("BOTTOMRIGHT", detailPanel, "BOTTOMRIGHT", -12, 12)
     detailPanel.btnRemove = btnRemove
 
     local btnPlan = CreateRetroButton(detailPanel, "Plan session", 98, 24, function()
-        CLIAlts:ExecutePromptCommand("plan 2")
+        ForeverAlts:ExecutePromptCommand("plan 2")
     end)
     btnPlan:SetPoint("RIGHT", btnRemove, "LEFT", -6, 0)
     detailPanel.btnPlan = btnPlan
 
     local btnEditNote = CreateRetroButton(detailPanel, "Edit note", 80, 24, function()
-        local char = CLIAlts:GetSelectedOrCurChar()
+        local char = ForeverAlts:GetSelectedOrCurChar()
         if char and frame.promptBox then
             local name = char.name or char.fullName
             frame.promptBox:SetText("note " .. name .. " ")
@@ -4347,13 +3097,13 @@ function CLIAlts:CreateModernMainFrame()
     detailPanel.btnEditNote = btnEditNote
 
     -- 5. Center Main Column
-    local mainCol = CreateFrame("Frame", "CLIAltsMainCol", frame)
+    local mainCol = CreateFrame("Frame", "ForeverAltsMainCol", frame)
     mainCol:SetPoint("TOPLEFT", sidebar, "TOPRIGHT", 12, -8)
     mainCol:SetPoint("BOTTOMRIGHT", detailPanel, "BOTTOMLEFT", -12, 0)
     frame.mainCol = mainCol
 
     -- Play Next Banner (Phase 4 placeholder)
-    local nextBanner = CreateFrame("Frame", "CLIAltsPlayNextBanner", mainCol, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local nextBanner = CreateFrame("Frame", "ForeverAltsPlayNextBanner", mainCol, BackdropTemplateMixin and "BackdropTemplate" or nil)
     nextBanner:SetPoint("TOPLEFT", mainCol, "TOPLEFT", 0, 0)
     nextBanner:SetPoint("TOPRIGHT", mainCol, "TOPRIGHT", 0, 0)
     nextBanner:SetHeight(146)
@@ -4378,7 +3128,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.recHeroTitle = bannerTitle
 
     -- 2. Capped Badge Pill ("2 capped") on TOPRIGHT
-    local bannerCappedBadge = CreateFrame("Frame", "CLIAltsPlayNextCappedBadge", nextBanner, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local bannerCappedBadge = CreateFrame("Frame", "ForeverAltsPlayNextCappedBadge", nextBanner, BackdropTemplateMixin and "BackdropTemplate" or nil)
     bannerCappedBadge:SetSize(72, 20)
     bannerCappedBadge:SetPoint("TOPRIGHT", nextBanner, "TOPRIGHT", -14, -11)
     bannerCappedBadge:SetBackdrop({
@@ -4479,21 +3229,21 @@ function CLIAlts:CreateModernMainFrame()
 
         card:SetScript("OnClick", function(cSelf)
             if cSelf.charData then
-                CLIAlts.selectedCharKey = cSelf.charData.fullName or cSelf.charData.name
+                ForeverAlts.selectedCharKey = cSelf.charData.fullName or cSelf.charData.name
                 if mainFrame and mainFrame.detailPanel then
                     mainFrame.detailPanel.currentChar = cSelf.charData
                 end
-                local charsList = CLIAlts:GetCharactersList()
-                local rowsPerPage = CLIAlts:GetRowsPerPage()
+                local charsList = ForeverAlts:GetCharactersList()
+                local rowsPerPage = ForeverAlts:GetRowsPerPage()
                 for idx, c in ipairs(charsList) do
-                    if (c.fullName and c.fullName == CLIAlts.selectedCharKey) or (c.name and c.name == CLIAlts.selectedCharKey) then
+                    if (c.fullName and c.fullName == ForeverAlts.selectedCharKey) or (c.name and c.name == ForeverAlts.selectedCharKey) then
                         currentPage = math.floor((idx - 1) / rowsPerPage) + 1
                         break
                     end
                 end
                 PlayRetroSound()
-                CLIAlts:UpdateDetailPanel(cSelf.charData)
-                CLIAlts:Render()
+                ForeverAlts:UpdateDetailPanel(cSelf.charData)
+                ForeverAlts:Render()
             end
         end)
         card:SetScript("OnEnter", function(cSelf)
@@ -4507,25 +3257,25 @@ function CLIAlts:CreateModernMainFrame()
                 GameTooltip:SetOwner(cSelf, "ANCHOR_TOP")
                 local c = cSelf.charData
                 local classFile = c.classFile or "WARRIOR"
-                local cr, cg, cb = CLIAlts:GetClassColor(classFile)
+                local cr, cg, cb = ForeverAlts:GetClassColor(classFile)
                 local class = c.class or c.className or classFile
                 local cName = c.fullName or c.name or "Character"
                 GameTooltip:AddLine(cName, cr, cg, cb)
                 GameTooltip:AddLine(string.format("Level %d %s", c.level or 1, class), 0.8, 0.8, 0.8)
                 GameTooltip:AddLine(" ")
 
-                local rested = CLIAlts:GetRestedData(c)
-                local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(c, nil, rested)
+                local rested = ForeverAlts:GetRestedData(c)
+                local wastedSec, wastedXP, _, timeStr = ForeverAlts:GetRestedWaste(c, nil, rested)
                 local curPercent = (rested and rested.percent) or 0
                 local maxPercent = (rested and rested.maxPercent) or 150
                 local currentRested = (rested and rested.currentRested) or 0
 
-                GameTooltip:AddDoubleLine("Rested XP:", string.format("%s (%d%% / %d%%)", CLIAlts:FormatNumber(currentRested), curPercent, maxPercent), 0.8, 0.8, 0.8, 1, 1, 1)
+                GameTooltip:AddDoubleLine("Rested XP:", string.format("%s (%d%% / %d%%)", ForeverAlts:FormatNumber(currentRested), curPercent, maxPercent), 0.8, 0.8, 0.8, 1, 1, 1)
 
                 if wastedSec and wastedSec > 0 then
                     local dur = timeStr or "0m"
                     GameTooltip:AddDoubleLine("Time Capped:", dur, 1, 0.4, 0.2, 1, 0.4, 0.2)
-                    GameTooltip:AddDoubleLine("Wasted XP:", string.format("~%s XP lost", CLIAlts:FormatNumber(wastedXP or 0)), 1, 0.4, 0.2, 1, 0.4, 0.2)
+                    GameTooltip:AddDoubleLine("Wasted XP:", string.format("~%s XP lost", ForeverAlts:FormatNumber(wastedXP or 0)), 1, 0.4, 0.2, 1, 0.4, 0.2)
                 elseif rested and rested.isFull then
                     GameTooltip:AddLine("|cff00ff66At max rested XP cap (ready to level)|r")
                 else
@@ -4571,13 +3321,13 @@ function CLIAlts:CreateModernMainFrame()
     end)
 
     -- Filter Bar (Phase 5)
-    local filterBar = CreateFrame("Frame", "CLIAltsFilterBar", mainCol)
+    local filterBar = CreateFrame("Frame", "ForeverAltsFilterBar", mainCol)
     filterBar:SetPoint("TOPLEFT", nextBanner, "BOTTOMLEFT", 0, -8)
     filterBar:SetPoint("TOPRIGHT", nextBanner, "BOTTOMRIGHT", 0, -8)
     filterBar:SetHeight(28)
     frame.filterBar = filterBar
 
-    local filterChipsBar = CreateFrame("Frame", "CLIAltsFilterChipsBar", filterBar)
+    local filterChipsBar = CreateFrame("Frame", "ForeverAltsFilterChipsBar", filterBar)
     filterChipsBar:SetAllPoints(filterBar)
     frame.filterChipsBar = filterChipsBar
 
@@ -4621,7 +3371,7 @@ function CLIAlts:CreateModernMainFrame()
 
         chip:SetScript("OnClick", function(cSelf)
             PlayRetroSound()
-            CLIAlts:SetFilter(cSelf.filterKey)
+            ForeverAlts:SetFilter(cSelf.filterKey)
         end)
         chip:SetScript("OnEnter", function(cSelf)
             if not cSelf.isActive then
@@ -4647,7 +3397,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.filterChips = filterChips
 
     -- Right-aligned Sort Dropdown Button (Phase 5 / Artboard B)
-    local btnSort = CreateFrame("Button", "CLIAltsSortButton", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local btnSort = CreateFrame("Button", "ForeverAltsSortButton", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btnSort:SetHeight(22)
     btnSort:SetWidth(120)
     btnSort:SetPoint("RIGHT", filterChipsBar, "RIGHT", 0, 0)
@@ -4668,7 +3418,7 @@ function CLIAlts:CreateModernMainFrame()
     btnSort.label = btnSortText
     btnSort:SetScript("OnClick", function()
         PlayRetroSound()
-        CLIAlts:CycleSort()
+        ForeverAlts:CycleSort()
     end)
     btnSort:SetScript("OnEnter", function(bSelf)
         if bSelf.SetBackdropColor then bSelf:SetBackdropColor(raisedR, raisedG, raisedB, 0.9) end
@@ -4681,7 +3431,7 @@ function CLIAlts:CreateModernMainFrame()
     frame.btnSort = btnSort
 
     -- Prominent Well Rested & LP Badge for Rested XP view
-    local wellRestedBadge = CreateFrame("Button", "CLIAltsWellRestedBadge", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local wellRestedBadge = CreateFrame("Button", "ForeverAltsWellRestedBadge", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
     wellRestedBadge:SetHeight(22)
     wellRestedBadge:SetWidth(220)
     wellRestedBadge:SetPoint("RIGHT", btnSort, "LEFT", -10, 0)
@@ -4703,23 +3453,23 @@ function CLIAlts:CreateModernMainFrame()
     frame.wellRestedBadge = wellRestedBadge
 
     wellRestedBadge:SetScript("OnClick", function(self)
-        local selChar = CLIAlts:GetSelectedOrCurChar()
-        CLIAlts:CycleWellRestedPerk(selChar)
+        local selChar = ForeverAlts:GetSelectedOrCurChar()
+        ForeverAlts:CycleWellRestedPerk(selChar)
         if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
             self:GetScript("OnEnter")(self)
         end
-        CLIAlts:Render()
+        ForeverAlts:Render()
     end)
     wellRestedBadge:SetScript("OnEnter", function(self)
-        local curT = CLIAlts:GetTheme()
+        local curT = ForeverAlts:GetTheme()
         if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.45) end
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        local selChar = CLIAlts:GetSelectedOrCurChar()
+        local selChar = ForeverAlts:GetSelectedOrCurChar()
         local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
         GameTooltip:AddLine(string.format("%s: Well Rested & Legacy Points", cName), 1, 0.82, 0)
-        local r = CLIAlts:GetWellRestedRank(selChar)
-        local charLP, lpReasons = CLIAlts:CalculateCharacterLP(selChar)
-        local lpData = CLIAlts:CalculateAccountLP()
+        local r = ForeverAlts:GetWellRestedRank(selChar)
+        local charLP, lpReasons = ForeverAlts:CalculateCharacterLP(selChar)
+        local lpData = ForeverAlts:CalculateAccountLP()
         GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
         GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
@@ -4739,26 +3489,26 @@ function CLIAlts:CreateModernMainFrame()
         GameTooltip:Hide()
     end)
 
-    local mailActionBar = CreateFrame("Frame", "CLIAltsMailActionBar", filterBar)
+    local mailActionBar = CreateFrame("Frame", "ForeverAltsMailActionBar", filterBar)
     mailActionBar:SetAllPoints(filterBar)
     mailActionBar:Hide()
     frame.mailActionBar = mailActionBar
 
     local btnConsumables = CreateRetroButton(mailActionBar, "Auto-Mail Consumables: ON", 185, 22, function()
-        CLIAlts:ToggleAutoMailConsumables()
-        CLIAlts:Render()
+        ForeverAlts:ToggleAutoMailConsumables()
+        ForeverAlts:Render()
     end)
     btnConsumables:SetPoint("LEFT", mailActionBar, "LEFT", 0, 3)
     mailActionBar.btnConsumables = btnConsumables
 
     local btnIgnored = CreateRetroButton(mailActionBar, "Ignored Items", 105, 22, function()
-        CLIAlts:ListIgnoredMailItems()
+        ForeverAlts:ListIgnoredMailItems()
     end)
     btnIgnored:SetPoint("LEFT", btnConsumables, "RIGHT", 6, 0)
     mailActionBar.btnIgnored = btnIgnored
 
     local btnPrintRoute = CreateRetroButton(mailActionBar, "Print in Chat", 95, 22, function()
-        CLIAlts:PrintMailRouting()
+        ForeverAlts:PrintMailRouting()
     end)
     btnPrintRoute:SetPoint("LEFT", btnIgnored, "RIGHT", 6, 0)
     mailActionBar.btnPrintRoute = btnPrintRoute
@@ -4771,7 +3521,7 @@ function CLIAlts:CreateModernMainFrame()
     mailActionBar.hint = mailHintText
 
     -- Modern Table Column Headers (Tabs 2-7)
-    local headerFrame = CreateFrame("Frame", "CLIAltsModernHeaderFrame", mainCol)
+    local headerFrame = CreateFrame("Frame", "ForeverAltsModernHeaderFrame", mainCol)
     headerFrame:SetPoint("TOPLEFT", filterBar, "BOTTOMLEFT", 0, -4)
     headerFrame:SetPoint("RIGHT", mainCol, "RIGHT", 0, 0)
     headerFrame:SetHeight(20)
@@ -4791,7 +3541,7 @@ function CLIAlts:CreateModernMainFrame()
         btn:EnableMouse(true)
         btn:SetScript("OnClick", function(self)
             if self.sortKey then
-                CLIAlts:ToggleSortKey(self.sortKey)
+                ForeverAlts:ToggleSortKey(self.sortKey)
             end
         end)
         btn:SetScript("OnEnter", function(self)
@@ -4810,7 +3560,7 @@ function CLIAlts:CreateModernMainFrame()
     end
 
     -- Rows List Container
-    local rowsContainer = CreateFrame("Frame", "CLIAltsRowsContainer", mainCol)
+    local rowsContainer = CreateFrame("Frame", "ForeverAltsRowsContainer", mainCol)
     rowsContainer:SetPoint("TOPLEFT", headerFrame, "BOTTOMLEFT", 0, -4)
     rowsContainer:SetPoint("BOTTOMRIGHT", mainCol, "BOTTOMRIGHT", 0, 0)
     rowsContainer:EnableMouseWheel(true)
@@ -4819,26 +3569,26 @@ function CLIAlts:CreateModernMainFrame()
             if currentPage > 1 then
                 currentPage = currentPage - 1
                 PlayRetroSound()
-                CLIAlts:Render()
+                ForeverAlts:Render()
             end
         else
             if currentPage < totalPages then
                 currentPage = currentPage + 1
                 PlayRetroSound()
-                CLIAlts:Render()
+                ForeverAlts:Render()
             end
         end
     end)
     frame.rowsContainer = rowsContainer
 
     -- Hidden Button for Enter keyboard override (details on Enter)
-    local btnFocusEnter = _G["CLIAltsFocusEnterBtn"] or CreateFrame("Button", "CLIAltsFocusEnterBtn", frame)
+    local btnFocusEnter = _G["ForeverAltsFocusEnterBtn"] or CreateFrame("Button", "ForeverAltsFocusEnterBtn", frame)
     btnFocusEnter:SetScript("OnClick", function()
         if MouseIsOver and MouseIsOver(frame) then
             if not (frame.searchBox and frame.searchBox:HasFocus()) and not (frame.promptBox and frame.promptBox:HasFocus()) then
-                local selChar = CLIAlts:GetSelectedOrCurChar()
+                local selChar = ForeverAlts:GetSelectedOrCurChar()
                 if selChar then
-                    CLIAlts:ShowDossierPopup(selChar)
+                    ForeverAlts:ShowDossierPopup(selChar)
                 end
             end
         end
@@ -4935,16 +3685,16 @@ function CLIAlts:CreateModernMainFrame()
         restBarBg:EnableMouse(true)
         restBarBg:SetScript("OnEnter", function(self)
             if row.charData then
-                local xpData = CLIAlts:GetLevelProgressData(row.charData)
+                local xpData = ForeverAlts:GetLevelProgressData(row.charData)
                 GameTooltip:SetOwner(self, "ANCHOR_TOP")
                 GameTooltip:AddLine(string.format("Level %d Progress: %s", row.charData.level or 1, row.charData.name or ""), 1, 1, 1)
                 if xpData and not xpData.isMaxLevel then
-                    GameTooltip:AddLine(string.format("XP Gained: |cffffffff%s / %s|r (|cff00ff66%d%%|r)", CLIAlts:FormatNumber(xpData.curXP), CLIAlts:FormatNumber(xpData.maxXP), xpData.percent), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Remaining to Level %d: |cffffd700%s XP|r", (row.charData.level or 1) + 1, CLIAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
-                    local rested = CLIAlts:GetRestedData(row.charData)
+                    GameTooltip:AddLine(string.format("XP Gained: |cffffffff%s / %s|r (|cff00ff66%d%%|r)", ForeverAlts:FormatNumber(xpData.curXP), ForeverAlts:FormatNumber(xpData.maxXP), xpData.percent), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Remaining to Level %d: |cffffd700%s XP|r", (row.charData.level or 1) + 1, ForeverAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
+                    local rested = ForeverAlts:GetRestedData(row.charData)
                     if rested and not rested.isMaxLevel then
                         GameTooltip:AddLine(" ")
-                        GameTooltip:AddLine(string.format("Rested XP Pool: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.7, 0.7, 0.7)
+                        GameTooltip:AddLine(string.format("Rested XP Pool: |cffffffff%s XP|r (%d%%)", ForeverAlts:FormatNumber(rested.currentRested or 0), rested.percent or 0), 0.7, 0.7, 0.7)
                     end
                 else
                     GameTooltip:AddLine("Level cap reached.", 0.8, 0.8, 0.8)
@@ -5017,12 +3767,12 @@ function CLIAlts:CreateModernMainFrame()
         gaugeXP:EnableMouse(true)
         gaugeXP:SetScript("OnEnter", function(s)
             if row.charData then
-                local xpData = CLIAlts:GetLevelProgressData(row.charData)
+                local xpData = ForeverAlts:GetLevelProgressData(row.charData)
                 GameTooltip:SetOwner(s, "ANCHOR_TOP")
-                GameTooltip:AddLine(string.format("Level %d XP Progress: %s", row.charData.level or 1, CLIAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
+                GameTooltip:AddLine(string.format("Level %d XP Progress: %s", row.charData.level or 1, ForeverAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
                 if xpData and not xpData.isMaxLevel then
-                    GameTooltip:AddLine(string.format("XP Gained: |cffffffff%s / %s|r (|cff00ff66%d%%|r)", CLIAlts:FormatNumber(xpData.curXP), CLIAlts:FormatNumber(xpData.maxXP), xpData.percent), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Remaining to Next Level: |cffffd700%s XP|r", CLIAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("XP Gained: |cffffffff%s / %s|r (|cff00ff66%d%%|r)", ForeverAlts:FormatNumber(xpData.curXP), ForeverAlts:FormatNumber(xpData.maxXP), xpData.percent), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Remaining to Next Level: |cffffd700%s XP|r", ForeverAlts:FormatNumber(xpData.remainingXP)), 0.8, 0.8, 0.8)
                 else
                     GameTooltip:AddLine("Level cap reached.", 0.8, 0.8, 0.8)
                 end
@@ -5039,20 +3789,20 @@ function CLIAlts:CreateModernMainFrame()
         gaugeRest:EnableMouse(true)
         gaugeRest:SetScript("OnEnter", function(s)
             if row.charData then
-                local rested = CLIAlts:GetRestedData(row.charData)
+                local rested = ForeverAlts:GetRestedData(row.charData)
                 GameTooltip:SetOwner(s, "ANCHOR_TOP")
-                GameTooltip:AddLine(string.format("Rested XP: %s", CLIAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
+                GameTooltip:AddLine(string.format("Rested XP: %s", ForeverAlts:ColorizePlayerName(row.charData.name or "", row.charData.classFile)), 1, 1, 1)
                 if rested and not rested.isMaxLevel then
                     local curR = rested.currentRested or 0
                     local charMaxXP = (row.charData and row.charData.maxXP and row.charData.maxXP > 0) and row.charData.maxXP or 1
                     local lvlPct = (curR / charMaxXP) * 100
                     local capRatioPct = (rested.maxRested and rested.maxRested > 0) and ((curR / rested.maxRested) * 100) or 0
-                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (|cff00ff66%.1f%% of level|r · %d%% of cap)", CLIAlts:FormatNumber(curR), lvlPct, math.floor(capRatioPct + 0.5)), 0.8, 0.8, 0.8)
-                    GameTooltip:AddLine(string.format("Rested Cap: |cffffffff%s XP|r (%d%%)", CLIAlts:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Current Rested: |cffffffff%s XP|r (|cff00ff66%.1f%% of level|r · %d%% of cap)", ForeverAlts:FormatNumber(curR), lvlPct, math.floor(capRatioPct + 0.5)), 0.8, 0.8, 0.8)
+                    GameTooltip:AddLine(string.format("Rested Cap: |cffffffff%s XP|r (%d%%)", ForeverAlts:FormatNumber(rested.maxRested or 0), rested.maxPercent or 150), 0.8, 0.8, 0.8)
                     if rested.isFull then
-                        local wastedSec, wastedXP, _, timeStr = CLIAlts:GetRestedWaste(row.charData)
+                        local wastedSec, wastedXP, _, timeStr = ForeverAlts:GetRestedWaste(row.charData)
                         if wastedSec and wastedSec > 0 then
-                            GameTooltip:AddLine(string.format("|cffff4444Capped %s (~%s XP wasted)|r", timeStr or "", CLIAlts:FormatNumber(wastedXP or 0)), 1, 0.3, 0.3)
+                            GameTooltip:AddLine(string.format("|cffff4444Capped %s (~%s XP wasted)|r", timeStr or "", ForeverAlts:FormatNumber(wastedXP or 0)), 1, 0.3, 0.3)
                         else
                             GameTooltip:AddLine("|cff55e39aAt Rested Cap (Ready now)|r", 0.3, 1, 0.3)
                         end
@@ -5061,7 +3811,7 @@ function CLIAlts:CreateModernMainFrame()
                         local ratePerHr = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
                         local isInn = row.charData.loggedOutInRestZone
                         local locDesc = isInn and "Inn/City: 5% per 8h" or "Wild: 1.25% per 8h"
-                        GameTooltip:AddLine(string.format("Resting Rate: |cffffffff+%s XP/h|r (%s)", CLIAlts:FormatNumber(ratePerHr), locDesc), 0.7, 0.8, 0.9)
+                        GameTooltip:AddLine(string.format("Resting Rate: |cffffffff+%s XP/h|r (%s)", ForeverAlts:FormatNumber(ratePerHr), locDesc), 0.7, 0.8, 0.9)
                     end
                 else
                     GameTooltip:AddLine("Level cap reached - Rested XP no longer accumulates.", 0.7, 0.7, 0.7)
@@ -5117,7 +3867,7 @@ function CLIAlts:CreateModernMainFrame()
         colRestBarBg:EnableMouse(true)
         colRestBarBg:SetScript("OnEnter", function(self)
             if row.charData then
-                CLIAlts:ShowRestedTooltip(self, row.charData)
+                ForeverAlts:ShowRestedTooltip(self, row.charData)
             end
         end)
         colRestBarBg:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -5130,49 +3880,49 @@ function CLIAlts:CreateModernMainFrame()
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         row:SetScript("OnClick", function(self, button)
             if self.charData then
-                CLIAlts.selectedCharKey = self.charData.fullName or self.charData.name
+                ForeverAlts.selectedCharKey = self.charData.fullName or self.charData.name
                 if mainFrame and mainFrame.detailPanel then
                     mainFrame.detailPanel.currentChar = self.charData
                 end
-                local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
+                local curTab = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab
                 if button == "RightButton" then
-                    CLIAlts:ShowRowContextMenu(self, self.charData)
+                    ForeverAlts:ShowRowContextMenu(self, self.charData)
                 elseif curTab == 7 then
                     if IsShiftKeyDown and IsShiftKeyDown() then
-                        CLIAlts:CycleCharacterSupplyRole(self.charData)
-                        CLIAlts:RequestRender()
+                        ForeverAlts:CycleCharacterSupplyRole(self.charData)
+                        ForeverAlts:RequestRender()
                     else
-                        CLIAlts:ShowMailRouteDialog(self.charData)
+                        ForeverAlts:ShowMailRouteDialog(self.charData)
                     end
-                elseif IsShiftKeyDown and IsShiftKeyDown() and CLIAlts:IsForeverMode() then
-                    CLIAlts:CycleCharacterTier(self.charData)
-                    CLIAlts:RequestRender()
+                elseif IsShiftKeyDown and IsShiftKeyDown() and ForeverAlts:IsForeverMode() then
+                    ForeverAlts:CycleCharacterTier(self.charData)
+                    ForeverAlts:RequestRender()
                 else
                     local now = (GetTime and GetTime()) or time()
                     if self.lastClickTime and (now - self.lastClickTime) < 0.35 then
-                        CLIAlts:ShowDossierPopup(self.charData)
+                        ForeverAlts:ShowDossierPopup(self.charData)
                     end
                     self.lastClickTime = now
-                    CLIAlts:Render()
+                    ForeverAlts:Render()
                 end
             end
         end)
 
         row:SetScript("OnEnter", function(self)
-            local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
+            local isSelected = (ForeverAlts.selectedCharKey and self.charData and (self.charData.fullName == ForeverAlts.selectedCharKey or self.charData.name == ForeverAlts.selectedCharKey))
             if not isSelected then
                 if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
                 if self.SetBackdropBorderColor then self:SetBackdropBorderColor(lineR, lineG, lineB, 0.65) end
             end
-            local curTab = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab
+            local curTab = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab
             if curTab == 3 and self.charData then
-                CLIAlts:ShowRestedTooltip(self, self.charData)
+                ForeverAlts:ShowRestedTooltip(self, self.charData)
             end
         end)
 
         row:SetScript("OnLeave", function(self)
             GameTooltip:Hide()
-            local isSelected = (CLIAlts.selectedCharKey and self.charData and (self.charData.fullName == CLIAlts.selectedCharKey or self.charData.name == CLIAlts.selectedCharKey))
+            local isSelected = (ForeverAlts.selectedCharKey and self.charData and (self.charData.fullName == ForeverAlts.selectedCharKey or self.charData.name == ForeverAlts.selectedCharKey))
             if isSelected then
                 if self.SetBackdropColor then self:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
                 if self.SetBackdropBorderColor then self:SetBackdropBorderColor(brandR, brandG, brandB, 1.0) end
@@ -5189,12 +3939,12 @@ function CLIAlts:CreateModernMainFrame()
     frame:SetScript("OnShow", function(self)
         pcall(function()
             if SetOverrideBindingClick then
-                SetOverrideBindingClick(self, false, "ENTER", "CLIAltsFocusEnterBtn")
-                SetOverrideBindingClick(self, false, "/", "CLIAltsFocusSlashBtn")
+                SetOverrideBindingClick(self, false, "ENTER", "ForeverAltsFocusEnterBtn")
+                SetOverrideBindingClick(self, false, "/", "ForeverAltsFocusSlashBtn")
             end
         end)
-        CLIAlts:ApplyLayoutSize()
-        CLIAlts:Render()
+        ForeverAlts:ApplyLayoutSize()
+        ForeverAlts:Render()
     end)
     frame:SetScript("OnHide", function(self)
         pcall(function()
@@ -5205,36 +3955,36 @@ function CLIAlts:CreateModernMainFrame()
         if frame.promptBox then
             frame.promptBox:ClearFocus()
         end
-        if CLIAlts.EndTour then
-            CLIAlts:EndTour()
+        if ForeverAlts.EndTour then
+            ForeverAlts:EndTour()
         end
     end)
 
     return frame
 end
 
-function CLIAlts:CreateMainFrame()
+function ForeverAlts:CreateMainFrame()
     if mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
         rowFrames = mainFrame.rowFrames
         return mainFrame
     end
-    if _G["CLIAltsMainFrame"] and _G["CLIAltsMainFrame"].rowFrames and #_G["CLIAltsMainFrame"].rowFrames > 0 then
-        mainFrame = _G["CLIAltsMainFrame"]
+    if _G["ForeverAltsMainFrame"] and _G["ForeverAltsMainFrame"].rowFrames and #_G["ForeverAltsMainFrame"].rowFrames > 0 then
+        mainFrame = _G["ForeverAltsMainFrame"]
         self.mainFrame = mainFrame
         rowFrames = mainFrame.rowFrames
         return mainFrame
     end
 
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.legacyUI = nil
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.legacyUI = nil
     end
 
     return self:CreateModernMainFrame()
 end
 
-function CLIAlts:RecreateMainFrame()
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.legacyUI = nil
+function ForeverAlts:RecreateMainFrame()
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.legacyUI = nil
     end
 
     local frame = self:CreateModernMainFrame()
@@ -5248,35 +3998,14 @@ function CLIAlts:RecreateMainFrame()
     return frame
 end
 
-function CLIAlts:GetVisibleCharactersList()
-    local activeTab = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.activeTab) or 1
-    local activeSortBy = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "rested"
-    local activeSortAsc = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc ~= nil) and CLIAltsDB.settings.sortAsc or false
-    if mainFrame and mainFrame.isLegacyUI then
-        if activeTab == 2 then
-            activeSortBy = "rotation"
-            activeSortAsc = false
-        elseif activeTab == 3 then
-            activeSortBy = "rested"
-            activeSortAsc = false
-        elseif activeTab == 4 then
-            activeSortBy = "prof"
-            activeSortAsc = true
-        elseif activeTab == 5 then
-            activeSortBy = "gold"
-            activeSortAsc = false
-        elseif activeTab == 6 then
-            activeSortBy = "cooldown"
-            activeSortAsc = true
-        elseif activeTab == 7 then
-            activeSortBy = "name"
-            activeSortAsc = true
-        end
-    end
+function ForeverAlts:GetVisibleCharactersList()
+    local activeTab = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab) or 1
+    local activeSortBy = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "rested"
+    local activeSortAsc = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc ~= nil) and ForeverAltsDB.settings.sortAsc or false
     return self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
 end
 
-function CLIAlts:GetSelectedOrCurChar()
+function ForeverAlts:GetSelectedOrCurChar()
     local selectedKey = self.selectedCharKey
     local charList = self:GetVisibleCharactersList()
     if not charList or #charList == 0 then
@@ -5309,7 +4038,7 @@ function CLIAlts:GetSelectedOrCurChar()
     return charList[1]
 end
 
-function CLIAlts:UpdateDetailPanel(charArg)
+function ForeverAlts:UpdateDetailPanel(charArg)
     if not mainFrame or not mainFrame.detailPanel then return end
     local dp = mainFrame.detailPanel
     local char = charArg or self:GetSelectedOrCurChar()
@@ -5553,7 +4282,7 @@ function CLIAlts:UpdateDetailPanel(charArg)
     end
 end
 
-function CLIAlts:NavigateSelection(delta)
+function ForeverAlts:NavigateSelection(delta)
     local chars = self:GetVisibleCharactersList()
     if not chars or #chars == 0 then return end
     local curChar = self:GetSelectedOrCurChar()
@@ -5586,7 +4315,7 @@ end
 -- ----------------------------------------------------------------------------
 local renderTimerPending = false
 
-function CLIAlts:RequestRender()
+function ForeverAlts:RequestRender()
     self._cachedSidebarBadges = nil
     renderDirty = true
     if self.UpdateLDB then
@@ -5603,13 +4332,13 @@ function CLIAlts:RequestRender()
                 renderTimerPending = false
                 if renderDirty and mainFrame and mainFrame:IsShown() then
                     renderDirty = false
-                    CLIAlts:Render()
+                    ForeverAlts:Render()
                 end
             end)
         else
             renderTimerPending = false
             renderDirty = false
-            CLIAlts:Render()
+            ForeverAlts:Render()
         end
     end
 end
@@ -5617,7 +4346,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Shared Character Row Component (Dual circular gauges, details, g/s/c coins)
 -- ----------------------------------------------------------------------------
-function CLIAlts:RenderCharRow(row, char, derived)
+function ForeverAlts:RenderCharRow(row, char, derived)
     if not row or not char then return end
 
     derived = derived or {}
@@ -5871,7 +4600,7 @@ function CLIAlts:RenderCharRow(row, char, derived)
     end
 end
 
-function CLIAlts:Render(force)
+function ForeverAlts:Render(force)
     renderDirty = false
     if self.UpdateLDB then
         self:UpdateLDB()
@@ -5882,7 +4611,7 @@ function CLIAlts:Render(force)
         if (not rowFrames or #rowFrames == 0) and mainFrame and mainFrame.rowFrames and #mainFrame.rowFrames > 0 then
             rowFrames = mainFrame.rowFrames
         end
-        local activeTab = CLIAltsDB.settings.activeTab or 1
+        local activeTab = ForeverAltsDB.settings.activeTab or 1
         if activeTab == 7 then
             self._cachedMailReadySummary = self:GetMailReadySummary()
         else
@@ -5943,45 +4672,23 @@ function CLIAlts:Render(force)
         local base = isComp and tabBtn.compactText or tabBtn.baseText
         local isActive = (tabBtn.tabId == activeTab)
         tabBtn.label:SetText(base)
-        if not mainFrame.isLegacyUI then
-            local raisedR, raisedG, raisedB = self:Hex("raised")
-            local lineR, lineG, lineB, lineA = self:Hex("line")
-            local mutedR, mutedG, mutedB = self:Hex("muted")
-            local brandR, brandG, brandB = self:Hex("brand")
-            if tabBtn.SetBackdropColor then
-                tabBtn:SetBackdropColor(isActive and raisedR or 0, isActive and raisedG or 0, isActive and raisedB or 0, isActive and 0.85 or 0)
-            end
-            if tabBtn.SetBackdropBorderColor then
-                tabBtn:SetBackdropBorderColor(isActive and lineR or 0, isActive and lineG or 0, isActive and lineB or 0, isActive and lineA or 0)
-            end
-            tabBtn.label:SetTextColor(isActive and brandR or mutedR, isActive and brandG or mutedG, isActive and brandB or mutedB)
-        else
-            if isActive then
-                tabBtn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-                local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-                if tabBtn.SetBackdropColor then
-                    tabBtn:SetBackdropColor(hov[1], hov[2], hov[3], 0.22)
-                end
-                if tabBtn.SetBackdropBorderColor then
-                    tabBtn:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.9)
-                end
-            else
-                local m = t.muted or t.dim or { 0.663, 0.627, 0.549 }
-                tabBtn.label:SetTextColor(m[1], m[2], m[3])
-                if tabBtn.SetBackdropColor then
-                    tabBtn:SetBackdropColor(0, 0, 0, 0)
-                end
-                if tabBtn.SetBackdropBorderColor then
-                    tabBtn:SetBackdropBorderColor(0, 0, 0, 0)
-                end
-            end
+        local raisedR, raisedG, raisedB = self:Hex("raised")
+        local lineR, lineG, lineB, lineA = self:Hex("line")
+        local mutedR, mutedG, mutedB = self:Hex("muted")
+        local brandR, brandG, brandB = self:Hex("brand")
+        if tabBtn.SetBackdropColor then
+            tabBtn:SetBackdropColor(isActive and raisedR or 0, isActive and raisedG or 0, isActive and raisedB or 0, isActive and 0.85 or 0)
         end
+        if tabBtn.SetBackdropBorderColor then
+            tabBtn:SetBackdropBorderColor(isActive and lineR or 0, isActive and lineG or 0, isActive and lineB or 0, isActive and lineA or 0)
+        end
+        tabBtn.label:SetTextColor(isActive and brandR or mutedR, isActive and brandG or mutedG, isActive and brandB or mutedB)
     end
 
     if mainFrame.mailActionBar then
         if activeTab == 7 then
             mainFrame.mailActionBar:Show()
-            local isCons = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoMailConsumables
+            local isCons = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.autoMailConsumables
             if mainFrame.mailActionBar.btnConsumables and mainFrame.mailActionBar.btnConsumables.label then
                 mainFrame.mailActionBar.btnConsumables.label:SetText(isCons and "Auto-Mail Consumables: ON" or "Auto-Mail Consumables: OFF")
             end
@@ -6063,8 +4770,7 @@ function CLIAlts:Render(force)
     self._cachedPriorityList = nextList
     local topNext = nextList and nextList[1]
 
-    if not mainFrame.isLegacyUI then
-        if activeTab == 1 then
+    if activeTab == 1 then
             if mainFrame.nextBanner then
                 mainFrame.nextBanner:Show()
                 self:UpdatePlayNextBanner()
@@ -6093,176 +4799,6 @@ function CLIAlts:Render(force)
                 mainFrame.filterBar:Show()
             end
         end
-    else
-        if activeTab == 8 then
-            if mainFrame.recPanel then mainFrame.recPanel:Hide() end
-            if mainFrame.kpiContainer then mainFrame.kpiContainer:Hide() end
-        elseif activeTab == 7 then
-            if mainFrame.recPanel then mainFrame.recPanel:Show() end
-            if mainFrame.kpiContainer then mainFrame.kpiContainer:Show() end
-            mainFrame.recChar = nil
-        if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
-        if mainFrame.recBadge then
-            mainFrame.recBadge:SetText("MAIL DISPATCH & SUPPLY CHAIN")
-        end
-        local mailSummary = self._cachedMailReadySummary or self:GetMailReadySummary()
-        if mailSummary.totalPackages > 0 then
-            if mainFrame.recHeroTitle then
-                mainFrame.recHeroTitle:SetText(string.format("%d Pending In-Bag Packages Ready (%d items)", mailSummary.totalPackages, mailSummary.totalItems))
-            end
-            if mainFrame.recProfLine then
-                mainFrame.recProfLine:SetText("Materials & BoE goods found in bags destined for specialized crafters & mules.")
-                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-            if mainFrame.recRestLine then
-                mainFrame.recRestLine:SetText(string.format("Send to: %d recipients ready for dispatch", mailSummary.totalPackages))
-                mainFrame.recRestLine:SetTextColor(t.ready[1], t.ready[2], t.ready[3])
-            end
-            if mainFrame.recReasonLine then
-                mainFrame.recReasonLine:SetText("Click an alt below to configure routing, or click [ VIEW CHAT ] for bag mail breakdown.")
-                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-        else
-            if mainFrame.recHeroTitle then
-                mainFrame.recHeroTitle:SetText("All Bag Materials Dispatched")
-            end
-            if mainFrame.recProfLine then
-                mainFrame.recProfLine:SetText("No pending trade goods or profession materials in your bags need mailing.")
-                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-            if mainFrame.recRestLine then
-                mainFrame.recRestLine:SetText("Supply routes active across all tracked characters.")
-                mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-            end
-            if mainFrame.recReasonLine then
-                mainFrame.recReasonLine:SetText("Configure auto-suggested or custom material streams for any character below.")
-                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-        end
-        if mainFrame.recBtnDossier then mainFrame.recBtnDossier:Hide() end
-        if mainFrame.recBtnSetup then
-            mainFrame.recBtnSetup:Show()
-            if mainFrame.recBtnSetup.label then
-                mainFrame.recBtnSetup.label:SetText("[ VIEW CHAT ]")
-            end
-            mainFrame.recBtnSetup:SetScript("OnClick", function()
-                CLIAlts:PrintMailRouting()
-            end)
-        end
-    else
-        if mainFrame.recPanel then mainFrame.recPanel:Show() end
-        if mainFrame.kpiContainer then mainFrame.kpiContainer:Show() end
-        if mainFrame.recBadge then
-            mainFrame.recBadge:SetText("RECOMMENDED NEXT")
-        end
-        if mainFrame.recBtnSetup and mainFrame.recBtnSetup.label then
-            mainFrame.recBtnSetup.label:SetText("[ GUIDE ]")
-        end
-        if topNext then
-            local tc = topNext.char
-            mainFrame.recChar = tc
-            local cName = self:ColorizePlayerName(tc.fullName or tc.name, tc.classFile)
-            local isCur = (tc.fullName and tc.fullName == self.curPlayerFullName) or (tc.name and tc.name == self.curPlayerName)
-            local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
-            local tgtLvl = topNext.targetLevel or ((tc.tier == "CORE" and 35) or (tc.tier == "RESERVE" and 25) or 60)
-            local lvlStr = string.format("Level %d/%d %s", tc.level or 1, tgtLvl, tc.class or "")
-
-            if mainFrame.recCohortBadge then
-                mainFrame.recCohortBadge:Show()
-                if mainFrame.recCohortBadgeText then
-                    if tc.tier == "CORE" then
-                        mainFrame.recCohortBadgeText:SetText("|cffffb547CORE|r")
-                    elseif tc.tier == "RESERVE" then
-                        mainFrame.recCohortBadgeText:SetText("|cff57d6e8ALT|r")
-                    elseif tc.tier == "BANK" then
-                        mainFrame.recCohortBadgeText:SetText("|cffa9a08cBANK|r")
-                    else
-                        mainFrame.recCohortBadgeText:SetText("|cffffffffALT|r")
-                    end
-                end
-            end
-
-            local profParts = {}
-            if tc.supply_role and tc.supply_role ~= "" then
-                table.insert(profParts, tc.supply_role)
-            end
-            if tc.professions and tc.professions.primary and #tc.professions.primary > 0 then
-                for _, p in ipairs(tc.professions.primary) do
-                    table.insert(profParts, string.format("%s %d", p.name or "", p.rank or 0))
-                end
-            end
-            local profSummary = (#profParts > 0) and table.concat(profParts, " · ") or "No primary professions tracked"
-
-            local restStr
-            if topNext.isCapped then
-                restStr = string.format("%d%% Capped", topNext.maxPercent or 150)
-                if topNext.wastedXP and topNext.wastedXP > 0 then
-                    restStr = restStr .. string.format(" (+%s XP waste)", self:FormatNumber(topNext.wastedXP))
-                end
-            else
-                restStr = string.format("%d%% Rested (~%s XP)", topNext.percent or 0, self:FormatNumber(topNext.usableXP or 0))
-            end
-
-            local whyText
-            if topNext.isCapped and topNext.wastedXP and topNext.wastedXP > 0 then
-                whyText = string.format("Rested cap reached with XP overflow (+%s wasted) - play now to prevent XP waste.", self:FormatNumber(topNext.wastedXP))
-            elseif topNext.isCapped then
-                whyText = string.format("At %d%% Rested cap with double XP active - optimal time to level.", topNext.maxPercent or 150)
-            elseif tc.tier == "CORE" then
-                whyText = string.format("Core cohort priority with largest available rested pool (~%s XP).", self:FormatNumber(topNext.usableXP or 0))
-            else
-                whyText = string.format("Highest available rested XP pool (~%s XP) ready for progression.", self:FormatNumber(topNext.usableXP or 0))
-            end
-
-            if mainFrame.recHeroTitle then
-                mainFrame.recHeroTitle:SetText(string.format("%s%s · %s", curPrefix, cName, lvlStr))
-            end
-            if mainFrame.recProfLine then
-                mainFrame.recProfLine:SetText(profSummary)
-                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-            if mainFrame.recRestLine then
-                mainFrame.recRestLine:SetText(string.format("%s · Rested XP opportunity", restStr))
-                mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
-            end
-            if mainFrame.recReasonLine then
-                mainFrame.recReasonLine:SetText(whyText)
-                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-            if mainFrame.recBtnDossier then
-                mainFrame.recBtnDossier:Show()
-                mainFrame.recBtnDossier:SetScript("OnClick", function()
-                    CLIAlts:ShowDossierPopup(tc)
-                end)
-            end
-            if mainFrame.recBtnSetup then mainFrame.recBtnSetup:Hide() end
-        else
-            mainFrame.recChar = nil
-            if mainFrame.recCohortBadge then mainFrame.recCohortBadge:Hide() end
-            if mainFrame.recHeroTitle then
-                mainFrame.recHeroTitle:SetText("All characters up to date")
-            end
-            if mainFrame.recProfLine then
-                mainFrame.recProfLine:SetText("Target level reached for all active cohorts.")
-                mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-            if mainFrame.recRestLine then
-                mainFrame.recRestLine:SetText("")
-            end
-            if mainFrame.recReasonLine then
-                mainFrame.recReasonLine:SetText("Setup: Assign Core (L35) or Alt (L25) cohorts below to activate recommendations.")
-                mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-            end
-            if mainFrame.recBtnDossier then mainFrame.recBtnDossier:Hide() end
-            if mainFrame.recBtnSetup then
-                mainFrame.recBtnSetup:Show()
-                mainFrame.recBtnSetup:SetScript("OnClick", function()
-                    CLIAlts:ShowHelpPopup()
-                end)
-            end
-        end
-    end
-    end
 
     -- ------------------------------------------------------------------------
     -- Level 2: 3 Modern KPI Metric Cards (RESTED | PROFESSIONS | GOLD)
@@ -6446,11 +4982,10 @@ function CLIAlts:Render(force)
     -- Render Table Header Cells & Clickable Header Buttons
     local cols = self:GetColumns(activeTab)
     local xOffset = 16
-    local sortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
-    local sortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
-    local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-    local curFontSz = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
-    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":" .. curFontSz .. ":v8"
+    local sortBy = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy
+    local sortAsc = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc
+    local curFontSz = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or 18
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":mod:" .. curFontSz .. ":v8"
     local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
     if relayoutHeaders and mainFrame.headerFrame then
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
@@ -6462,8 +4997,8 @@ function CLIAlts:Render(force)
         local col = cols[idx]
 
         if col then
-            local colW = (mainFrame and not mainFrame.isLegacyUI and col.mpw) or (isComp and (col.cpw or col.pw)) or col.pw
-            local padR = (mainFrame and not mainFrame.isLegacyUI and col.mpadRight) or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
+            local colW = col.mpw or (isComp and (col.cpw or col.pw)) or col.pw
+            local padR = col.mpadRight or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
             local cellW = math.max(1, colW - padR)
             if hCell then
                 if relayoutHeaders then
@@ -6514,8 +5049,8 @@ function CLIAlts:Render(force)
     end
 
     -- Retrieve Sorted Characters (with view-based defaults)
-    local activeSortBy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy
-    local activeSortAsc = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc
+    local activeSortBy = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy
+    local activeSortAsc = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc
     if not activeSortBy then
         if activeTab == 2 then
             activeSortBy = "rotation"
@@ -6626,14 +5161,8 @@ function CLIAlts:Render(force)
         local sd = self:GetSettingsDialog()
         if sd then
             sd:SetParent(mainFrame)
-            sd:ClearAllPoints()
-            if not mainFrame.isLegacyUI then
-                sd:SetPoint("TOPLEFT", mainFrame.sidebar, "TOPRIGHT", 24, -8)
-                sd:SetSize(720, 680)
-            else
-                sd:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 20, -64)
-                sd:SetSize(700, 520)
-            end
+            sd:SetPoint("TOPLEFT", mainFrame.sidebar, "TOPRIGHT", 24, -8)
+            sd:SetSize(720, 680)
             sd:Show()
             self:UpdateSettingsDialog()
         end
@@ -6652,7 +5181,7 @@ function CLIAlts:Render(force)
         if sd and sd:IsShown() then
             sd:Hide()
         end
-        if not mainFrame.isLegacyUI and mainFrame.detailPanel then
+        if mainFrame.detailPanel then
             mainFrame.detailPanel:Show()
         end
     end
@@ -6676,9 +5205,8 @@ function CLIAlts:Render(force)
 
             if char then
                 row.charData = char
-                local isSelected = (CLIAlts.selectedCharKey and (char.fullName == CLIAlts.selectedCharKey or char.name == CLIAlts.selectedCharKey))
+                local isSelected = (ForeverAlts.selectedCharKey and (char.fullName == ForeverAlts.selectedCharKey or char.name == ForeverAlts.selectedCharKey))
 
-                if not mainFrame.isLegacyUI then
                     -- Modern UI row styling
                     if isSelected then
                         if row.SetBackdropColor then row:SetBackdropColor(raisedR, raisedG, raisedB, 0.95) end
@@ -6726,9 +5254,8 @@ function CLIAlts:Render(force)
                         if row.colRestBarBg and activeTab ~= 3 then row.colRestBarBg:Hide() end
                         if row.colRestLabel and activeTab ~= 3 then row.colRestLabel:Hide() end
 
-                        local isMod = (mainFrame and not mainFrame.isLegacyUI) and "mod" or "leg"
-                        local curFontSz = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
-                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":" .. isMod .. ":" .. curFontSz .. ":v9"
+                        local curFontSz = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or 18
+                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":mod:" .. curFontSz .. ":v9"
                         local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                         if relayoutRow then
                             row.lastLayoutKey = rowLayoutKey
@@ -6740,8 +5267,8 @@ function CLIAlts:Render(force)
                             local col = cols[idx]
                             if cell then
                                 if col then
-                                    local colW = (mainFrame and not mainFrame.isLegacyUI and col.mpw) or (isComp and (col.cpw or col.pw)) or col.pw
-                                    local padR = (mainFrame and not mainFrame.isLegacyUI and col.mpadRight) or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
+                                    local colW = col.mpw or (isComp and (col.cpw or col.pw)) or col.pw
+                                    local padR = col.mpadRight or (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
                                     if padR == 0 and col.align ~= "RIGHT" and col.align ~= "CENTER" then
                                         padR = 8
                                     end
@@ -6826,192 +5353,6 @@ function CLIAlts:Render(force)
                             end
                         end
                     end
-                else
-                    -- Legacy UI row rendering
-                    if isSelected then
-                        local hov = t.rowHover or { 0.949, 0.788, 0.298, 0.25 }
-                        if row.SetBackdropColor then row:SetBackdropColor(hov[1], hov[2], hov[3], 0.35) end
-                        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8) end
-                        if row.borderL then row.borderL:SetText(string.format("|cff%s>|r", t.highlightHex or "ffd34e")) end
-                    else
-                        local rowBg = (rowIndex % 2 == 0) and (t.rowEven or { 0.098, 0.082, 0.047, 0.32 }) or (t.rowOdd or { 0.098, 0.082, 0.047, 0.12 })
-                        if row.SetBackdropColor then row:SetBackdropColor(rowBg[1], rowBg[2], rowBg[3], rowBg[4]) end
-                        if row.SetBackdropBorderColor then row:SetBackdropBorderColor(0, 0, 0, 0) end
-                        if row.borderL then row.borderL:SetText("") end
-                    end
-
-                    if activeTab == 1 then
-                        local coloredName = self:ColorizePlayerName(char.fullName or char.name, char.classFile)
-                        local isCur = (char.fullName and char.fullName == self.curPlayerFullName) or (char.name and char.name == self.curPlayerName)
-                        local curPrefix = isCur and string.format("|cff%s*|r ", t.accentHex or "57d6e8") or ""
-                        if row.nameLine then
-                            row.nameLine:SetText(curPrefix .. coloredName)
-                            row.nameLine:Show()
-                        end
-                        if row.subLine then
-                            local roleTag = (char.tier == "CORE" and string.format("|cff%sCORE|r", t.highlightHex or "ffd34e"))
-                                or (char.tier == "RESERVE" and string.format("|cff%sALT|r", t.accentHex or "57d6e8"))
-                                or (char.tier == "BANK" and string.format("|cff%sBANK|r", t.pendingHex or "ffb547"))
-                                or string.format("|cff%sALT|r", t.mutedHex or "a9a08c")
-                            local isTopNext = (topNext and topNext.char and ((topNext.char.fullName or topNext.char.name) == (char.fullName or char.name)))
-                            if isTopNext then
-                                roleTag = roleTag .. string.format(" · |cff%sNEXT|r", t.highlightHex or "ffd34e")
-                            end
-                            local statusDetail = ""
-                            if char.supply_role and char.supply_role ~= "" then
-                                statusDetail = " · " .. char.supply_role
-                            elseif char.level and char.level >= self:GetMaxLevel() then
-                                statusDetail = " · Target Level Reached"
-                            elseif char.tier == "BANK" then
-                                statusDetail = " · Storage Mule"
-                            end
-                            row.subLine:SetText(roleTag .. statusDetail)
-                            row.subLine:Show()
-                        end
-                        if row.levelText then
-                            row.levelText:SetText(string.format("|cffffffff%d|r", char.level or 1))
-                            row.levelText:Show()
-                        end
-                        local rested = self:GetRestedData(char)
-                        if rested and not rested.isMaxLevel then
-                            local pct = rested.percent or 0
-                            local maxPct = rested.maxPercent or 150
-                            local est = rested.isEstimate and "~" or ""
-                            if row.restPercentText then
-                                row.restPercentText:SetText(string.format("|cff%s%s%d%%|r", t.highlightHex or "ffd34e", est, pct))
-                                row.restPercentText:Show()
-                            end
-                            local ratio = math.min(1.0, math.max(0, pct / maxPct))
-                            local maxBarW = isComp and 170 or 220
-                            local barW = math.floor(maxBarW * ratio)
-                            if row.barFill then
-                                row.barFill:SetWidth(math.max(1, barW))
-                                row.barFill:SetVertexColor(t.primary[1], t.primary[2], t.primary[3], 0.95)
-                            end
-                            if row.barBg then row.barBg:Show() end
-                            if row.etaText then
-                                if pct >= maxPct then
-                                    row.etaText:SetText(string.format("|cff%sAt Cap|r", t.readyHex or "55e39a"))
-                                else
-                                    row.etaText:SetText(string.format("|cff%s%s|r", t.dimHex or "a9a08c", rested.timeLeftStr or "---"))
-                                end
-                                row.etaText:Show()
-                            end
-                        else
-                            if row.restPercentText then
-                                row.restPercentText:SetText(string.format("|cff%s---|r", t.dimHex or "a9a08c"))
-                                row.restPercentText:Show()
-                            end
-                            if row.barBg then row.barBg:Hide() end
-                            if row.etaText then
-                                row.etaText:SetText(string.format("|cff%sMax Level|r", t.readyHex or "55e39a"))
-                                row.etaText:Show()
-                            end
-                        end
-                        if row.colRestBarBg then row.colRestBarBg:Hide() end
-                        if row.colRestLabel then row.colRestLabel:Hide() end
-                        for idx = 1, 12 do
-                            if row.cells and row.cells[idx] then
-                                row.cells[idx]:SetText("")
-                                row.cells[idx]:Hide()
-                            end
-                        end
-                    else
-                        if row.nameLine then row.nameLine:Hide() end
-                        if row.subLine then row.subLine:Hide() end
-                        if row.levelText then row.levelText:Hide() end
-                        if row.restPercentText then row.restPercentText:Hide() end
-                        if row.barBg then row.barBg:Hide() end
-                        if row.etaText then row.etaText:Hide() end
-                        if row.colRestBarBg and activeTab ~= 3 then row.colRestBarBg:Hide() end
-                        if row.colRestLabel and activeTab ~= 3 then row.colRestLabel:Hide() end
-
-                        local rowXOffset = 16
-                        for idx = 1, 12 do
-                            local cell = row.cells and row.cells[idx]
-                            local col = cols[idx]
-                            if cell then
-                                if col then
-                                    local colW = (isComp and (col.cpw or col.pw)) or col.pw
-                                    local padR = (isComp and (col.cpadRight or col.padRight or 0)) or (col.padRight or 0)
-                                    local cellW = math.max(1, colW - padR)
-                                    cell:ClearAllPoints()
-                                    cell:SetPoint("LEFT", row, "LEFT", rowXOffset, 0)
-                                    cell:SetWidth(cellW)
-                                    cell:SetJustifyH(col.align or "LEFT")
-
-                                    if col.key == "restBar" and row.colRestBarBg then
-                                        cell:SetText("")
-                                        cell:Hide()
-
-                                        row.colRestBarBg:ClearAllPoints()
-                                        row.colRestBarBg:SetPoint("LEFT", row, "LEFT", rowXOffset, -4)
-                                        row.colRestBarBg:SetWidth(cellW)
-
-                                        row.colRestLabel:ClearAllPoints()
-                                        row.colRestLabel:SetPoint("BOTTOMLEFT", row.colRestBarBg, "TOPLEFT", 0, 2)
-                                        row.colRestLabel:SetWidth(cellW)
-
-                                        local rested = self:GetRestedData(char)
-                                        if rested and not rested.isMaxLevel then
-                                            local ratio = math.min(1.0, math.max(0, rested.ratio or 0))
-                                            local barW = math.floor(cellW * ratio)
-                                            if row.colRestBarFill then
-                                                row.colRestBarFill:SetWidth(math.max(1, barW))
-                                                if rested.isFull then
-                                                    local wastedSec, wastedXP = self:GetRestedWaste(char)
-                                                    if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
-                                                        row.colRestBarFill:SetVertexColor(dangerR, dangerG, dangerB, 1.0)
-                                                    else
-                                                        row.colRestBarFill:SetVertexColor(warnR, warnG, warnB, 1.0)
-                                                    end
-                                                else
-                                                    row.colRestBarFill:SetVertexColor(fillR, fillG, fillB, 1.0)
-                                                end
-                                            end
-                                            row.colRestBarBg:Show()
-
-                                            if row.colRestLabel then
-                                                local est = rested.isEstimate and "~" or ""
-                                                local capPct = math.floor(ratio * 100)
-                                                if rested.isFull then
-                                                    local wastedSec, wastedXP = self:GetRestedWaste(char)
-                                                    if wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0 then
-                                                        row.colRestLabel:SetText(string.format("100%% [CAPPED] (+%s Wasted)", self:FormatWasteShort(wastedXP)))
-                                                        row.colRestLabel:SetTextColor(dangerR, dangerG, dangerB)
-                                                    else
-                                                        row.colRestLabel:SetText("100% [CAPPED]")
-                                                        row.colRestLabel:SetTextColor(warnR, warnG, warnB)
-                                                    end
-                                                else
-                                                    row.colRestLabel:SetText(string.format("%s%d%% of Cap", est, capPct))
-                                                    row.colRestLabel:SetTextColor(textR, textG, textB)
-                                                end
-                                                row.colRestLabel:Show()
-                                            end
-                                        else
-                                            if row.colRestLabel then
-                                                row.colRestLabel:SetText("Max Level")
-                                                row.colRestLabel:SetTextColor(mutedR, mutedG, mutedB)
-                                                row.colRestLabel:Show()
-                                            end
-                                            if row.colRestBarBg then
-                                                row.colRestBarBg:Hide()
-                                            end
-                                        end
-                                    else
-                                        cell:SetText(col.fmt(char, t) or "")
-                                        cell:Show()
-                                    end
-                                    rowXOffset = rowXOffset + colW
-                                else
-                                    cell:SetText("")
-                                    cell:Hide()
-                                end
-                            end
-                        end
-                    end
-                end
 
                 row:Show()
             else
@@ -7048,9 +5389,7 @@ function CLIAlts:Render(force)
             row:Hide()
         end
     end
-        if not mainFrame.isLegacyUI then
-            self:UpdateDetailPanel()
-        end
+        self:UpdateDetailPanel()
         self._cachedPriorityList = nil
         self._cachedMailReadySummary = nil
     end)
@@ -7066,12 +5405,11 @@ end
 -- ----------------------------------------------------------------------------
 -- Theme Application
 -- ----------------------------------------------------------------------------
-function CLIAlts:ApplyTheme()
+function ForeverAlts:ApplyTheme()
     if not mainFrame then return end
     local t = self:GetTheme()
 
-    if not mainFrame.isLegacyUI then
-        local bgR, bgG, bgB, bgA = self:Hex("bg")
+    local bgR, bgG, bgB, bgA = self:Hex("bg")
         local lineR, lineG, lineB, lineA = self:Hex("line")
         local panelR, panelG, panelB, panelA = self:Hex("panel")
         local raisedR, raisedG, raisedB, raisedA = self:Hex("raised")
@@ -7137,83 +5475,40 @@ function CLIAlts:ApplyTheme()
         end
         if mainFrame.cmdPromptIndicator then mainFrame.cmdPromptIndicator:SetTextColor(mutedR, mutedG, mutedB) end
         if mainFrame.legendText then mainFrame.legendText:SetTextColor(mutedR, mutedG, mutedB) end
+
+    -- Modern UI: Restyle recPanel, kpiCards, and subview texts using modern design tokens
+    local panelR, panelG, panelB, panelA = self:Hex("panel")
+    local lineR, lineG, lineB, lineA = self:Hex("line")
+    local brandR, brandG, brandB = self:Hex("brand")
+    local textR, textG, textB = self:Hex("text")
+    local mutedR, mutedG, mutedB = self:Hex("muted")
+    local warnR, warnG, warnB = self:Hex("warn")
+    local readyR, readyG, readyB = self:Hex("ready")
+
+    if mainFrame.recPanel then
+        if mainFrame.recPanel.SetBackdropColor then mainFrame.recPanel:SetBackdropColor(panelR, panelG, panelB, panelA) end
+        if mainFrame.recPanel.SetBackdropBorderColor then mainFrame.recPanel:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
     end
+    if mainFrame.nextBanner then
+        if mainFrame.nextBanner.title then mainFrame.nextBanner.title:SetTextColor(brandR, brandG, brandB) end
+        if mainFrame.nextBanner.subtitle then mainFrame.nextBanner.subtitle:SetTextColor(mutedR, mutedG, mutedB) end
+    end
+    if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(brandR, brandG, brandB) end
+    if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(textR, textG, textB) end
+    if mainFrame.recProfLine then mainFrame.recProfLine:SetTextColor(mutedR, mutedG, mutedB) end
+    if mainFrame.recRestLine then mainFrame.recRestLine:SetTextColor(readyR, readyG, readyB) end
+    if mainFrame.recReasonLine then mainFrame.recReasonLine:SetTextColor(warnR, warnG, warnB) end
 
-    if mainFrame.isLegacyUI then
-        if mainFrame.SetBackdropColor then
-            mainFrame:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], t.bg[4])
-        end
-        if mainFrame.SetBackdropBorderColor then
-            mainFrame:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], t.border[4])
-        end
+    if mainFrame.subViewTitle then mainFrame.subViewTitle:SetTextColor(brandR, brandG, brandB) end
+    if mainFrame.subViewFilters then mainFrame.subViewFilters:SetTextColor(mutedR, mutedG, mutedB) end
 
-        if mainFrame.topAscii then mainFrame.topAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-        if mainFrame.titleText then mainFrame.titleText:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-        if mainFrame.midAscii1 then mainFrame.midAscii1:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-        if mainFrame.recPanel then
-            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-            if mainFrame.recPanel.SetBackdropColor then
-                mainFrame.recPanel:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.95)
-            end
-            if mainFrame.recPanel.SetBackdropBorderColor then
-                mainFrame.recPanel:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.55)
-            end
-        end
-        if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-        if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(t.text[1], t.text[2], t.text[3]) end
-        if mainFrame.recProfLine then mainFrame.recProfLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
-        if mainFrame.recRestLine then mainFrame.recRestLine:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-        if mainFrame.recReasonLine then mainFrame.recReasonLine:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
-        if mainFrame.subViewTitle then mainFrame.subViewTitle:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3]) end
-        if mainFrame.subViewFilters then mainFrame.subViewFilters:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
-        if mainFrame.summaryBar and mainFrame.summaryBar.SetBackdropColor then
-            local pBg = t.panelBg or { 0.098, 0.082, 0.047, 0.90 }
-            mainFrame.summaryBar:SetBackdropColor(pBg[1], pBg[2], pBg[3], 0.70)
-            if mainFrame.summaryBar.SetBackdropBorderColor then
-                mainFrame.summaryBar:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 0.3)
-            end
-        end
-        if mainFrame.summaryText then mainFrame.summaryText:SetTextColor(t.primary[1], t.primary[2], t.primary[3]) end
-        if mainFrame.statusBarText and mainFrame.statusBarText ~= mainFrame.summaryText then
-            mainFrame.statusBarText:SetTextColor(t.dim[1], t.dim[2], t.dim[3])
-        end
-        if mainFrame.midAscii2 then mainFrame.midAscii2:SetText("") end
-        if mainFrame.tableTopAscii then mainFrame.tableTopAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
-    else
-        -- Modern UI: Restyle recPanel, kpiCards, and subview texts using modern design tokens
-        local panelR, panelG, panelB, panelA = self:Hex("panel")
-        local lineR, lineG, lineB, lineA = self:Hex("line")
-        local brandR, brandG, brandB = self:Hex("brand")
-        local textR, textG, textB = self:Hex("text")
-        local mutedR, mutedG, mutedB = self:Hex("muted")
-        local warnR, warnG, warnB = self:Hex("warn")
-        local readyR, readyG, readyB = self:Hex("ready")
-
-        if mainFrame.recPanel then
-            if mainFrame.recPanel.SetBackdropColor then mainFrame.recPanel:SetBackdropColor(panelR, panelG, panelB, panelA) end
-            if mainFrame.recPanel.SetBackdropBorderColor then mainFrame.recPanel:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
-        end
-        if mainFrame.nextBanner then
-            if mainFrame.nextBanner.title then mainFrame.nextBanner.title:SetTextColor(brandR, brandG, brandB) end
-            if mainFrame.nextBanner.subtitle then mainFrame.nextBanner.subtitle:SetTextColor(mutedR, mutedG, mutedB) end
-        end
-        if mainFrame.recBadge then mainFrame.recBadge:SetTextColor(brandR, brandG, brandB) end
-        if mainFrame.recHeroTitle then mainFrame.recHeroTitle:SetTextColor(textR, textG, textB) end
-        if mainFrame.recProfLine then mainFrame.recProfLine:SetTextColor(mutedR, mutedG, mutedB) end
-        if mainFrame.recRestLine then mainFrame.recRestLine:SetTextColor(readyR, readyG, readyB) end
-        if mainFrame.recReasonLine then mainFrame.recReasonLine:SetTextColor(warnR, warnG, warnB) end
-
-        if mainFrame.subViewTitle then mainFrame.subViewTitle:SetTextColor(brandR, brandG, brandB) end
-        if mainFrame.subViewFilters then mainFrame.subViewFilters:SetTextColor(mutedR, mutedG, mutedB) end
-
-        if mainFrame.kpiCards then
-            for _, card in pairs(mainFrame.kpiCards) do
-                if card.SetBackdropColor then card:SetBackdropColor(panelR, panelG, panelB, panelA) end
-                if card.SetBackdropBorderColor then card:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
-                if card.title then card.title:SetTextColor(brandR, brandG, brandB) end
-                if card.val then card.val:SetTextColor(textR, textG, textB) end
-                if card.sub then card.sub:SetTextColor(mutedR, mutedG, mutedB) end
-            end
+    if mainFrame.kpiCards then
+        for _, card in pairs(mainFrame.kpiCards) do
+            if card.SetBackdropColor then card:SetBackdropColor(panelR, panelG, panelB, panelA) end
+            if card.SetBackdropBorderColor then card:SetBackdropBorderColor(lineR, lineG, lineB, lineA) end
+            if card.title then card.title:SetTextColor(brandR, brandG, brandB) end
+            if card.val then card.val:SetTextColor(textR, textG, textB) end
+            if card.sub then card.sub:SetTextColor(mutedR, mutedG, mutedB) end
         end
     end
     if mainFrame.tableSepAscii then mainFrame.tableSepAscii:SetTextColor(t.border[1], t.border[2], t.border[3], 0.8) end
@@ -7245,7 +5540,7 @@ function CLIAlts:ApplyTheme()
     end
 
     if mainFrame.btnScale then
-        local s = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+        local s = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.scale) or 1.0
         mainFrame.btnScale.label:SetText(string.format("[ SCALE: %d%% ]", math.floor(s * 100 + 0.5)))
         mainFrame.btnScale.label:SetTextColor(t.primary[1], t.primary[2], t.primary[3])
     end
@@ -7286,14 +5581,14 @@ end
 -- ----------------------------------------------------------------------------
 -- Tab Switching, Sorting & Filtering Controls
 -- ----------------------------------------------------------------------------
-function CLIAlts:ToggleSortKey(key)
+function ForeverAlts:ToggleSortKey(key)
     if not key then return end
-    if CLIAltsDB and CLIAltsDB.settings then
-        if CLIAltsDB.settings.sortBy == key then
-            CLIAltsDB.settings.sortAsc = not CLIAltsDB.settings.sortAsc
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        if ForeverAltsDB.settings.sortBy == key then
+            ForeverAltsDB.settings.sortAsc = not ForeverAltsDB.settings.sortAsc
         else
-            CLIAltsDB.settings.sortBy = key
-            CLIAltsDB.settings.sortAsc = (key == "name" or key == "level" or key == "prof" or key == "role")
+            ForeverAltsDB.settings.sortBy = key
+            ForeverAltsDB.settings.sortAsc = (key == "name" or key == "level" or key == "prof" or key == "role")
         end
     end
     PlayRetroSound()
@@ -7301,22 +5596,22 @@ function CLIAlts:ToggleSortKey(key)
     self:Render()
 end
 
-function CLIAlts:SwitchTab(tabId)
+function ForeverAlts:SwitchTab(tabId)
     tabId = tonumber(tabId)
     if not tabId then return end
     if tabId == 2 or tabId == 3 then tabId = 1 end
     if tabId == 5 then tabId = 6 end
     if tabId == 9 then tabId = 8 end
     if tabId < 1 or tabId > 8 then return end
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.activeTab = tabId
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.activeTab = tabId
     end
     currentPage = 1
     PlayRetroSound()
     self:Render()
 end
 
-function CLIAlts:SetFilter(filterStr)
+function ForeverAlts:SetFilter(filterStr)
     if not filterStr or filterStr == "" then
         self.activeFilter = nil
     else
@@ -7345,7 +5640,7 @@ function CLIAlts:SetFilter(filterStr)
     self:Render()
 end
 
-function CLIAlts:SetPage(page)
+function ForeverAlts:SetPage(page)
     local p = tonumber(page)
     if p and p >= 1 and p <= (totalPages or 1) then
         currentPage = p
@@ -7356,7 +5651,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Interactive Terminal Command Prompt Methods
 -- ----------------------------------------------------------------------------
-function CLIAlts:SetPromptFeedback(msg, isError)
+function ForeverAlts:SetPromptFeedback(msg, isError)
     self.lastFeedbackText = msg
     local target = (mainFrame and mainFrame.promptStatusTip) or (mainFrame and mainFrame.legendText)
     if not target then return end
@@ -7370,7 +5665,7 @@ function CLIAlts:SetPromptFeedback(msg, isError)
             if mainFrame then
                 if mainFrame.legendText then
                     mainFrame.legendText:SetText("Capped means at the XP cap. Losing means XP is being wasted.")
-                    local mutedR, mutedG, mutedB = CLIAlts:Hex("muted")
+                    local mutedR, mutedG, mutedB = ForeverAlts:Hex("muted")
                     mainFrame.legendText:SetTextColor(mutedR, mutedG, mutedB)
                 elseif mainFrame.promptStatusTip then
                     mainFrame.promptStatusTip:SetText("|cff888888[Commands: 1-6, sort <col>, filter <query>, find <text>, watch <item>, next, export, help]|r")
@@ -7380,15 +5675,15 @@ function CLIAlts:SetPromptFeedback(msg, isError)
     end
 end
 
-function CLIAlts:ExecutePromptCommand(input)
+function ForeverAlts:ExecutePromptCommand(input)
     if not input then return end
     local clean = input:match("^%s*(.-)%s*$") or ""
     if clean == "" then return end
 
-    if not CLIAltsDB.commandHistory then
-        CLIAltsDB.commandHistory = {}
+    if not ForeverAltsDB.commandHistory then
+        ForeverAltsDB.commandHistory = {}
     end
-    local hist = CLIAltsDB.commandHistory
+    local hist = ForeverAltsDB.commandHistory
     if hist[#hist] ~= clean then
         table.insert(hist, clean)
         if #hist > 50 then
@@ -7455,7 +5750,7 @@ function CLIAlts:ExecutePromptCommand(input)
             }
             local key = map[args:lower()] or args:lower()
             self:ToggleSortKey(key)
-            local dir = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc) and "ASC" or "DESC"
+            local dir = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc) and "ASC" or "DESC"
             self:SetPromptFeedback(string.format("Sorted by %s (%s)", key:upper(), dir))
         else
             self:SetPromptFeedback("Usage: sort <name|level|gold|rested|waste|xp|location|hearth|seen>", true)
@@ -7538,8 +5833,8 @@ function CLIAlts:ExecutePromptCommand(input)
         self:SetPromptFeedback(string.format("Compact mode: %s (XP bars %s)", isComp and "ENABLED" or "DISABLED", isComp and "hidden" or "shown"))
 
     elseif cmd == "legacy" or cmd == "legacyui" then
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.legacyUI = nil
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.legacyUI = nil
         end
         self:SetPromptFeedback("Modern v2 is the standard UI layout. Legacy ASCII UI has been deprecated.")
         if self.RecreateMainFrame then
@@ -7552,17 +5847,17 @@ function CLIAlts:ExecutePromptCommand(input)
         end
 
     elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
-        CLIAltsDB.settings.showInventoryTooltips = (CLIAltsDB.settings.showInventoryTooltips == false)
-        local isEnabled = CLIAltsDB.settings.showInventoryTooltips
+        ForeverAltsDB.settings.showInventoryTooltips = (ForeverAltsDB.settings.showInventoryTooltips == false)
+        local isEnabled = ForeverAltsDB.settings.showInventoryTooltips
         self:SetPromptFeedback(string.format("Inventory hover tooltips: %s", isEnabled and "ENABLED" or "DISABLED"))
 
     elseif cmd == "theme" then
         if args and args ~= "" then
-            local map = self.THEME_MAP or CLIAlts.THEME_MAP
+            local map = self.THEME_MAP or ForeverAlts.THEME_MAP
             local choice = map and map[args:lower()]
             if choice and self.THEMES and self.THEMES[choice] then
-                CLIAltsDB.settings.theme = choice
-                CLIAltsDB.settings.themeExplicit = true
+                ForeverAltsDB.settings.theme = choice
+                ForeverAltsDB.settings.themeExplicit = true
                 self:ApplyTheme()
                 self:Render()
                 self:SetPromptFeedback(string.format("Theme set to %s (%s)", choice, self.THEMES[choice] and self.THEMES[choice].tag or choice))
@@ -7571,7 +5866,7 @@ function CLIAlts:ExecutePromptCommand(input)
             end
         else
             self:CycleTheme()
-            self:SetPromptFeedback(string.format("Theme cycled: %s", CLIAltsDB.settings.theme))
+            self:SetPromptFeedback(string.format("Theme cycled: %s", ForeverAltsDB.settings.theme))
         end
 
     elseif cmd == "scale" then
@@ -7587,7 +5882,7 @@ function CLIAlts:ExecutePromptCommand(input)
             end
         else
             self:CycleScale()
-            local curScale = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+            local curScale = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.scale) or 1.0
             self:SetPromptFeedback(string.format("Scale: %d%%", math.floor(curScale * 100 + 0.5)))
         end
 
@@ -7699,7 +5994,7 @@ function CLIAlts:ExecutePromptCommand(input)
         self:ToggleForeverMode()
         local isForever = self:IsForeverMode()
         if isForever then
-            CLIAltsDB.settings.activeTab = 1
+            ForeverAltsDB.settings.activeTab = 1
             self:SetPromptFeedback("WoW Forever Mode: ENABLED (Tab 1 Cohorts active)")
         else
             self:SetPromptFeedback("WoW Forever Mode: DISABLED (Standard view restored)")
@@ -7715,8 +6010,8 @@ function CLIAlts:ExecutePromptCommand(input)
             if not targetName or not tier then
                 local singleName = args:match("^(%S+)$")
                 local foundChar = nil
-                if singleName and CLIAltsDB and CLIAltsDB.characters then
-                    for _, c in pairs(CLIAltsDB.characters) do
+                if singleName and ForeverAltsDB and ForeverAltsDB.characters then
+                    for _, c in pairs(ForeverAltsDB.characters) do
                         local n = (c.name or ""):lower()
                         if n == singleName:lower() or n:find(singleName:lower(), 1, true) then
                             foundChar = c
@@ -7875,7 +6170,7 @@ function CLIAlts:ExecutePromptCommand(input)
     end
 end
 
-function CLIAlts:AutoCompletePrompt(editBox)
+function ForeverAlts:AutoCompletePrompt(editBox)
     if not editBox then return end
     local text = editBox:GetText() or ""
     local trimmed = text:match("^%s*(.-)%s*$") or ""
@@ -7907,8 +6202,8 @@ function CLIAlts:AutoCompletePrompt(editBox)
                 end
             end
         elseif cmd == "note" then
-            if CLIAltsDB and CLIAltsDB.characters and not arg:find("%s") then
-                for _, c in pairs(CLIAltsDB.characters) do
+            if ForeverAltsDB and ForeverAltsDB.characters and not arg:find("%s") then
+                for _, c in pairs(ForeverAltsDB.characters) do
                     local name = c.name or ""
                     if name:lower():sub(1, #arg) == arg:lower() and name:lower() ~= arg:lower() then
                         editBox:SetText("note " .. name .. " ")
@@ -7933,9 +6228,9 @@ function CLIAlts:AutoCompletePrompt(editBox)
                 end
             end
         elseif cmd == "unwatch" then
-            if CLIAltsDB and CLIAltsDB.watchlist and #CLIAltsDB.watchlist > 0 then
-                for _, item in ipairs(CLIAltsDB.watchlist) do
-                    local name = CLIAlts.GetWatchItemPlainName and CLIAlts:GetWatchItemPlainName(item) or tostring(item)
+            if ForeverAltsDB and ForeverAltsDB.watchlist and #ForeverAltsDB.watchlist > 0 then
+                for _, item in ipairs(ForeverAltsDB.watchlist) do
+                    local name = ForeverAlts.GetWatchItemPlainName and ForeverAlts:GetWatchItemPlainName(item) or tostring(item)
                     if name:lower():sub(1, #arg) == arg:lower() and name:lower() ~= arg:lower() then
                         editBox:SetText("unwatch " .. name)
                         editBox:SetCursorPosition(#editBox:GetText())
@@ -7968,15 +6263,15 @@ end
 -- ----------------------------------------------------------------------------
 -- Alt Dossier Modal (Detailed Character Inspection)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetDossierPopup()
+function ForeverAlts:GetDossierPopup()
     return dossierPopup
 end
 
-function CLIAlts:GetCustomRolePopup()
+function ForeverAlts:GetCustomRolePopup()
     return customRolePopup
 end
 
-function CLIAlts:ShowDossierPopup(char, forcePopup)
+function ForeverAlts:ShowDossierPopup(char, forcePopup)
     if not char then return end
 
     if type(char) == "string" then
@@ -7992,7 +6287,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
 
     self.selectedCharKey = char.fullName or char.name
 
-    if not forcePopup and not self:IsCompact() and not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI) then
+    if not forcePopup and not self:IsCompact() and not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.legacyUI) then
         if dossierPopup and dossierPopup.Hide then dossierPopup:Hide() end
         if not mainFrame or not mainFrame:IsShown() then
             self:Toggle(true)
@@ -8004,7 +6299,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
 
     if not dossierPopup then
         local t = self:GetTheme()
-        local dp = CreateFrame("Frame", "CLIAltsDossierPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local dp = CreateFrame("Frame", "ForeverAltsDossierPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         dp:Hide()
         dp:SetSize(680, 660)
         dp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -8014,7 +6309,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
         dp:RegisterForDrag("LeftButton")
         dp:SetScript("OnDragStart", function(self) self:StartMoving() end)
         dp:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-        tinsert(UISpecialFrames, "CLIAltsDossierPopup")
+        tinsert(UISpecialFrames, "ForeverAltsDossierPopup")
 
         dp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -8038,7 +6333,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
         local btnDel = CreateRetroButton(dp, "[ PURGE ]", 72, 20, function()
             dp:Hide()
             if dp.charData then
-                CLIAlts:ShowConfirmDelete(dp.charData)
+                ForeverAlts:ShowConfirmDelete(dp.charData)
             end
         end, 11)
         btnDel:SetPoint("BOTTOMLEFT", dp, "BOTTOMLEFT", 16, 14)
@@ -8048,9 +6343,9 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
             if dp.charData then
                 local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
-                    CLIAlts:SetCharacterCohort(charName, "CORE")
-                    CLIAlts:ShowDossierPopup(dp.charData)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:SetCharacterCohort(charName, "CORE")
+                    ForeverAlts:ShowDossierPopup(dp.charData)
+                    ForeverAlts:RequestRender()
                 end
             end
         end, 11)
@@ -8061,9 +6356,9 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
             if dp.charData then
                 local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
-                    CLIAlts:SetCharacterCohort(charName, "RESERVE")
-                    CLIAlts:ShowDossierPopup(dp.charData)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:SetCharacterCohort(charName, "RESERVE")
+                    ForeverAlts:ShowDossierPopup(dp.charData)
+                    ForeverAlts:RequestRender()
                 end
             end
         end, 11)
@@ -8074,9 +6369,9 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
             if dp.charData then
                 local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
-                    CLIAlts:SetCharacterCohort(charName, "BANK")
-                    CLIAlts:ShowDossierPopup(dp.charData)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:SetCharacterCohort(charName, "BANK")
+                    ForeverAlts:ShowDossierPopup(dp.charData)
+                    ForeverAlts:RequestRender()
                 end
             end
         end, 11)
@@ -8087,9 +6382,9 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
             if dp.charData then
                 local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
-                    CLIAlts:SetCharacterCohort(charName, "UNASSIGNED")
-                    CLIAlts:ShowDossierPopup(dp.charData)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:SetCharacterCohort(charName, "UNASSIGNED")
+                    ForeverAlts:ShowDossierPopup(dp.charData)
+                    ForeverAlts:RequestRender()
                 end
             end
         end, 11)
@@ -8104,9 +6399,9 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
 
         local btnPerk = CreateRetroButton(dp, "[ PERK: R0 ]", 115, 20, function(self)
             if dp.charData then
-                CLIAlts:CycleWellRestedPerk(dp.charData)
-                CLIAlts:ShowDossierPopup(dp.charData)
-                CLIAlts:RequestRender()
+                ForeverAlts:CycleWellRestedPerk(dp.charData)
+                ForeverAlts:ShowDossierPopup(dp.charData)
+                ForeverAlts:RequestRender()
                 if MouseIsOver and MouseIsOver(self) and self:GetScript("OnEnter") then
                     self:GetScript("OnEnter")(self)
                 end
@@ -8114,14 +6409,14 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
         end, 11)
         btnPerk:SetPoint("RIGHT", btnClose, "LEFT", -6, 0)
         btnPerk:SetScript("OnEnter", function(self)
-            local curT = CLIAlts:GetTheme()
+            local curT = ForeverAlts:GetTheme()
             if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.8) end
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             local c = dp.charData
             local cName = (c and (c.fullName or c.name)) or "Character"
             GameTooltip:AddLine(string.format("%s: Well Rested Perk", cName), 1, 0.82, 0)
-            local r = CLIAlts:GetWellRestedRank(c)
-            local charLP = CLIAlts:CalculateCharacterLP(c)
+            local r = ForeverAlts:GetWellRestedRank(c)
+            local charLP = ForeverAlts:CalculateCharacterLP(c)
             GameTooltip:AddLine(string.format("Well Rested Perk: |cffffffffRank %d / 5|r", r), 0.8, 0.8, 0.8)
             GameTooltip:AddLine(string.format("Rest Speed Bonus: |cff00ff66+%d%%|r (accumulates %d%% faster)", r * 4, r * 4), 0.8, 0.8, 0.8)
             GameTooltip:AddLine(string.format("Rested XP Cap: |cff00ff66%d%%|r (standard 150%% + %d%%)", 150 + (r * 6), r * 6), 0.8, 0.8, 0.8)
@@ -8131,7 +6426,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
             GameTooltip:Show()
         end)
         btnPerk:SetScript("OnLeave", function(self)
-            local curT = CLIAlts:GetTheme()
+            local curT = ForeverAlts:GetTheme()
             local curBg = curT.panelBg or { 0.098, 0.082, 0.047, 0.90 }
             if self.SetBackdropColor then self:SetBackdropColor(curBg[1], curBg[2], curBg[3], curBg[4] or 0.85) end
             GameTooltip:Hide()
@@ -8149,9 +6444,9 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
             if dp.charData then
                 local charName = dp.charData.fullName or dp.charData.name or (dp.charData.fullName and dp.charData.fullName:match("^(%S+)"))
                 if charName then
-                    CLIAlts:SetCharacterSupplyRole(charName, roleName)
-                    CLIAlts:ShowDossierPopup(dp.charData)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:SetCharacterSupplyRole(charName, roleName)
+                    ForeverAlts:ShowDossierPopup(dp.charData)
+                    ForeverAlts:RequestRender()
                 end
             end
         end
@@ -8182,7 +6477,7 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
 
         local btnRoleCustom = CreateRetroButton(dp, "[ Custom... ]", 78, 19, function()
             if dp.charData then
-                CLIAlts:ShowCustomRolePrompt(dp.charData)
+                ForeverAlts:ShowCustomRolePrompt(dp.charData)
             end
         end, 11)
         btnRoleCustom:SetPoint("LEFT", btnRoleAuto, "RIGHT", 4, 0)
@@ -8407,18 +6702,18 @@ function CLIAlts:ShowDossierPopup(char, forcePopup)
     dossierPopup:Show()
 end
 
-function CLIAlts:ShowCustomRolePrompt(char)
+function ForeverAlts:ShowCustomRolePrompt(char)
     if not char then return end
     local cleanName = char.fullName or char.name
 
     if not customRolePopup then
-        local cp = CreateFrame("Frame", "CLIAltsCustomRolePopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local cp = CreateFrame("Frame", "ForeverAltsCustomRolePopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         cp:Hide()
         cp:SetSize(380, 140)
         cp:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
         cp:SetFrameStrata("FULLSCREEN_DIALOG")
         cp:EnableMouse(true)
-        tinsert(UISpecialFrames, "CLIAltsCustomRolePopup")
+        tinsert(UISpecialFrames, "ForeverAltsCustomRolePopup")
 
         cp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -8445,7 +6740,7 @@ function CLIAlts:ShowCustomRolePrompt(char)
         subtitle:SetText("Enter role (or leave empty to auto-detect professions):")
         cp.subtitle = subtitle
 
-        local eb = CreateFrame("EditBox", "CLIAltsCustomRoleEditBox", cp)
+        local eb = CreateFrame("EditBox", "ForeverAltsCustomRoleEditBox", cp)
         self:SetWidgetFont(eb, 13)
         eb:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -8)
         eb:SetPoint("RIGHT", cp, "RIGHT", -16, 0)
@@ -8460,9 +6755,9 @@ function CLIAlts:ShowCustomRolePrompt(char)
             if cp.targetChar then
                 local charName = cp.targetChar.fullName or cp.targetChar.name or (cp.targetChar.fullName and cp.targetChar.fullName:match("^(%S+)"))
                 if charName then
-                    CLIAlts:SetCharacterSupplyRole(charName, text)
-                    CLIAlts:ShowDossierPopup(cp.targetChar)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:SetCharacterSupplyRole(charName, text)
+                    ForeverAlts:ShowDossierPopup(cp.targetChar)
+                    ForeverAlts:RequestRender()
                 end
             end
             cp:Hide()
@@ -8500,20 +6795,20 @@ end
 -- ----------------------------------------------------------------------------
 local contextMenu = nil
 
-function CLIAlts:GetContextMenu()
+function ForeverAlts:GetContextMenu()
     return contextMenu
 end
 
-function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
+function ForeverAlts:ShowRowContextMenu(anchorFrame, charData)
     if not charData then return end
 
     if not contextMenu then
-        local cm = CreateFrame("Frame", "CLIAltsContextMenu", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local cm = CreateFrame("Frame", "ForeverAltsContextMenu", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         cm:Hide()
         cm:SetSize(216, 255)
         cm:SetFrameStrata("DIALOG")
         cm:EnableMouse(true)
-        tinsert(UISpecialFrames, "CLIAltsContextMenu")
+        tinsert(UISpecialFrames, "ForeverAltsContextMenu")
 
         cm:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -8540,46 +6835,46 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
         local actions = {
             { key = "dossier", label = "1. Open Dossier", fn = function(c)
                 cm:Hide()
-                CLIAlts:ShowDossierPopup(c)
+                ForeverAlts:ShowDossierPopup(c)
             end },
             { key = "core", label = "2. Set Role: Core (L35)", fn = function(c)
                 cm:Hide()
                 local name = c.fullName or c.name
-                CLIAlts:SetCharacterCohort(name, "CORE")
-                CLIAlts:Render()
+                ForeverAlts:SetCharacterCohort(name, "CORE")
+                ForeverAlts:Render()
             end },
             { key = "alt", label = "3. Set Role: Alt (L25)", fn = function(c)
                 cm:Hide()
                 local name = c.fullName or c.name
-                CLIAlts:SetCharacterCohort(name, "RESERVE")
-                CLIAlts:Render()
+                ForeverAlts:SetCharacterCohort(name, "RESERVE")
+                ForeverAlts:Render()
             end },
             { key = "bank", label = "4. Set Role: Bank Mule", fn = function(c)
                 cm:Hide()
                 local name = c.fullName or c.name
-                CLIAlts:SetCharacterCohort(name, "BANK")
-                CLIAlts:Render()
+                ForeverAlts:SetCharacterCohort(name, "BANK")
+                ForeverAlts:Render()
             end },
             { key = "perk", label = "5. Well Rested: Rank 0 (+0%)", fn = function(c)
                 cm:Hide()
-                CLIAlts:CycleWellRestedPerk(c)
-                CLIAlts:Render()
+                ForeverAlts:CycleWellRestedPerk(c)
+                ForeverAlts:Render()
             end },
             { key = "route", label = "6. Configure Mail Route...", fn = function(c)
                 cm:Hide()
-                CLIAlts:ShowMailRouteDialog(c)
+                ForeverAlts:ShowMailRouteDialog(c)
             end },
             { key = "watch", label = "7. Toggle Watchlist", fn = function(c)
                 cm:Hide()
                 local name = c.fullName or c.name
-                if CLIAlts.ToggleWatchlist then
-                    CLIAlts:ToggleWatchlist(name)
+                if ForeverAlts.ToggleWatchlist then
+                    ForeverAlts:ToggleWatchlist(name)
                 end
-                CLIAlts:Render()
+                ForeverAlts:Render()
             end },
             { key = "delete", label = "8. Remove Alt...", fn = function(c)
                 cm:Hide()
-                CLIAlts:ShowConfirmDelete(c)
+                ForeverAlts:ShowConfirmDelete(c)
             end },
             { key = "cancel", label = "9. Cancel", fn = function()
                 cm:Hide()
@@ -8609,7 +6904,7 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
             btn.actKey = act.key
 
             btn:SetScript("OnEnter", function(self)
-                local t = CLIAlts:GetTheme()
+                local t = ForeverAlts:GetTheme()
                 self:SetBackdropColor(t.border[1], t.border[2], t.border[3], 0.35)
                 self:SetBackdropBorderColor(t.highlight[1], t.highlight[2], t.highlight[3], 0.8)
                 if self.actKey == "delete" then
@@ -8621,7 +6916,7 @@ function CLIAlts:ShowRowContextMenu(anchorFrame, charData)
             btn:SetScript("OnLeave", function(self)
                 self:SetBackdropColor(0, 0, 0, 0)
                 self:SetBackdropBorderColor(0, 0, 0, 0)
-                local t = CLIAlts:GetTheme()
+                local t = ForeverAlts:GetTheme()
                 if self.actKey == "delete" then
                     self.label:SetTextColor(0.9, 0.5, 0.5)
                 else
@@ -8691,21 +6986,21 @@ end
 -- ----------------------------------------------------------------------------
 local mailRouteDialog = nil
 
-function CLIAlts:GetMailRouteDialog()
+function ForeverAlts:GetMailRouteDialog()
     return mailRouteDialog
 end
 
-function CLIAlts:ShowMailRouteDialog(charData)
+function ForeverAlts:ShowMailRouteDialog(charData)
     if not charData then return end
 
     if not mailRouteDialog then
-        local dlg = CreateFrame("Frame", "CLIAltsMailRouteDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local dlg = CreateFrame("Frame", "ForeverAltsMailRouteDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         dlg:Hide()
         dlg:SetSize(480, 420)
         dlg:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dlg:SetFrameStrata("DIALOG")
         dlg:EnableMouse(true)
-        tinsert(UISpecialFrames, "CLIAltsMailRouteDialog")
+        tinsert(UISpecialFrames, "ForeverAltsMailRouteDialog")
 
         dlg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -8757,9 +7052,9 @@ function CLIAlts:ShowMailRouteDialog(charData)
         local btnRevert = CreateRetroButton(statusBox, "[ REVERT TO AUTO SUGGESTION ]", 230, 20, function()
             if dlg.targetChar then
                 local cName = dlg.targetChar.fullName or dlg.targetChar.name
-                CLIAlts:SetCharacterSupplyRole(cName, "auto")
-                CLIAlts:ShowMailRouteDialog(dlg.targetChar)
-                CLIAlts:RequestRender()
+                ForeverAlts:SetCharacterSupplyRole(cName, "auto")
+                ForeverAlts:ShowMailRouteDialog(dlg.targetChar)
+                ForeverAlts:RequestRender()
             end
         end)
         btnRevert:SetPoint("BOTTOMLEFT", statusBox, "BOTTOMLEFT", 10, 8)
@@ -8794,9 +7089,9 @@ function CLIAlts:ShowMailRouteDialog(charData)
             local pBtn = CreateRetroButton(dlg, "[ " .. pDef.label .. " ]", 220, 20, function()
                 if dlg.targetChar then
                     local cName = dlg.targetChar.fullName or dlg.targetChar.name
-                    CLIAlts:SetCharacterSupplyRole(cName, pDef.role)
-                    CLIAlts:ShowMailRouteDialog(dlg.targetChar)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:SetCharacterSupplyRole(cName, pDef.role)
+                    ForeverAlts:ShowMailRouteDialog(dlg.targetChar)
+                    ForeverAlts:RequestRender()
                 end
             end, 10)
             pBtn:SetPoint("TOPLEFT", dlg, "TOPLEFT", btnX, btnY)
@@ -8811,7 +7106,7 @@ function CLIAlts:ShowMailRouteDialog(charData)
         customLabel:SetText("Custom stream keyword:")
         dlg.customLabel = customLabel
 
-        local editBox = CreateFrame("EditBox", "CLIAltsMailCustomEdit", dlg, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local editBox = CreateFrame("EditBox", "ForeverAltsMailCustomEdit", dlg, BackdropTemplateMixin and "BackdropTemplate" or nil)
         editBox:SetSize(260, 20)
         editBox:SetPoint("TOPLEFT", customLabel, "BOTTOMLEFT", 0, -4)
         editBox:SetAutoFocus(false)
@@ -8831,10 +7126,10 @@ function CLIAlts:ShowMailRouteDialog(charData)
                 local txt = dlg.editBox:GetText()
                 if txt and txt:gsub("%s+", "") ~= "" then
                     local cName = dlg.targetChar.fullName or dlg.targetChar.name
-                    CLIAlts:SetCharacterSupplyRole(cName, txt)
+                    ForeverAlts:SetCharacterSupplyRole(cName, txt)
                     dlg.editBox:ClearFocus()
-                    CLIAlts:ShowMailRouteDialog(dlg.targetChar)
-                    CLIAlts:RequestRender()
+                    ForeverAlts:ShowMailRouteDialog(dlg.targetChar)
+                    ForeverAlts:RequestRender()
                 end
             end
         end)
@@ -8850,9 +7145,9 @@ function CLIAlts:ShowMailRouteDialog(charData)
 
         local btnCooking = CreateRetroButton(dlg, "[ COOKING: DISABLED ]", 220, 20, function()
             if dlg.targetChar then
-                CLIAlts:ToggleCharacterCooking(dlg.targetChar)
-                CLIAlts:ShowMailRouteDialog(dlg.targetChar)
-                CLIAlts:RequestRender()
+                ForeverAlts:ToggleCharacterCooking(dlg.targetChar)
+                ForeverAlts:ShowMailRouteDialog(dlg.targetChar)
+                ForeverAlts:RequestRender()
             end
         end, 10)
         btnCooking:SetPoint("TOPLEFT", dlg, "TOPLEFT", 16, -344)
@@ -8860,9 +7155,9 @@ function CLIAlts:ShowMailRouteDialog(charData)
 
         local btnFirstAid = CreateRetroButton(dlg, "[ FIRST AID: DISABLED ]", 220, 20, function()
             if dlg.targetChar then
-                CLIAlts:ToggleCharacterFirstAid(dlg.targetChar)
-                CLIAlts:ShowMailRouteDialog(dlg.targetChar)
-                CLIAlts:RequestRender()
+                ForeverAlts:ToggleCharacterFirstAid(dlg.targetChar)
+                ForeverAlts:ShowMailRouteDialog(dlg.targetChar)
+                ForeverAlts:RequestRender()
             end
         end, 10)
         btnFirstAid:SetPoint("TOPLEFT", dlg, "TOPLEFT", 244, -344)
@@ -8870,7 +7165,7 @@ function CLIAlts:ShowMailRouteDialog(charData)
 
         -- Ignored Items button
         local btnIgnored = CreateRetroButton(dlg, "[ IGNORED ITEMS ]", 140, 20, function()
-            CLIAlts:ListIgnoredMailItems()
+            ForeverAlts:ListIgnoredMailItems()
         end)
         btnIgnored:SetPoint("BOTTOMLEFT", dlg, "BOTTOMLEFT", 16, 12)
         dlg.btnIgnored = btnIgnored
@@ -8888,7 +7183,7 @@ function CLIAlts:ShowMailRouteDialog(charData)
     local dlg = mailRouteDialog
     dlg.targetChar = charData
     local t = self:GetTheme()
-    local isLegacy = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.legacyUI
+    local isLegacy = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.legacyUI
 
     if not isLegacy then
         local bgR, bgG, bgB, bgA = self:Hex("bg")
@@ -8994,17 +7289,17 @@ end
 -- ----------------------------------------------------------------------------
 -- Confirmation Modal (Delete Character)
 -- ----------------------------------------------------------------------------
-function CLIAlts:ShowConfirmDelete(char)
+function ForeverAlts:ShowConfirmDelete(char)
     if not char then return end
 
     if not confirmPopup then
-        local cp = CreateFrame("Frame", "CLIAltsConfirmPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local cp = CreateFrame("Frame", "ForeverAltsConfirmPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         cp:Hide()
         cp:SetSize(360, 160)
         cp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         cp:SetFrameStrata("DIALOG")
         cp:EnableMouse(true)
-        tinsert(UISpecialFrames, "CLIAltsConfirmPopup")
+        tinsert(UISpecialFrames, "ForeverAltsConfirmPopup")
 
         cp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -9028,8 +7323,8 @@ function CLIAlts:ShowConfirmDelete(char)
             if cp.onConfirm then
                 cp.onConfirm()
             elseif cp.charKey then
-                CLIAlts:DeleteCharacter(cp.charKey)
-                CLIAlts:Render()
+                ForeverAlts:DeleteCharacter(cp.charKey)
+                ForeverAlts:Render()
             end
             cp:Hide()
         end)
@@ -9063,7 +7358,7 @@ function CLIAlts:ShowConfirmDelete(char)
     confirmPopup:Show()
 end
 
-function CLIAlts:ShowConfirmPrunePopup(days, count, names)
+function ForeverAlts:ShowConfirmPrunePopup(days, count, names)
     if not confirmPopup then
         self:ShowConfirmDelete({ name = "dummy" })
         confirmPopup:Hide()
@@ -9080,9 +7375,9 @@ function CLIAlts:ShowConfirmPrunePopup(days, count, names)
 
     confirmPopup.charKey = nil
     confirmPopup.onConfirm = function()
-        local prunedCount = CLIAlts:PruneCharacters(days)
-        CLIAlts:SetPromptFeedback(string.format("Pruned %d alts inactive for %d+ days", prunedCount, days))
-        CLIAlts:Render()
+        local prunedCount = ForeverAlts:PruneCharacters(days)
+        ForeverAlts:SetPromptFeedback(string.format("Pruned %d alts inactive for %d+ days", prunedCount, days))
+        ForeverAlts:Render()
     end
 
     local msg = {
@@ -9100,15 +7395,15 @@ end
 -- ----------------------------------------------------------------------------
 -- Help / Info Modal
 -- ----------------------------------------------------------------------------
-function CLIAlts:ShowHelpPopup()
+function ForeverAlts:ShowHelpPopup()
     if not helpPopup then
-        local hp = CreateFrame("Frame", "CLIAltsHelpPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local hp = CreateFrame("Frame", "ForeverAltsHelpPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         hp:Hide()
         hp:SetSize(620, 660)
         hp:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         hp:SetFrameStrata("DIALOG")
         hp:EnableMouse(true)
-        tinsert(UISpecialFrames, "CLIAltsHelpPopup")
+        tinsert(UISpecialFrames, "ForeverAltsHelpPopup")
 
         hp:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -9248,15 +7543,15 @@ end
 -- ----------------------------------------------------------------------------
 -- CSV Export Modal (Copyable Multi-Line Dialog)
 -- ----------------------------------------------------------------------------
-function CLIAlts:ShowExportPopup()
+function ForeverAlts:ShowExportPopup()
     if not exportPopup then
-        local ep = CreateFrame("Frame", "CLIAltsExportPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+        local ep = CreateFrame("Frame", "ForeverAltsExportPopup", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         ep:Hide()
         ep:SetSize(640, 440)
         ep:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         ep:SetFrameStrata("DIALOG")
         ep:EnableMouse(true)
-        tinsert(UISpecialFrames, "CLIAltsExportPopup")
+        tinsert(UISpecialFrames, "ForeverAltsExportPopup")
 
         ep:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -9274,11 +7569,11 @@ function CLIAlts:ShowExportPopup()
         title:SetText("FOREVERALTS :: CSV EXPORT (PRESS CTRL+C TO COPY)")
         ep.title = title
 
-        local scrollFrame = CreateFrame("ScrollFrame", "CLIAltsExportScrollFrame", ep, "UIPanelScrollFrameTemplate")
+        local scrollFrame = CreateFrame("ScrollFrame", "ForeverAltsExportScrollFrame", ep, "UIPanelScrollFrameTemplate")
         scrollFrame:SetPoint("TOPLEFT", ep, "TOPLEFT", 16, -42)
         scrollFrame:SetPoint("BOTTOMRIGHT", ep, "BOTTOMRIGHT", -36, 45)
 
-        local editBox = CreateFrame("EditBox", "CLIAltsExportEditBox", scrollFrame)
+        local editBox = CreateFrame("EditBox", "ForeverAltsExportEditBox", scrollFrame)
         self:SetWidgetFont(editBox, 12)
         editBox:SetWidth(580)
         editBox:SetMultiLine(true)
@@ -9328,11 +7623,11 @@ end
 -- ----------------------------------------------------------------------------
 
 local function CreateChatDropdown(sd)
-    local dd = CreateFrame("Frame", "CLIAltsChatDropdown", sd, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local dd = CreateFrame("Frame", "ForeverAltsChatDropdown", sd, BackdropTemplateMixin and "BackdropTemplate" or nil)
     dd:Hide()
     dd:SetFrameStrata("TOOLTIP")
     dd:EnableMouse(true)
-    tinsert(UISpecialFrames, "CLIAltsChatDropdown")
+    tinsert(UISpecialFrames, "ForeverAltsChatDropdown")
     dd:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -9344,7 +7639,7 @@ local function CreateChatDropdown(sd)
     return dd
 end
 
-function CLIAlts:ToggleChatSourceDropdown()
+function ForeverAlts:ToggleChatSourceDropdown()
     local sd = settingsDialog
     if not sd then return end
     local dd = sd.chatDropdown or CreateChatDropdown(sd)
@@ -9404,7 +7699,7 @@ function CLIAlts:ToggleChatSourceDropdown()
             btn.label:ClearAllPoints()
             btn.label:SetPoint("LEFT", btn, "LEFT", 8, 0)
 
-            local classColor = (CLIAlts.FALLBACK_CLASS_COLORS and CLIAlts.FALLBACK_CLASS_COLORS[p.class]) or t.primary
+            local classColor = (ForeverAlts.FALLBACK_CLASS_COLORS and ForeverAlts.FALLBACK_CLASS_COLORS[p.class]) or t.primary
             if isSelected then
                 btn.label:SetTextColor(t.highlight[1], t.highlight[2], t.highlight[3])
                 if btn.SetBackdropBorderColor then btn:SetBackdropBorderColor(t.primary[1], t.primary[2], t.primary[3], 1) end
@@ -9429,15 +7724,15 @@ function CLIAlts:ToggleChatSourceDropdown()
     dd:Show()
 end
 
-function CLIAlts:GetSettingsDialog()
+function ForeverAlts:GetSettingsDialog()
     return settingsDialog
 end
 
-function CLIAlts:CreateSettingsPanel()
+function ForeverAlts:CreateSettingsPanel()
     if settingsDialog then return settingsDialog end
 
     local parent = mainFrame or UIParent
-    local sd = CreateFrame("Frame", "CLIAltsSettingsDialog", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local sd = CreateFrame("Frame", "ForeverAltsSettingsDialog", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     sd:Hide()
     sd:SetSize(680, 590)
     sd:EnableMouse(true)
@@ -9468,7 +7763,7 @@ function CLIAlts:CreateSettingsPanel()
     sd.sub = sub
 
     local topClose = CreateRetroButton(sd, "[X]", 32, 20, function()
-        CLIAlts:SwitchTab(1)
+        ForeverAlts:SwitchTab(1)
     end)
     topClose:SetPoint("TOPRIGHT", sd, "TOPRIGHT", -16, -16)
     topClose:Hide()
@@ -9497,12 +7792,12 @@ function CLIAlts:CreateSettingsPanel()
             local col = (i - 1) % 3
             local row = math.floor((i - 1) / 3)
             local btn = CreateRetroButton(sd, info.name, 206, 22, function()
-                CLIAltsDB.settings = CLIAltsDB.settings or {}
-                CLIAltsDB.settings.theme = info.key
-                CLIAltsDB.settings.themeExplicit = true
-                CLIAlts:ApplyTheme()
-                CLIAlts:Render()
-                CLIAlts:UpdateSettingsDialog()
+                ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+                ForeverAltsDB.settings.theme = info.key
+                ForeverAltsDB.settings.themeExplicit = true
+                ForeverAlts:ApplyTheme()
+                ForeverAlts:Render()
+                ForeverAlts:UpdateSettingsDialog()
             end, 11)
             btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + (col * 217), -90 - (row * 26))
             btn.themeKey = info.key
@@ -9522,8 +7817,8 @@ function CLIAlts:CreateSettingsPanel()
         for i, sz in ipairs(fontSizes) do
             local label = (sz == 18) and string.format("%dpx*", sz) or string.format("%dpx", sz)
             local btn = CreateRetroButton(sd, label, 85, 22, function()
-                CLIAlts:SetFontSize(sz)
-                CLIAlts:UpdateSettingsDialog()
+                ForeverAlts:SetFontSize(sz)
+                ForeverAlts:UpdateSettingsDialog()
             end, 11)
             btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 92), -196)
             btn.fontSize = sz
@@ -9543,9 +7838,9 @@ function CLIAlts:CreateSettingsPanel()
             local pct = math.floor(sc * 100 + 0.5)
             local label = (math.abs(sc - 1.0) < 0.05) and string.format("%d%%*", pct) or string.format("%d%%", pct)
             local btn = CreateRetroButton(sd, label, 100, 22, function()
-                CLIAlts:SetScale(sc)
-                CLIAlts:Render()
-                CLIAlts:UpdateSettingsDialog()
+                ForeverAlts:SetScale(sc)
+                ForeverAlts:Render()
+                ForeverAlts:UpdateSettingsDialog()
             end, 11)
             btn:SetPoint("TOPLEFT", sd, "TOPLEFT", 20 + ((i - 1) * 108), -250)
             btn.scaleVal = sc
@@ -9561,50 +7856,50 @@ function CLIAlts:CreateSettingsPanel()
 
         -- Col 1 toggles (x = 20, width = 310)
         local btnAudio = CreateRetroButton(sd, "Audio SFX: ENABLED", 310, 26, function()
-            CLIAltsDB.settings = CLIAltsDB.settings or {}
-            CLIAltsDB.settings.soundDisabled = not CLIAltsDB.settings.soundDisabled
-            CLIAlts:UpdateSettingsDialog()
+            ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+            ForeverAltsDB.settings.soundDisabled = not ForeverAltsDB.settings.soundDisabled
+            ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnAudio:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -306)
         sd.btnAudio = btnAudio
 
         local btnSort = CreateRetroButton(sd, "Bag Sort Button: ENABLED", 310, 26, function()
-            local cur = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false)
-            CLIAlts:ToggleBagSortButton(not cur)
-            CLIAlts:UpdateSettingsDialog()
+            local cur = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showBagSortButton == false)
+            ForeverAlts:ToggleBagSortButton(not cur)
+            ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnSort:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -336)
         sd.btnSort = btnSort
 
         local btnTip = CreateRetroButton(sd, "Cross-Alt Tooltips: ENABLED", 310, 26, function()
-            CLIAltsDB.settings = CLIAltsDB.settings or {}
-            CLIAltsDB.settings.showInventoryTooltips = (CLIAltsDB.settings.showInventoryTooltips == false)
-            CLIAlts:UpdateSettingsDialog()
+            ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+            ForeverAltsDB.settings.showInventoryTooltips = (ForeverAltsDB.settings.showInventoryTooltips == false)
+            ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnTip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -366)
         sd.btnTip = btnTip
 
         -- Col 2 toggles (x = 345, width = 310)
         local btnMail = CreateRetroButton(sd, "Mail Auto-Fill: ENABLED", 310, 26, function()
-            local cur = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showMailAutoFillButton == false)
-            CLIAlts:ToggleMailAutoFillButton(not cur)
-            CLIAlts:UpdateSettingsDialog()
+            local cur = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showMailAutoFillButton == false)
+            ForeverAlts:ToggleMailAutoFillButton(not cur)
+            ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnMail:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -306)
         sd.btnMail = btnMail
 
         local btnCons = CreateRetroButton(sd, "Route Consumables: DISABLED", 310, 26, function()
-            CLIAltsDB.settings = CLIAltsDB.settings or {}
-            CLIAltsDB.settings.autoMailConsumables = not CLIAltsDB.settings.autoMailConsumables
-            CLIAlts:UpdateSettingsDialog()
+            ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+            ForeverAltsDB.settings.autoMailConsumables = not ForeverAltsDB.settings.autoMailConsumables
+            ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnCons:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -336)
         sd.btnCons = btnCons
 
         local btnAutoSend = CreateRetroButton(sd, "Auto-Fill On Mail Open: ENABLED", 310, 26, function()
-            CLIAltsDB.settings = CLIAltsDB.settings or {}
-            CLIAltsDB.settings.autoFillMailOnSend = (CLIAltsDB.settings.autoFillMailOnSend == false)
-            CLIAlts:UpdateSettingsDialog()
+            ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+            ForeverAltsDB.settings.autoFillMailOnSend = (ForeverAltsDB.settings.autoFillMailOnSend == false)
+            ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnAutoSend:SetPoint("TOPLEFT", sd, "TOPLEFT", 345, -366)
         sd.btnAutoSend = btnAutoSend
@@ -9623,7 +7918,7 @@ function CLIAlts:CreateSettingsPanel()
         sd.chatDesc = chatDesc
 
         local btnChatSource = CreateRetroButton(sd, "Source: [Select Alt] ▼", 260, 26, function()
-            CLIAlts:ToggleChatSourceDropdown()
+            ForeverAlts:ToggleChatSourceDropdown()
         end, 11)
         btnChatSource:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -446)
         sd.btnChatSource = btnChatSource
@@ -9635,30 +7930,30 @@ function CLIAlts:CreateSettingsPanel()
                 end
                 return
             end
-            local ok, msg = CLIAlts:CopyChatSettings(sd.selectedChatSource)
+            local ok, msg = ForeverAlts:CopyChatSettings(sd.selectedChatSource)
             if sd.chatStatus then
                 sd.chatStatus:SetText(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
             end
-            CLIAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
+            ForeverAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
         end, 11)
         btnChatCopy:SetPoint("LEFT", btnChatSource, "RIGHT", 10, 0)
         sd.btnChatCopy = btnChatCopy
 
         local btnChatSave = CreateRetroButton(sd, "[ Save Current ]", 140, 26, function()
-            local ok, count = CLIAlts:CaptureChatSettings()
+            local ok, count = ForeverAlts:CaptureChatSettings()
             if ok then
                 local msg = string.format("Snapshot saved (%d chat windows captured).", count)
                 if sd.chatStatus then
                     sd.chatStatus:SetText("|cff00ff66" .. msg .. "|r")
                 end
-                CLIAlts:Print("|cff00ff66" .. msg .. "|r")
-                CLIAlts:UpdateSettingsDialog()
+                ForeverAlts:Print("|cff00ff66" .. msg .. "|r")
+                ForeverAlts:UpdateSettingsDialog()
             else
                 local msg = tostring(count or "Failed to capture chat.")
                 if sd.chatStatus then
                     sd.chatStatus:SetText("|cffff4444" .. msg .. "|r")
                 end
-                CLIAlts:Print("|cffff4444" .. msg .. "|r")
+                ForeverAlts:Print("|cffff4444" .. msg .. "|r")
             end
         end, 11)
         btnChatSave:SetPoint("LEFT", btnChatCopy, "RIGHT", 10, 0)
@@ -9682,31 +7977,31 @@ function CLIAlts:CreateSettingsPanel()
             if mainFrame then
                 mainFrame:ClearAllPoints()
                 mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-                if CLIAltsDB and CLIAltsDB.settings then
-                    CLIAltsDB.settings.windowPos = nil
+                if ForeverAltsDB and ForeverAltsDB.settings then
+                    ForeverAltsDB.settings.windowPos = nil
                 end
-                CLIAlts:Print("Main window centered on screen.")
+                ForeverAlts:Print("Main window centered on screen.")
             end
         end, 11)
         btnCenter:SetPoint("BOTTOMLEFT", sd, "BOTTOMLEFT", 20, 18)
         sd.btnCenter = btnCenter
 
         local btnReset = CreateRetroButton(sd, "[ Reset Defaults ]", 140, 26, function()
-            CLIAltsDB.settings = CLIAltsDB.settings or {}
-            CLIAltsDB.settings.theme = "DEFAULT"
-            CLIAltsDB.settings.themeExplicit = true
-            CLIAlts:SetScale(1.0)
-            CLIAlts:SetFontSize(18)
-            CLIAlts:ApplyTheme()
-            CLIAlts:Render()
-            CLIAlts:UpdateSettingsDialog()
-            CLIAlts:Print("Visual settings reset to defaults.")
+            ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+            ForeverAltsDB.settings.theme = "DEFAULT"
+            ForeverAltsDB.settings.themeExplicit = true
+            ForeverAlts:SetScale(1.0)
+            ForeverAlts:SetFontSize(18)
+            ForeverAlts:ApplyTheme()
+            ForeverAlts:Render()
+            ForeverAlts:UpdateSettingsDialog()
+            ForeverAlts:Print("Visual settings reset to defaults.")
         end, 11)
         btnReset:SetPoint("LEFT", btnCenter, "RIGHT", 12, 0)
         sd.btnReset = btnReset
 
         local btnClose = CreateRetroButton(sd, "[ Close ]", 90, 26, function()
-            CLIAlts:SwitchTab(1)
+            ForeverAlts:SwitchTab(1)
         end, 11)
         btnClose:SetPoint("LEFT", btnReset, "RIGHT", 12, 0)
         sd.btnClose = btnClose
@@ -9715,7 +8010,7 @@ function CLIAlts:CreateSettingsPanel()
         return settingsDialog
 end
 
-function CLIAlts:ShowSettingsDialog()
+function ForeverAlts:ShowSettingsDialog()
     if not mainFrame then
         self:Toggle(true)
     elseif not mainFrame:IsShown() then
@@ -9728,18 +8023,13 @@ function CLIAlts:ShowSettingsDialog()
     end
 end
 
-function CLIAlts:UpdateSettingsDialog()
+function ForeverAlts:UpdateSettingsDialog()
     if not settingsDialog then return end
     local t = self:GetTheme()
 
     if settingsDialog.SetBackdropColor then
-        if mainFrame and not mainFrame.isLegacyUI then
-            settingsDialog:SetBackdropColor(0, 0, 0, 0)
-            settingsDialog:SetBackdropBorderColor(0, 0, 0, 0)
-        else
-            settingsDialog:SetBackdropColor(t.bg[1], t.bg[2], t.bg[3], 0.98)
-            settingsDialog:SetBackdropBorderColor(t.border[1], t.border[2], t.border[3], 1)
-        end
+        settingsDialog:SetBackdropColor(0, 0, 0, 0)
+        settingsDialog:SetBackdropBorderColor(0, 0, 0, 0)
     end
     if settingsDialog.topClose then
         settingsDialog.topClose:Hide()
@@ -9754,7 +8044,7 @@ function CLIAlts:UpdateSettingsDialog()
     if settingsDialog.tip then settingsDialog.tip:SetTextColor(t.dim[1], t.dim[2], t.dim[3]) end
 
     -- Theme buttons
-    local curTheme = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
+    local curTheme = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.theme) or "DEFAULT"
     for _, btn in ipairs(settingsDialog.themeButtons or {}) do
         local isSel = (btn.themeKey == curTheme)
         btn.isSelected = isSel
@@ -9772,7 +8062,7 @@ function CLIAlts:UpdateSettingsDialog()
     end
 
     -- Font size buttons
-    local curFont = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.fontSize) or 18
+    local curFont = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or 18
     for _, btn in ipairs(settingsDialog.fontButtons or {}) do
         local isSel = (btn.fontSize == curFont)
         btn.isSelected = isSel
@@ -9791,7 +8081,7 @@ function CLIAlts:UpdateSettingsDialog()
     end
 
     -- Scale buttons
-    local curScale = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.scale) or 1.0
+    local curScale = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.scale) or 1.0
     for _, btn in ipairs(settingsDialog.scaleButtons or {}) do
         local isSel = (math.abs(btn.scaleVal - curScale) < 0.05)
         btn.isSelected = isSel
@@ -9811,32 +8101,32 @@ function CLIAlts:UpdateSettingsDialog()
     end
 
     -- Toggles
-    local sfxOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.soundDisabled)
+    local sfxOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.soundDisabled)
     if settingsDialog.btnAudio then
         settingsDialog.btnAudio.label:SetText(string.format("Audio SFX: %s", sfxOn and "|cff00ff66ENABLED|r" or "|cffff4444MUTED|r"))
     end
 
-    local sortOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false)
+    local sortOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showBagSortButton == false)
     if settingsDialog.btnSort then
         settingsDialog.btnSort.label:SetText(string.format("Bag Sort Button: %s", sortOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
     end
 
-    local tipOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showInventoryTooltips == false)
+    local tipOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showInventoryTooltips == false)
     if settingsDialog.btnTip then
         settingsDialog.btnTip.label:SetText(string.format("Cross-Alt Tooltips: %s", tipOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
     end
 
-    local mailOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showMailAutoFillButton == false)
+    local mailOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showMailAutoFillButton == false)
     if settingsDialog.btnMail then
         settingsDialog.btnMail.label:SetText(string.format("Mail Auto-Fill: %s", mailOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
     end
 
-    local consOn = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoMailConsumables == true)
+    local consOn = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.autoMailConsumables == true)
     if settingsDialog.btnCons then
         settingsDialog.btnCons.label:SetText(string.format("Route Consumables: %s", consOn and "|cff00ff66ON (Active)|r" or "|cffffb033OFF (Protected)|r"))
     end
 
-    local autoSendOn = not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoFillMailOnSend == false)
+    local autoSendOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.autoFillMailOnSend == false)
     if settingsDialog.btnAutoSend and settingsDialog.btnAutoSend.label then
         settingsDialog.btnAutoSend.label:SetText(string.format("Auto-Fill On Mail Open: %s", autoSendOn and "|cff00ff66ENABLED|r" or "|cffffb033DISABLED|r"))
     end
@@ -9899,7 +8189,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Window Toggle & Refresh
 -- ----------------------------------------------------------------------------
-function CLIAlts:Toggle(show)
+function ForeverAlts:Toggle(show)
     local ok, err = pcall(function()
         if not mainFrame then
             mainFrame = self:CreateMainFrame()
@@ -9937,7 +8227,7 @@ function CLIAlts:Toggle(show)
     end
 end
 
-function CLIAlts:Refresh()
+function ForeverAlts:Refresh()
     local ok, err = pcall(function()
         self:CollectCurrentCharacter(false, true)
         self:ApplyTheme()
@@ -9954,10 +8244,10 @@ end
 -- ----------------------------------------------------------------------------
 -- Cross-Character Inventory Tooltip Hooks & Formatter (Feature 6)
 -- ----------------------------------------------------------------------------
-function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
+function ForeverAlts:AddInventoryInfoToTooltip(tooltip, itemID)
     if not tooltip or not itemID then return end
     if InCombatLockdown and InCombatLockdown() then return end
-    if not CLIAltsDB or not CLIAltsDB.settings or CLIAltsDB.settings.showInventoryTooltips == false then
+    if not ForeverAltsDB or not ForeverAltsDB.settings or ForeverAltsDB.settings.showInventoryTooltips == false then
         return
     end
 
@@ -10051,7 +8341,7 @@ function CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID)
     self._isAddingTooltipInfo = false
 end
 
-function CLIAlts:InitTooltipHooks()
+function ForeverAlts:InitTooltipHooks()
     if self.tooltipHooksInitialized then return end
     self.tooltipHooksInitialized = true
 
@@ -10092,7 +8382,7 @@ function CLIAlts:InitTooltipHooks()
                 if link then itemID = tonumber(link:match("item:(%d+)")) end
             end
             if itemID then
-                pcall(function() CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID) end)
+                pcall(function() ForeverAlts:AddInventoryInfoToTooltip(tooltip, itemID) end)
             end
         end)
     else
@@ -10112,7 +8402,7 @@ function CLIAlts:InitTooltipHooks()
             if link then
                 local itemID = tonumber(link:match("item:(%d+)"))
                 if itemID then
-                    pcall(function() CLIAlts:AddInventoryInfoToTooltip(tooltip, itemID) end)
+                    pcall(function() ForeverAlts:AddInventoryInfoToTooltip(tooltip, itemID) end)
                 end
             end
         end
@@ -10129,7 +8419,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Bag Auto-Sort Button Integration (ContainerFrame1 / Combined Bags)
 -- ----------------------------------------------------------------------------
-function CLIAlts:ApplyThemeToBagButton()
+function ForeverAlts:ApplyThemeToBagButton()
     local btn = self.bagSortButton
     if not btn then return end
     local t = self:GetTheme()
@@ -10141,11 +8431,11 @@ function CLIAlts:ApplyThemeToBagButton()
     end
 end
 
-function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
+function ForeverAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
     if InCombatLockdown and InCombatLockdown() then return end
     local btn = self.bagSortButton
     if not btn then return end
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false then
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showBagSortButton == false then
         btn:Hide()
         return
     end
@@ -10217,13 +8507,13 @@ function CLIAlts:UpdateBagSortButtonAnchor(testCombinedFrame, testSingleFrame)
     end
 end
 
-function CLIAlts:InitBagSortButton()
+function ForeverAlts:InitBagSortButton()
     if InCombatLockdown and InCombatLockdown() then return nil end
     if self.bagSortButton then
         self:UpdateBagSortButtonAnchor()
         return self.bagSortButton
     end
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showBagSortButton == false then
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showBagSortButton == false then
         return nil
     end
 
@@ -10231,7 +8521,7 @@ function CLIAlts:InitBagSortButton()
     local singleFrame = rawget(_G, "ContainerFrame1") or ContainerFrame1
     local defaultParent = combinedFrame or singleFrame or UIParent
 
-    local btn = CreateFrame("Button", "CLIAltsBagSortBtn", defaultParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local btn = CreateFrame("Button", "ForeverAltsBagSortBtn", defaultParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btn:SetSize(18, 18)
     if btn.SetFrameStrata then btn:SetFrameStrata("HIGH") end
 
@@ -10283,9 +8573,9 @@ function CLIAlts:InitBagSortButton()
 
     btn:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
-            CLIAlts:Toggle()
+            ForeverAlts:Toggle()
         else
-            CLIAlts:SortBags()
+            ForeverAlts:SortBags()
         end
     end)
 
@@ -10294,7 +8584,7 @@ function CLIAlts:InitBagSortButton()
 
     -- Completely unhooked event watcher: monitors bag visibility without touching Blizzard secure bag functions or container scripts
     if not self.bagSortWatcher then
-        local watcher = CreateFrame("Frame", "CLIAltsBagSortWatcher", UIParent)
+        local watcher = CreateFrame("Frame", "ForeverAltsBagSortWatcher", UIParent)
         self.bagSortWatcher = watcher
         if watcher.RegisterEvent then
             pcall(watcher.RegisterEvent, watcher, "BAG_UPDATE_DELAYED")
@@ -10304,13 +8594,13 @@ function CLIAlts:InitBagSortButton()
         end
         watcher:SetScript("OnEvent", function(_, event)
             if event == "PLAYER_REGEN_DISABLED" then
-                if CLIAlts.bagSortButton and InCombatLockdown and InCombatLockdown() then
-                    CLIAlts.bagSortButton:Hide()
+                if ForeverAlts.bagSortButton and InCombatLockdown and InCombatLockdown() then
+                    ForeverAlts.bagSortButton:Hide()
                 end
                 return
             end
             if InCombatLockdown and InCombatLockdown() then return end
-            CLIAlts:UpdateBagSortButtonAnchor()
+            ForeverAlts:UpdateBagSortButtonAnchor()
         end)
 
         local lastShown = false
@@ -10324,7 +8614,7 @@ function CLIAlts:InitBagSortButton()
             local isShown = cfShown or sfShown
             local curTarget = cfShown and cf or (sfShown and sf or nil)
 
-            local btnRef = CLIAlts.bagSortButton
+            local btnRef = ForeverAlts.bagSortButton
             local needsReanchor = (isShown ~= lastShown)
                                or (curTarget ~= lastTarget)
                                or (isShown and btnRef and (not btnRef:IsShown() or (btnRef.GetParent and btnRef:GetParent() ~= curTarget)))
@@ -10332,7 +8622,7 @@ function CLIAlts:InitBagSortButton()
             if needsReanchor then
                 lastShown = isShown
                 lastTarget = curTarget
-                CLIAlts:UpdateBagSortButtonAnchor()
+                ForeverAlts:UpdateBagSortButtonAnchor()
             end
         end)
     end
@@ -10341,17 +8631,17 @@ function CLIAlts:InitBagSortButton()
     return btn
 end
 
-function CLIAlts:ToggleBagSortButton(enable)
+function ForeverAlts:ToggleBagSortButton(enable)
     if enable == nil then
-        if CLIAltsDB and CLIAltsDB.settings then
-            enable = not CLIAltsDB.settings.showBagSortButton
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            enable = not ForeverAltsDB.settings.showBagSortButton
         else
             enable = true
         end
     end
 
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.showBagSortButton = enable
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.showBagSortButton = enable
     end
 
     if enable then
@@ -10371,7 +8661,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Send Mail Auto-Fill Button Integration (SendMailFrame)
 -- ----------------------------------------------------------------------------
-function CLIAlts:UpdateMailAutoFillButton()
+function ForeverAlts:UpdateMailAutoFillButton()
     local btn = self.mailAutoFillButton
     if not btn then return end
     local t = self:GetTheme()
@@ -10396,16 +8686,16 @@ function CLIAlts:UpdateMailAutoFillButton()
     end
 end
 
-function CLIAlts:InitMailAutoFillButton()
+function ForeverAlts:InitMailAutoFillButton()
     if self.mailAutoFillButton then return self.mailAutoFillButton end
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.showMailAutoFillButton == false then
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showMailAutoFillButton == false then
         return nil
     end
 
     local parent = SendMailFrame
     if not parent then return nil end
 
-    local btn = CreateFrame("Button", "CLIAltsMailAutoFillBtn", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local btn = CreateFrame("Button", "ForeverAltsMailAutoFillBtn", parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     btn:SetSize(115, 20)
 
     if SendMailNameEditBox then
@@ -10444,7 +8734,7 @@ function CLIAlts:InitMailAutoFillButton()
             GameTooltip:ClearLines()
             GameTooltip:AddLine("|cfff2c94cForeverAlts: Mail Auto-Fill|r")
             GameTooltip:AddLine("|cff55e39aLeft-Click|r: Fill next alt recipient & attach items", 0.9, 0.9, 0.9)
-            local autoSend = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoFillMailOnSend
+            local autoSend = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.autoFillMailOnSend
             GameTooltip:AddLine(string.format("|cff57d6e8Right-Click|r: Auto-load next on Send (|cffffd700%s|r)", autoSend and "ENABLED" or "DISABLED"), 0.9, 0.9, 0.9)
             GameTooltip:AddLine("|cffa9a08cYou review items and manually click Send Mail.|r", 0.7, 0.7, 0.7)
             GameTooltip:Show()
@@ -10463,21 +8753,21 @@ function CLIAlts:InitMailAutoFillButton()
 
     btn:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
-            if CLIAltsDB and CLIAltsDB.settings then
-                CLIAltsDB.settings.autoFillMailOnSend = not CLIAltsDB.settings.autoFillMailOnSend
-                local state = CLIAltsDB.settings.autoFillMailOnSend and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
-                CLIAlts:Print(string.format("Auto-load next package on Send: %s.", state))
-                CLIAlts:UpdateMailAutoFillButton()
+            if ForeverAltsDB and ForeverAltsDB.settings then
+                ForeverAltsDB.settings.autoFillMailOnSend = not ForeverAltsDB.settings.autoFillMailOnSend
+                local state = ForeverAltsDB.settings.autoFillMailOnSend and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+                ForeverAlts:Print(string.format("Auto-load next package on Send: %s.", state))
+                ForeverAlts:UpdateMailAutoFillButton()
             end
         else
-            CLIAlts:FillSendMailNextBatch()
+            ForeverAlts:FillSendMailNextBatch()
         end
     end)
 
     if parent and parent.HookScript then
         pcall(parent.HookScript, parent, "OnShow", function()
-            if CLIAlts.UpdateMailAutoFillButton then
-                CLIAlts:UpdateMailAutoFillButton()
+            if ForeverAlts.UpdateMailAutoFillButton then
+                ForeverAlts:UpdateMailAutoFillButton()
             end
         end)
     end
@@ -10487,17 +8777,17 @@ function CLIAlts:InitMailAutoFillButton()
     return btn
 end
 
-function CLIAlts:ToggleMailAutoFillButton(enable)
+function ForeverAlts:ToggleMailAutoFillButton(enable)
     if enable == nil then
-        if CLIAltsDB and CLIAltsDB.settings then
-            enable = not CLIAltsDB.settings.showMailAutoFillButton
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            enable = not ForeverAltsDB.settings.showMailAutoFillButton
         else
             enable = true
         end
     end
 
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.showMailAutoFillButton = enable
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.showMailAutoFillButton = enable
     end
 
     if enable then
@@ -10521,13 +8811,13 @@ end
 -- Highlights key features across 3 steps: Banner, Status Pill, Command Bar
 -- ============================================================================
 
-CLIAlts.TOUR_STEPS = {
+ForeverAlts.TOUR_STEPS = {
     {
         badge = "STEP 1 OF 3",
         title = "Play Next Priority",
         desc = "ForeverAlts identifies alts at danger of wasting rested XP or with urgent cooldowns and ranks them here. Click any hero card to inspect.",
         target = function()
-            local mf = CLIAlts.mainFrame or _G["CLIAltsMainFrame"]
+            local mf = ForeverAlts.mainFrame or _G["ForeverAltsMainFrame"]
             if mf and mf.nextBanner and mf.nextBanner:IsShown() then
                 return mf.nextBanner
             end
@@ -10540,14 +8830,14 @@ CLIAlts.TOUR_STEPS = {
         title = "Real-Time Status Pills",
         desc = "Status pills show whether each character is Resting, Capped, Losing XP, or Ready to play at a glance. Rested XP and progress calculate continuously.",
         target = function()
-            local rowFrames = CLIAlts:GetRowFrames()
+            local rowFrames = ForeverAlts:GetRowFrames()
             if rowFrames and rowFrames[1] then
                 if rowFrames[1].statusPill and rowFrames[1].statusPill:IsShown() then
                     return rowFrames[1].statusPill
                 end
                 return rowFrames[1]
             end
-            local mf = CLIAlts.mainFrame or _G["CLIAltsMainFrame"]
+            local mf = ForeverAlts.mainFrame or _G["ForeverAltsMainFrame"]
             return mf
         end,
         position = "LEFT_OR_BELOW",
@@ -10557,7 +8847,7 @@ CLIAlts.TOUR_STEPS = {
         title = "Command Bar & Quick Chips",
         desc = "Type commands or click quick hint chips (like 'next', 'plan 2', 'unlocked mc', 'digest') to control your roster. Use Up/Down for history and Tab to autocomplete.",
         target = function()
-            local mf = CLIAlts.mainFrame or _G["CLIAltsMainFrame"]
+            local mf = ForeverAlts.mainFrame or _G["ForeverAltsMainFrame"]
             if mf and mf.cmdBar and mf.cmdBar:IsShown() then
                 return mf.cmdBar
             end
@@ -10567,9 +8857,9 @@ CLIAlts.TOUR_STEPS = {
     },
 }
 
-function CLIAlts:GetTourHighlight()
+function ForeverAlts:GetTourHighlight()
     if self.tourHighlight then return self.tourHighlight end
-    local hl = CreateFrame("Frame", "CLIAltsTourHighlight", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local hl = CreateFrame("Frame", "ForeverAltsTourHighlight", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     hl:SetFrameStrata("DIALOG")
     hl:SetFrameLevel(90)
     hl:EnableMouse(false)
@@ -10585,9 +8875,9 @@ function CLIAlts:GetTourHighlight()
     return hl
 end
 
-function CLIAlts:GetTourCard()
+function ForeverAlts:GetTourCard()
     if self.tourCard then return self.tourCard end
-    local card = CreateFrame("Frame", "CLIAltsTourCard", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    local card = CreateFrame("Frame", "ForeverAltsTourCard", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     card:SetSize(360, 140)
     card:SetFrameStrata("DIALOG")
     card:SetFrameLevel(100)
@@ -10596,7 +8886,7 @@ function CLIAlts:GetTourCard()
     card:RegisterForDrag("LeftButton")
     card:SetScript("OnDragStart", function(self) self:StartMoving() end)
     card:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-    tinsert(UISpecialFrames, "CLIAltsTourCard")
+    tinsert(UISpecialFrames, "ForeverAltsTourCard")
 
     card:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
@@ -10618,7 +8908,7 @@ function CLIAlts:GetTourCard()
     card.stepBadge = stepBadge
 
     local btnClose = CreateRetroButton(card, "X", 20, 20, function()
-        CLIAlts:EndTour()
+        ForeverAlts:EndTour()
     end, 10)
     btnClose:SetPoint("TOPRIGHT", card, "TOPRIGHT", -8, -8)
     card.btnClose = btnClose
@@ -10642,25 +8932,25 @@ function CLIAlts:GetTourCard()
     card.descText = descText
 
     local btnBack = CreateRetroButton(card, "< Back", 65, 20, function()
-        if CLIAlts.currentTourStep and CLIAlts.currentTourStep > 1 then
-            CLIAlts:ShowTourStep(CLIAlts.currentTourStep - 1)
+        if ForeverAlts.currentTourStep and ForeverAlts.currentTourStep > 1 then
+            ForeverAlts:ShowTourStep(ForeverAlts.currentTourStep - 1)
         end
     end)
     btnBack:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 14, 12)
     card.btnBack = btnBack
 
     local btnNext = CreateRetroButton(card, "Next >", 75, 20, function()
-        if CLIAlts.currentTourStep and CLIAlts.currentTourStep < #CLIAlts.TOUR_STEPS then
-            CLIAlts:ShowTourStep(CLIAlts.currentTourStep + 1)
+        if ForeverAlts.currentTourStep and ForeverAlts.currentTourStep < #ForeverAlts.TOUR_STEPS then
+            ForeverAlts:ShowTourStep(ForeverAlts.currentTourStep + 1)
         else
-            CLIAlts:EndTour()
+            ForeverAlts:EndTour()
         end
     end)
     btnNext:SetPoint("LEFT", btnBack, "RIGHT", 8, 0)
     card.btnNext = btnNext
 
     local btnSkip = CreateRetroButton(card, "Skip Tour", 75, 20, function()
-        CLIAlts:EndTour()
+        ForeverAlts:EndTour()
     end)
     btnSkip:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -14, 12)
     card.btnSkip = btnSkip
@@ -10669,7 +8959,7 @@ function CLIAlts:GetTourCard()
     return card
 end
 
-function CLIAlts:ShowTourStep(stepIndex)
+function ForeverAlts:ShowTourStep(stepIndex)
     stepIndex = tonumber(stepIndex) or 1
     if stepIndex < 1 then stepIndex = 1 end
     if stepIndex > #self.TOUR_STEPS then stepIndex = #self.TOUR_STEPS end
@@ -10680,7 +8970,7 @@ function CLIAlts:ShowTourStep(stepIndex)
 
     local hl = self:GetTourHighlight()
     local card = self:GetTourCard()
-    local mf = self.mainFrame or _G["CLIAltsMainFrame"]
+    local mf = self.mainFrame or _G["ForeverAltsMainFrame"]
 
     -- Find target frame
     local target = nil
@@ -10753,7 +9043,7 @@ function CLIAlts:ShowTourStep(stepIndex)
     end
 end
 
-function CLIAlts:StartTour()
+function ForeverAlts:StartTour()
     local ok, err = pcall(function()
         if InCombatLockdown and InCombatLockdown() then
             if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
@@ -10762,15 +9052,15 @@ function CLIAlts:StartTour()
             return
         end
 
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.tourDone = true
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.tourDone = true
         end
 
         if self.SwitchTab then
             self:SwitchTab(1)
         end
 
-        local mf = self.mainFrame or _G["CLIAltsMainFrame"]
+        local mf = self.mainFrame or _G["ForeverAltsMainFrame"]
         if not mf or not mf:IsShown() then
             self:Toggle(true)
         end
@@ -10784,7 +9074,7 @@ function CLIAlts:StartTour()
     end
 end
 
-function CLIAlts:EndTour()
+function ForeverAlts:EndTour()
     self.currentTourStep = nil
     if self.tourHighlight then
         self.tourHighlight:Hide()
@@ -10792,8 +9082,8 @@ function CLIAlts:EndTour()
     if self.tourCard then
         self.tourCard:Hide()
     end
-    if CLIAltsDB and CLIAltsDB.settings then
-        CLIAltsDB.settings.tourDone = true
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.tourDone = true
     end
 end
 

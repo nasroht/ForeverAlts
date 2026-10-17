@@ -36,6 +36,11 @@ globals = {
     -- Addon Globals & SavedVariables
     "ForeverAlts",
     "ForeverAltsDB",
+    "ForeverAltsMainFrame",
+    "ForeverAltsSettingsDialog",
+    "ForeverAltsFocusEnterBtn",
+    "ForeverAltsFocusSlashBtn",
+    "CLIAlts",
     "CLIAltsDB",
     "CLIAltsMainFrame",
     "CLIAltsSettingsDialog",

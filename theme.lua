@@ -1,17 +1,18 @@
 -- ============================================================================
--- CLIAlts: Design Tokens and Color System
+-- ForeverAlts: Design Tokens and Color System
 -- File: theme.lua
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable or _G["CLIAlts"] or _G["ForeverAlts"] or {}
-_G["CLIAlts"] = CLIAlts
-_G["clialts"] = CLIAlts
-_G["ForeverAlts"] = CLIAlts
-_G["foreveralts"] = CLIAlts
+local ForeverAlts = addonTable or _G["ForeverAlts"] or _G["CLIAlts"] or {}
+_G["ForeverAlts"] = ForeverAlts
+_G["foreveralts"] = ForeverAlts
+_G["CLIAlts"] = ForeverAlts
+_G["clialts"] = ForeverAlts
+local CLIAlts = ForeverAlts
 
 -- Design Tokens (Base Phase 1 Tokens: Default Palette)
-CLIAlts.TOKENS = {
+ForeverAlts.TOKENS = {
     bg     = "0A0E17",
     panel  = "131A26",
     raised = "1B2436",
@@ -33,8 +34,8 @@ CLIAlts.TOKENS = {
 }
 
 -- Alternative Theme Token Sets
-CLIAlts.THEME_TOKENS = {
-    ["DEFAULT"] = CLIAlts.TOKENS,
+ForeverAlts.THEME_TOKENS = {
+    ["DEFAULT"] = ForeverAlts.TOKENS,
     ["BLIZZARD"] = {
         bg     = "0B0E14",
         panel  = "131722",
@@ -176,15 +177,16 @@ CLIAlts.THEME_TOKENS = {
         font   = { title = 19, body = 14, small = 12, num = 14 },
     },
 }
-CLIAlts.THEME_TOKENS["DEF"] = CLIAlts.THEME_TOKENS["DEFAULT"]
-CLIAlts.THEME_TOKENS["WOW"] = CLIAlts.THEME_TOKENS["BLIZZARD"]
+ForeverAlts.THEME_TOKENS["DEF"] = ForeverAlts.THEME_TOKENS["DEFAULT"]
+ForeverAlts.THEME_TOKENS["WOW"] = ForeverAlts.THEME_TOKENS["BLIZZARD"]
 
-function CLIAlts:GetTokens()
-    local themeKey = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.theme) or "DEFAULT"
+function ForeverAlts:GetTokens()
+    local db = ForeverAltsDB or CLIAltsDB
+    local themeKey = (db and db.settings and db.settings.theme) or "DEFAULT"
     return self.THEME_TOKENS[themeKey] or self.THEME_TOKENS["DEFAULT"] or self.TOKENS
 end
 
-function CLIAlts:Hex(token, alpha)
+function ForeverAlts:Hex(token, alpha)
     if type(token) == "table" then
         if token.r and token.g and token.b then
             return token.r, token.g, token.b, alpha or token.a or 1

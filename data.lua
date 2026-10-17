@@ -1,17 +1,18 @@
 -- ============================================================================
--- CLIAlts: Retro Alt Tracker
+-- ForeverAlts: Retro Alt Tracker
 -- File: data.lua
 -- Database management, character data collection, and rested XP calculations.
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable or _G["CLIAlts"] or _G["ForeverAlts"] or {}
-_G["CLIAlts"] = CLIAlts
-_G["clialts"] = CLIAlts
-_G["ForeverAlts"] = CLIAlts
-_G["foreveralts"] = CLIAlts
+local ForeverAlts = addonTable or _G["ForeverAlts"] or _G["CLIAlts"] or {}
+_G["ForeverAlts"] = ForeverAlts
+_G["foreveralts"] = ForeverAlts
+_G["CLIAlts"] = ForeverAlts
+_G["clialts"] = ForeverAlts
+local CLIAlts = ForeverAlts
 
-function CLIAlts:Print(msg)
+function ForeverAlts:Print(msg)
     local tag = "|cffffb000[ForeverAlts]|r"
     if self.GetTheme then
         local t = self:GetTheme()
@@ -32,15 +33,15 @@ end
 local addonVersion = (C_AddOns and C_AddOns.GetAddOnMetadata and (C_AddOns.GetAddOnMetadata("ForeverAlts", "Version") or C_AddOns.GetAddOnMetadata("clialts", "Version") or C_AddOns.GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
     or (GetAddOnMetadata and (GetAddOnMetadata("ForeverAlts", "Version") or GetAddOnMetadata("clialts", "Version") or GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
     or "1.2.2"
-CLIAlts.VERSION = addonVersion
+ForeverAlts.VERSION = addonVersion
 ForeverAlts = CLIAlts
 
-function CLIAlts:PrintVersion()
+function ForeverAlts:PrintVersion()
     local ver = tostring(self.VERSION or "1.2.2")
     self:Print(string.format("ForeverAlts Version: |cff00ff66v%s|r (CurseForge Project #1747176)", ver))
     return ver
 end
-CLIAlts.DB_VERSION = 3
+ForeverAlts.DB_VERSION = 3
 local CURRENT_DB_VERSION = 3
 local cachedCurrentChar = nil
 
@@ -60,7 +61,7 @@ local FALLBACK_CLASS_COLORS = {
     ["DEMONHUNTER"] = { r = 0.64, g = 0.19, b = 0.79, hex = "a330c9" },
     ["EVOKER"]      = { r = 0.20, g = 0.58, b = 0.50, hex = "33937f" },
 }
-CLIAlts.FALLBACK_CLASS_COLORS = FALLBACK_CLASS_COLORS
+ForeverAlts.FALLBACK_CLASS_COLORS = FALLBACK_CLASS_COLORS
 
 local ALLIANCE_RACES = {
     ["human"] = true, ["dwarf"] = true, ["nightelf"] = true, ["gnome"] = true,
@@ -83,12 +84,12 @@ local function InferFaction(char, maybeChar)
     if HORDE_RACES[race] then return "Horde" end
     return nil
 end
-CLIAlts.InferFaction = InferFaction
+ForeverAlts.InferFaction = InferFaction
 
 -- ----------------------------------------------------------------------------
 -- Client Flavor & Retail Detection Helper
 -- ----------------------------------------------------------------------------
-function CLIAlts:IsForeverClient()
+function ForeverAlts:IsForeverClient()
     if self.isForeverOverride ~= nil then
         return self.isForeverOverride
     end
@@ -112,8 +113,8 @@ function CLIAlts:IsForeverClient()
         end
     end
     -- 4. Tracked characters database contains characters with secondary names
-    if CLIAltsDB and CLIAltsDB.characters then
-        for _, c in pairs(CLIAltsDB.characters) do
+    if ForeverAltsDB and ForeverAltsDB.characters then
+        for _, c in pairs(ForeverAltsDB.characters) do
             if c.secondaryName and c.secondaryName ~= "" then
                 return true
             end
@@ -127,7 +128,7 @@ function CLIAlts:IsForeverClient()
     return false
 end
 
-function CLIAlts:IsRetail()
+function ForeverAlts:IsRetail()
     if self.isRetailOverride ~= nil then
         return self.isRetailOverride
     end
@@ -143,7 +144,7 @@ function CLIAlts:IsRetail()
     return false
 end
 
-function CLIAlts:GetClientFlavor()
+function ForeverAlts:GetClientFlavor()
     if self:IsRetail() then
         return "Retail"
     end
@@ -156,38 +157,38 @@ function CLIAlts:GetClientFlavor()
     return "Classic"
 end
 
-function CLIAlts:IsForeverMode()
+function ForeverAlts:IsForeverMode()
     if self.isForeverOverride ~= nil then
         return self.isForeverOverride
     end
-    if CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.foreverMode ~= nil then
-        return CLIAltsDB.settings.foreverMode == true
+    if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.foreverMode ~= nil then
+        return ForeverAltsDB.settings.foreverMode == true
     end
     return self:IsForeverClient()
 end
 
-function CLIAlts:ToggleForeverMode()
-    if not CLIAltsDB or not CLIAltsDB.settings then return false end
-    CLIAltsDB.settings.foreverMode = not self:IsForeverMode()
+function ForeverAlts:ToggleForeverMode()
+    if not ForeverAltsDB or not ForeverAltsDB.settings then return false end
+    ForeverAltsDB.settings.foreverMode = not self:IsForeverMode()
     if self.ApplyLayoutSize then self:ApplyLayoutSize() end
     if self.Render then self:Render() end
-    return CLIAltsDB.settings.foreverMode
+    return ForeverAltsDB.settings.foreverMode
 end
 
 -- ----------------------------------------------------------------------------
 -- Level Cap Helper (WoW Forever / Classic / Expansion Dynamic Cap)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetMaxLevel()
+function ForeverAlts:GetMaxLevel()
     if GetMaxPlayerLevel then
         local ml = GetMaxPlayerLevel()
         if ml and type(ml) == "number" and ml > 0 then
-            if CLIAltsDB and CLIAltsDB.settings then
-                CLIAltsDB.settings.maxLevel = ml
+            if ForeverAltsDB and ForeverAltsDB.settings then
+                ForeverAltsDB.settings.maxLevel = ml
             end
             return ml
         end
     end
-    return (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.maxLevel) or 60
+    return (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.maxLevel) or 60
 end
 
 local KNOWN_PRIMARY_PROFS = {
@@ -252,7 +253,7 @@ local RACE_CODES = {
     ["HIGHORDERSKYBORNE"]   = "SKY",
 }
 
-function CLIAlts:GetRaceCode(char)
+function ForeverAlts:GetRaceCode(char)
     if not char then return "UNK" end
 
     -- Prefer stored localized race over internal engine raceFile token
@@ -297,7 +298,7 @@ function CLIAlts:GetRaceCode(char)
     return "UNK"
 end
 
-function CLIAlts:FormatRace(char)
+function ForeverAlts:FormatRace(char)
     if not char then return "Unknown" end
 
     -- Prefer stored localized race
@@ -322,7 +323,7 @@ function CLIAlts:FormatRace(char)
     return race
 end
 
-function CLIAlts:FormatRaceClass(char)
+function ForeverAlts:FormatRaceClass(char)
     if not char then return "Unknown" end
     local code = self:GetRaceCode(char)
     local class = char.class or "Unknown"
@@ -332,7 +333,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Database Snapshot Backup & Restore (/clialts backup, /clialts restore)
 -- ----------------------------------------------------------------------------
-function CLIAlts:CopyTable(src, seen)
+function ForeverAlts:CopyTable(src, seen)
     if type(src) ~= "table" then return src end
     if seen and seen[src] then return seen[src] end
     local s = seen or {}
@@ -348,36 +349,36 @@ function CLIAlts:CopyTable(src, seen)
     return copy
 end
 
-function CLIAlts:BackupDB(reason)
-    if not CLIAltsDB then return false, "No database to backup." end
+function ForeverAlts:BackupDB(reason)
+    if not ForeverAltsDB then return false, "No database to backup." end
     local backup = {}
-    for k, v in pairs(CLIAltsDB) do
+    for k, v in pairs(ForeverAltsDB) do
         if k ~= "backup" then
             backup[k] = (type(v) == "table") and self:CopyTable(v) or v
         end
     end
     backup._backupTime = time()
     backup._backupReason = reason or "manual"
-    CLIAltsDB.backup = backup
+    ForeverAltsDB.backup = backup
     return true, "Backup saved to ForeverAltsDB.backup."
 end
 
-function CLIAlts:RestoreDB()
-    if not CLIAltsDB or not CLIAltsDB.backup then
+function ForeverAlts:RestoreDB()
+    if not ForeverAltsDB or not ForeverAltsDB.backup then
         return false, "No backup available to restore."
     end
-    local backupSlot = CLIAltsDB.backup
-    for k in pairs(CLIAltsDB) do
+    local backupSlot = ForeverAltsDB.backup
+    for k in pairs(ForeverAltsDB) do
         if k ~= "backup" then
-            CLIAltsDB[k] = nil
+            ForeverAltsDB[k] = nil
         end
     end
     for k, v in pairs(backupSlot) do
         if k ~= "backup" and k ~= "_backupTime" and k ~= "_backupReason" then
-            CLIAltsDB[k] = (type(v) == "table") and self:CopyTable(v) or v
+            ForeverAltsDB[k] = (type(v) == "table") and self:CopyTable(v) or v
         end
     end
-    CLIAltsDB.backup = backupSlot
+    ForeverAltsDB.backup = backupSlot
     self.dbInitialized = false
     self:InitDB()
     if self.RequestRender then
@@ -391,76 +392,77 @@ end
 -- ----------------------------------------------------------------------------
 -- Database Initialization & Two-Name Migration
 -- ----------------------------------------------------------------------------
-function CLIAlts:InitDB()
-    if self.dbInitialized and CLIAltsDB and CLIAltsDB.characters and CLIAltsDB.settings and CLIAltsDB.dbVersion == CURRENT_DB_VERSION then
+function ForeverAlts:InitDB()
+    if self.dbInitialized and ForeverAltsDB and ForeverAltsDB.characters and ForeverAltsDB.settings and ForeverAltsDB.dbVersion == CURRENT_DB_VERSION then
         return
     end
 
     local oldDB = rawget(_G, "ForeverAltsDB") or rawget(_G, "CLIAltsDB") or rawget(_G, "NasaltsDB")
-    if not CLIAltsDB and oldDB then
-        CLIAltsDB = oldDB
+    if not ForeverAltsDB and oldDB then
+        ForeverAltsDB = oldDB
     end
-    if not CLIAltsDB then
-        CLIAltsDB = {}
+    if not ForeverAltsDB then
+        ForeverAltsDB = {}
     end
-    ForeverAltsDB = CLIAltsDB
+    CLIAltsDB = ForeverAltsDB
     _G["ForeverAltsDB"] = ForeverAltsDB
-    _G["CLIAltsDB"] = CLIAltsDB
-    _G["ForeverAlts"] = CLIAlts
-    CLIAltsDB.settings = CLIAltsDB.settings or {}
-    if not CLIAltsDB.settings.theme or ((CLIAltsDB.settings.theme == "AMBER" or CLIAltsDB.settings.theme == "BLIZZARD") and not CLIAltsDB.settings.themeExplicit) then
-        CLIAltsDB.settings.theme = "DEFAULT"
+    _G["CLIAltsDB"] = ForeverAltsDB
+    _G["ForeverAlts"] = ForeverAlts
+    _G["CLIAlts"] = ForeverAlts
+    ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+    if not ForeverAltsDB.settings.theme or ((ForeverAltsDB.settings.theme == "AMBER" or ForeverAltsDB.settings.theme == "BLIZZARD") and not ForeverAltsDB.settings.themeExplicit) then
+        ForeverAltsDB.settings.theme = "DEFAULT"
     end
-    CLIAltsDB.settings.minimapPos = CLIAltsDB.settings.minimapPos or 45
-    CLIAltsDB.settings.minimapShow = (CLIAltsDB.settings.minimapShow ~= false)
-    CLIAltsDB.settings.sortBy = CLIAltsDB.settings.sortBy or "name"
-    CLIAltsDB.settings.sortAsc = (CLIAltsDB.settings.sortAsc == true)
-    CLIAltsDB.settings.activeTab = CLIAltsDB.settings.activeTab or 1
-    if CLIAltsDB.settings.activeTab == 2 or CLIAltsDB.settings.activeTab == 3 then
-        CLIAltsDB.settings.activeTab = 1
-    elseif CLIAltsDB.settings.activeTab == 5 then
-        CLIAltsDB.settings.activeTab = 6
+    ForeverAltsDB.settings.minimapPos = ForeverAltsDB.settings.minimapPos or 45
+    ForeverAltsDB.settings.minimapShow = (ForeverAltsDB.settings.minimapShow ~= false)
+    ForeverAltsDB.settings.sortBy = ForeverAltsDB.settings.sortBy or "name"
+    ForeverAltsDB.settings.sortAsc = (ForeverAltsDB.settings.sortAsc == true)
+    ForeverAltsDB.settings.activeTab = ForeverAltsDB.settings.activeTab or 1
+    if ForeverAltsDB.settings.activeTab == 2 or ForeverAltsDB.settings.activeTab == 3 then
+        ForeverAltsDB.settings.activeTab = 1
+    elseif ForeverAltsDB.settings.activeTab == 5 then
+        ForeverAltsDB.settings.activeTab = 6
     end
-    CLIAltsDB.settings.wellRestedRank = tonumber(CLIAltsDB.settings.wellRestedRank) or 0
-    CLIAltsDB.settings.alerts = CLIAltsDB.settings.alerts or {}
-    if CLIAltsDB.settings.alerts.cooldowns == nil then CLIAltsDB.settings.alerts.cooldowns = true end
-    if CLIAltsDB.settings.alerts.rested == nil then CLIAltsDB.settings.alerts.rested = true end
-    if CLIAltsDB.settings.alerts.mail == nil then CLIAltsDB.settings.alerts.mail = true end
-    if CLIAltsDB.settings.alerts.lockouts == nil then CLIAltsDB.settings.alerts.lockouts = true end
-    if CLIAltsDB.settings.restedBurnRatio == nil then CLIAltsDB.settings.restedBurnRatio = 0.5 end
-    CLIAltsDB.settings.staleDays = tonumber(CLIAltsDB.settings.staleDays) or 30
-    CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode == true)
-    if CLIAltsDB.settings.showInventoryTooltips == nil then CLIAltsDB.settings.showInventoryTooltips = true end
-    if CLIAltsDB.settings.showBagSortButton == nil then CLIAltsDB.settings.showBagSortButton = true end
-    if CLIAltsDB.settings.showMailAutoFillButton == nil then CLIAltsDB.settings.showMailAutoFillButton = true end
-    if CLIAltsDB.settings.autoFillMailOnSend == nil then CLIAltsDB.settings.autoFillMailOnSend = true end
-    CLIAltsDB.settings.ignoredMailItems = CLIAltsDB.settings.ignoredMailItems or {}
-    if CLIAltsDB.settings.autoMailConsumables == nil then CLIAltsDB.settings.autoMailConsumables = false end
-    if CLIAltsDB.settings.fontSize == nil or CLIAltsDB.settings.fontSize == 15 then CLIAltsDB.settings.fontSize = 18 end
-    CLIAltsDB.settings.legacyUI = nil
-    if CLIAltsDB.settings.foreverMode == false and self:IsForeverClient() then
-        CLIAltsDB.settings.foreverMode = nil
+    ForeverAltsDB.settings.wellRestedRank = tonumber(ForeverAltsDB.settings.wellRestedRank) or 0
+    ForeverAltsDB.settings.alerts = ForeverAltsDB.settings.alerts or {}
+    if ForeverAltsDB.settings.alerts.cooldowns == nil then ForeverAltsDB.settings.alerts.cooldowns = true end
+    if ForeverAltsDB.settings.alerts.rested == nil then ForeverAltsDB.settings.alerts.rested = true end
+    if ForeverAltsDB.settings.alerts.mail == nil then ForeverAltsDB.settings.alerts.mail = true end
+    if ForeverAltsDB.settings.alerts.lockouts == nil then ForeverAltsDB.settings.alerts.lockouts = true end
+    if ForeverAltsDB.settings.restedBurnRatio == nil then ForeverAltsDB.settings.restedBurnRatio = 0.5 end
+    ForeverAltsDB.settings.staleDays = tonumber(ForeverAltsDB.settings.staleDays) or 30
+    ForeverAltsDB.settings.compactMode = (ForeverAltsDB.settings.compactMode == true)
+    if ForeverAltsDB.settings.showInventoryTooltips == nil then ForeverAltsDB.settings.showInventoryTooltips = true end
+    if ForeverAltsDB.settings.showBagSortButton == nil then ForeverAltsDB.settings.showBagSortButton = true end
+    if ForeverAltsDB.settings.showMailAutoFillButton == nil then ForeverAltsDB.settings.showMailAutoFillButton = true end
+    if ForeverAltsDB.settings.autoFillMailOnSend == nil then ForeverAltsDB.settings.autoFillMailOnSend = true end
+    ForeverAltsDB.settings.ignoredMailItems = ForeverAltsDB.settings.ignoredMailItems or {}
+    if ForeverAltsDB.settings.autoMailConsumables == nil then ForeverAltsDB.settings.autoMailConsumables = false end
+    if ForeverAltsDB.settings.fontSize == nil or ForeverAltsDB.settings.fontSize == 15 then ForeverAltsDB.settings.fontSize = 18 end
+    ForeverAltsDB.settings.legacyUI = nil
+    if ForeverAltsDB.settings.foreverMode == false and self:IsForeverClient() then
+        ForeverAltsDB.settings.foreverMode = nil
     end
-    CLIAltsDB.characters = CLIAltsDB.characters or {}
-    CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
-    CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
-    CLIAltsDB.commandHistory = CLIAltsDB.commandHistory or {}
+    ForeverAltsDB.characters = ForeverAltsDB.characters or {}
+    ForeverAltsDB.goldHistory = ForeverAltsDB.goldHistory or {}
+    ForeverAltsDB.watchlist = ForeverAltsDB.watchlist or {}
+    ForeverAltsDB.commandHistory = ForeverAltsDB.commandHistory or {}
 
     -- Run one-time migration and repair only if dbVersion is older than CURRENT_DB_VERSION
-    if (tonumber(CLIAltsDB.dbVersion) or 0) < CURRENT_DB_VERSION then
-        -- Automatically backup CLIAltsDB to a one-slot CLIAltsDB.backup before any migration
+    if (tonumber(ForeverAltsDB.dbVersion) or 0) < CURRENT_DB_VERSION then
+        -- Automatically backup ForeverAltsDB to a one-slot ForeverAltsDB.backup before any migration
         self:BackupDB("migration")
 
         -- Merge / restore character data and professions from old NasaltsDB if available
-        if oldDB and oldDB ~= CLIAltsDB and oldDB.characters then
+        if oldDB and oldDB ~= ForeverAltsDB and oldDB.characters then
             for oldKey, oldChar in pairs(oldDB.characters) do
                 local cleanOldKey = oldChar.fullName or oldChar.name or oldKey
                 cleanOldKey = cleanOldKey:match("^(.-)%s*-%s*.*$") or cleanOldKey
 
-                -- Find if this character already exists in CLIAltsDB
-                local target = CLIAltsDB.characters[cleanOldKey] or CLIAltsDB.characters[oldKey]
+                -- Find if this character already exists in ForeverAltsDB
+                local target = ForeverAltsDB.characters[cleanOldKey] or ForeverAltsDB.characters[oldKey]
                 if not target then
-                    for k, c in pairs(CLIAltsDB.characters) do
+                    for k, c in pairs(ForeverAltsDB.characters) do
                         local n = c.fullName or c.name or k
                         if n == cleanOldKey or (n and cleanOldKey and (n:find(cleanOldKey, 1, true) or cleanOldKey:find(n, 1, true))) then
                             target = c
@@ -470,8 +472,8 @@ function CLIAlts:InitDB()
                 end
 
                 if not target then
-                    -- Import character that was tracked in NasaltsDB but missing in CLIAltsDB
-                    CLIAltsDB.characters[cleanOldKey] = oldChar
+                    -- Import character that was tracked in NasaltsDB but missing in ForeverAltsDB
+                    ForeverAltsDB.characters[cleanOldKey] = oldChar
                 else
                     -- Restore professions if current character has empty professions but old character has recorded ones
                     local curProf = target.professions
@@ -487,7 +489,7 @@ function CLIAlts:InitDB()
 
         -- Migrate old "Name - Realm" keys to clean two-name keys & repair resting flags
         local migrated = {}
-        for key, char in pairs(CLIAltsDB.characters) do
+        for key, char in pairs(ForeverAltsDB.characters) do
             local cleanKey = char.fullName
             if not cleanKey or cleanKey == "" then
                 if char.primaryName and char.secondaryName and char.secondaryName ~= "" then
@@ -512,13 +514,13 @@ function CLIAlts:InitDB()
 
             migrated[cleanKey] = char
         end
-        CLIAltsDB.characters = migrated
-        CLIAltsDB.dbVersion = CURRENT_DB_VERSION
+        ForeverAltsDB.characters = migrated
+        ForeverAltsDB.dbVersion = CURRENT_DB_VERSION
     end
 
     -- Repair resting state for characters whose location confirms an inn or resting area
-    if CLIAltsDB and CLIAltsDB.characters then
-        for _, char in pairs(CLIAltsDB.characters) do
+    if ForeverAltsDB and ForeverAltsDB.characters then
+        for _, char in pairs(ForeverAltsDB.characters) do
             if char.location and self:IsLocationResting(char.location) then
                 if char.isResting ~= true or char.loggedOutInRestZone ~= true then
                     char.isResting = true
@@ -552,30 +554,30 @@ local function SafeAfter(delay, callback)
         end
     end)
 end
-CLIAlts.SafeAfter = SafeAfter
+ForeverAlts.SafeAfter = SafeAfter
 
-function CLIAlts:IsCompact()
-    return (CLIAltsDB and CLIAltsDB.settings and (CLIAltsDB.settings.compactMode == true or CLIAltsDB.settings.compact == true))
+function ForeverAlts:IsCompact()
+    return (ForeverAltsDB and ForeverAltsDB.settings and (ForeverAltsDB.settings.compactMode == true or ForeverAltsDB.settings.compact == true))
 end
 
-function CLIAlts:ToggleCompact()
-    if not CLIAltsDB or not CLIAltsDB.settings then
+function ForeverAlts:ToggleCompact()
+    if not ForeverAltsDB or not ForeverAltsDB.settings then
         self:InitDB()
     end
-    CLIAltsDB.settings.compactMode = (CLIAltsDB.settings.compactMode ~= true)
+    ForeverAltsDB.settings.compactMode = (ForeverAltsDB.settings.compactMode ~= true)
     if self.ApplyLayoutSize then
         self:ApplyLayoutSize()
     end
     if self.Render then
         self:Render()
     end
-    return CLIAltsDB.settings.compactMode
+    return ForeverAltsDB.settings.compactMode
 end
 
 -- ----------------------------------------------------------------------------
 -- Helper: Primary Name & Secondary Name (WoW Forever Support & Identity Cache)
 -- ----------------------------------------------------------------------------
-function CLIAlts:CacheCurrentPlayer()
+function ForeverAlts:CacheCurrentPlayer()
     local primaryName, secondaryName = nil, nil
 
     -- 1. In WoW Forever, UnitName("player") returns (primaryName, secondaryName)
@@ -642,28 +644,28 @@ function CLIAlts:CacheCurrentPlayer()
     return primaryName, secondaryName, fullName
 end
 
-function CLIAlts:GetPlayerNames(force)
+function ForeverAlts:GetPlayerNames(force)
     if not force and self.curPlayerPrimary and self.curPlayerFullName then
         return self.curPlayerPrimary, self.curPlayerSecondary, self.curPlayerFullName
     end
     return self:CacheCurrentPlayer()
 end
 
-function CLIAlts:GetCurrentPlayer()
+function ForeverAlts:GetCurrentPlayer()
     if not self.curPlayerKey then
         self:CacheCurrentPlayer()
     end
-    if self.curPlayerKey and CLIAltsDB and CLIAltsDB.characters and CLIAltsDB.characters[self.curPlayerKey] then
-        return CLIAltsDB.characters[self.curPlayerKey]
+    if self.curPlayerKey and ForeverAltsDB and ForeverAltsDB.characters and ForeverAltsDB.characters[self.curPlayerKey] then
+        return ForeverAltsDB.characters[self.curPlayerKey]
     end
-    if CLIAltsDB and CLIAltsDB.characters then
-        local first = next(CLIAltsDB.characters)
-        if first then return CLIAltsDB.characters[first] end
+    if ForeverAltsDB and ForeverAltsDB.characters then
+        local first = next(ForeverAltsDB.characters)
+        if first then return ForeverAltsDB.characters[first] end
     end
     return nil
 end
 
-function CLIAlts:IsCurrentPlayer(char)
+function ForeverAlts:IsCurrentPlayer(char)
     if not char then return false end
     if not self.curPlayerKey then
         self:CacheCurrentPlayer()
@@ -734,7 +736,7 @@ function CLIAlts:IsCurrentPlayer(char)
     return false
 end
 
-function CLIAlts:GetCharacterKey(name, realm)
+function ForeverAlts:GetCharacterKey(name, realm)
     if not name or name == "" then
         local _, _, full = self:GetPlayerNames()
         name = full or "Unknown"
@@ -746,7 +748,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Data Collection: Professions
 -- ----------------------------------------------------------------------------
-function CLIAlts:CollectProfessions()
+function ForeverAlts:CollectProfessions()
     local primary = {}
     local secondary = {}
     local seen = {}
@@ -833,7 +835,7 @@ local liveMailCount = nil
 local liveMinMailDays = nil
 local liveMailCheckedTime = nil
 
-function CLIAlts:ScanMailInbox()
+function ForeverAlts:ScanMailInbox()
     pcall(function()
         if GetInboxNumItems and GetInboxHeaderInfo then
             local n = GetInboxNumItems() or 0
@@ -849,8 +851,8 @@ function CLIAlts:ScanMailInbox()
             liveMinMailDays = (n > 0 and minDays < 999) and minDays or nil
 
             local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
-            if curFull and CLIAltsDB and CLIAltsDB.characters then
-                local char = CLIAltsDB.characters[curFull] or CLIAltsDB.characters[self:GetCharacterKey(curFull)]
+            if curFull and ForeverAltsDB and ForeverAltsDB.characters then
+                local char = ForeverAltsDB.characters[curFull] or ForeverAltsDB.characters[self:GetCharacterKey(curFull)]
                 if char then
                     char.mailCount = liveMailCount
                     char.minMailDays = liveMinMailDays
@@ -861,7 +863,7 @@ function CLIAlts:ScanMailInbox()
     end)
 end
 
-function CLIAlts:CollectTradeCooldowns(existing)
+function ForeverAlts:CollectTradeCooldowns(existing)
     local cds = {}
     if existing then
         for k, v in pairs(existing) do cds[k] = v end
@@ -885,7 +887,7 @@ function CLIAlts:CollectTradeCooldowns(existing)
     return cds
 end
 
-function CLIAlts:CollectKnownRecipes(existing)
+function ForeverAlts:CollectKnownRecipes(existing)
     local recipes = {}
     if existing then
         for k, v in pairs(existing) do recipes[k] = v end
@@ -913,7 +915,7 @@ function CLIAlts:CollectKnownRecipes(existing)
     return recipes
 end
 
-function CLIAlts:CollectLockouts(existing)
+function ForeverAlts:CollectLockouts(existing)
     local locks = {}
     if existing then
         for k, v in pairs(existing) do locks[k] = v end
@@ -942,7 +944,7 @@ function CLIAlts:CollectLockouts(existing)
     return locks
 end
 
-function CLIAlts:CollectDungeonQuests(existing)
+function ForeverAlts:CollectDungeonQuests(existing)
     local completed = {}
     if existing and type(existing) == "table" then
         for qid, val in pairs(existing) do
@@ -982,7 +984,7 @@ function CLIAlts:CollectDungeonQuests(existing)
     return completed
 end
 
-function CLIAlts:CollectActiveDungeonQuests()
+function ForeverAlts:CollectActiveDungeonQuests()
     local active = {}
     pcall(function()
         if C_QuestLog and C_QuestLog.GetNumQuestLogEntries then
@@ -1006,14 +1008,14 @@ function CLIAlts:CollectActiveDungeonQuests()
     return active
 end
 
-function CLIAlts:CollectWatchlistCounts(existing)
+function ForeverAlts:CollectWatchlistCounts(existing)
     local counts = {}
-    local watchlist = (CLIAltsDB and CLIAltsDB.watchlist) or {}
-    if not CLIAltsDB or not CLIAltsDB.watchlist or #watchlist == 0 then
+    local watchlist = (ForeverAltsDB and ForeverAltsDB.watchlist) or {}
+    if not ForeverAltsDB or not ForeverAltsDB.watchlist or #watchlist == 0 then
         return counts
     end
 
-    -- Keep only existing counts that match an active item in CLIAltsDB.watchlist
+    -- Keep only existing counts that match an active item in ForeverAltsDB.watchlist
     if existing then
         for k, v in pairs(existing) do
             for _, item in ipairs(watchlist) do
@@ -1038,14 +1040,14 @@ function CLIAlts:CollectWatchlistCounts(existing)
     return counts
 end
 
-function CLIAlts:UpdateWatchCounts()
-    if not CLIAltsDB or not CLIAltsDB.characters then return end
+function ForeverAlts:UpdateWatchCounts()
+    if not ForeverAltsDB or not ForeverAltsDB.characters then return end
     local curKey = self.curPlayerKey
     if not curKey then
         local _, _, full = self:GetPlayerNames()
         curKey = full and self:GetCharacterKey(full)
     end
-    local char = curKey and CLIAltsDB.characters[curKey]
+    local char = curKey and ForeverAltsDB.characters[curKey]
     if char then
         char.watchlistCounts = self:CollectWatchlistCounts(char.watchlistCounts)
         if cachedCurrentChar and cachedCurrentChar ~= char then
@@ -1057,7 +1059,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Cross-Character Inventory Scanner & Query API (Feature 6)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetContainerItemData(bagID, slot)
+function ForeverAlts:GetContainerItemData(bagID, slot)
     local id = nil
     local count = 1
     local link = nil
@@ -1093,7 +1095,7 @@ function CLIAlts:GetContainerItemData(bagID, slot)
     return nil, 0, nil
 end
 
-function CLIAlts:GetNumContainerSlots(bagID)
+function ForeverAlts:GetNumContainerSlots(bagID)
     if C_Container and C_Container.GetContainerNumSlots then
         return C_Container.GetContainerNumSlots(bagID) or 0
     elseif GetContainerNumSlots then
@@ -1102,7 +1104,7 @@ function CLIAlts:GetNumContainerSlots(bagID)
     return 0
 end
 
-function CLIAlts:CollectInventory(existingInventory, forceScanBank)
+function ForeverAlts:CollectInventory(existingInventory, forceScanBank)
     local inventory = {}
     local isBankOpen = forceScanBank
     if isBankOpen == nil then
@@ -1194,8 +1196,8 @@ function CLIAlts:CollectInventory(existingInventory, forceScanBank)
     return inventory, isBankOpen
 end
 
-function CLIAlts:ScanCurrentInventory(scanBank)
-    if not CLIAltsDB or not CLIAltsDB.characters then return end
+function ForeverAlts:ScanCurrentInventory(scanBank)
+    if not ForeverAltsDB or not ForeverAltsDB.characters then return end
     local curKey = self.curPlayerKey
     if not curKey then
         local _, _, full = self:GetPlayerNames()
@@ -1203,7 +1205,7 @@ function CLIAlts:ScanCurrentInventory(scanBank)
     end
     if not curKey then return end
 
-    local char = CLIAltsDB.characters[curKey]
+    local char = ForeverAltsDB.characters[curKey]
     if not char then return end
 
     local inv, wasBankScanned = self:CollectInventory(char.inventory, scanBank)
@@ -1222,7 +1224,7 @@ function CLIAlts:ScanCurrentInventory(scanBank)
     end
 end
 
-function CLIAlts:GetItemInventorySummary(targetItem)
+function ForeverAlts:GetItemInventorySummary(targetItem)
     local itemID = self:ResolveWatchItem(targetItem)
     if not itemID or type(itemID) ~= "number" then
         return 0, {}
@@ -1264,7 +1266,7 @@ end
 local lastCollectTime = 0
 local collectPending = false
 
-function CLIAlts:CollectCurrentCharacter(isLogout, force)
+function ForeverAlts:CollectCurrentCharacter(isLogout, force)
     self:InitDB()
 
     local nowTime = (GetTime and GetTime()) or time()
@@ -1275,9 +1277,9 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
             if safeAfter then
                 safeAfter(1.0, function()
                     collectPending = false
-                    CLIAlts:CollectCurrentCharacter(false, true)
-                    if CLIAlts.RequestRender then
-                        CLIAlts:RequestRender()
+                    ForeverAlts:CollectCurrentCharacter(false, true)
+                    if ForeverAlts.RequestRender then
+                        ForeverAlts:RequestRender()
                     end
                 end)
             end
@@ -1313,7 +1315,7 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         locClass, classFile = UnitClass("player")
     end
 
-    local existing = CLIAltsDB.characters and (CLIAltsDB.characters[charKey] or CLIAltsDB.characters[fullName])
+    local existing = ForeverAltsDB.characters and (ForeverAltsDB.characters[charKey] or ForeverAltsDB.characters[fullName])
 
     local level = (UnitLevel and UnitLevel("player")) or 1
     local curXP = (UnitXP and UnitXP("player")) or 0
@@ -1441,10 +1443,10 @@ function CLIAlts:CollectCurrentCharacter(isLogout, force)
         logoutTime = (isLogout and now) or (existing and existing.logoutTime) or now,
     }
 
-    if not CLIAltsDB.characters then
-        CLIAltsDB.characters = {}
+    if not ForeverAltsDB.characters then
+        ForeverAltsDB.characters = {}
     end
-    CLIAltsDB.characters[charKey] = charData
+    ForeverAltsDB.characters[charKey] = charData
     cachedCurrentChar = charData
     if self.InvalidateRestedCache then
         self:InvalidateRestedCache()
@@ -1461,7 +1463,7 @@ end
 -- Rested Zone & Location Detection Helpers
 -- ----------------------------------------------------------------------------
 
-function CLIAlts:IsLocationResting(loc)
+function ForeverAlts:IsLocationResting(loc)
     if not loc or loc == "" then return false end
     local l = loc:lower()
 
@@ -1516,7 +1518,7 @@ function CLIAlts:IsLocationResting(loc)
     return false
 end
 
-function CLIAlts:IsCharacterResting(char)
+function ForeverAlts:IsCharacterResting(char)
     if not char then return false end
 
     -- 1. If currently logged in as this character, live IsResting() is authoritative
@@ -1548,7 +1550,7 @@ end
 -- Each rank gives +4% accumulation speed and +4% max rested cap (up to +20%).
 -- In WoW Forever, Legacy Points and perk selections are tracked individually per character.
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetWellRestedRank(char)
+function ForeverAlts:GetWellRestedRank(char)
     if self:IsRetail() then return 0 end
     if type(char) == "string" then
         char = self:FindCharacter(char)
@@ -1561,14 +1563,14 @@ function CLIAlts:GetWellRestedRank(char)
         return math.floor(r)
     end
     -- Fallback to global setting if set, else 0
-    local globalR = CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.wellRestedRank)
+    local globalR = ForeverAltsDB and ForeverAltsDB.settings and tonumber(ForeverAltsDB.settings.wellRestedRank)
     if globalR and globalR >= 0 and globalR <= 5 then
         return math.floor(globalR)
     end
     return 0
 end
 
-function CLIAlts:SetWellRestedRank(rank, charOrName)
+function ForeverAlts:SetWellRestedRank(rank, charOrName)
     if self:IsRetail() then
         self:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
         return false
@@ -1595,8 +1597,8 @@ function CLIAlts:SetWellRestedRank(rank, charOrName)
             self.selectedCharKey = char.fullName or char.name
         end
     else
-        CLIAltsDB.settings = CLIAltsDB.settings or {}
-        CLIAltsDB.settings.wellRestedRank = rank
+        ForeverAltsDB.settings = ForeverAltsDB.settings or {}
+        ForeverAltsDB.settings.wellRestedRank = rank
     end
 
     if self.InvalidateRestedCache then
@@ -1639,7 +1641,7 @@ function CLIAlts:SetWellRestedRank(rank, charOrName)
     return true
 end
 
-function CLIAlts:CycleWellRestedPerk(charOrName)
+function ForeverAlts:CycleWellRestedPerk(charOrName)
     if self:IsRetail() then
         self:Print("Well Rested perks are only available on WoW Forever (Retail uses baseline 150% rested rates).")
         return
@@ -1664,7 +1666,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Level Experience Progress (Current XP, Max XP, %, and ASCII Progress Bar)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetLevelProgressData(char)
+function ForeverAlts:GetLevelProgressData(char)
     if not char then return nil end
 
     local maxLevel = self:GetMaxLevel()
@@ -1744,7 +1746,7 @@ end
 local RESTED_CACHE_TTL = 1.0
 local restedDataCache = {}
 
-function CLIAlts:InvalidateRestedCache()
+function ForeverAlts:InvalidateRestedCache()
     if wipe then
         wipe(restedDataCache)
     else
@@ -1754,7 +1756,7 @@ function CLIAlts:InvalidateRestedCache()
     end
 end
 
-function CLIAlts:GetRestedData(char, force, nowOverride)
+function ForeverAlts:GetRestedData(char, force, nowOverride)
     if not char then return nil end
 
     local charKey = char.key or char.fullName or char.name or tostring(char)
@@ -1940,7 +1942,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Formatting Helpers
 -- ----------------------------------------------------------------------------
-function CLIAlts:FormatNumber(n)
+function ForeverAlts:FormatNumber(n)
     n = tonumber(n) or 0
     local formatted = tostring(math.floor(math.abs(n)))
     local k
@@ -1954,7 +1956,7 @@ function CLIAlts:FormatNumber(n)
     return formatted
 end
 
-function CLIAlts:StripColors(str)
+function ForeverAlts:StripColors(str)
     if not str then return "" end
     str = tostring(str)
     str = str:gsub("|c%x%x%x%x%x%x%x%x", "")
@@ -2003,12 +2005,12 @@ local function Utf8Sub(str, startChar, numChars)
     return str:sub(startByte, endByte)
 end
 
-function CLIAlts:VisibleLen(str)
+function ForeverAlts:VisibleLen(str)
     if not str then return 0 end
     return SafeStrLenUtf8(self:StripColors(str))
 end
 
-function CLIAlts:Pad(text, width, align, colorHex)
+function ForeverAlts:Pad(text, width, align, colorHex)
     text = tostring(text or "")
     if colorHex and not text:find("|c") then
         text = string.format("|cff%s%s|r", colorHex, text)
@@ -2040,7 +2042,7 @@ function CLIAlts:Pad(text, width, align, colorHex)
     end
 end
 
-function CLIAlts:FormatMoney(copper, colorize)
+function ForeverAlts:FormatMoney(copper, colorize)
     copper = tonumber(copper) or 0
     local gold = math.floor(copper / 10000)
     local silver = math.floor((copper % 10000) / 100)
@@ -2061,7 +2063,7 @@ function CLIAlts:FormatMoney(copper, colorize)
     end
 end
 
-function CLIAlts:FormatCoins(copper)
+function ForeverAlts:FormatCoins(copper)
     copper = tonumber(copper) or 0
     local gold = math.floor(copper / 10000)
     local silver = math.floor((copper % 10000) / 100)
@@ -2071,7 +2073,7 @@ function CLIAlts:FormatCoins(copper)
         self:FormatNumber(gold), silver, copperRem)
 end
 
-function CLIAlts:GetClassColor(classFile)
+function ForeverAlts:GetClassColor(classFile)
     local r, g, b = 1, 1, 1
     if RAID_CLASS_COLORS and classFile and RAID_CLASS_COLORS[classFile] then
         local c = RAID_CLASS_COLORS[classFile]
@@ -2094,12 +2096,12 @@ function CLIAlts:GetClassColor(classFile)
     return r, g, b, hex
 end
 
-function CLIAlts:ColorizePlayerName(name, classFile)
+function ForeverAlts:ColorizePlayerName(name, classFile)
     local _, _, _, hex = self:GetClassColor(classFile)
     return string.format("|cff%s%s|r", hex or "ffffff", name or "Unknown")
 end
 
-function CLIAlts:GetFactionTag(faction)
+function ForeverAlts:GetFactionTag(faction)
     local t = self.GetTheme and self:GetTheme()
     if faction == "Alliance" then
         return string.format("|cff%s[A]|r", (t and t.accentHex) or "57d6e8")
@@ -2110,7 +2112,7 @@ function CLIAlts:GetFactionTag(faction)
     end
 end
 
-function CLIAlts:GetTimeAgo(timestamp)
+function ForeverAlts:GetTimeAgo(timestamp)
     if not timestamp or timestamp == 0 then return "Unknown" end
     local elapsed = math.max(0, time() - timestamp)
     if elapsed < 60 then
@@ -2124,7 +2126,7 @@ function CLIAlts:GetTimeAgo(timestamp)
     end
 end
 
-function CLIAlts:FormatDateSafe(timestamp, fmt)
+function ForeverAlts:FormatDateSafe(timestamp, fmt)
     timestamp = tonumber(timestamp)
     if not timestamp or timestamp <= 0 then
         return "Unknown"
@@ -2143,17 +2145,17 @@ end
 -- ----------------------------------------------------------------------------
 -- CRUD Operations & Querying
 -- ----------------------------------------------------------------------------
-function CLIAlts:FindCharacter(query)
-    if not query or query == "" or not CLIAltsDB or not CLIAltsDB.characters then return nil, nil end
+function ForeverAlts:FindCharacter(query)
+    if not query or query == "" or not ForeverAltsDB or not ForeverAltsDB.characters then return nil, nil end
     local qLower = query:lower():match("^%s*(.-)%s*$")
     if qLower == "" then return nil, nil end
 
-    if CLIAltsDB.characters[query] then
-        return CLIAltsDB.characters[query], query
+    if ForeverAltsDB.characters[query] then
+        return ForeverAltsDB.characters[query], query
     end
 
     -- 1. Exact case-insensitive match on full name, key, or name
-    for k, char in pairs(CLIAltsDB.characters) do
+    for k, char in pairs(ForeverAltsDB.characters) do
         local full = (char.fullName or ""):lower()
         local keyLower = tostring(k):lower()
         local name = (char.name or ""):lower()
@@ -2164,7 +2166,7 @@ function CLIAlts:FindCharacter(query)
 
     -- 1b. Fallback exact match on primaryName only if query doesn't contain a space
     if not qLower:find(" ") then
-        for k, char in pairs(CLIAltsDB.characters) do
+        for k, char in pairs(ForeverAltsDB.characters) do
             local prim = (char.primaryName or ""):lower()
             if prim == qLower then
                 return char, k
@@ -2173,7 +2175,7 @@ function CLIAlts:FindCharacter(query)
     end
 
     -- 2. Prefix match (starts with query)
-    for k, char in pairs(CLIAltsDB.characters) do
+    for k, char in pairs(ForeverAltsDB.characters) do
         local name = (char.name or ""):lower()
         local full = (char.fullName or ""):lower()
         local prim = (char.primaryName or ""):lower()
@@ -2186,7 +2188,7 @@ function CLIAlts:FindCharacter(query)
     return nil, nil
 end
 
-function CLIAlts:SetCharacterNote(charQuery, noteText, printChat)
+function ForeverAlts:SetCharacterNote(charQuery, noteText, printChat)
     if not charQuery or charQuery == "" then
         local msg = "Usage: note <name> <text> (or 'clear' to remove)"
         if printChat then self:Print(msg) end
@@ -2235,30 +2237,30 @@ function CLIAlts:SetCharacterNote(charQuery, noteText, printChat)
     end
 end
 
-function CLIAlts:DeleteCharacter(charKey)
-    if not CLIAltsDB or not CLIAltsDB.characters or not charKey then return false end
-    if CLIAltsDB.characters[charKey] then
-        CLIAltsDB.characters[charKey] = nil
+function ForeverAlts:DeleteCharacter(charKey)
+    if not ForeverAltsDB or not ForeverAltsDB.characters or not charKey then return false end
+    if ForeverAltsDB.characters[charKey] then
+        ForeverAltsDB.characters[charKey] = nil
         return true
     end
     -- Fallback: check if char.fullName or char.name or key matches
-    for k, char in pairs(CLIAltsDB.characters) do
+    for k, char in pairs(ForeverAltsDB.characters) do
         if k == charKey or char.fullName == charKey or char.name == charKey then
-            CLIAltsDB.characters[k] = nil
+            ForeverAltsDB.characters[k] = nil
             return true
         end
     end
     return false
 end
 
-function CLIAlts:GetDaysInactive(char, now)
+function ForeverAlts:GetDaysInactive(char, now)
     if not char then return 0 end
     now = now or time()
     local last = char.lastUpdate or char.logoutTime or now
     return math.max(0, math.floor((now - last) / 86400))
 end
 
-function CLIAlts:IsCharStale(char, staleDays, now)
+function ForeverAlts:IsCharStale(char, staleDays, now)
     if not char then return false, 0 end
     -- The currently logged in character is NEVER stale
     local curKey = self.curPlayerKey
@@ -2270,20 +2272,20 @@ function CLIAlts:IsCharStale(char, staleDays, now)
         return false, 0
     end
 
-    staleDays = tonumber(staleDays) or (CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.staleDays)) or 30
+    staleDays = tonumber(staleDays) or (ForeverAltsDB and ForeverAltsDB.settings and tonumber(ForeverAltsDB.settings.staleDays)) or 30
     local days = self:GetDaysInactive(char, now)
     return days >= staleDays, days
 end
 
-function CLIAlts:GetPrunableCharacters(days, now)
+function ForeverAlts:GetPrunableCharacters(days, now)
     local list = {}
-    if not CLIAltsDB or not CLIAltsDB.characters then return 0, list end
+    if not ForeverAltsDB or not ForeverAltsDB.characters then return 0, list end
     days = tonumber(days) or 30
     now = now or time()
     local curKey = self.curPlayerKey
     local _, _, curFull = self:GetPlayerNames()
 
-    for k, c in pairs(CLIAltsDB.characters) do
+    for k, c in pairs(ForeverAltsDB.characters) do
         local isCurrent = (curKey and (k == curKey or c.fullName == curKey))
             or (curFull and (c.fullName == curFull or c.name == curFull))
         if not isCurrent then
@@ -2298,8 +2300,8 @@ function CLIAlts:GetPrunableCharacters(days, now)
     return #list, list
 end
 
-function CLIAlts:PruneCharacters(days, now)
-    if not CLIAltsDB or not CLIAltsDB.characters then return 0, {} end
+function ForeverAlts:PruneCharacters(days, now)
+    if not ForeverAltsDB or not ForeverAltsDB.characters then return 0, {} end
     days = tonumber(days) or 30
     now = now or time()
     local prunedKeys = {}
@@ -2307,7 +2309,7 @@ function CLIAlts:PruneCharacters(days, now)
     local curKey = self.curPlayerKey
     local _, _, curFull = self:GetPlayerNames()
 
-    for k, c in pairs(CLIAltsDB.characters) do
+    for k, c in pairs(ForeverAltsDB.characters) do
         local isCurrent = (curKey and (k == curKey or c.fullName == curKey))
             or (curFull and (c.fullName == curFull or c.name == curFull))
         if not isCurrent then
@@ -2321,7 +2323,7 @@ function CLIAlts:PruneCharacters(days, now)
     end
 
     for _, k in ipairs(prunedKeys) do
-        CLIAltsDB.characters[k] = nil
+        ForeverAltsDB.characters[k] = nil
     end
 
     if #prunedKeys > 0 then
@@ -2340,8 +2342,8 @@ end
 -- ----------------------------------------------------------------------------
 -- WoW Forever: Roster Categorization & Role Tagging (Component 1)
 -- ----------------------------------------------------------------------------
-function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
-    if not CLIAltsDB or not CLIAltsDB.characters then
+function ForeverAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
+    if not ForeverAltsDB or not ForeverAltsDB.characters then
         return false, "Database not initialized"
     end
     if not targetName or targetName == "" then
@@ -2353,7 +2355,7 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
 
     local foundChar = nil
     local foundKey = nil
-    for k, c in pairs(CLIAltsDB.characters) do
+    for k, c in pairs(ForeverAltsDB.characters) do
         local n = (c.name or k):lower()
         local f = (c.fullName or ""):lower()
         if n == cleanTarget or f == cleanTarget or n:find(cleanTarget, 1, true) then
@@ -2413,20 +2415,20 @@ function CLIAlts:SetCharacterRole(targetName, tier, supplyRole, targetLevel)
         foundChar.name or targetName, dispTier, foundChar.target_level, roleStr)
 end
 
-function CLIAlts:SetCharacterCohort(targetName, cohort, targetLevel)
+function ForeverAlts:SetCharacterCohort(targetName, cohort, targetLevel)
     return self:SetCharacterRole(targetName, cohort, nil, targetLevel)
 end
 
-function CLIAlts:SetCharacterSupplyRole(targetName, supplyRole)
+function ForeverAlts:SetCharacterSupplyRole(targetName, supplyRole)
     return self:SetCharacterRole(targetName, nil, supplyRole, nil)
 end
 
-function CLIAlts:FormatCohortSummary()
+function ForeverAlts:FormatCohortSummary()
     local core, res, bank = self:GetCohortCounts()
     return string.format("%d Core | %d Alt | %d Bank", core, res, bank)
 end
 
-function CLIAlts:CycleCharacterTier(char)
+function ForeverAlts:CycleCharacterTier(char)
     if not char then return "UNASSIGNED" end
     local cur = char.tier or "UNASSIGNED"
     local nextTier, nextTarget
@@ -2450,10 +2452,10 @@ function CLIAlts:CycleCharacterTier(char)
     return nextTier
 end
 
-function CLIAlts:GetCohortCounts()
+function ForeverAlts:GetCohortCounts()
     local core, res, bank, unassigned = 0, 0, 0, 0
-    if CLIAltsDB and CLIAltsDB.characters then
-        for _, c in pairs(CLIAltsDB.characters) do
+    if ForeverAltsDB and ForeverAltsDB.characters then
+        for _, c in pairs(ForeverAltsDB.characters) do
             local t = c.tier or "UNASSIGNED"
             if t == "CORE" then
                 core = core + 1
@@ -2469,7 +2471,7 @@ function CLIAlts:GetCohortCounts()
     return core, res, bank, unassigned
 end
 
-function CLIAlts:PrintRosterRoles()
+function ForeverAlts:PrintRosterRoles()
     self:Print("--- WoW Forever: Roster Cohorts & Roles ---")
     local chars = self:GetCharactersList("cohort", true)
     local groups = { CORE = {}, RESERVE = {}, BANK = {}, UNASSIGNED = {} }
@@ -2484,7 +2486,7 @@ function CLIAlts:PrintRosterRoles()
         if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
             DEFAULT_CHAT_FRAME:AddMessage(string.format("  |cffffd700%s|r (%d alts):", title, #list))
             for _, c in ipairs(list) do
-                local coloredName = CLIAlts:ColorizePlayerName(c.name, c.classFile)
+                local coloredName = ForeverAlts:ColorizePlayerName(c.name, c.classFile)
                 local tgt = c.target_level or defaultTgt
                 local lvl = c.level or 1
                 local reachedTag = (lvl >= tgt) and " |cff00ff66[Target Level Reached]|r" or ""
@@ -2509,9 +2511,9 @@ function CLIAlts:PrintRosterRoles()
     PrintGroup("UNASSIGNED ALTS", groups.UNASSIGNED, 60)
 end
 
-function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
+function ForeverAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     local list = {}
-    if not CLIAltsDB or not CLIAltsDB.characters then
+    if not ForeverAltsDB or not ForeverAltsDB.characters then
         return list
     end
 
@@ -2519,7 +2521,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     if query then query = query:lower():match("^%s*(.-)%s*$") end
     if query == "" then query = nil end
 
-    for key, char in pairs(CLIAltsDB.characters) do
+    for key, char in pairs(ForeverAltsDB.characters) do
         char.key = key
         local keep = true
         if query then
@@ -2578,10 +2580,10 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     if sortBy == nil and self:IsForeverMode() then
         sortBy = "cohort"
     else
-        sortBy = sortBy or (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortBy) or "level"
+        sortBy = sortBy or (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "level"
     end
-    if sortAsc == nil and CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.sortAsc ~= nil then
-        sortAsc = CLIAltsDB.settings.sortAsc
+    if sortAsc == nil and ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc ~= nil then
+        sortAsc = ForeverAltsDB.settings.sortAsc
     end
 
     local sortValues = {}
@@ -2755,7 +2757,7 @@ function CLIAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     return list
 end
 
-function CLIAlts:GetAccountSummary()
+function ForeverAlts:GetAccountSummary()
     local totalGold = 0
     local fullyRested = 0
     local nextFullAlt = nil
@@ -2792,7 +2794,7 @@ function CLIAlts:GetAccountSummary()
     }
 end
 
-function CLIAlts:GetRosterSummaryMetrics()
+function ForeverAlts:GetRosterSummaryMetrics()
     local chars = self:GetCharactersList()
     local totalAlts = #chars
     local totalGold = 0
@@ -2865,7 +2867,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Self-Calibrating Rested Model (Feature 1)
 -- ----------------------------------------------------------------------------
-function CLIAlts:ProjectRested(char, targetTimestamp, rankOverride, forceLogoutState)
+function ForeverAlts:ProjectRested(char, targetTimestamp, rankOverride, forceLogoutState)
     if not char then return 0 end
     local maxXP = char.maxXP or 0
     if maxXP <= 0 then return char.restedXP or 0 end
@@ -2897,7 +2899,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Self-Calibrating Rested Model (Feature 1)
 -- ----------------------------------------------------------------------------
-function CLIAlts:EvaluateCalibration(old, actualRested, curLevel, nowTimestamp, curRank, pendingRank)
+function ForeverAlts:EvaluateCalibration(old, actualRested, curLevel, nowTimestamp, curRank, pendingRank)
     if not old or not old.cleanLogout or not old.lastUpdate then
         return nil, 0, "NO_DATA"
     end
@@ -2960,38 +2962,38 @@ function CLIAlts:EvaluateCalibration(old, actualRested, curLevel, nowTimestamp, 
     return inferredRank, drift, confirmed and "CONFIRMED" or "PENDING"
 end
 
-function CLIAlts:CalibrateRestedModel()
+function ForeverAlts:CalibrateRestedModel()
     if not GetXPExhaustion or not UnitXPMax then return end
     local curFull = self.curPlayerFullName or (select(3, self:GetPlayerNames()))
-    if not curFull or not CLIAltsDB or not CLIAltsDB.characters then return end
+    if not curFull or not ForeverAltsDB or not ForeverAltsDB.characters then return end
 
     local charKey = self:GetCharacterKey(curFull)
-    local old = CLIAltsDB.characters[charKey]
+    local old = ForeverAltsDB.characters[charKey]
     if not old then return end
 
     local curLevel = (UnitLevel and UnitLevel("player")) or 1
     local actualRested = GetXPExhaustion() or 0
     local curRank = self:GetWellRestedRank(old)
-    local pendingRank = old.pendingCalibratedRank or (CLIAltsDB.settings and CLIAltsDB.settings.pendingCalibratedRank)
+    local pendingRank = old.pendingCalibratedRank or (ForeverAltsDB.settings and ForeverAltsDB.settings.pendingCalibratedRank)
 
     local inferredRank, drift, status = self:EvaluateCalibration(old, actualRested, curLevel, time(), curRank, pendingRank)
     if status == "MATCH" then
         old.pendingCalibratedRank = nil
-        if CLIAltsDB.settings then
-            CLIAltsDB.settings.pendingCalibratedRank = nil
+        if ForeverAltsDB.settings then
+            ForeverAltsDB.settings.pendingCalibratedRank = nil
         end
     elseif status == "PENDING" then
         old.pendingCalibratedRank = inferredRank
-        if CLIAltsDB.settings then
-            CLIAltsDB.settings.pendingCalibratedRank = inferredRank
+        if ForeverAltsDB.settings then
+            ForeverAltsDB.settings.pendingCalibratedRank = inferredRank
         end
     elseif status == "CONFIRMED" then
         old.wellRestedRank = inferredRank
         old.pendingCalibratedRank = nil
-        if CLIAltsDB.settings then
-            CLIAltsDB.settings.wellRestedRank = inferredRank
-            CLIAltsDB.settings.calibrated = true
-            CLIAltsDB.settings.pendingCalibratedRank = nil
+        if ForeverAltsDB.settings then
+            ForeverAltsDB.settings.wellRestedRank = inferredRank
+            ForeverAltsDB.settings.calibrated = true
+            ForeverAltsDB.settings.pendingCalibratedRank = nil
         end
         self:InvalidateRestedCache()
         self:Print(string.format("Rested model self-calibrated for %s (confirmed): Well Rested Rank %d (+%d%% speed, drift was %+.1f%%).",
@@ -3003,7 +3005,7 @@ end
 -- Self-Test Verification Suite (/clialts selftest)
 -- Note: Extracted to tests/selftest.lua to reduce production runtime footprint
 -- ----------------------------------------------------------------------------
-function CLIAlts:RunSelfTest()
+function ForeverAlts:RunSelfTest()
     if self.ExecuteSelfTest then
         return self:ExecuteSelfTest()
     end
@@ -3024,7 +3026,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Rested Waste Tracker & Next Alt Priority (Feature 2)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetRestedWaste(char, nowOverride, precalcRested)
+function ForeverAlts:GetRestedWaste(char, nowOverride, precalcRested)
     if not char then return 0, 0, "No waste", "0m" end
     local maxLevel = self:GetMaxLevel()
     local level = char.level or 1
@@ -3079,7 +3081,7 @@ end
 -- ----------------------------------------------------------------------------
 -- LibDataBroker Summary & Text Formatting (Feature 10)
 -- ----------------------------------------------------------------------------
-function CLIAlts:FormatWasteShort(waste)
+function ForeverAlts:FormatWasteShort(waste)
     waste = math.max(0, tonumber(waste) or 0)
     if waste >= 1000000 then
         local m = waste / 1000000
@@ -3095,7 +3097,7 @@ function CLIAlts:FormatWasteShort(waste)
     end
 end
 
-function CLIAlts:GetLDBText(now, charListOverride)
+function ForeverAlts:GetLDBText(now, charListOverride)
     local chars = charListOverride or self:GetCharactersList()
     local maxLevel = self:GetMaxLevel()
     local cappedCount = 0
@@ -3120,7 +3122,7 @@ function CLIAlts:GetLDBText(now, charListOverride)
     return text, cappedCount, totalWastedXP
 end
 
-function CLIAlts:CalculateRotationScore(char, nowOverride, precalcRested, precalcWastedXP)
+function ForeverAlts:CalculateRotationScore(char, nowOverride, precalcRested, precalcWastedXP)
     if not char then return -9999999 end
     local lvl = char.level or 1
     local maxLevel = self:GetMaxLevel()
@@ -3161,7 +3163,7 @@ function CLIAlts:CalculateRotationScore(char, nowOverride, precalcRested, precal
     end
 end
 
-function CLIAlts:GetNextAltsPriority(nowOverride, charListOverride)
+function ForeverAlts:GetNextAltsPriority(nowOverride, charListOverride)
     local chars = charListOverride or self:GetCharactersList()
     local scored = {}
     local maxLevel = self:GetMaxLevel()
@@ -3227,7 +3229,7 @@ function CLIAlts:GetNextAltsPriority(nowOverride, charListOverride)
     return scored
 end
 
-function CLIAlts:PrintNextAlts()
+function ForeverAlts:PrintNextAlts()
     local list = self:GetNextAltsPriority()
     if #list == 0 then
         if self:IsForeverMode() then
@@ -3256,7 +3258,7 @@ function CLIAlts:PrintNextAlts()
     end
 end
 
-function CLIAlts:CheckCappedAltsNotice()
+function ForeverAlts:CheckCappedAltsNotice()
     local list = self:GetNextAltsPriority()
     local capped = {}
     for _, item in ipairs(list) do
@@ -3279,7 +3281,7 @@ end
 -- ----------------------------------------------------------------------------
 -- WoW Forever: Profession Milestone Thresholds (Component 3)
 -- ----------------------------------------------------------------------------
-CLIAlts.PROFESSION_MILESTONES = {
+ForeverAlts.PROFESSION_MILESTONES = {
     { phase = "P1", milestone = 75,  rankTitle = "Apprentice", nextRank = "Journeyman", reqLevel = 5,  nextReqLevel = 10, minSkillToTrainNext = 50 },
     { phase = "P2", milestone = 150, rankTitle = "Journeyman", nextRank = "Expert",     reqLevel = 10, nextReqLevel = 20, minSkillToTrainNext = 125 },
     { phase = "P3", milestone = 225, rankTitle = "Expert",     nextRank = "Artisan",    reqLevel = 20, nextReqLevel = 35, minSkillToTrainNext = 200 },
@@ -3301,7 +3303,7 @@ local PROF_ABBREVIATIONS = {
     ["Fishing"]        = "Fish",
 }
 
-function CLIAlts:GetProfessionAbbr(profName)
+function ForeverAlts:GetProfessionAbbr(profName)
     if not profName or profName == "" then return "Prof" end
     if PROF_ABBREVIATIONS[profName] then return PROF_ABBREVIATIONS[profName] end
     local lowerName = profName:lower()
@@ -3313,7 +3315,7 @@ function CLIAlts:GetProfessionAbbr(profName)
     return profName:sub(1, 6)
 end
 
-function CLIAlts:GetProfessionMilestoneInfo(char, prof)
+function ForeverAlts:GetProfessionMilestoneInfo(char, prof)
     if not prof then return nil end
     local rank = tonumber(prof.rank) or 0
     local maxRank = tonumber(prof.maxRank) or 75
@@ -3401,7 +3403,7 @@ function CLIAlts:GetProfessionMilestoneInfo(char, prof)
     }
 end
 
-function CLIAlts:FormatProfessionMilestone(char, prof, compact)
+function ForeverAlts:FormatProfessionMilestone(char, prof, compact)
     local m = self:GetProfessionMilestoneInfo(char, prof)
     local t = self.GetTheme and self:GetTheme()
     local mutedHex = (t and t.mutedHex) or "a9a08c"
@@ -3432,7 +3434,7 @@ function CLIAlts:FormatProfessionMilestone(char, prof, compact)
     return string.format("%s: %d/%d [%s Target]", nameStr, m.rank, m.targetMilestone, m.targetPhase)
 end
 
-function CLIAlts:GetCharacterProfessionAlerts(char)
+function ForeverAlts:GetCharacterProfessionAlerts(char)
     local alerts = {}
     if not char or not char.professions or not char.professions.primary then
         return alerts
@@ -3472,7 +3474,7 @@ function CLIAlts:GetCharacterProfessionAlerts(char)
     return alerts
 end
 
-function CLIAlts:PrintProfessionMilestones()
+function ForeverAlts:PrintProfessionMilestones()
     self:Print("--- WoW Forever: Profession Milestones & Training Report ---")
     local chars = self:GetCharactersList("cohort", true)
     local totalAlerts = 0
@@ -3511,9 +3513,9 @@ end
 -- ----------------------------------------------------------------------------
 -- WoW Forever: Automated Dungeon Quest Tracker (Component 4)
 -- ----------------------------------------------------------------------------
-CLIAlts.DUNGEON_KEYS = { "RFC", "WC", "DM", "SFK", "BFD" }
+ForeverAlts.DUNGEON_KEYS = { "RFC", "WC", "DM", "SFK", "BFD" }
 
-CLIAlts.DUNGEON_DATA = {
+ForeverAlts.DUNGEON_DATA = {
     RFC = {
         tag = "RFC",
         name = "Ragefire Chasm",
@@ -3648,7 +3650,7 @@ CLIAlts.DUNGEON_DATA = {
     },
 }
 
-function CLIAlts:GetDungeonReadiness(char, dungeonTag)
+function ForeverAlts:GetDungeonReadiness(char, dungeonTag)
     if not char or not dungeonTag then return nil end
     local dng = self.DUNGEON_DATA and self.DUNGEON_DATA[dungeonTag:upper()]
     if not dng then return nil end
@@ -3748,7 +3750,7 @@ function CLIAlts:GetDungeonReadiness(char, dungeonTag)
     }
 end
 
-function CLIAlts:FormatDungeonStatusShort(char, dungeonTag)
+function ForeverAlts:FormatDungeonStatusShort(char, dungeonTag)
     local r = self:GetDungeonReadiness(char, dungeonTag)
     if not r then return "---" end
     local t = (self.GetTheme and self:GetTheme()) or {
@@ -3779,7 +3781,7 @@ function CLIAlts:FormatDungeonStatusShort(char, dungeonTag)
     return string.format("[%d/%d Quests]", r.completedQuests, r.totalQuests)
 end
 
-function CLIAlts:PrintDungeonReadiness(dungeonQuery)
+function ForeverAlts:PrintDungeonReadiness(dungeonQuery)
     local t = (self.GetTheme and self:GetTheme()) or {
         borderHex = "f2c94c",
         primaryHex = "ffd34e",
@@ -3864,7 +3866,7 @@ end
 -- ----------------------------------------------------------------------------
 -- WoW Forever: Inter-Alt Mail & Supply Chain Router (Component 5)
 -- ----------------------------------------------------------------------------
-CLIAlts.STANDARD_SUPPLY_ROLES = {
+ForeverAlts.STANDARD_SUPPLY_ROLES = {
     { key = "auto",     label = "Auto (Suggested by Professions)", role = nil },
     { key = "cloth",    label = "Cloth & Tailoring",              role = "Cloth (Tailor)" },
     { key = "herbs",    label = "Herbs & Alchemy",                role = "Herbs (Alch)" },
@@ -3877,7 +3879,7 @@ CLIAlts.STANDARD_SUPPLY_ROLES = {
     { key = "exclude",  label = "Exclude (No Mail Packages)",     role = "None" },
 }
 
-function CLIAlts:GetCharacterAutoSupplyRole(char)
+function ForeverAlts:GetCharacterAutoSupplyRole(char)
     if not char then return "None" end
     if char.tier == "BANK" then
         return "Bank Mule (Storage)"
@@ -3933,7 +3935,7 @@ function CLIAlts:GetCharacterAutoSupplyRole(char)
     return table.concat(roles, " · ")
 end
 
-function CLIAlts:GetCharacterEffectiveSupplyRole(char)
+function ForeverAlts:GetCharacterEffectiveSupplyRole(char)
     if not char then return "None", false, "None" end
     local autoRole = self:GetCharacterAutoSupplyRole(char)
     if char.supply_role and char.supply_role ~= "" and char.supply_role:lower() ~= "auto" then
@@ -3942,7 +3944,7 @@ function CLIAlts:GetCharacterEffectiveSupplyRole(char)
     return autoRole, false, autoRole
 end
 
-function CLIAlts:CycleCharacterSupplyRole(char)
+function ForeverAlts:CycleCharacterSupplyRole(char)
     if not char then return "Auto" end
     local cur = (char.supply_role or ""):lower()
     local nextRole, nextLabel
@@ -3985,7 +3987,7 @@ function CLIAlts:CycleCharacterSupplyRole(char)
     return nextLabel
 end
 
-function CLIAlts:GetCharacterPendingMail(char)
+function ForeverAlts:GetCharacterPendingMail(char)
     if not char then return 0, "No items" end
     if self:IsCurrentPlayer(char) then
         return 0, "Logged in"
@@ -4023,7 +4025,7 @@ function CLIAlts:GetCharacterPendingMail(char)
     return total, detail
 end
 
-function CLIAlts:GetCanonicalProfession(name)
+function ForeverAlts:GetCanonicalProfession(name)
     if not name or type(name) ~= "string" then return nil end
     local lower = name:lower():gsub("^%s+", ""):gsub("%s+$", "")
     if lower:find("tailor", 1, true) or lower:find("schneider", 1, true) or lower:find("coutur", 1, true) then
@@ -4056,7 +4058,7 @@ function CLIAlts:GetCanonicalProfession(name)
     return name
 end
 
-function CLIAlts:ProfessionsMatch(p1, p2)
+function ForeverAlts:ProfessionsMatch(p1, p2)
     if not p1 or not p2 then return false end
     local c1 = self:GetCanonicalProfession(p1)
     local c2 = self:GetCanonicalProfession(p2)
@@ -4068,16 +4070,16 @@ function CLIAlts:ProfessionsMatch(p1, p2)
     return l1 == l2 or l1:find(l2, 1, true) or l2:find(l1, 1, true)
 end
 
-function CLIAlts:IsMailCandidate(char)
+function ForeverAlts:IsMailCandidate(char)
     if not char or self:IsCurrentPlayer(char) then
         return false
     end
     local curChar = nil
-    if self.curPlayerKey and CLIAltsDB and CLIAltsDB.characters then
-        curChar = CLIAltsDB.characters[self.curPlayerKey]
+    if self.curPlayerKey and ForeverAltsDB and ForeverAltsDB.characters then
+        curChar = ForeverAltsDB.characters[self.curPlayerKey]
     end
-    if not curChar and self.curPlayerFullName and CLIAltsDB and CLIAltsDB.characters then
-        curChar = CLIAltsDB.characters[self.curPlayerFullName]
+    if not curChar and self.curPlayerFullName and ForeverAltsDB and ForeverAltsDB.characters then
+        curChar = ForeverAltsDB.characters[self.curPlayerFullName]
     end
 
     -- 1. Realm Isolation: Never mail across different realms in Classic / WoW Forever
@@ -4099,7 +4101,7 @@ function CLIAlts:IsMailCandidate(char)
     return true
 end
 
-function CLIAlts:ResolveCharacter(charOrName)
+function ForeverAlts:ResolveCharacter(charOrName)
     if not charOrName then
         return self:GetSelectedOrCurChar()
     end
@@ -4121,7 +4123,7 @@ function CLIAlts:ResolveCharacter(charOrName)
     return nil
 end
 
-function CLIAlts:ToggleCharacterCooking(charOrName)
+function ForeverAlts:ToggleCharacterCooking(charOrName)
     local char = self:ResolveCharacter(charOrName)
     if not char then
         self:Print("Character not found. Usage: |cff00ff66/fa cook <name>|r")
@@ -4136,7 +4138,7 @@ function CLIAlts:ToggleCharacterCooking(charOrName)
     return char.routeCooking
 end
 
-function CLIAlts:ToggleCharacterFirstAid(charOrName)
+function ForeverAlts:ToggleCharacterFirstAid(charOrName)
     local char = self:ResolveCharacter(charOrName)
     if not char then
         self:Print("Character not found. Usage: |cff00ff66/fa firstaid <name>|r")
@@ -4151,7 +4153,7 @@ function CLIAlts:ToggleCharacterFirstAid(charOrName)
     return char.routeFirstAid
 end
 
-function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
+function ForeverAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
     local chars = self:GetCharactersList("level", false)
     local bestChar = nil
     local bestScore = -1
@@ -4249,7 +4251,7 @@ function CLIAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
     return bestChar
 end
 
-function CLIAlts:FindBankMule()
+function ForeverAlts:FindBankMule()
     local chars = self:GetCharactersList("level", false)
     for _, c in ipairs(chars) do
         -- Never route mail to current player or cross-faction / cross-realm candidates
@@ -4264,7 +4266,7 @@ function CLIAlts:FindBankMule()
 end
 
 local scanTooltip = nil
-function CLIAlts:GetScanTooltip()
+function ForeverAlts:GetScanTooltip()
     if not scanTooltip and CreateFrame then
         pcall(function()
             local parent = UIParent or nil
@@ -4280,7 +4282,7 @@ function CLIAlts:GetScanTooltip()
     return scanTooltip
 end
 
-function CLIAlts:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
+function ForeverAlts:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
     if self._isScanningRecipe then
         return false, nil, nil
     end
@@ -4400,7 +4402,7 @@ function CLIAlts:ScanRecipeTooltip(itemID, itemLink, bagID, slot)
     return isKnown, (canonicalProf or reqProfession), reqSkill
 end
 
-function CLIAlts:GetRecipeCraftName(itemName)
+function ForeverAlts:GetRecipeCraftName(itemName)
     if not itemName or type(itemName) ~= "string" then return nil end
     local clean = itemName:match("^[Pp]attern:%s*(.+)$")
         or itemName:match("^[Rr]ecipe:%s*(.+)$")
@@ -4420,7 +4422,7 @@ function CLIAlts:GetRecipeCraftName(itemName)
     return clean or itemName
 end
 
-function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName, itemSubTypeStr, itemLink, bagID, slot)
+function ForeverAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName, itemSubTypeStr, itemLink, bagID, slot)
     local targetProfession = nil
     local preferredRole = nil
     local subID = tonumber(itemSubClassID)
@@ -4558,18 +4560,18 @@ function CLIAlts:GetRecipeProfessionAndRole(itemID, itemSubClassID, itemName, it
     return targetProfession, preferredRole
 end
 
-function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, itemID, learner, itemLink, bagID, slot)
+function ForeverAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, itemID, learner, itemLink, bagID, slot)
     local curChar = nil
-    if self.curPlayerKey and CLIAltsDB and CLIAltsDB.characters then
-        curChar = CLIAltsDB.characters[self.curPlayerKey]
+    if self.curPlayerKey and ForeverAltsDB and ForeverAltsDB.characters then
+        curChar = ForeverAltsDB.characters[self.curPlayerKey]
     end
-    if not curChar and self.curPlayerFullName and CLIAltsDB and CLIAltsDB.characters then
-        curChar = CLIAltsDB.characters[self.curPlayerFullName]
+    if not curChar and self.curPlayerFullName and ForeverAltsDB and ForeverAltsDB.characters then
+        curChar = ForeverAltsDB.characters[self.curPlayerFullName]
     end
     if not curChar and UnitName then
         local pName = UnitName("player")
-        if pName and CLIAltsDB and CLIAltsDB.characters then
-            for _, c in pairs(CLIAltsDB.characters) do
+        if pName and ForeverAltsDB and ForeverAltsDB.characters then
+            for _, c in pairs(ForeverAltsDB.characters) do
                 if c.name == pName or c.primaryName == pName then
                     curChar = c
                     break
@@ -4691,7 +4693,7 @@ function CLIAlts:ShouldCurrentPlayerLearnRecipe(targetProfession, craftName, ite
     return true
 end
 
-function CLIAlts:FindBestRecipeLearner(targetProfession, preferredRole, craftName, itemName)
+function ForeverAlts:FindBestRecipeLearner(targetProfession, preferredRole, craftName, itemName)
     local chars = self:GetCharactersList("level", false)
     local bestChar = nil
     local bestScore = -1
@@ -4803,13 +4805,13 @@ end
 -- ============================================================================
 -- Safe External API Wrappers (Permits clean unit testing without tainting globals)
 -- ============================================================================
-function CLIAlts.GetItemInfo(selfOrID, itemID)
+function ForeverAlts.GetItemInfo(selfOrID, itemID)
     local id = (type(selfOrID) == "table" and itemID) or selfOrID
     if GetItemInfo then return GetItemInfo(id) end
     return nil
 end
 
-function CLIAlts.GetItemInfoInstant(selfOrID, itemID)
+function ForeverAlts.GetItemInfoInstant(selfOrID, itemID)
     local id = (type(selfOrID) == "table" and itemID) or selfOrID
     if C_Item and C_Item.GetItemInfoInstant then
         return C_Item.GetItemInfoInstant(id)
@@ -4819,16 +4821,16 @@ function CLIAlts.GetItemInfoInstant(selfOrID, itemID)
     return nil
 end
 
-function CLIAlts.GetCursorInfo()
+function ForeverAlts.GetCursorInfo()
     if GetCursorInfo then return GetCursorInfo() end
     return nil
 end
 
-function CLIAlts:IsItemMailIgnored(itemID, itemName)
-    if not CLIAltsDB or not CLIAltsDB.settings or not CLIAltsDB.settings.ignoredMailItems then
+function ForeverAlts:IsItemMailIgnored(itemID, itemName)
+    if not ForeverAltsDB or not ForeverAltsDB.settings or not ForeverAltsDB.settings.ignoredMailItems then
         return false
     end
-    local list = CLIAltsDB.settings.ignoredMailItems
+    local list = ForeverAltsDB.settings.ignoredMailItems
     if itemID then
         if list[itemID] or list[tostring(itemID)] then
             return true
@@ -4850,9 +4852,9 @@ function CLIAlts:IsItemMailIgnored(itemID, itemName)
     return false
 end
 
-function CLIAlts:IgnoreMailItem(itemIdentifier)
-    if not CLIAltsDB or not CLIAltsDB.settings then return false end
-    CLIAltsDB.settings.ignoredMailItems = CLIAltsDB.settings.ignoredMailItems or {}
+function ForeverAlts:IgnoreMailItem(itemIdentifier)
+    if not ForeverAltsDB or not ForeverAltsDB.settings then return false end
+    ForeverAltsDB.settings.ignoredMailItems = ForeverAltsDB.settings.ignoredMailItems or {}
 
     local itemID
     local itemName
@@ -4918,10 +4920,10 @@ function CLIAlts:IgnoreMailItem(itemIdentifier)
 
     local cleanName = itemName or (itemID and ("Item #" .. tostring(itemID))) or "Unknown Item"
     if itemID then
-        CLIAltsDB.settings.ignoredMailItems[itemID] = cleanName
+        ForeverAltsDB.settings.ignoredMailItems[itemID] = cleanName
     end
     if itemName and itemName ~= "" then
-        CLIAltsDB.settings.ignoredMailItems[itemName:lower()] = true
+        ForeverAltsDB.settings.ignoredMailItems[itemName:lower()] = true
     end
 
     self:Print(string.format("|cff57d6e8[Mail Router]|r Added |cffffffff[%s]|r to mail ignore list. It will not be auto-routed or mailed.", cleanName))
@@ -4930,8 +4932,8 @@ function CLIAlts:IgnoreMailItem(itemIdentifier)
     return true, cleanName
 end
 
-function CLIAlts:UnignoreMailItem(itemIdentifier)
-    if not CLIAltsDB or not CLIAltsDB.settings or not CLIAltsDB.settings.ignoredMailItems then
+function ForeverAlts:UnignoreMailItem(itemIdentifier)
+    if not ForeverAltsDB or not ForeverAltsDB.settings or not ForeverAltsDB.settings.ignoredMailItems then
         self:Print("No items are currently in the mail ignore list.")
         return false
     end
@@ -4979,7 +4981,7 @@ function CLIAlts:UnignoreMailItem(itemIdentifier)
         if instantID then itemID = instantID end
     end
 
-    local list = CLIAltsDB.settings.ignoredMailItems
+    local list = ForeverAltsDB.settings.ignoredMailItems
     local removed = false
     local cleanName = itemName or (itemID and tostring(itemID)) or "Unknown Item"
 
@@ -5011,13 +5013,13 @@ function CLIAlts:UnignoreMailItem(itemIdentifier)
     end
 end
 
-function CLIAlts:ListIgnoredMailItems()
-    if not CLIAltsDB or not CLIAltsDB.settings or not CLIAltsDB.settings.ignoredMailItems then
+function ForeverAlts:ListIgnoredMailItems()
+    if not ForeverAltsDB or not ForeverAltsDB.settings or not ForeverAltsDB.settings.ignoredMailItems then
         self:Print("|cff57d6e8[Mail Router]|r No items are currently in the mail ignore list.")
         return 0
     end
 
-    local list = CLIAltsDB.settings.ignoredMailItems
+    local list = ForeverAltsDB.settings.ignoredMailItems
     local unique = {}
     for k, v in pairs(list) do
         if type(k) == "number" then
@@ -5043,20 +5045,20 @@ function CLIAlts:ListIgnoredMailItems()
     return #unique
 end
 
-function CLIAlts:ToggleAutoMailConsumables(enable)
-    if not CLIAltsDB or not CLIAltsDB.settings then return false end
+function ForeverAlts:ToggleAutoMailConsumables(enable)
+    if not ForeverAltsDB or not ForeverAltsDB.settings then return false end
     if enable == nil then
-        enable = not CLIAltsDB.settings.autoMailConsumables
+        enable = not ForeverAltsDB.settings.autoMailConsumables
     end
-    CLIAltsDB.settings.autoMailConsumables = (enable == true)
-    local stateStr = CLIAltsDB.settings.autoMailConsumables and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r (Safe: food/drink/potions kept in bags)"
+    ForeverAltsDB.settings.autoMailConsumables = (enable == true)
+    local stateStr = ForeverAltsDB.settings.autoMailConsumables and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r (Safe: food/drink/potions kept in bags)"
     self:Print(string.format("|cff57d6e8[Mail Router]|r Auto-routing of Consumables is now %s.", stateStr))
     if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
     if self.RequestRender then self:RequestRender() end
-    return CLIAltsDB.settings.autoMailConsumables
+    return ForeverAltsDB.settings.autoMailConsumables
 end
 
-function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassID, itemSubClassID, itemQuality, itemLink, bagID, slot)
+function ForeverAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassID, itemSubClassID, itemQuality, itemLink, bagID, slot)
     local itemID = tonumber(itemIdentifier)
     local itemName = nil
     local quality = itemQuality
@@ -5144,7 +5146,7 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     end
 
     -- Never auto-mail consumables (food, drink, potions, bandages) unless explicitly enabled
-    if classID == 0 and not (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.autoMailConsumables) then
+    if classID == 0 and not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.autoMailConsumables) then
         return nil
     end
 
@@ -5295,7 +5297,7 @@ function CLIAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemClassI
     }
 end
 
-function CLIAlts:GetMailReadySummary()
+function ForeverAlts:GetMailReadySummary()
     local summary = {
         totalPackages = 0,
         totalItems = 0,
@@ -5345,7 +5347,7 @@ function CLIAlts:GetMailReadySummary()
     return summary
 end
 
-function CLIAlts:PrintMailRouting()
+function ForeverAlts:PrintMailRouting()
     local summary = self:GetMailReadySummary()
     local t = (self.GetTheme and self:GetTheme()) or {
         borderHex = "f2c94c",
@@ -5386,7 +5388,7 @@ function CLIAlts:PrintMailRouting()
     return fb, true
 end
 
-function CLIAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
+function ForeverAlts:FillSendMailNextBatch(targetRecipient, isSimulated)
     if InCombatLockdown and InCombatLockdown() then
         self:Print("|cffff4444Cannot auto-fill mail while in combat.|r")
         return false, "In combat"
@@ -5570,9 +5572,9 @@ end
 -- ----------------------------------------------------------------------------
 -- WoW Forever: Custom Legacy Point (LP) Progress Tracker (Component 6)
 -- ----------------------------------------------------------------------------
-CLIAlts.LP_TIERS = { 10, 16, 18 }
+ForeverAlts.LP_TIERS = { 10, 16, 18 }
 
-function CLIAlts:CalculateCharacterLP(char)
+function ForeverAlts:CalculateCharacterLP(char)
     if not char then return 0.0, {} end
     if char.legacyPoints and tonumber(char.legacyPoints) then
         local manualPts = tonumber(char.legacyPoints)
@@ -5618,7 +5620,7 @@ function CLIAlts:CalculateCharacterLP(char)
     return pts, reasons
 end
 
-function CLIAlts:CalculateAccountLP()
+function ForeverAlts:CalculateAccountLP()
     local totalCalc = 0.0
     local breakdown = {}
     local chars = self:GetCharactersList("level", false)
@@ -5640,7 +5642,7 @@ function CLIAlts:CalculateAccountLP()
         end
     end
 
-    local manualLP = CLIAltsDB and CLIAltsDB.settings and tonumber(CLIAltsDB.settings.legacyPoints)
+    local manualLP = ForeverAltsDB and ForeverAltsDB.settings and tonumber(ForeverAltsDB.settings.legacyPoints)
     local effectiveLP = (manualLP and manualLP > 0) and manualLP or totalCalc
 
     local nextTier = 10
@@ -5672,11 +5674,11 @@ function CLIAlts:CalculateAccountLP()
     }
 end
 
-function CLIAlts:SetAccountLP(points)
-    if not CLIAltsDB then self:InitDB() end
-    if not CLIAltsDB.settings then CLIAltsDB.settings = {} end
+function ForeverAlts:SetAccountLP(points)
+    if not ForeverAltsDB then self:InitDB() end
+    if not ForeverAltsDB.settings then ForeverAltsDB.settings = {} end
     if not points or points == "" or points == "auto" or points == "reset" or points == "calc" then
-        CLIAltsDB.settings.legacyPoints = nil
+        ForeverAltsDB.settings.legacyPoints = nil
         local data = self:CalculateAccountLP()
         return string.format("Legacy Points reset to auto calculation (%.1f LP).", data.effectiveLP), true
     end
@@ -5684,12 +5686,12 @@ function CLIAlts:SetAccountLP(points)
     if not num or num < 0 or num > 50 then
         return "Usage: lp <points|auto> (e.g. lp 14 or lp auto)", false
     end
-    CLIAltsDB.settings.legacyPoints = num
+    ForeverAltsDB.settings.legacyPoints = num
     local data = self:CalculateAccountLP()
     return string.format("Legacy Points manually set to %.1f LP (Target: %d LP, %.1f needed).", num, data.nextTier, data.neededLP), true
 end
 
-function CLIAlts:SetCharacterLP(charOrName, points)
+function ForeverAlts:SetCharacterLP(charOrName, points)
     local char = nil
     if charOrName then
         if type(charOrName) == "table" then
@@ -5719,7 +5721,7 @@ function CLIAlts:SetCharacterLP(charOrName, points)
     return string.format("Legacy Points for %s set to %.1f LP.", char.name or "alt", num), true
 end
 
-function CLIAlts:PrintLegacyPointStatus(arg)
+function ForeverAlts:PrintLegacyPointStatus(arg)
     if arg and arg ~= "" then
         local a1, a2 = arg:match("^(%S+)%s+(%S+)$")
         if a1 and a2 then
@@ -5807,7 +5809,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Watchlist System (Feature 5)
 -- ----------------------------------------------------------------------------
-function CLIAlts:ResolveWatchItem(input)
+function ForeverAlts:ResolveWatchItem(input)
     if not input then return nil end
     if type(input) == "number" then return input end
     local str = tostring(input):match("^%s*(.-)%s*$")
@@ -5845,7 +5847,7 @@ function CLIAlts:ResolveWatchItem(input)
     return str
 end
 
-function CLIAlts:IsWatchItemMatch(existing, target)
+function ForeverAlts:IsWatchItemMatch(existing, target)
     if existing == nil or target == nil then return false end
     if existing == target then return true end
     if tostring(existing):lower() == tostring(target):lower() then return true end
@@ -5869,7 +5871,7 @@ function CLIAlts:IsWatchItemMatch(existing, target)
     return false
 end
 
-function CLIAlts:GetWatchItemPlainName(item)
+function ForeverAlts:GetWatchItemPlainName(item)
     if not item then return "Unknown" end
     local num = tonumber(item)
     if num and num > 0 then
@@ -5882,7 +5884,7 @@ function CLIAlts:GetWatchItemPlainName(item)
     return tostring(item)
 end
 
-function CLIAlts:GetWatchItemDisplayName(item)
+function ForeverAlts:GetWatchItemDisplayName(item)
     if not item then return "Unknown" end
     local num = tonumber(item)
     if num and num > 0 then
@@ -5900,26 +5902,26 @@ function CLIAlts:GetWatchItemDisplayName(item)
     return tostring(item)
 end
 
-function CLIAlts:AddWatchItem(input)
+function ForeverAlts:AddWatchItem(input)
     if not input or input == "" then return false, nil end
     local resolved = self:ResolveWatchItem(input)
     if not resolved then return false, nil end
 
-    CLIAltsDB.watchlist = CLIAltsDB.watchlist or {}
-    for _, existing in ipairs(CLIAltsDB.watchlist) do
+    ForeverAltsDB.watchlist = ForeverAltsDB.watchlist or {}
+    for _, existing in ipairs(ForeverAltsDB.watchlist) do
         if self:IsWatchItemMatch(existing, resolved) then
             return false, existing
         end
     end
 
-    table.insert(CLIAltsDB.watchlist, resolved)
+    table.insert(ForeverAltsDB.watchlist, resolved)
     self:UpdateWatchCounts()
     return true, resolved
 end
 
-function CLIAlts:CleanWatchlistCounts(removedItem, target)
-    if not CLIAltsDB or not CLIAltsDB.characters then return end
-    local watchlist = CLIAltsDB.watchlist or {}
+function ForeverAlts:CleanWatchlistCounts(removedItem, target)
+    if not ForeverAltsDB or not ForeverAltsDB.characters then return end
+    local watchlist = ForeverAltsDB.watchlist or {}
 
     local function cleanTable(counts)
         if not counts then return end
@@ -5957,7 +5959,7 @@ function CLIAlts:CleanWatchlistCounts(removedItem, target)
         end
     end
 
-    for _, char in pairs(CLIAltsDB.characters) do
+    for _, char in pairs(ForeverAltsDB.characters) do
         cleanTable(char.watchlistCounts)
     end
     if cachedCurrentChar then
@@ -5965,14 +5967,14 @@ function CLIAlts:CleanWatchlistCounts(removedItem, target)
     end
 end
 
-function CLIAlts:RemoveWatchItem(input)
-    if not input or not CLIAltsDB or not CLIAltsDB.watchlist then return false, nil end
+function ForeverAlts:RemoveWatchItem(input)
+    if not input or not ForeverAltsDB or not ForeverAltsDB.watchlist then return false, nil end
     local target = self:ResolveWatchItem(input) or input
     local found = false
     local removedItem = nil
     local newWatch = {}
 
-    for _, existing in ipairs(CLIAltsDB.watchlist) do
+    for _, existing in ipairs(ForeverAltsDB.watchlist) do
         if not found and self:IsWatchItemMatch(existing, target) then
             found = true
             removedItem = existing
@@ -5982,7 +5984,7 @@ function CLIAlts:RemoveWatchItem(input)
     end
 
     if found then
-        CLIAltsDB.watchlist = newWatch
+        ForeverAltsDB.watchlist = newWatch
         self:CleanWatchlistCounts(removedItem, target)
         self:UpdateWatchCounts()
     end
@@ -5990,8 +5992,8 @@ function CLIAlts:RemoveWatchItem(input)
     return found, (removedItem or target)
 end
 
-function CLIAlts:GetWatchlistSummary()
-    local watchlist = (CLIAltsDB and CLIAltsDB.watchlist) or {}
+function ForeverAlts:GetWatchlistSummary()
+    local watchlist = (ForeverAltsDB and ForeverAltsDB.watchlist) or {}
     local summary = {}
     local chars = self:GetCharactersList("name", true)
 
@@ -6026,7 +6028,7 @@ function CLIAlts:GetWatchlistSummary()
     return summary
 end
 
-function CLIAlts:PrintWatchlist()
+function ForeverAlts:PrintWatchlist()
     local summary = self:GetWatchlistSummary()
     if #summary == 0 then
         self:Print("Watchlist is empty. Use |cff00ff66/fa watch <Item Link, ID, or Name>|r to track specific items across alts.")
@@ -6050,9 +6052,9 @@ end
 -- ----------------------------------------------------------------------------
 -- Gold History & ASCII Sparkline (Feature 6)
 -- ----------------------------------------------------------------------------
-function CLIAlts:RecordGoldSnapshot()
-    if not CLIAltsDB then return end
-    CLIAltsDB.goldHistory = CLIAltsDB.goldHistory or {}
+function ForeverAlts:RecordGoldSnapshot()
+    if not ForeverAltsDB then return end
+    ForeverAltsDB.goldHistory = ForeverAltsDB.goldHistory or {}
 
     local summary = self:GetAccountSummary()
     local totalCopper = summary.totalGold or 0
@@ -6064,29 +6066,29 @@ function CLIAlts:RecordGoldSnapshot()
         self.sessionInitialCopper = totalCopper
     end
 
-    local last = CLIAltsDB.goldHistory[#CLIAltsDB.goldHistory]
+    local last = ForeverAltsDB.goldHistory[#ForeverAltsDB.goldHistory]
     if last and last.date == today then
         last.gold = totalGold
         last.copper = totalCopper
         last.time = now
     else
-        table.insert(CLIAltsDB.goldHistory, {
+        table.insert(ForeverAltsDB.goldHistory, {
             date = today,
             time = now,
             gold = totalGold,
             copper = totalCopper,
         })
-        while #CLIAltsDB.goldHistory > 90 do
-            table.remove(CLIAltsDB.goldHistory, 1)
+        while #ForeverAltsDB.goldHistory > 90 do
+            table.remove(ForeverAltsDB.goldHistory, 1)
         end
     end
 end
 
-function CLIAlts:GetGoldHistoryDeltas()
+function ForeverAlts:GetGoldHistoryDeltas()
     local summary = self:GetAccountSummary()
     local curCopper = summary.totalGold or 0
     local curGold = math.floor(curCopper / 10000)
-    local hist = (CLIAltsDB and CLIAltsDB.goldHistory) or {}
+    local hist = (ForeverAltsDB and ForeverAltsDB.goldHistory) or {}
     local now = time()
 
     local g1d, g7d, g30d = curGold, curGold, curGold
@@ -6128,9 +6130,9 @@ function CLIAlts:GetGoldHistoryDeltas()
     return d1, d7, d30, (found7d or hasHistory), (found7d and 7 or oldestDays)
 end
 
-function CLIAlts:GenerateAsciiSparkline(numChars)
+function ForeverAlts:GenerateAsciiSparkline(numChars)
     numChars = numChars or 14
-    local hist = (CLIAltsDB and CLIAltsDB.goldHistory) or {}
+    local hist = (ForeverAltsDB and ForeverAltsDB.goldHistory) or {}
     local ramp = { "_", ".", "-", "=", "*", "#" }
 
     if #hist == 0 then
@@ -6171,23 +6173,23 @@ end
 -- ----------------------------------------------------------------------------
 -- Login Digest & Alert Category System (Feature 7)
 -- ----------------------------------------------------------------------------
-function CLIAlts:IsAlertEnabled(category)
-    if not CLIAltsDB or not CLIAltsDB.settings then return true end
-    CLIAltsDB.settings.alerts = CLIAltsDB.settings.alerts or {}
-    local a = CLIAltsDB.settings.alerts
+function ForeverAlts:IsAlertEnabled(category)
+    if not ForeverAltsDB or not ForeverAltsDB.settings then return true end
+    ForeverAltsDB.settings.alerts = ForeverAltsDB.settings.alerts or {}
+    local a = ForeverAltsDB.settings.alerts
     if a[category] == nil then return true end
     return a[category] == true
 end
 
-function CLIAlts:ToggleAlert(category, explicitState)
-    if not CLIAltsDB or not CLIAltsDB.settings then return false end
-    CLIAltsDB.settings.alerts = CLIAltsDB.settings.alerts or {
+function ForeverAlts:ToggleAlert(category, explicitState)
+    if not ForeverAltsDB or not ForeverAltsDB.settings then return false end
+    ForeverAltsDB.settings.alerts = ForeverAltsDB.settings.alerts or {
         cooldowns = true,
         rested = true,
         mail = true,
         lockouts = true,
     }
-    local a = CLIAltsDB.settings.alerts
+    local a = ForeverAltsDB.settings.alerts
     if explicitState ~= nil then
         a[category] = (explicitState == true)
     else
@@ -6198,7 +6200,7 @@ function CLIAlts:ToggleAlert(category, explicitState)
     return a[category]
 end
 
-function CLIAlts:PrintAlertStatus()
+function ForeverAlts:PrintAlertStatus()
     self:Print("--- Login Alert Settings (/fa alerts <category>) ---")
     local cd = self:IsAlertEnabled("cooldowns") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
     local rest = self:IsAlertEnabled("rested") and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"
@@ -6211,7 +6213,7 @@ function CLIAlts:PrintAlertStatus()
     DEFAULT_CHAT_FRAME:AddMessage("  |cff888888Commands: /fa alerts [on|off|show|cd|rested|mail|locks]|r")
 end
 
-function CLIAlts:HandleAlertsCommand(arg)
+function ForeverAlts:HandleAlertsCommand(arg)
     arg = arg and arg:match("^%s*(.-)%s*$") or ""
     if arg == "" then
         self:PrintAlertStatus()
@@ -6220,14 +6222,14 @@ function CLIAlts:HandleAlertsCommand(arg)
 
     local lower = arg:lower()
     if lower == "on" or lower == "enable" or lower == "all" then
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.alerts = { cooldowns = true, rested = true, mail = true, lockouts = true }
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.alerts = { cooldowns = true, rested = true, mail = true, lockouts = true }
         end
         self:Print("All login alert categories |cff00ff66ENABLED|r.")
         return "All login alerts enabled."
     elseif lower == "off" or lower == "disable" or lower == "none" then
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.alerts = { cooldowns = false, rested = false, mail = false, lockouts = false }
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.alerts = { cooldowns = false, rested = false, mail = false, lockouts = false }
         end
         self:Print("All login alert categories |cffff4444DISABLED|r.")
         return "All login alerts disabled."
@@ -6267,7 +6269,7 @@ function CLIAlts:HandleAlertsCommand(arg)
     end
 end
 
-function CLIAlts:GetLoginDigestItems(nowOverride)
+function ForeverAlts:GetLoginDigestItems(nowOverride)
     local now = nowOverride or time()
     local items = {}
 
@@ -6467,7 +6469,7 @@ function CLIAlts:GetLoginDigestItems(nowOverride)
     return items
 end
 
-function CLIAlts:FormatLoginDigestLines(items)
+function ForeverAlts:FormatLoginDigestLines(items)
     local lines = {}
     if not items or #items == 0 then return lines end
 
@@ -6488,7 +6490,7 @@ function CLIAlts:FormatLoginDigestLines(items)
     return lines
 end
 
-function CLIAlts:PrintLoginDigest(force)
+function ForeverAlts:PrintLoginDigest(force)
     local items = self:GetLoginDigestItems()
     local border = "+-----------------[ ForeverAlts :: LOGIN DIGEST ]-----------------+"
     local bottom = "+-------------------------------------------------------------+"
@@ -6512,7 +6514,7 @@ function CLIAlts:PrintLoginDigest(force)
 end
 
 -- Backward compatibility helpers
-function CLIAlts:CheckCappedAltsAlert(forceDetailed)
+function ForeverAlts:CheckCappedAltsAlert(forceDetailed)
     if forceDetailed then
         self:CheckCappedAltsNotice()
     else
@@ -6520,7 +6522,7 @@ function CLIAlts:CheckCappedAltsAlert(forceDetailed)
     end
 end
 
-function CLIAlts:CheckMailExpiryAlert()
+function ForeverAlts:CheckMailExpiryAlert()
     -- Subsumed by PrintLoginDigest
 end
 
@@ -6533,7 +6535,7 @@ local function CsvQuote(val)
     return '"' .. s:gsub('"', '""') .. '"'
 end
 
-function CLIAlts:GenerateExportCSV()
+function ForeverAlts:GenerateExportCSV()
     local lines = {}
     table.insert(lines, "Name,Realm,Faction,Race,Class,Level,XP,MaxXP,RestedXP,RestedPct,RestedStatus,WastedXP,Gold,Silver,Copper,Prof1,Prof1Rank,Prof2,Prof2Rank,Location,Hearthstone,LastSeen,Note")
 
@@ -6591,7 +6593,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Leveling Session Planner & XP Tracking (Feature 10: > plan <hours>)
 -- ----------------------------------------------------------------------------
-function CLIAlts:InitSessionXP()
+function ForeverAlts:InitSessionXP()
     if not UnitXP or not UnitXPMax or not UnitLevel then return end
     local curXP = UnitXP("player") or 0
     local maxXP = UnitXPMax("player") or 0
@@ -6609,7 +6611,7 @@ function CLIAlts:InitSessionXP()
     }
 end
 
-function CLIAlts:UpdateSessionXP()
+function ForeverAlts:UpdateSessionXP()
     if not self.sessionXP then
         self:InitSessionXP()
         return
@@ -6655,7 +6657,7 @@ function CLIAlts:UpdateSessionXP()
 
 end
 
-function CLIAlts:FinalizeSessionXP()
+function ForeverAlts:FinalizeSessionXP()
     if not self.sessionXP or self.sessionXP.finalized then return end
     local now = time()
     local elapsed = now - (self.sessionXP.startTime or now)
@@ -6668,8 +6670,8 @@ function CLIAlts:FinalizeSessionXP()
             local _, _, full = self:GetPlayerNames()
             curKey = full and self:GetCharacterKey(full)
         end
-        if curKey and CLIAltsDB and CLIAltsDB.characters and CLIAltsDB.characters[curKey] then
-            local char = CLIAltsDB.characters[curKey]
+        if curKey and ForeverAltsDB and ForeverAltsDB.characters and ForeverAltsDB.characters[curKey] then
+            local char = ForeverAltsDB.characters[curKey]
             if char.xpHour and char.xpHour > 0 then
                 char.xpHour = math.floor(char.xpHour * 0.75 + currentRate * 0.25 + 0.5)
             else
@@ -6680,7 +6682,7 @@ function CLIAlts:FinalizeSessionXP()
     end
 end
 
-function CLIAlts:GetEstimatedXpHour(char)
+function ForeverAlts:GetEstimatedXpHour(char)
     if char and char.xpHour and char.xpHour > 0 then
         return char.xpHour, false
     end
@@ -6688,7 +6690,7 @@ function CLIAlts:GetEstimatedXpHour(char)
     return math.max(5000, math.floor(lvl * 650 + 4000)), true
 end
 
-function CLIAlts:EvaluateBurnRatio(restedBurned, restedXPGained, currentRatio, pendingRatio)
+function ForeverAlts:EvaluateBurnRatio(restedBurned, restedXPGained, currentRatio, pendingRatio)
     if not restedBurned or not restedXPGained or restedBurned < 1000 or restedXPGained <= 0 then
         return nil, 0, "SHORT_SAMPLE"
     end
@@ -6714,35 +6716,35 @@ function CLIAlts:EvaluateBurnRatio(restedBurned, restedXPGained, currentRatio, p
     return inferredRatio, drift, confirmed and "CONFIRMED" or "PENDING"
 end
 
-function CLIAlts:CheckBurnRatioDrift()
+function ForeverAlts:CheckBurnRatioDrift()
     if not self.sessionXP then return end
     local restedBurned = self.sessionXP.restedBurned or 0
     local restedXPGained = self.sessionXP.restedXPGained or 0
-    local curRatio = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.restedBurnRatio) or 0.5
-    local pendingRatio = CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.pendingBurnRatio
+    local curRatio = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.restedBurnRatio) or 0.5
+    local pendingRatio = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.pendingBurnRatio
 
     local inferred, drift, status = self:EvaluateBurnRatio(restedBurned, restedXPGained, curRatio, pendingRatio)
     if status == "MATCH" then
-        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.pendingBurnRatio = nil end
+        if ForeverAltsDB and ForeverAltsDB.settings then ForeverAltsDB.settings.pendingBurnRatio = nil end
     elseif status == "PENDING" then
-        if CLIAltsDB and CLIAltsDB.settings then CLIAltsDB.settings.pendingBurnRatio = inferred end
+        if ForeverAltsDB and ForeverAltsDB.settings then ForeverAltsDB.settings.pendingBurnRatio = inferred end
     elseif status == "CONFIRMED" then
-        if CLIAltsDB and CLIAltsDB.settings then
-            CLIAltsDB.settings.restedBurnRatio = inferred
-            CLIAltsDB.settings.pendingBurnRatio = nil
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            ForeverAltsDB.settings.restedBurnRatio = inferred
+            ForeverAltsDB.settings.pendingBurnRatio = nil
         end
         self:Print(string.format("Rested burn ratio self-calibrated (confirmed): %.2f (drift was %+.1f%%).",
             inferred, drift * 100))
     end
 end
 
-function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
+function ForeverAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
     targetHours = tonumber(targetHours) or 2
     if targetHours <= 0 then targetHours = 2 end
     local targetMinutes = math.floor(targetHours * 60 + 0.5)
 
     local now = nowTimestamp or time()
-    local burnRatio = (CLIAltsDB and CLIAltsDB.settings and CLIAltsDB.settings.restedBurnRatio) or 0.5
+    local burnRatio = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.restedBurnRatio) or 0.5
     local chars = mockChars or self:GetCharactersList()
     local candidates = {}
 
@@ -6853,7 +6855,7 @@ function CLIAlts:GenerateLevelingPlan(targetHours, mockChars, nowTimestamp)
     return schedule, summaryText, totalAllocated, targetMinutes
 end
 
-function CLIAlts:PrintPlan(targetHours)
+function ForeverAlts:PrintPlan(targetHours)
     local schedule, summaryText, totalAllocated, targetMinutes = self:GenerateLevelingPlan(targetHours)
     if #schedule == 0 then
         self:Print(summaryText)
@@ -6917,7 +6919,7 @@ local KNOWN_INSTANCES = {
     ["brd"] = { name = "Blackrock Depths", minLevel = 50 },
 }
 
-function CLIAlts:GetUnlockedAlts(query, nowTimestamp, mockChars)
+function ForeverAlts:GetUnlockedAlts(query, nowTimestamp, mockChars)
     if not query or query == "" then
         return nil, nil, nil, nil, "Usage: unlocked <instance> (e.g. unlocked \"Molten Core\")"
     end
@@ -7021,7 +7023,7 @@ function CLIAlts:GetUnlockedAlts(query, nowTimestamp, mockChars)
     return unlocked, locked, canonName, minLevel, nil
 end
 
-function CLIAlts:PrintUnlockedAlts(query, nowTimestamp, mockChars)
+function ForeverAlts:PrintUnlockedAlts(query, nowTimestamp, mockChars)
     local unlocked, locked, canonName, minLevel, errMsg = self:GetUnlockedAlts(query, nowTimestamp, mockChars)
     if errMsg then
         self:Print(errMsg)
@@ -7104,7 +7106,7 @@ end
 -- ----------------------------------------------------------------------------
 -- Automatic Bag Sorting & Stack Consolidation Engine (Feature 8)
 -- ----------------------------------------------------------------------------
-function CLIAlts:GetItemSortScore(itemID, count)
+function ForeverAlts:GetItemSortScore(itemID, count)
     itemID = tonumber(itemID)
     if not itemID or itemID <= 0 then
         return 990000000, "99_empty", 99
@@ -7189,7 +7191,7 @@ local function CanPickupContainerItem()
     return (C_Container and C_Container.PickupContainerItem) or PickupContainerItem
 end
 
-function CLIAlts:ConsolidateBagStacks()
+function ForeverAlts:ConsolidateBagStacks()
     if InCombatLockdown and InCombatLockdown() then return false end
     if CursorHasItem and CursorHasItem() then return false end
 
@@ -7248,7 +7250,7 @@ function CLIAlts:ConsolidateBagStacks()
     return didMerge
 end
 
-function CLIAlts:SortBags(forceInCombat)
+function ForeverAlts:SortBags(forceInCombat)
     if forceInCombat or (InCombatLockdown and InCombatLockdown()) then
         self:Print("|cffff4444Cannot sort bags while in combat.|r")
         return false
@@ -7295,7 +7297,7 @@ function CLIAlts:SortBags(forceInCombat)
     return self:StartCustomBagSort()
 end
 
-function CLIAlts:StopBagSort()
+function ForeverAlts:StopBagSort()
     if self.sortFrame then
         self.sortFrame:Hide()
     end
@@ -7303,7 +7305,7 @@ function CLIAlts:StopBagSort()
     if ClearCursor then ClearCursor() end
 end
 
-function CLIAlts:StartCustomBagSort()
+function ForeverAlts:StartCustomBagSort()
     if not CanPickupContainerItem() then
         self:Print("Bag sorting API not available on this client.")
         return false
@@ -7398,16 +7400,16 @@ function CLIAlts:StartCustomBagSort()
     sf:SetScript("OnUpdate", function(f, elapsed)
         if InCombatLockdown and InCombatLockdown() then
             f:Hide()
-            CLIAlts.isSortingBags = false
-            CLIAlts:Print("|cffff4444Bag sorting paused: In combat.|r")
+            ForeverAlts.isSortingBags = false
+            ForeverAlts:Print("|cffff4444Bag sorting paused: In combat.|r")
             return
         end
 
         local curTime = (GetTime and GetTime()) or 0
         if curTime > f.startTime + 15 then
             f:Hide()
-            CLIAlts.isSortingBags = false
-            CLIAlts:Print("Bag sorting timed out.")
+            ForeverAlts.isSortingBags = false
+            ForeverAlts:Print("Bag sorting timed out.")
             return
         end
 
@@ -7420,7 +7422,7 @@ function CLIAlts:StartCustomBagSort()
         local allMatched = true
 
         for idx, ref in ipairs(f.slotRefs) do
-            local itemID, count = CLIAlts:GetContainerItemData(ref.bag, ref.slot)
+            local itemID, count = ForeverAlts:GetContainerItemData(ref.bag, ref.slot)
             current[idx] = {
                 bag = ref.bag,
                 slot = ref.slot,
@@ -7482,12 +7484,12 @@ function CLIAlts:StartCustomBagSort()
 
         if allMatched then
             f:Hide()
-            CLIAlts.isSortingBags = false
+            ForeverAlts.isSortingBags = false
             if PlaySound and SOUNDKIT and SOUNDKIT.IG_BACKPACK_OPEN then
                 pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN)
             end
-            CLIAlts:Print("|cff00ff66Bags sorted successfully.|r")
-            if CLIAlts.RequestRender then CLIAlts:RequestRender() end
+            ForeverAlts:Print("|cff00ff66Bags sorted successfully.|r")
+            if ForeverAlts.RequestRender then ForeverAlts:RequestRender() end
         end
     end)
 
@@ -7500,16 +7502,16 @@ end
 -- Chat Layout Cloner Engine (Feature 16)
 -- ----------------------------------------------------------------------------
 
-function CLIAlts:CaptureChatSettings(charKey)
+function ForeverAlts:CaptureChatSettings(charKey)
     local targetKey = charKey or self.curPlayerKey
     if not targetKey then
         local _, _, full = self:GetPlayerNames()
         targetKey = full and self:GetCharacterKey(full)
     end
     if not targetKey then return false, "No character identified." end
-    if not CLIAltsDB or not CLIAltsDB.characters then return false, "DB not initialized." end
+    if not ForeverAltsDB or not ForeverAltsDB.characters then return false, "DB not initialized." end
 
-    local char = CLIAltsDB.characters[targetKey]
+    local char = ForeverAltsDB.characters[targetKey]
     if not char then
         -- Find or initialize record if collecting during early login
         local found = self:FindCharacter(targetKey)
@@ -7624,16 +7626,16 @@ function CLIAlts:CaptureChatSettings(charKey)
     return true, winCount
 end
 
-function CLIAlts:CopyChatSettings(sourceCharKey, targetCharKey)
+function ForeverAlts:CopyChatSettings(sourceCharKey, targetCharKey)
     if not sourceCharKey or sourceCharKey == "" then
         return false, "No source character selected."
     end
 
-    if not CLIAltsDB or not CLIAltsDB.characters then
+    if not ForeverAltsDB or not ForeverAltsDB.characters then
         return false, "Database not initialized."
     end
 
-    local sourceChar = CLIAltsDB.characters[sourceCharKey]
+    local sourceChar = ForeverAltsDB.characters[sourceCharKey]
     if not sourceChar then
         local found = self:FindCharacter(sourceCharKey)
         if found then
@@ -7734,13 +7736,13 @@ function CLIAlts:CopyChatSettings(sourceCharKey, targetCharKey)
     return true, string.format("Copied chat layout from %s (%d windows updated).", srcName, copiedCount)
 end
 
-function CLIAlts:GetChatProfilesList()
+function ForeverAlts:GetChatProfilesList()
     local list = {}
-    if not CLIAltsDB or not CLIAltsDB.characters then
+    if not ForeverAltsDB or not ForeverAltsDB.characters then
         return list
     end
 
-    for k, c in pairs(CLIAltsDB.characters) do
+    for k, c in pairs(ForeverAltsDB.characters) do
         if c.chatSettings and c.chatSettings.windows and next(c.chatSettings.windows) then
             local isCur = self:IsCurrentPlayer(c)
             table.insert(list, {
