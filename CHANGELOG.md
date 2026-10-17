@@ -5,6 +5,12 @@ All notable changes to **ForeverAlts** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-10-18
+
+### Fixed
+- **Combat Lockdown & Protected Action Taint (ADDON_ACTION_BLOCKED)**: Removed deprecated `SetOverrideBindingClick` and `ClearOverrideBindings` protected API calls from `OnShow`, `OnHide`, and `PLAYER_REGEN_DISABLED`. Window closing on ESC is handled natively via Blizzard's `UISpecialFrames` system without any taint or protected key overrides, allowing the addon to be opened, toggled, and closed smoothly during combat or high-load encounters without triggering UI action blocked errors.
+- **Combat Safety Test Coverage**: Added simulation of Blizzard's protected function combat enforcement in unit tests and automated regression assertions ensuring combat-safe Show/Hide lifecycle handling.
+
 ## [1.3.2] - 2026-10-17
 
 ### Fixed & Improved

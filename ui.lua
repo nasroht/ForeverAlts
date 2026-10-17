@@ -6503,7 +6503,7 @@ function ForeverAlts:ExecutePromptCommand(input)
         self:SetPromptFeedback("Help manual opened.")
 
     elseif cmd == "version" or cmd == "ver" then
-        local ver = tostring(self.VERSION or "1.3.2")
+        local ver = tostring(self.VERSION or "1.3.3")
         self:SetPromptFeedback(string.format("ForeverAlts Version: v%s", ver))
         self:PrintVersion()
 
