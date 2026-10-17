@@ -1929,7 +1929,7 @@ local COLS = {
         { key = "name",       title = "CHARACTER",         w = 30, pw = 280, cpw = 260, mpw = 280, align = "LEFT",   sort = "name",     fmt = FmtName },
         { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 78,  cpw = 70,  mpw = 78,  align = "CENTER", sort = "xp",       fmt = FmtCurXP, mono = true },
         { key = "circleRest", title = "RESTED XP",         w = 9,  pw = 76,  cpw = 70,  mpw = 76,  align = "CENTER", sort = "rested",   fmt = FmtRested, mono = true },
-        { key = "details",    title = "RESTED DETAILS",    w = 25, pw = 230, cpw = 200, mpw = 230, align = "LEFT",   sort = "rested",   fmt = FmtRestedPool },
+        { key = "details",    title = "TIME TO CAP",       w = 25, pw = 230, cpw = 200, mpw = 230, align = "LEFT",   sort = "waste",    fmt = FmtTimeToCap },
         { key = "gold",       title = "WEALTH",            w = 15, pw = 160, cpw = 140, mpw = 160, padRight = 16, cpadRight = 12, mpadRight = 16, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins, mono = true },
     },
     [2] = { -- 2: FOREVER ROUTE
@@ -3886,7 +3886,7 @@ function ForeverAlts:CreateModernMainFrame()
 
         local betaRateText = row:CreateFontString(nil, "OVERLAY")
         self:SetWidgetFont(betaRateText, 15, "", "mono")
-        betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 450, 6)
+        betaRateText:SetPoint("LEFT", row, "LEFT", 450, 0)
         betaRateText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         betaRateText:SetJustifyH("LEFT")
         betaRateText:SetWordWrap(false)
@@ -4662,33 +4662,15 @@ function ForeverAlts:RenderCharRow(row, char, derived)
         row.gaugeRest:Show()
     end
 
-    -- 6. Rested Details Text (Pool & Rate / Time to Cap, at x=450)
+    -- 6. Rested Details Text (Time to Cap, vertically centered at x=450)
     if row.betaPoolText then
-        self:SetWidgetFont(row.betaPoolText, 13, "OUTLINE", "mono")
-        row.betaPoolText:ClearAllPoints()
-        row.betaPoolText:SetPoint("TOPLEFT", row, "LEFT", 450, -6)
-        row.betaPoolText:SetPoint("RIGHT", row, "LEFT", 680, 0)
-        if rested and not rested.isMaxLevel then
-            local curR = rested.currentRested or 0
-            local maxR = rested.maxRested or 1
-            local est = rested.isEstimate and "~" or ""
-            row.betaPoolText:SetText(string.format("%s%s / %s XP", est, self:FormatNumber(curR), self:FormatNumber(maxR)))
-            if isCappedOrWasting then
-                row.betaPoolText:SetTextColor(warnR, warnG, warnB)
-            else
-                row.betaPoolText:SetTextColor(textR, textG, textB)
-            end
-        else
-            row.betaPoolText:SetText("Level Cap Reached")
-            row.betaPoolText:SetTextColor(mutedR, mutedG, mutedB)
-        end
-        row.betaPoolText:Show()
+        row.betaPoolText:Hide()
     end
 
     if row.betaRateText then
         self:SetWidgetFont(row.betaRateText, 15, "", "mono")
         row.betaRateText:ClearAllPoints()
-        row.betaRateText:SetPoint("BOTTOMLEFT", row, "LEFT", 450, 6)
+        row.betaRateText:SetPoint("LEFT", row, "LEFT", 450, 0)
         row.betaRateText:SetPoint("RIGHT", row, "LEFT", 680, 0)
         if rested and not rested.isMaxLevel then
             if isCappedOrWasting then
@@ -4700,15 +4682,26 @@ function ForeverAlts:RenderCharRow(row, char, derived)
                     row.betaRateText:SetTextColor(fillR, fillG, fillB)
                 end
             else
-                local xpPerHour = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
-                local isInn = char.loggedOutInRestZone
-                local locTag = isInn and "Inn" or "Wild · 4x in Inn"
                 local timeCap = rested.timeLeftStr or "---"
-                row.betaRateText:SetText(string.format("+%s XP/h (%s) · %s to cap", self:FormatNumber(xpPerHour), locTag, timeCap))
-                row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
+                if timeCap == "---" or timeCap == "" then
+                    row.betaRateText:SetText("---")
+                    row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
+                elseif timeCap:find("FULL") or timeCap:find("CAP") then
+                    row.betaRateText:SetText("At Cap (Ready to play)")
+                    row.betaRateText:SetTextColor(fillR, fillG, fillB)
+                elseif timeCap:sub(1, 1) == "~" then
+                    row.betaRateText:SetText(string.format("~Caps in %s", timeCap:sub(2)))
+                    row.betaRateText:SetTextColor(textR, textG, textB)
+                else
+                    row.betaRateText:SetText(string.format("Caps in %s", timeCap))
+                    row.betaRateText:SetTextColor(textR, textG, textB)
+                end
             end
+        elseif rested and rested.isMaxLevel then
+            row.betaRateText:SetText("Level Cap Reached")
+            row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
         else
-            row.betaRateText:SetText("No XP accumulation")
+            row.betaRateText:SetText("---")
             row.betaRateText:SetTextColor(mutedR, mutedG, mutedB)
         end
         row.betaRateText:Show()

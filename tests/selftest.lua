@@ -3874,8 +3874,10 @@ function ForeverAlts:RunSelfTest()
                     "ConsolidatedOverview: classRingInitial displays character level")
                 Assert(row1.classRingInitial.fontSize == 15, "ConsolidatedOverview: classRingInitial font size is 15")
             end
-            Assert(row1.betaPoolText:IsShown() == true, "ConsolidatedOverview: betaPoolText is shown on Overview row")
+            Assert(row1.betaPoolText:IsShown() == false, "ConsolidatedOverview: betaPoolText is hidden (only time to cap shown)")
             Assert(row1.betaRateText:IsShown() == true, "ConsolidatedOverview: betaRateText is shown on Overview row")
+            Assert(row1.betaRateText:GetText() ~= nil and (row1.betaRateText:GetText():find("Cap") ~= nil or row1.betaRateText:GetText():find("%d+d") ~= nil),
+                "ConsolidatedOverview: betaRateText displays time to cap format")
             if row1.statusPill then
                 Assert(row1.statusPill:IsShown() == false, "ConsolidatedOverview: statusPill is hidden on Overview")
             end
