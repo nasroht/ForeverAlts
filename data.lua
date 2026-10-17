@@ -3643,9 +3643,9 @@ function ForeverAlts:CycleCharacterSupplyRole(char)
 end
 
 function ForeverAlts:GetCharacterPendingMail(char)
-    if not char then return 0, "No items" end
+    if not char then return 0, "No items", nil end
     if self:IsCurrentPlayer(char) then
-        return 0, "Logged in"
+        return 0, "Logged in", nil
     end
     local summary = self._cachedMailReadySummary or self:GetMailReadySummary()
     local name = char.name
@@ -3662,7 +3662,7 @@ function ForeverAlts:GetCharacterPendingMail(char)
         end
     end
     if not grp or not grp.items or #grp.items == 0 then
-        return 0, "No items"
+        return 0, "No items", nil
     end
 
     local total = 0
@@ -3677,7 +3677,7 @@ function ForeverAlts:GetCharacterPendingMail(char)
     if #grp.items > 2 then
         detail = detail .. string.format(" (+%d more)", #grp.items - 2)
     end
-    return total, detail
+    return total, detail, grp.items
 end
 
 function ForeverAlts:GetCanonicalProfession(name)

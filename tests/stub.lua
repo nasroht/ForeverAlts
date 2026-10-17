@@ -364,6 +364,7 @@ C_QuestLog = C_QuestLog or {
 GetQuestsCompleted = GetQuestsCompleted or function(tbl) end
 GetItemInfo = GetItemInfo or function(id) return nil end
 GetItemInfoInstant = GetItemInfoInstant or function(id) return nil end
+GetItemQualityColor = GetItemQualityColor or function(q) return 1, 1, 1 end
 C_Item = C_Item or {
     GetItemInfoInstant = function(id) return nil end,
 }

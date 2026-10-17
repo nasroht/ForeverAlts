@@ -3067,9 +3067,59 @@ function ForeverAlts:CreateModernMainFrame()
     local mcPending = mailCard:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(mcPending, 13, "")
     mcPending:SetPoint("TOPLEFT", mcStream, "BOTTOMLEFT", 0, -3)
+    mcPending:SetPoint("RIGHT", mailCard, "RIGHT", -10, 0)
+    mcPending:SetWordWrap(false)
     mcPending:SetText("No pending materials in bags")
     mcPending:SetTextColor(mutedR, mutedG, mutedB)
     mailCard.pending = mcPending
+
+    mailCard:EnableMouse(true)
+    mailCard:SetScript("OnEnter", function(self)
+        local curT = ForeverAlts:GetTheme()
+        if self.SetBackdropColor then self:SetBackdropColor(curT.rowHover[1], curT.rowHover[2], curT.rowHover[3], 0.45) end
+        if not GameTooltip then return end
+        local selChar = ForeverAlts:GetSelectedOrCurChar()
+        if not selChar then return end
+        local pCount, _, pItems = ForeverAlts:GetCharacterPendingMail(selChar)
+        local curRole, isOverride = ForeverAlts:GetCharacterEffectiveSupplyRole(selChar)
+        local cName = selChar.fullName or selChar.name or "Character"
+
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine(string.format("%s: Mail & Supply Stream", cName), 1, 0.82, 0)
+        GameTooltip:AddLine(string.format("Assigned Stream: |cffffffff%s|r %s", curRole or "General", isOverride and "|cffffb547[OVERRIDE]|r" or "|cff57d6e8[AUTO]|r"), 0.8, 0.8, 0.8)
+
+        if pCount > 0 then
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine(string.format("Pending Materials in Bags (|cff55e39a%d items|r):", pCount), 0.8, 0.8, 0.8)
+            if pItems and #pItems > 0 then
+                local maxShow = 20
+                for i = 1, math.min(#pItems, maxShow) do
+                    local itm = pItems[i]
+                    local itmName = itm.name or (itm.link and itm.link:match("%[(.-)%]")) or "Item"
+                    local itmCount = itm.count or 1
+                    local itmLink = itm.link
+                    if itmLink and itmLink:find("|c") then
+                        GameTooltip:AddDoubleLine(itmLink, string.format("|cffffffffx%d|r", itmCount))
+                    else
+                        GameTooltip:AddDoubleLine(string.format("|cffffffff%s|r", itmName), string.format("|cffffffffx%d|r", itmCount))
+                    end
+                end
+                if #pItems > maxShow then
+                    GameTooltip:AddLine(string.format("|cffa9a08c... and %d more items|r", #pItems - maxShow))
+                end
+            end
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine("Open a mailbox to auto-fill these items for sending.", 0.7, 0.7, 0.7, true)
+        else
+            GameTooltip:AddLine("No matching trade materials currently in bags.", 0.7, 0.7, 0.7, true)
+        end
+        GameTooltip:Show()
+    end)
+    mailCard:SetScript("OnLeave", function(self)
+        local rR, rG, rB = ForeverAlts:Hex("raised")
+        if self.SetBackdropColor then self:SetBackdropColor(rR, rG, rB, 0.8) end
+        if GameTooltip then GameTooltip:Hide() end
+    end)
 
     local btnConfigRoute = CreateRetroButton(mailCard, "Configure", 100, 22, function()
         local char = ForeverAlts:GetSelectedOrCurChar()
@@ -4345,9 +4395,10 @@ function ForeverAlts:UpdateDetailPanel(charArg)
             dp.mailCard.stream:SetTextColor(textR, textG, textB)
         end
 
-        local pCount, pDetail = self:GetCharacterPendingMail(char)
+        local pCount = self:GetCharacterPendingMail(char)
         if pCount > 0 then
-            dp.mailCard.pending:SetText(string.format("%d items pending (%s)", pCount, pDetail))
+            local pStr = (pCount == 1) and "1 item pending" or string.format("%d items pending", pCount)
+            dp.mailCard.pending:SetText(pStr)
             dp.mailCard.pending:SetTextColor(fillR, fillG, fillB)
         else
             dp.mailCard.pending:SetText("No pending materials in bags")

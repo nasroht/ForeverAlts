@@ -4058,6 +4058,36 @@ function ForeverAlts:RunSelfTest()
         self:UpdateDetailPanel(nasGuile)
         Assert(mFrame.detailPanel.avatar.text:GetText() == "18", "OptionC: Dossier avatar square displays character level '18'")
         Assert(mFrame.detailPanel.sub:GetText() == "High Order Skyborne Rogue", "OptionC: Dossier subline displays only race and class 'High Order Skyborne Rogue'")
+
+        -- 9. Right Dossier Panel: Mail Card Concise Pending Count & Mouseover Tooltip
+        Assert(mFrame.detailPanel.mailCard ~= nil, "OptionC: detailPanel contains mailCard")
+        Assert(mFrame.detailPanel.mailCard:GetScript("OnEnter") ~= nil, "OptionC: mailCard has OnEnter script for tooltip inspection")
+        local oldMailSummary = self._cachedMailReadySummary
+        self._cachedMailReadySummary = {
+            totalPackages = 1,
+            totalItems = 31,
+            byRecipient = {
+                ["Nas Guile"] = {
+                    items = {
+                        { name = "Great Goretusk Snout", count = 5 },
+                        { name = "Crisp Spider Meat", count = 6 },
+                        { name = "Copper Ore", count = 20 },
+                    }
+                }
+            }
+        }
+        self:UpdateDetailPanel(nasGuile)
+        Assert(mFrame.detailPanel.mailCard.pending:GetText() == "31 items pending",
+            "OptionC: mailCard displays concise '31 items pending' instead of long list (got: " .. tostring(mFrame.detailPanel.mailCard.pending:GetText()) .. ")")
+        local enterOk = pcall(function()
+            mFrame.detailPanel.mailCard:GetScript("OnEnter")(mFrame.detailPanel.mailCard)
+        end)
+        Assert(enterOk == true, "OptionC: mailCard OnEnter executes cleanly")
+        local leaveOk = pcall(function()
+            mFrame.detailPanel.mailCard:GetScript("OnLeave")(mFrame.detailPanel.mailCard)
+        end)
+        Assert(leaveOk == true, "OptionC: mailCard OnLeave executes cleanly")
+        self._cachedMailReadySummary = oldMailSummary
     end
 
     -- 38. Tab 8 Embedded Settings Navigation Panel Engine Tests
