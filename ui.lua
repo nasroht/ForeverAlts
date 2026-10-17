@@ -1206,9 +1206,8 @@ function ForeverAlts:SetFontSize(size, skipScale)
     end
 end
 
-function ForeverAlts:UpdateAllFonts(fontSize)
+function ForeverAlts:UpdateAllFonts(_)
     if not mainFrame then return end
-    fontSize = fontSize or (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or DEFAULT_FONT_SIZE
 
     -- Modern UI: Keep fonts proportional and bound within column widths
     for _, row in ipairs(rowFrames) do
@@ -3999,7 +3998,6 @@ function ForeverAlts:RecreateMainFrame()
 end
 
 function ForeverAlts:GetVisibleCharactersList()
-    local activeTab = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.activeTab) or 1
     local activeSortBy = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "rested"
     local activeSortAsc = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc ~= nil) and ForeverAltsDB.settings.sortAsc or false
     return self:GetCharactersList(activeSortBy, activeSortAsc, self.activeFilter)
@@ -4768,7 +4766,6 @@ function ForeverAlts:Render(force)
     -- ------------------------------------------------------------------------
     local nextList = self:GetNextAltsPriority()
     self._cachedPriorityList = nextList
-    local topNext = nextList and nextList[1]
 
     if activeTab == 1 then
             if mainFrame.nextBanner then

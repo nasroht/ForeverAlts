@@ -9,7 +9,6 @@ _G["ForeverAlts"] = ForeverAlts
 _G["foreveralts"] = ForeverAlts
 _G["CLIAlts"] = ForeverAlts
 _G["clialts"] = ForeverAlts
-local CLIAlts = ForeverAlts
 
 -- Design Tokens (Base Phase 1 Tokens: Default Palette)
 ForeverAlts.TOKENS = {

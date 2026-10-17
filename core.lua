@@ -10,7 +10,6 @@ _G["ForeverAlts"] = ForeverAlts
 _G["foreveralts"] = ForeverAlts
 _G["CLIAlts"] = ForeverAlts
 _G["clialts"] = ForeverAlts
-local CLIAlts = ForeverAlts
 
 -- ForeverAlts:Print is canonical in data.lua
 
