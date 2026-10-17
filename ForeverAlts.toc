@@ -11,7 +11,10 @@
 ## X-Curse-Project-ID: 1747176
 
 data.lua
+modules/dungeon_data.lua
+modules/chat_cloner.lua
 theme.lua
 minimap.lua
 ui.lua
+modules/tour.lua
 core.lua

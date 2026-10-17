@@ -395,9 +395,18 @@ C_Timer = C_Timer or {
     NewTicker = function(sec, cb) return { Cancel = function() end } end,
 }
 
--- 4. Load ForeverAlts Addon Files in TOC order
 local addon = {}
-local files = { "data.lua", "theme.lua", "minimap.lua", "ui.lua", "core.lua", "tests/selftest.lua" }
+local files = {
+    "data.lua",
+    "modules/dungeon_data.lua",
+    "modules/chat_cloner.lua",
+    "theme.lua",
+    "minimap.lua",
+    "ui.lua",
+    "modules/tour.lua",
+    "core.lua",
+    "tests/selftest.lua",
+}
 
 print("============================================================")
 print("ForeverAlts CI Test Runner: Loading files under plain Lua 5.1...")
