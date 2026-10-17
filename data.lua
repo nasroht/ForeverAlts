@@ -32,12 +32,12 @@ end
 -- ----------------------------------------------------------------------------
 local addonVersion = (C_AddOns and C_AddOns.GetAddOnMetadata and (C_AddOns.GetAddOnMetadata("ForeverAlts", "Version") or C_AddOns.GetAddOnMetadata("clialts", "Version") or C_AddOns.GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
     or (GetAddOnMetadata and (GetAddOnMetadata("ForeverAlts", "Version") or GetAddOnMetadata("clialts", "Version") or GetAddOnMetadata(addonName or "ForeverAlts", "Version")))
-    or "1.3.0"
+    or "1.3.1"
 ForeverAlts.VERSION = addonVersion
 ForeverAlts = CLIAlts
 
 function ForeverAlts:PrintVersion()
-    local ver = tostring(self.VERSION or "1.3.0")
+    local ver = tostring(self.VERSION or "1.3.1")
     self:Print(string.format("ForeverAlts Version: |cff00ff66v%s|r (CurseForge Project #1747176)", ver))
     return ver
 end

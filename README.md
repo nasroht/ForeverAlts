@@ -47,9 +47,16 @@ ForeverAlts keeps useful information about your characters in one place:
 - **Dungeon lockouts** *(experimental; still needs testing)*
 - **Legacy rested perks**, configurable from 0 to 5 points per character
 
-### Combined Bags
+### Bags & Third-Party Bag Addon Compatibility
 
-There's also a small extra: ForeverAlts can sort your combined bags. Look for the little icon in the top-right corner.
+ForeverAlts includes a built-in bag auto-sort engine with a discreet `[S]` button attached to the top-right corner of Blizzard's default bag frames (supporting both combined and separate bag views).
+
+**Third-Party Bag Addon Auto-Detection**:
+If you use a dedicated bag management addon like **Bagnon**, **Baganator**, **AdiBags**, **ArkInventory**, **BetterBags**, **Inventorian**, **Combuctor**, or **LiteBag**:
+- ForeverAlts automatically detects it on login and disables its duplicate `[S]` button to prevent UI clutter.
+- On mouseover tooltips, ForeverAlts automatically suppresses duplicate alt item counts while **keeping its unique Inter-Alt Mail Router tags active** (`[Mail Router] Send to: Mule (Cloth)`).
+- If you ever uninstall or disable your third-party bag addon, ForeverAlts automatically restores its default sort button and item counts.
+- Full manual control is always available via `/fa sortbtn`, `/fa tooltip`, or the integrated Settings panel (`/fa config`).
 
 ---
 
@@ -130,6 +137,9 @@ You can type commands into the in-game chat (`/fa` or `/foreveralts`) or directl
 | `/fa mailignore <item>` | Add an item to the mail ignore list |
 | `/fa mailunignore <item>` | Remove an item from the mail ignore list |
 | `/fa mailconsumables` | Toggle auto-routing of food/water/potions (safe by default) |
+| `/fa sortbags` | Trigger bag auto-sort and consolidation |
+| `/fa sortbtn [reset]` | Toggle `[S]` sort button on bags (or reset auto-detection) |
+| `/fa tooltip [mail\|reset]` | Toggle alt count tooltips, mail router tags, or reset auto-detection |
 | `/fa perk [0-5] [alt]` | Set or cycle Well Rested legacy perk rank (0–5) for current or specified character |
 | `/fa watch <item>` | Add item to bag & bank watchlist tracker |
 | `/fa unwatch <item>` | Remove item from watchlist |

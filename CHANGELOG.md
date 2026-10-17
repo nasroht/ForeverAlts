@@ -5,6 +5,14 @@ All notable changes to **ForeverAlts** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-10-17
+
+### Added
+- **Third-Party Bag Addon Auto-Detection**: Added instantaneous in-memory detection of third-party bag management and alt tracking addons (`Bagnon`, `Baganator`, `AdiBags`, `ArkInventory`, `BetterBags`, `Inventorian`, `Combuctor`, `LiteBag`, `tdBag2`, `cargBags_Nivaya`, and `Altoholic`).
+- **Conflict Auto-Resolution for Bag Sort Button**: When a supported third-party bag addon is loaded, ForeverAlts automatically disables and hides its duplicate `[S]` sort button to eliminate interface clutter, issuing a single polite chat notice on first login.
+- **Granular Tooltip Split & Mail Router Tag Retention**: Split cross-character item hover tooltips into independent controls (`showAltCountTooltips` and `showMailRouteTooltips`). When Bagnon, Baganator, or Altoholic is detected, duplicate alt item counts are suppressed while **Inter-Alt Mail Router destination tags remain fully active** (`[Mail Router] Send to: <Alt> (<Reason>)`).
+- **Dynamic Auto-Restoration & Manual Overrides**: If third-party bag addons are uninstalled or disabled in the future, ForeverAlts automatically detects their removal on login and restores its default `[S]` button and alt item tooltips. Full manual control is supported via `/fa sortbtn`, `/fa tooltip`, and the Settings Dialog.
+
 ## [1.3.0] - 2026-10-17
 
 ### Added

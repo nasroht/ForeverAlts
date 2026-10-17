@@ -388,7 +388,7 @@ C_AddOns = C_AddOns or {
 }
 IsAddOnLoaded = IsAddOnLoaded or function(name) return false, true end
 GetAddOnMetadata = GetAddOnMetadata or function(addon, field)
-    if field == "Version" then return "1.3.0" end
+    if field == "Version" then return "1.3.1" end
     return nil
 end
 if C_AddOns and not C_AddOns.GetAddOnMetadata then
