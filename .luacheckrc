@@ -115,6 +115,7 @@ globals = {
     "GetBuildInfo",
     "C_AddOns",
     "GetAddOnMetadata",
+    "IsAddOnLoaded",
     "GetCVar",
     "GetCVarBool",
     "SetCVar",

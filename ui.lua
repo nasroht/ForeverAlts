@@ -6386,8 +6386,27 @@ function ForeverAlts:ExecutePromptCommand(input)
         self:SetPromptFeedback("Bag sort started.")
 
     elseif cmd == "sortbtn" or cmd == "sortbutton" then
-        local newState = self:ToggleBagSortButton()
-        self:SetPromptFeedback(string.format("Bag auto-sort button: %s", newState and "ENABLED" or "DISABLED"))
+        if arg and (arg:lower() == "reset" or arg:lower() == "auto") then
+            if ForeverAltsDB and ForeverAltsDB.settings then
+                ForeverAltsDB.settings.bagSortManualOverride = nil
+                ForeverAltsDB.settings.bagAddonNotified = nil
+            end
+            local detected = self:CheckBagAddonConflict(false)
+            if not detected then
+                self:ToggleBagSortButton(true, false)
+                self:SetPromptFeedback("Bag sort button reset to auto (ENABLED)")
+            else
+                self:SetPromptFeedback(string.format("Bag sort button reset to auto (DISABLED - %s)", detected))
+            end
+        else
+            local newState = self:ToggleBagSortButton(nil, true)
+            local detected = self.detectedBagAddon or (self.DetectThirdPartyBagAddon and self:DetectThirdPartyBagAddon())
+            if detected and newState then
+                self:SetPromptFeedback(string.format("Bag sort button: ENABLED (override with %s)", detected))
+            else
+                self:SetPromptFeedback(string.format("Bag auto-sort button: %s", newState and "ENABLED" or "DISABLED"))
+            end
+        end
 
     elseif cmd == "fillmail" or cmd == "mailfill" or cmd == "autofillmail" then
         local ok, who, cnt = self:FillSendMailNextBatch()
@@ -8151,7 +8170,7 @@ function ForeverAlts:CreateSettingsPanel()
 
         local btnSort = CreateRetroButton(sd, "Bag Sort Button: ENABLED", 310, 26, function()
             local cur = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showBagSortButton == false)
-            ForeverAlts:ToggleBagSortButton(not cur)
+            ForeverAlts:ToggleBagSortButton(not cur, true)
             ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnSort:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -336)
@@ -8394,7 +8413,18 @@ function ForeverAlts:UpdateSettingsDialog()
 
     local sortOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showBagSortButton == false)
     if settingsDialog.btnSort then
-        settingsDialog.btnSort.label:SetText(string.format("Bag Sort Button: %s", sortOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
+        local labelText
+        if sortOn then
+            labelText = "Bag Sort Button: |cff00ff66ENABLED|r"
+        else
+            local detected = ForeverAlts.detectedBagAddon or (ForeverAlts.DetectThirdPartyBagAddon and ForeverAlts:DetectThirdPartyBagAddon())
+            if detected then
+                labelText = string.format("Bag Sort Button: |cffff4444DISABLED|r |cff888888(%s)|r", detected)
+            else
+                labelText = "Bag Sort Button: |cffff4444DISABLED|r"
+            end
+        end
+        settingsDialog.btnSort.label:SetText(labelText)
     end
 
     local tipOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showInventoryTooltips == false)
@@ -8795,6 +8825,9 @@ end
 
 function ForeverAlts:InitBagSortButton()
     if InCombatLockdown and InCombatLockdown() then return nil end
+    if self.CheckBagAddonConflict then
+        self:CheckBagAddonConflict(true)
+    end
     if self.bagSortButton then
         self:UpdateBagSortButtonAnchor()
         return self.bagSortButton
@@ -8917,7 +8950,7 @@ function ForeverAlts:InitBagSortButton()
     return btn
 end
 
-function ForeverAlts:ToggleBagSortButton(enable)
+function ForeverAlts:ToggleBagSortButton(enable, isManual)
     if enable == nil then
         if ForeverAltsDB and ForeverAltsDB.settings then
             enable = not ForeverAltsDB.settings.showBagSortButton
@@ -8928,6 +8961,9 @@ function ForeverAlts:ToggleBagSortButton(enable)
 
     if ForeverAltsDB and ForeverAltsDB.settings then
         ForeverAltsDB.settings.showBagSortButton = enable
+        if isManual ~= false then
+            ForeverAltsDB.settings.bagSortManualOverride = true
+        end
     end
 
     if enable then

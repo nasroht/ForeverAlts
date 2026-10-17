@@ -384,13 +384,18 @@ GetBuildInfo = GetBuildInfo or function() return "1.15.5", "58238", "Jan 1 2026"
 C_AddOns = C_AddOns or {
     GetAddOnMemoryUsage = function(name) return 150.5 end,
     UpdateAddOnMemoryUsage = function() end,
+    IsAddOnLoaded = function(name) return false, true end,
 }
+IsAddOnLoaded = IsAddOnLoaded or function(name) return false, true end
 GetAddOnMetadata = GetAddOnMetadata or function(addon, field)
     if field == "Version" then return "1.3.0" end
     return nil
 end
 if C_AddOns and not C_AddOns.GetAddOnMetadata then
     C_AddOns.GetAddOnMetadata = GetAddOnMetadata
+end
+if C_AddOns and not C_AddOns.IsAddOnLoaded then
+    C_AddOns.IsAddOnLoaded = IsAddOnLoaded
 end
 C_Timer = C_Timer or {
     After = function(sec, cb) if cb then cb() end end,

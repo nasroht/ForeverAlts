@@ -3054,6 +3054,75 @@ function ForeverAlts:RunSelfTest()
         self:UpdateBagSortButtonAnchor()
     end
 
+    -- 25f. Third-Party Bag Addon Detection & Auto-Conflict Resolution (Option B)
+    do
+        local origIsAddonLoaded = self.IsAddonLoadedCheck
+        local loadedMock = {}
+        self.IsAddonLoadedCheck = function(s, name)
+            return loadedMock[name] == true
+        end
+
+        -- Case 1: No bag addon installed
+        loadedMock = {}
+        local detectedNone = self:DetectThirdPartyBagAddon()
+        Assert(detectedNone == nil, "DetectThirdPartyBagAddon: Returns nil when no bag addons loaded")
+
+        ForeverAltsDB.settings.showBagSortButton = true
+        ForeverAltsDB.settings.bagSortManualOverride = nil
+        ForeverAltsDB.settings.bagAddonNotified = nil
+        local d1, toggled1 = self:CheckBagAddonConflict(true)
+        Assert(d1 == nil and toggled1 == false, "CheckBagAddonConflict: No change when no bag addon detected")
+        Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Sort button remains enabled without third-party bag addon")
+
+        -- Case 2: User installs Bagnon (or Baganator, etc.) in the future
+        loadedMock["Bagnon"] = true
+        local detectedBagnon = self:DetectThirdPartyBagAddon()
+        Assert(detectedBagnon == "Bagnon", "DetectThirdPartyBagAddon: Detects Bagnon correctly")
+
+        local d2, toggled2 = self:CheckBagAddonConflict(false)
+        Assert(d2 == "Bagnon" and toggled2 == true, "CheckBagAddonConflict: Auto-disables sort button on detecting Bagnon")
+        Assert(ForeverAltsDB.settings.showBagSortButton == false, "CheckBagAddonConflict: showBagSortButton is false")
+        Assert(ForeverAltsDB.settings.bagAddonNotified == "Bagnon", "CheckBagAddonConflict: Records bagAddonNotified = 'Bagnon'")
+        Assert(sortBtn:IsShown() == false, "CheckBagAddonConflict: Hides [S] sort button frame")
+
+        -- Case 3: Subsequent login with Bagnon still loaded -> keeps disabled, toggled returns true
+        local d3, toggled3 = self:CheckBagAddonConflict(false)
+        Assert(d3 == "Bagnon" and toggled3 == true, "CheckBagAddonConflict: Stays disabled on subsequent login")
+        Assert(ForeverAltsDB.settings.showBagSortButton == false, "CheckBagAddonConflict: Remains disabled")
+
+        -- Case 4: Manual user override (/fa sortbtn or Settings Dialog)
+        local overrideState = self:ToggleBagSortButton(true, true)
+        Assert(overrideState == true, "ToggleBagSortButton(true, true): Explicit user action enables button")
+        Assert(ForeverAltsDB.settings.bagSortManualOverride == true, "ToggleBagSortButton: Sets bagSortManualOverride flag")
+
+        -- Subsequent conflict check respects manual override
+        local d4, toggled4 = self:CheckBagAddonConflict(false)
+        Assert(d4 == "Bagnon" and toggled4 == false, "CheckBagAddonConflict: Respects bagSortManualOverride, does not auto-toggle")
+        Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Manual override preserved")
+
+        -- Case 5: User clears manual override, and uninstalls Bagnon
+        ForeverAltsDB.settings.bagSortManualOverride = nil
+        ForeverAltsDB.settings.showBagSortButton = false
+        ForeverAltsDB.settings.bagAddonNotified = "Bagnon"
+        loadedMock["Bagnon"] = nil
+
+        local d5, toggled5 = self:CheckBagAddonConflict(false)
+        Assert(d5 == nil and toggled5 == false, "CheckBagAddonConflict: Detects removal of bag addon")
+        Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Automatically restores sort button when bag addon uninstalled")
+        Assert(ForeverAltsDB.settings.bagAddonNotified == nil, "CheckBagAddonConflict: Clears bagAddonNotified flag")
+
+        -- Case 6: Coverage of supported third-party bag addons
+        local testAddons = { "Baganator", "AdiBags", "ArkInventory", "BetterBags", "Inventorian", "Combuctor", "LiteBag", "tdBag2", "cargBags_Nivaya" }
+        for _, addonName in ipairs(testAddons) do
+            loadedMock = { [addonName] = true }
+            local found = self:DetectThirdPartyBagAddon()
+            Assert(found == addonName, string.format("DetectThirdPartyBagAddon: Detects %s", addonName))
+        end
+
+        -- Clean up mock
+        self.IsAddonLoadedCheck = origIsAddonLoaded
+    end
+
     -- Clean up mocks
     ForeverAltsDB = oldSortDB; ForeverAltsDB = ForeverAltsDB
     end

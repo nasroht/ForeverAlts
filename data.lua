@@ -436,7 +436,13 @@ function ForeverAlts:InitDB()
     ForeverAltsDB.settings.staleDays = tonumber(ForeverAltsDB.settings.staleDays) or 30
     ForeverAltsDB.settings.compactMode = (ForeverAltsDB.settings.compactMode == true)
     if ForeverAltsDB.settings.showInventoryTooltips == nil then ForeverAltsDB.settings.showInventoryTooltips = true end
-    if ForeverAltsDB.settings.showBagSortButton == nil then ForeverAltsDB.settings.showBagSortButton = true end
+    if ForeverAltsDB.settings.showBagSortButton == nil then
+        if self.DetectThirdPartyBagAddon and self:DetectThirdPartyBagAddon() then
+            ForeverAltsDB.settings.showBagSortButton = false
+        else
+            ForeverAltsDB.settings.showBagSortButton = true
+        end
+    end
     if ForeverAltsDB.settings.showMailAutoFillButton == nil then ForeverAltsDB.settings.showMailAutoFillButton = true end
     if ForeverAltsDB.settings.autoFillMailOnSend == nil then ForeverAltsDB.settings.autoFillMailOnSend = true end
     ForeverAltsDB.settings.ignoredMailItems = ForeverAltsDB.settings.ignoredMailItems or {}
@@ -6903,6 +6909,86 @@ function ForeverAlts:ConsolidateBagStacks()
         end
     end
     return didMerge
+end
+
+-- ----------------------------------------------------------------------------
+-- Third-Party Bag Addon Detection & Conflict Resolution
+-- ----------------------------------------------------------------------------
+local THIRD_PARTY_BAG_ADDONS = {
+    "Bagnon",
+    "Baganator",
+    "AdiBags",
+    "ArkInventory",
+    "BetterBags",
+    "Inventorian",
+    "Combuctor",
+    "LiteBag",
+    "tdBag2",
+    "cargBags_Nivaya",
+}
+
+function ForeverAlts:IsAddonLoadedCheck(addonName)
+    if not addonName then return false end
+    if C_AddOns and C_AddOns.IsAddOnLoaded then
+        local loaded = C_AddOns.IsAddOnLoaded(addonName)
+        if loaded then return true end
+    end
+    if rawget(_G, "IsAddOnLoaded") then
+        local loaded = IsAddOnLoaded(addonName)
+        if loaded then return true end
+    end
+    if rawget(_G, addonName) ~= nil then
+        return true
+    end
+    return false
+end
+
+function ForeverAlts:DetectThirdPartyBagAddon()
+    for _, name in ipairs(THIRD_PARTY_BAG_ADDONS) do
+        if self:IsAddonLoadedCheck(name) then
+            return name
+        end
+    end
+    return nil
+end
+
+function ForeverAlts:CheckBagAddonConflict(silent)
+    if not (ForeverAltsDB and ForeverAltsDB.settings) then return nil, false end
+    local detected = self:DetectThirdPartyBagAddon()
+    self.detectedBagAddon = detected
+
+    -- If user has manually overridden this setting via /fa sortbtn or Settings Dialog, respect their choice
+    if ForeverAltsDB.settings.bagSortManualOverride then
+        return detected, false
+    end
+
+    if detected then
+        ForeverAltsDB.settings.showBagSortButton = false
+        if self.bagSortButton then
+            self.bagSortButton:Hide()
+        end
+        if not silent and ForeverAltsDB.settings.bagAddonNotified ~= detected then
+            ForeverAltsDB.settings.bagAddonNotified = detected
+            if self.Print then
+                self:Print(string.format("Detected |cff00ff66%s|r. Bag sort button |cfff2c94c[S]|r has been automatically disabled to prevent conflicts (type |cff00ff66/fa sortbtn|r to re-enable).", detected))
+            end
+        end
+        return detected, true
+    else
+        -- No third-party bag addon detected
+        -- If it was previously auto-disabled by an addon that is now uninstalled/disabled, restore it
+        if ForeverAltsDB.settings.bagAddonNotified and ForeverAltsDB.settings.showBagSortButton == false then
+            ForeverAltsDB.settings.showBagSortButton = true
+            ForeverAltsDB.settings.bagAddonNotified = nil
+            if not silent and self.Print then
+                self:Print("No third-party bag addon detected. Restored bag sort button |cfff2c94c[S]|r.")
+            end
+            if self.bagSortButton then
+                self:UpdateBagSortButtonAnchor()
+            end
+        end
+        return nil, false
+    end
 end
 
 function ForeverAlts:SortBags(forceInCombat)

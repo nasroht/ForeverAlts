@@ -284,6 +284,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         -- Initialize item hover tooltip hooks & initial inventory scan (Feature 6)
         if ForeverAlts.InitTooltipHooks then ForeverAlts:InitTooltipHooks() end
         if ForeverAlts.ScanCurrentInventory then ForeverAlts:ScanCurrentInventory(false) end
+        if ForeverAlts.CheckBagAddonConflict then ForeverAlts:CheckBagAddonConflict(false) end
         if ForeverAlts.InitBagSortButton then ForeverAlts:InitBagSortButton() end
 
         -- Immediate snapshot
@@ -544,9 +545,28 @@ local function SlashHandler(msg)
         ForeverAlts:SortBags()
 
     elseif cmd == "sortbtn" or cmd == "sortbutton" then
-        local newState = ForeverAlts:ToggleBagSortButton()
-        local stateStr = newState and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
-        ForeverAlts:Print(string.format("Bag auto-sort button is now %s.", stateStr))
+        if arg and (arg:lower() == "reset" or arg:lower() == "auto") then
+            if ForeverAltsDB and ForeverAltsDB.settings then
+                ForeverAltsDB.settings.bagSortManualOverride = nil
+                ForeverAltsDB.settings.bagAddonNotified = nil
+            end
+            local detected = ForeverAlts:CheckBagAddonConflict(false)
+            if not detected then
+                ForeverAlts:ToggleBagSortButton(true, false)
+                ForeverAlts:Print("Bag sort button reset to automatic detection (|cff00ff66ENABLED|r - no bag addon detected).")
+            else
+                ForeverAlts:Print(string.format("Bag sort button reset to automatic detection (|cffff8800DISABLED|r - %s detected).", detected))
+            end
+        else
+            local newState = ForeverAlts:ToggleBagSortButton(nil, true)
+            local stateStr = newState and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+            local detected = ForeverAlts.detectedBagAddon or (ForeverAlts.DetectThirdPartyBagAddon and ForeverAlts:DetectThirdPartyBagAddon())
+            if detected and newState then
+                ForeverAlts:Print(string.format("Bag auto-sort button is now %s (manual override with %s loaded).", stateStr, detected))
+            else
+                ForeverAlts:Print(string.format("Bag auto-sort button is now %s.", stateStr))
+            end
+        end
 
     elseif cmd == "fillmail" or cmd == "autofillmail" or cmd == "mailfill" then
         ForeverAlts:FillSendMailNextBatch()
