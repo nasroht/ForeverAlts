@@ -4183,6 +4183,24 @@ function ForeverAlts:RunSelfTest()
         Assert(ttcSortedDesc[4].name == "WastingAlt", "TimeSortDesc: WastingAlt is 4th")
         Assert(ttcSortedDesc[5].name == "MaxLvlAlly", "TimeSortDesc: MaxLvlAlly cleanly grouped at the end")
 
+        -- 6. Overview Tab CHARACTER column sorts by level (highest first)
+        local overviewCols = self:GetColumns(1)
+        Assert(overviewCols[1].key == "name" and overviewCols[1].sort == "level",
+            "OverviewSort: CHARACTER column on Tab 1 defines sort='level'")
+        local restedCols = self:GetColumns(3)
+        Assert(restedCols[2].key == "name" and restedCols[2].sort == "name" and restedCols[3].key == "lvl" and restedCols[3].sort == "level",
+            "RestedCols: Tab 3 keeps separate name sort on CHARACTER and level sort on LVL")
+
+        -- 7. ToggleSortKey('level') defaults to sortAsc = false (60 -> 1 descending)
+        ForeverAltsDB.settings.sortBy = "name"
+        ForeverAltsDB.settings.sortAsc = true
+        self:ToggleSortKey("level")
+        Assert(ForeverAltsDB.settings.sortBy == "level" and ForeverAltsDB.settings.sortAsc == false,
+            "ToggleSortKey: 'level' defaults to sortAsc=false (highest level first)")
+        local levelSortedDesc = self:GetCharactersList("level", false)
+        Assert(levelSortedDesc[1].name == "MaxLvlAlly" and levelSortedDesc[2].name == "BigAlt10" and levelSortedDesc[5].name == "SmallAlt150",
+            "LevelSort: orders 60 -> 55 -> 30 -> 20 -> 10 descending")
+
         ForeverAltsDB = oldSortDB
         self:InvalidateRestedCache()
     end

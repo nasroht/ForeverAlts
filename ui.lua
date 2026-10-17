@@ -1940,7 +1940,7 @@ ForeverAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
     [1] = { -- 1: OVERVIEW (Consolidated Dashboard with Dual Circular Gauges)
-        { key = "name",       title = "CHARACTER",         w = 30, pw = 280, cpw = 260, mpw = 280, align = "LEFT",   sort = "name",      fmt = FmtName },
+        { key = "name",       title = "CHARACTER",         w = 30, pw = 280, cpw = 260, mpw = 280, align = "LEFT",   sort = "level",     fmt = FmtName },
         { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 78,  cpw = 70,  mpw = 78,  align = "CENTER", sort = "xp",        fmt = FmtCurXP, mono = true },
         { key = "circleRest", title = "RESTED XP",         w = 9,  pw = 76,  cpw = 70,  mpw = 76,  align = "CENTER", sort = "rested",    fmt = FmtRested, mono = true },
         { key = "details",    title = "TIME TO CAP",       w = 25, pw = 230, cpw = 200, mpw = 230, align = "LEFT",   sort = "timetocap", fmt = FmtTimeToCap },
@@ -5895,7 +5895,7 @@ function ForeverAlts:ToggleSortKey(key)
             ForeverAltsDB.settings.sortAsc = not ForeverAltsDB.settings.sortAsc
         else
             ForeverAltsDB.settings.sortBy = key
-            ForeverAltsDB.settings.sortAsc = (key == "name" or key == "level" or key == "prof" or key == "role" or key == "timetocap" or key == "waste" or key == "time" or key == "ttc" or key == "cd" or key == "cooldown")
+            ForeverAltsDB.settings.sortAsc = (key == "name" or key == "prof" or key == "role" or key == "timetocap" or key == "waste" or key == "time" or key == "ttc" or key == "cd" or key == "cooldown")
         end
     end
     PlayRetroSound()
