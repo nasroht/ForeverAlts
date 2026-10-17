@@ -5,6 +5,20 @@ All notable changes to **ForeverAlts** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-10-17
+
+### Added
+- **Instant ESC Key Dismissal**: Pressing `ESC` anywhere while viewing the addon cleanly dismisses open dialogs, clears input focus, or closes the main panel immediately without opening the World of Warcraft game menu.
+- **Overview Table View Toggle**: Added interactive `[ View: Gauges | View: Table ]` view toggle button to the filter bar and `/fa view` slash command, allowing instant switching between visual gauges and condensed analysis columns.
+- **Pending Mail Tooltip Inspection**: Hovering over the pending mail counter on character cards now reveals a full itemized tooltip breakdown including item names, stack counts, and quality color borders.
+
+### Improved & Fixed
+- **UI Strata & HUD Elevation (`DIALOG`)**: Elevated the main window to the `DIALOG` frame strata, ensuring it renders strictly above action bars, custom HUDs, combat text, and unit frames; elevated all overlay modals to `FULLSCREEN_DIALOG`.
+- **Rested Accumulation Rate Consistency**: Unified rested rate calculations across the entire interface. The character dossier now displays the exact offline resting accrual rate (`+146 XP/hr`) matching the gauge hover tooltips rather than active combat grinding rates.
+- **Streamlined Time to Cap Column**: Replaced redundant numeric rested pool values in the Overview table with a single, vertically centered **TIME TO CAP** countdown (`Caps in ...`, `At Cap`, or `Level Cap Reached`).
+- **Dossier Avatar & Identity Simplification**: Replaced the placeholder avatar initial with the character's level badge and simplified the identity subline to cleanly show race and class.
+- **Engine Performance**: Added reusable scratch buffers and column metadata caching to eliminate table render allocations.
+
 ## [1.2.2] - 2026-10-16
 
 ### Added

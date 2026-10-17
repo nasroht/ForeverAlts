@@ -2,7 +2,7 @@
 ## Title: |cff00ff66ForeverAlts|r - WoW Forever Alt Manager
 ## Notes: Purpose-built for World of Warcraft: Forever. Retro terminal alt dashboard, Well Rested perk optimization, leveling cohorts & milestones, automated dungeon quest tracker, Legacy Point calculator, and inter-alt supply chain router.
 ## Author: ForeverAlts
-## Version: 1.2.2
+## Version: 1.3.0
 ## SavedVariables: ForeverAltsDB, CLIAltsDB
 ## OptionalDeps: LibDataBroker-1.1
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
