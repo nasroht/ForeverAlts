@@ -1448,6 +1448,7 @@ function ForeverAlts:CollectCurrentCharacter(isLogout, force)
     end
     ForeverAltsDB.characters[charKey] = charData
     cachedCurrentChar = charData
+    self.cachedCurrentChar = charData
     if self.InvalidateRestedCache then
         self:InvalidateRestedCache()
     end

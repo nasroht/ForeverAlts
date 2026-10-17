@@ -127,8 +127,9 @@ function ForeverAlts:CaptureChatSettings(charKey)
     }
 
     char.chatSettings = snapshot
-    if cachedCurrentChar and (cachedCurrentChar.key == targetKey or cachedCurrentChar.name == targetKey or cachedCurrentChar.fullName == targetKey) then
-        cachedCurrentChar.chatSettings = snapshot
+    local cached = self.cachedCurrentChar
+    if cached and (cached.key == targetKey or cached.name == targetKey or cached.fullName == targetKey) then
+        cached.chatSettings = snapshot
     end
 
     return true, winCount
