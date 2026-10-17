@@ -917,9 +917,36 @@ local function SlashHandler(msg)
         ForeverAlts:Print(ok and ("|cff00ff66" .. msg .. "|r") or ("|cffff4444" .. msg .. "|r"))
 
     elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
-        ForeverAltsDB.settings.showInventoryTooltips = (ForeverAltsDB.settings.showInventoryTooltips == false)
-        local state = ForeverAltsDB.settings.showInventoryTooltips and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
-        ForeverAlts:Print(string.format("Inventory hover tooltips are now %s.", state))
+        if arg and (arg:lower() == "reset" or arg:lower() == "auto") then
+            if ForeverAltsDB and ForeverAltsDB.settings then
+                ForeverAltsDB.settings.tooltipCountManualOverride = nil
+                ForeverAltsDB.settings.tooltipAddonNotified = nil
+            end
+            local detected = ForeverAlts:CheckBagAddonConflict(false)
+            if not detected then
+                if ForeverAlts.ToggleAltCountTooltips then ForeverAlts:ToggleAltCountTooltips(true, false) end
+                ForeverAlts:Print("Alt count tooltips reset to automatic detection (|cff00ff66ENABLED|r - no conflict detected).")
+            else
+                ForeverAlts:Print(string.format("Alt count tooltips reset to automatic detection (|cffff8800DISABLED|r - %s detected).", detected))
+            end
+        elseif arg and (arg:lower() == "mail" or arg:lower() == "route") then
+            local newState = ForeverAlts.ToggleMailRouteTooltips and ForeverAlts:ToggleMailRouteTooltips()
+            local stateStr = newState and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+            ForeverAlts:Print(string.format("Mail router hover tags on tooltips are now %s.", stateStr))
+        else
+            local newState = ForeverAlts.ToggleAltCountTooltips and ForeverAlts:ToggleAltCountTooltips(nil, true)
+            if newState == nil then
+                ForeverAltsDB.settings.showAltCountTooltips = (ForeverAltsDB.settings.showAltCountTooltips == false)
+                newState = ForeverAltsDB.settings.showAltCountTooltips
+            end
+            local stateStr = newState and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
+            local detected = ForeverAlts.detectedAltCountAddon or (ForeverAlts.DetectAltCountTooltipAddon and ForeverAlts:DetectAltCountTooltipAddon())
+            if detected and newState then
+                ForeverAlts:Print(string.format("Alt item count tooltips are now %s (manual override with %s loaded). Mail router tags remain |cff00ff66ENABLED|r.", stateStr, detected))
+            else
+                ForeverAlts:Print(string.format("Alt item count tooltips are now %s. Mail router tags remain |cff00ff66ENABLED|r.", stateStr))
+            end
+        end
 
     elseif cmd == "view" or cmd == "mode" or cmd == "overview" then
         if arg == "table" or arg == "gauges" then

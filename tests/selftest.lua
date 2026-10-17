@@ -3068,8 +3068,12 @@ function ForeverAlts:RunSelfTest()
         Assert(detectedNone == nil, "DetectThirdPartyBagAddon: Returns nil when no bag addons loaded")
 
         ForeverAltsDB.settings.showBagSortButton = true
+        ForeverAltsDB.settings.showAltCountTooltips = true
+        ForeverAltsDB.settings.showMailRouteTooltips = true
         ForeverAltsDB.settings.bagSortManualOverride = nil
+        ForeverAltsDB.settings.tooltipCountManualOverride = nil
         ForeverAltsDB.settings.bagAddonNotified = nil
+        ForeverAltsDB.settings.tooltipAddonNotified = nil
         local d1, toggled1 = self:CheckBagAddonConflict(true)
         Assert(d1 == nil and toggled1 == false, "CheckBagAddonConflict: No change when no bag addon detected")
         Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Sort button remains enabled without third-party bag addon")
@@ -3078,40 +3082,84 @@ function ForeverAlts:RunSelfTest()
         loadedMock["Bagnon"] = true
         local detectedBagnon = self:DetectThirdPartyBagAddon()
         Assert(detectedBagnon == "Bagnon", "DetectThirdPartyBagAddon: Detects Bagnon correctly")
+        local detectedAltBagnon = self:DetectAltCountTooltipAddon()
+        Assert(detectedAltBagnon == "Bagnon", "DetectAltCountTooltipAddon: Detects Bagnon correctly")
 
         local d2, toggled2 = self:CheckBagAddonConflict(false)
         Assert(d2 == "Bagnon" and toggled2 == true, "CheckBagAddonConflict: Auto-disables sort button on detecting Bagnon")
         Assert(ForeverAltsDB.settings.showBagSortButton == false, "CheckBagAddonConflict: showBagSortButton is false")
+        Assert(ForeverAltsDB.settings.showAltCountTooltips == false, "CheckBagAddonConflict: Option A automatically disables duplicate alt count tooltips")
+        Assert(ForeverAltsDB.settings.showMailRouteTooltips == true, "CheckBagAddonConflict: Option A preserves showMailRouteTooltips = true")
         Assert(ForeverAltsDB.settings.bagAddonNotified == "Bagnon", "CheckBagAddonConflict: Records bagAddonNotified = 'Bagnon'")
         Assert(sortBtn:IsShown() == false, "CheckBagAddonConflict: Hides [S] sort button frame")
 
-        -- Case 3: Subsequent login with Bagnon still loaded -> keeps disabled, toggled returns true
-        local d3, toggled3 = self:CheckBagAddonConflict(false)
-        Assert(d3 == "Bagnon" and toggled3 == true, "CheckBagAddonConflict: Stays disabled on subsequent login")
-        Assert(ForeverAltsDB.settings.showBagSortButton == false, "CheckBagAddonConflict: Remains disabled")
+        -- Test Option A tooltip behavior: alt counts suppressed, mail router tags kept
+        do
+            local testTip = {
+                lines = {},
+                AddDoubleLine = function(s, l, r) table.insert(s.lines, { left = l, right = r }) end,
+                Show = function() end,
+            }
+            self:AddInventoryInfoToTooltip(testTip, 14047)
+            local hasAltCount = false
+            for _, line in ipairs(testTip.lines) do
+                if line.left and line.left:find("Alts with Item") then
+                    hasAltCount = true
+                end
+            end
+            Assert(hasAltCount == false, "AddInventoryInfoToTooltip: Option A suppresses duplicate alt count block when Bagnon detected")
+        end
 
-        -- Case 4: Manual user override (/fa sortbtn or Settings Dialog)
+        -- Case 3: Subsequent login with Bagnon still loaded -> keeps disabled, toggled returns false (already disabled)
+        local d3, toggled3 = self:CheckBagAddonConflict(false)
+        Assert(d3 == "Bagnon" and toggled3 == false, "CheckBagAddonConflict: Stays disabled on subsequent login without re-toggling")
+        Assert(ForeverAltsDB.settings.showBagSortButton == false, "CheckBagAddonConflict: Remains disabled")
+        Assert(ForeverAltsDB.settings.showAltCountTooltips == false, "CheckBagAddonConflict: Alt count tooltips remain disabled")
+
+        -- Case 4: Manual user override (/fa sortbtn and /fa tooltip or Settings Dialog)
         local overrideState = self:ToggleBagSortButton(true, true)
         Assert(overrideState == true, "ToggleBagSortButton(true, true): Explicit user action enables button")
         Assert(ForeverAltsDB.settings.bagSortManualOverride == true, "ToggleBagSortButton: Sets bagSortManualOverride flag")
 
+        local overrideTip = self:ToggleAltCountTooltips(true, true)
+        Assert(overrideTip == true, "ToggleAltCountTooltips(true, true): Explicit user action enables alt count tooltips")
+        Assert(ForeverAltsDB.settings.tooltipCountManualOverride == true, "ToggleAltCountTooltips: Sets tooltipCountManualOverride flag")
+
         -- Subsequent conflict check respects manual override
         local d4, toggled4 = self:CheckBagAddonConflict(false)
         Assert(d4 == "Bagnon" and toggled4 == false, "CheckBagAddonConflict: Respects bagSortManualOverride, does not auto-toggle")
-        Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Manual override preserved")
+        Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Manual sort override preserved")
+        Assert(ForeverAltsDB.settings.showAltCountTooltips == true, "CheckBagAddonConflict: Manual tooltip override preserved")
 
         -- Case 5: User clears manual override, and uninstalls Bagnon
         ForeverAltsDB.settings.bagSortManualOverride = nil
+        ForeverAltsDB.settings.tooltipCountManualOverride = nil
         ForeverAltsDB.settings.showBagSortButton = false
+        ForeverAltsDB.settings.showAltCountTooltips = false
         ForeverAltsDB.settings.bagAddonNotified = "Bagnon"
+        ForeverAltsDB.settings.tooltipAddonNotified = "Bagnon"
         loadedMock["Bagnon"] = nil
 
         local d5, toggled5 = self:CheckBagAddonConflict(false)
         Assert(d5 == nil and toggled5 == false, "CheckBagAddonConflict: Detects removal of bag addon")
         Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Automatically restores sort button when bag addon uninstalled")
+        Assert(ForeverAltsDB.settings.showAltCountTooltips == true, "CheckBagAddonConflict: Automatically restores alt count tooltips when bag addon uninstalled")
         Assert(ForeverAltsDB.settings.bagAddonNotified == nil, "CheckBagAddonConflict: Clears bagAddonNotified flag")
+        Assert(ForeverAltsDB.settings.tooltipAddonNotified == nil, "CheckBagAddonConflict: Clears tooltipAddonNotified flag")
 
-        -- Case 6: Coverage of supported third-party bag addons
+        -- Case 6: Altoholic detection (affects alt counts tooltips, does not affect bag sort button)
+        loadedMock = { ["Altoholic"] = true }
+        local foundAlto = self:DetectAltCountTooltipAddon()
+        Assert(foundAlto == "Altoholic", "DetectAltCountTooltipAddon: Detects Altoholic correctly")
+        local bagAlto = self:DetectThirdPartyBagAddon()
+        Assert(bagAlto == nil, "DetectThirdPartyBagAddon: Altoholic is not a bag replacer")
+
+        local d6, toggled6 = self:CheckBagAddonConflict(false)
+        Assert(d6 == "Altoholic" and toggled6 == true, "CheckBagAddonConflict: Triggers for Altoholic")
+        Assert(ForeverAltsDB.settings.showAltCountTooltips == false, "CheckBagAddonConflict: Auto-disables duplicate alt counts with Altoholic")
+        Assert(ForeverAltsDB.settings.showBagSortButton == true, "CheckBagAddonConflict: Bag sort button remains enabled with Altoholic")
+
+        -- Case 7: Coverage of supported third-party bag addons
         local testAddons = { "Baganator", "AdiBags", "ArkInventory", "BetterBags", "Inventorian", "Combuctor", "LiteBag", "tdBag2", "cargBags_Nivaya" }
         for _, addonName in ipairs(testAddons) do
             loadedMock = { [addonName] = true }

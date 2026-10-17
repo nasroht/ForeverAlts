@@ -436,6 +436,14 @@ function ForeverAlts:InitDB()
     ForeverAltsDB.settings.staleDays = tonumber(ForeverAltsDB.settings.staleDays) or 30
     ForeverAltsDB.settings.compactMode = (ForeverAltsDB.settings.compactMode == true)
     if ForeverAltsDB.settings.showInventoryTooltips == nil then ForeverAltsDB.settings.showInventoryTooltips = true end
+    if ForeverAltsDB.settings.showAltCountTooltips == nil then
+        if self.DetectAltCountTooltipAddon and self:DetectAltCountTooltipAddon() then
+            ForeverAltsDB.settings.showAltCountTooltips = false
+        else
+            ForeverAltsDB.settings.showAltCountTooltips = (ForeverAltsDB.settings.showInventoryTooltips ~= false)
+        end
+    end
+    if ForeverAltsDB.settings.showMailRouteTooltips == nil then ForeverAltsDB.settings.showMailRouteTooltips = true end
     if ForeverAltsDB.settings.showBagSortButton == nil then
         if self.DetectThirdPartyBagAddon and self:DetectThirdPartyBagAddon() then
             ForeverAltsDB.settings.showBagSortButton = false
@@ -6952,36 +6960,92 @@ function ForeverAlts:DetectThirdPartyBagAddon()
     return nil
 end
 
+local ALT_COUNT_TOOLTIP_ADDONS = {
+    "Bagnon",
+    "BagBrother",
+    "Baganator",
+    "ArkInventory",
+    "Altoholic",
+    "BetterBags",
+    "AdiBags",
+    "Inventorian",
+    "Combuctor",
+    "LiteBag",
+    "tdBag2",
+    "cargBags_Nivaya",
+}
+
+function ForeverAlts:DetectAltCountTooltipAddon()
+    for _, name in ipairs(ALT_COUNT_TOOLTIP_ADDONS) do
+        if self:IsAddonLoadedCheck(name) then
+            return name
+        end
+    end
+    return nil
+end
+
 function ForeverAlts:CheckBagAddonConflict(silent)
     if not (ForeverAltsDB and ForeverAltsDB.settings) then return nil, false end
-    local detected = self:DetectThirdPartyBagAddon()
-    self.detectedBagAddon = detected
+    local detectedBag = self:DetectThirdPartyBagAddon()
+    self.detectedBagAddon = detectedBag
 
-    -- If user has manually overridden this setting via /fa sortbtn or Settings Dialog, respect their choice
-    if ForeverAltsDB.settings.bagSortManualOverride then
-        return detected, false
-    end
+    local detectedAltTip = self:DetectAltCountTooltipAddon()
+    self.detectedAltCountAddon = detectedAltTip
 
-    if detected then
-        ForeverAltsDB.settings.showBagSortButton = false
-        if self.bagSortButton then
-            self.bagSortButton:Hide()
-        end
-        if not silent and ForeverAltsDB.settings.bagAddonNotified ~= detected then
-            ForeverAltsDB.settings.bagAddonNotified = detected
-            if self.Print then
-                self:Print(string.format("Detected |cff00ff66%s|r. Bag sort button |cfff2c94c[S]|r has been automatically disabled to prevent conflicts (type |cff00ff66/fa sortbtn|r to re-enable).", detected))
+    local toggledAny = false
+
+    -- 1. Bag Sort Button conflict resolution
+    if not ForeverAltsDB.settings.bagSortManualOverride then
+        if detectedBag then
+            if ForeverAltsDB.settings.showBagSortButton ~= false then
+                ForeverAltsDB.settings.showBagSortButton = false
+                toggledAny = true
+            end
+            if self.bagSortButton then
+                self.bagSortButton:Hide()
+            end
+        else
+            if ForeverAltsDB.settings.bagAddonNotified and ForeverAltsDB.settings.showBagSortButton == false then
+                ForeverAltsDB.settings.showBagSortButton = true
+                if self.bagSortButton then
+                    self:UpdateBagSortButtonAnchor()
+                end
             end
         end
-        return detected, true
+    end
+
+    -- 2. Alt Item Counts on Tooltips conflict resolution (Option A)
+    -- Mail routing tags ([Mail Router] Send to: ...) remain active!
+    if not ForeverAltsDB.settings.tooltipCountManualOverride then
+        if detectedAltTip then
+            if ForeverAltsDB.settings.showAltCountTooltips ~= false then
+                ForeverAltsDB.settings.showAltCountTooltips = false
+                toggledAny = true
+            end
+        else
+            if ForeverAltsDB.settings.tooltipAddonNotified and ForeverAltsDB.settings.showAltCountTooltips == false then
+                ForeverAltsDB.settings.showAltCountTooltips = true
+            end
+        end
+    end
+
+    -- 3. One-Time Notification Handling
+    local primaryDetected = detectedBag or detectedAltTip
+    if primaryDetected then
+        if not silent and (ForeverAltsDB.settings.bagAddonNotified ~= primaryDetected or ForeverAltsDB.settings.tooltipAddonNotified ~= primaryDetected) then
+            ForeverAltsDB.settings.bagAddonNotified = primaryDetected
+            ForeverAltsDB.settings.tooltipAddonNotified = primaryDetected
+            if self.Print then
+                self:Print(string.format("Detected |cff00ff66%s|r. Duplicate bag sort button |cfff2c94c[S]|r and alt item counts on tooltips have been automatically disabled to prevent conflicts. |cff57d6e8Mail Router tags remain active|r. (Type |cff00ff66/fa sortbtn|r or |cff00ff66/fa tooltip|r to re-enable)", primaryDetected))
+            end
+        end
+        return primaryDetected, toggledAny
     else
-        -- No third-party bag addon detected
-        -- If it was previously auto-disabled by an addon that is now uninstalled/disabled, restore it
-        if ForeverAltsDB.settings.bagAddonNotified and ForeverAltsDB.settings.showBagSortButton == false then
-            ForeverAltsDB.settings.showBagSortButton = true
+        if (ForeverAltsDB.settings.bagAddonNotified or ForeverAltsDB.settings.tooltipAddonNotified) then
             ForeverAltsDB.settings.bagAddonNotified = nil
+            ForeverAltsDB.settings.tooltipAddonNotified = nil
             if not silent and self.Print then
-                self:Print("No third-party bag addon detected. Restored bag sort button |cfff2c94c[S]|r.")
+                self:Print("No third-party bag or inventory addons detected. Restored bag sort button |cfff2c94c[S]|r and alt item tooltips.")
             end
             if self.bagSortButton then
                 self:UpdateBagSortButtonAnchor()

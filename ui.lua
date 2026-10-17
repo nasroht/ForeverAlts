@@ -6133,9 +6133,34 @@ function ForeverAlts:ExecutePromptCommand(input)
         end
 
     elseif cmd == "tooltips" or cmd == "tooltip" or cmd == "inv" then
-        ForeverAltsDB.settings.showInventoryTooltips = (ForeverAltsDB.settings.showInventoryTooltips == false)
-        local isEnabled = ForeverAltsDB.settings.showInventoryTooltips
-        self:SetPromptFeedback(string.format("Inventory hover tooltips: %s", isEnabled and "ENABLED" or "DISABLED"))
+        if arg and (arg:lower() == "reset" or arg:lower() == "auto") then
+            if ForeverAltsDB and ForeverAltsDB.settings then
+                ForeverAltsDB.settings.tooltipCountManualOverride = nil
+                ForeverAltsDB.settings.tooltipAddonNotified = nil
+            end
+            local detected = self:CheckBagAddonConflict(false)
+            if not detected then
+                if self.ToggleAltCountTooltips then self:ToggleAltCountTooltips(true, false) end
+                self:SetPromptFeedback("Alt count tooltips reset to auto (ENABLED)")
+            else
+                self:SetPromptFeedback(string.format("Alt count tooltips reset to auto (DISABLED - %s)", detected))
+            end
+        elseif arg and (arg:lower() == "mail" or arg:lower() == "route") then
+            local isEnabled = self.ToggleMailRouteTooltips and self:ToggleMailRouteTooltips()
+            self:SetPromptFeedback(string.format("Mail router tooltips: %s", isEnabled and "ENABLED" or "DISABLED"))
+        else
+            local isEnabled = self.ToggleAltCountTooltips and self:ToggleAltCountTooltips(nil, true)
+            if isEnabled == nil then
+                ForeverAltsDB.settings.showAltCountTooltips = (ForeverAltsDB.settings.showAltCountTooltips == false)
+                isEnabled = ForeverAltsDB.settings.showAltCountTooltips
+            end
+            local detected = self.detectedAltCountAddon or (self.DetectAltCountTooltipAddon and self:DetectAltCountTooltipAddon())
+            if detected and isEnabled then
+                self:SetPromptFeedback(string.format("Alt count tooltips: ENABLED (override with %s)", detected))
+            else
+                self:SetPromptFeedback(string.format("Alt count tooltips: %s (Mail tags active)", isEnabled and "ENABLED" or "DISABLED"))
+            end
+        end
 
     elseif cmd == "theme" then
         if args and args ~= "" then
@@ -8176,9 +8201,9 @@ function ForeverAlts:CreateSettingsPanel()
         btnSort:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -336)
         sd.btnSort = btnSort
 
-        local btnTip = CreateRetroButton(sd, "Cross-Alt Tooltips: ENABLED", 310, 26, function()
-            ForeverAltsDB.settings = ForeverAltsDB.settings or {}
-            ForeverAltsDB.settings.showInventoryTooltips = (ForeverAltsDB.settings.showInventoryTooltips == false)
+        local btnTip = CreateRetroButton(sd, "Alt Count Tooltips: ENABLED", 310, 26, function()
+            local cur = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showAltCountTooltips == false)
+            ForeverAlts:ToggleAltCountTooltips(not cur, true)
             ForeverAlts:UpdateSettingsDialog()
         end, 11)
         btnTip:SetPoint("TOPLEFT", sd, "TOPLEFT", 20, -366)
@@ -8427,9 +8452,20 @@ function ForeverAlts:UpdateSettingsDialog()
         settingsDialog.btnSort.label:SetText(labelText)
     end
 
-    local tipOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showInventoryTooltips == false)
+    local tipOn = not (ForeverAltsDB and ForeverAltsDB.settings and (ForeverAltsDB.settings.showAltCountTooltips == false or ForeverAltsDB.settings.showInventoryTooltips == false))
     if settingsDialog.btnTip then
-        settingsDialog.btnTip.label:SetText(string.format("Cross-Alt Tooltips: %s", tipOn and "|cff00ff66ENABLED|r" or "|cffff4444DISABLED|r"))
+        local labelText
+        if tipOn then
+            labelText = "Alt Count Tooltips: |cff00ff66ENABLED|r"
+        else
+            local detected = ForeverAlts.detectedAltCountAddon or (ForeverAlts.DetectAltCountTooltipAddon and ForeverAlts:DetectAltCountTooltipAddon())
+            if detected then
+                labelText = string.format("Alt Count Tooltips: |cffff4444DISABLED|r |cff888888(%s)|r", detected)
+            else
+                labelText = "Alt Count Tooltips: |cffff4444DISABLED|r"
+            end
+        end
+        settingsDialog.btnTip.label:SetText(labelText)
     end
 
     local mailOn = not (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.showMailAutoFillButton == false)
@@ -8567,6 +8603,12 @@ function ForeverAlts:AddInventoryInfoToTooltip(tooltip, itemID)
         return
     end
 
+    local showCounts = (ForeverAltsDB.settings.showAltCountTooltips ~= false)
+    local showMailRoute = (ForeverAltsDB.settings.showMailRouteTooltips ~= false)
+    if not showCounts and not showMailRoute then
+        return
+    end
+
     -- 1. Anti-recursion / scanner tooltip guards:
     if self._isAddingTooltipInfo then return end
     if tooltip._isScanTip then return end
@@ -8604,34 +8646,36 @@ function ForeverAlts:AddInventoryInfoToTooltip(tooltip, itemID)
 
         local didAdd = false
 
-        local totalCount, breakdown = self:GetItemInventorySummary(itemID)
-        if totalCount > 0 and breakdown and #breakdown > 0 then
-            tooltip:AddDoubleLine("|cff00ff66[ForeverAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
-            for _, entry in ipairs(breakdown) do
-                local _, _, _, colorHex = self:GetClassColor(entry.classFile)
-                colorHex = colorHex or "ffffff"
-                local nameStr = string.format("|cff%s%s|r", colorHex, entry.name)
-                if entry.isCurrent then
-                    nameStr = nameStr .. " |cff888888(you)|r"
-                elseif entry.realm and self.curPlayerRealm and entry.realm ~= self.curPlayerRealm then
-                    nameStr = nameStr .. string.format(" |cff888888(%s)|r", entry.realm)
-                end
+        if showCounts then
+            local totalCount, breakdown = self:GetItemInventorySummary(itemID)
+            if totalCount > 0 and breakdown and #breakdown > 0 then
+                tooltip:AddDoubleLine("|cff00ff66[ForeverAlts] Alts with Item:|r", string.format("|cffffffffTotal: %d|r", totalCount))
+                for _, entry in ipairs(breakdown) do
+                    local _, _, _, colorHex = self:GetClassColor(entry.classFile)
+                    colorHex = colorHex or "ffffff"
+                    local nameStr = string.format("|cff%s%s|r", colorHex, entry.name)
+                    if entry.isCurrent then
+                        nameStr = nameStr .. " |cff888888(you)|r"
+                    elseif entry.realm and self.curPlayerRealm and entry.realm ~= self.curPlayerRealm then
+                        nameStr = nameStr .. string.format(" |cff888888(%s)|r", entry.realm)
+                    end
 
-                local countDetail
-                if entry.bag > 0 and entry.bank > 0 then
-                    countDetail = string.format("%d (Bags: %d, Bank: %d)", entry.total, entry.bag, entry.bank)
-                elseif entry.bag > 0 then
-                    countDetail = string.format("%d (Bags)", entry.bag)
-                else
-                    countDetail = string.format("%d (Bank)", entry.bank)
-                end
+                    local countDetail
+                    if entry.bag > 0 and entry.bank > 0 then
+                        countDetail = string.format("%d (Bags: %d, Bank: %d)", entry.total, entry.bag, entry.bank)
+                    elseif entry.bag > 0 then
+                        countDetail = string.format("%d (Bags)", entry.bag)
+                    else
+                        countDetail = string.format("%d (Bank)", entry.bank)
+                    end
 
-                tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
+                    tooltip:AddDoubleLine("  " .. nameStr, string.format("|cffffd700%s|r", countDetail))
+                end
+                didAdd = true
             end
-            didAdd = true
         end
 
-        if self.GetMaterialDestination then
+        if showMailRoute and self.GetMaterialDestination then
             local isIgnored = self.IsItemMailIgnored and self:IsItemMailIgnored(itemID)
             if isIgnored then
                 tooltip:AddDoubleLine("|cff57d6e8[Mail Router]|r Status:", "|cffff4444IGNORED (Not Mailed)|r")
@@ -8976,6 +9020,40 @@ function ForeverAlts:ToggleBagSortButton(enable, isManual)
         if self.bagSortButton then
             self.bagSortButton:Hide()
         end
+    end
+    return enable
+end
+
+function ForeverAlts:ToggleAltCountTooltips(enable, isManual)
+    if enable == nil then
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            enable = not (ForeverAltsDB.settings.showAltCountTooltips ~= false)
+        else
+            enable = true
+        end
+    end
+
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.showAltCountTooltips = enable
+        ForeverAltsDB.settings.showInventoryTooltips = enable
+        if isManual ~= false then
+            ForeverAltsDB.settings.tooltipCountManualOverride = true
+        end
+    end
+    return enable
+end
+
+function ForeverAlts:ToggleMailRouteTooltips(enable)
+    if enable == nil then
+        if ForeverAltsDB and ForeverAltsDB.settings then
+            enable = not (ForeverAltsDB.settings.showMailRouteTooltips ~= false)
+        else
+            enable = true
+        end
+    end
+
+    if ForeverAltsDB and ForeverAltsDB.settings then
+        ForeverAltsDB.settings.showMailRouteTooltips = enable
     end
     return enable
 end
