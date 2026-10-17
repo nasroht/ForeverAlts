@@ -1246,6 +1246,7 @@ function ForeverAlts:RunSelfTest()
         Assert(dp.profCard.primary:GetText():find("None learned") ~= nil, "Phase 6: profCard shows 'None learned' for primary")
         Assert(dp.restedCard.status:GetText():find("Rested") ~= nil and dp.restedCard.status:GetText():find("XP pool") ~= nil, "Phase 6: Rested card shows XP pool for accruing alt")
         Assert(dp.restedCard.rate:GetText():find("Caps in") ~= nil, "Phase 6: Rested card rate shows 'Caps in ...'")
+        Assert(dp.restedCard.rate:GetText():find("%+%d+ XP/hr") ~= nil, "Phase 6: Rested card rate shows resting XP/hr")
 
         -- 5. Test Action Buttons on detailPanel
         -- 5a. Plan session button executes 'plan 2'

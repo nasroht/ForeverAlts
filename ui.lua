@@ -4296,7 +4296,12 @@ function ForeverAlts:UpdateDetailPanel(charArg)
                     dp.restedCard.barFill:SetVertexColor(fillR, fillG, fillB, 1.0)
                 end
                 if dp.restedCard.rate then
-                    dp.restedCard.rate:SetText(string.format("Caps in %s · +%s XP/hr", rested.timeLeftStr or "---", self:FormatNumber(estRate)))
+                    local restRatePerHr = math.floor((rested.ratePerSec or 0) * 3600 + 0.5)
+                    if restRatePerHr > 0 then
+                        dp.restedCard.rate:SetText(string.format("Caps in %s · +%s XP/hr", rested.timeLeftStr or "---", self:FormatNumber(restRatePerHr)))
+                    else
+                        dp.restedCard.rate:SetText(string.format("Caps in %s", rested.timeLeftStr or "---"))
+                    end
                     dp.restedCard.rate:SetTextColor(mutedR, mutedG, mutedB)
                 end
             end
