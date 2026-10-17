@@ -3973,6 +3973,80 @@ function ForeverAlts:RunSelfTest()
         ForeverAltsDB = oldFacDB; ForeverAltsDB = ForeverAltsDB
     end
 
+    do
+        -- 37g. Option C 5-Tab Architecture, View Toggle & Zone Subline
+        local mFrame = self:CreateModernMainFrame()
+        self:SwitchTab(1)
+        self:SetOverviewMode("gauges")
+        mFrame:Show()
+        self:Render()
+
+        -- 1. View Mode Button on filterChipsBar
+        Assert(mFrame.btnViewMode ~= nil, "OptionC: btnViewMode exists on filterChipsBar")
+        Assert(mFrame.btnViewMode:IsShown() == true, "OptionC: btnViewMode is visible on Tab 1")
+        Assert(mFrame.btnViewMode.label:GetText() == "View: Gauges", "OptionC: btnViewMode displays 'View: Gauges' by default")
+
+        -- 2. Toggle to Table mode
+        self:ToggleOverviewMode()
+        Assert(ForeverAltsDB.settings.overviewMode == "table", "OptionC: ToggleOverviewMode sets overviewMode to 'table'")
+        Assert(mFrame.btnViewMode.label:GetText() == "View: Table", "OptionC: btnViewMode label updates to 'View: Table'")
+        local tab1TableCols = self:GetColumns(1)
+        Assert(#tab1TableCols == 10, "OptionC: Tab 1 returns 10 columns in table mode (got: " .. tostring(#tab1TableCols) .. ")")
+
+        -- 3. Toggle back to Gauges mode
+        self:ToggleOverviewMode()
+        Assert(ForeverAltsDB.settings.overviewMode == "gauges", "OptionC: ToggleOverviewMode toggles back to 'gauges'")
+        Assert(mFrame.btnViewMode.label:GetText() == "View: Gauges", "OptionC: btnViewMode label updates back to 'View: Gauges'")
+        local tab1GaugeCols = self:GetColumns(1)
+        Assert(#tab1GaugeCols == 5, "OptionC: Tab 1 returns 5 columns in gauges mode")
+
+        -- 4. Programmatic SetOverviewMode
+        self:SetOverviewMode("table")
+        Assert(ForeverAltsDB.settings.overviewMode == "table", "OptionC: SetOverviewMode('table') works")
+        self:SetOverviewMode("gauges")
+        Assert(ForeverAltsDB.settings.overviewMode == "gauges", "OptionC: SetOverviewMode('gauges') works")
+
+        -- 5. Subline with Location formatting
+        local testRow = mFrame.rowFrames and mFrame.rowFrames[1]
+        Assert(testRow ~= nil, "OptionC: rowFrame 1 exists for subline testing")
+        local altWithLoc = {
+            name = "Nas Son",
+            level = 16,
+            race = "Gnome",
+            class = "Warlock",
+            faction = "Alliance",
+            location = "Westfall",
+            money = 7534,
+        }
+        self:RenderCharRow(testRow, altWithLoc)
+        Assert(testRow.subLine:GetText() == "Westfall · Gnome Warlock · Alliance",
+            "OptionC: Subline formats 'Westfall · Gnome Warlock · Alliance' when location is present")
+
+        local altWithoutLoc = {
+            name = "Nas Son",
+            level = 16,
+            race = "Gnome",
+            class = "Warlock",
+            faction = "Alliance",
+            location = nil,
+            money = 7534,
+        }
+        self:RenderCharRow(testRow, altWithoutLoc)
+        Assert(testRow.subLine:GetText() == "Gnome Warlock · Alliance",
+            "OptionC: Subline formats 'Gnome Warlock · Alliance' when location is absent")
+
+        -- 6. Tab 6 (World & Locks) Consolidated Columns Integrity
+        local tab6Cols = self:GetColumns(6)
+        Assert(tab6Cols ~= nil and #tab6Cols == 7, "OptionC: Tab 6 (World & Locks) defines 7 consolidated columns")
+        Assert(tab6Cols[1].key == "fac" and tab6Cols[2].key == "name" and tab6Cols[3].key == "lvl" and
+               tab6Cols[4].key == "tradeCd" and tab6Cols[5].key == "raidLocks" and
+               tab6Cols[6].key == "location" and tab6Cols[7].key == "hearth",
+               "OptionC: Tab 6 columns match (fac, name, lvl, tradeCd, raidLocks, location, hearth)")
+
+        -- 7. Sidebar Navigation Count
+        Assert(#mFrame.sidebarNavButtons == 5, "OptionC: Exactly 5 consolidated navigation buttons exist")
+    end
+
     -- 38. Tab 8 Embedded Settings Navigation Panel Engine Tests
     do
         local mFrame = self:CreateModernMainFrame()

@@ -901,6 +901,16 @@ local function SlashHandler(msg)
         local state = ForeverAltsDB.settings.showInventoryTooltips and "|cff00ff66ENABLED|r" or "|cffff8800DISABLED|r"
         ForeverAlts:Print(string.format("Inventory hover tooltips are now %s.", state))
 
+    elseif cmd == "view" or cmd == "mode" or cmd == "overview" then
+        if arg == "table" or arg == "gauges" then
+            ForeverAlts:SetOverviewMode(arg)
+            ForeverAlts:Print(string.format("Overview view mode set to: |cff00ff66%s|r", arg:upper()))
+        else
+            ForeverAlts:ToggleOverviewMode()
+            local cur = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.overviewMode) or "gauges"
+            ForeverAlts:Print(string.format("Overview view mode toggled to: |cff00ff66%s|r", cur:upper()))
+        end
+
     elseif cmd == "forever" or cmd == "wf" then
         ForeverAlts:ToggleForeverMode()
         local isForever = ForeverAlts:IsForeverMode()

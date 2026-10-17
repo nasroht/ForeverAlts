@@ -423,6 +423,9 @@ function ForeverAlts:InitDB()
     elseif ForeverAltsDB.settings.activeTab == 5 then
         ForeverAltsDB.settings.activeTab = 6
     end
+    if ForeverAltsDB.settings.overviewMode ~= "table" and ForeverAltsDB.settings.overviewMode ~= "gauges" then
+        ForeverAltsDB.settings.overviewMode = "gauges"
+    end
     ForeverAltsDB.settings.wellRestedRank = tonumber(ForeverAltsDB.settings.wellRestedRank) or 0
     ForeverAltsDB.settings.alerts = ForeverAltsDB.settings.alerts or {}
     if ForeverAltsDB.settings.alerts.cooldowns == nil then ForeverAltsDB.settings.alerts.cooldowns = true end

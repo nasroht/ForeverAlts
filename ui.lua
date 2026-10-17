@@ -1999,12 +1999,18 @@ end
 
 function ForeverAlts:GetColumns(activeTab)
     activeTab = tonumber(activeTab) or 1
-    local tabCols = COLS[activeTab] or COLS[1]
+    local tabCols
+    if activeTab == 1 and ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.overviewMode == "table" then
+        tabCols = COLS[3]
+    else
+        tabCols = COLS[activeTab] or COLS[1]
+    end
     if not self:IsCompact() and not mainFrame then
         return tabCols
     end
 
-    local cacheKey = tostring(activeTab) .. (mainFrame and "_m" or "") .. (self:IsCompact() and "_c" or "")
+    local overviewSuffix = (activeTab == 1 and ("_" .. tostring(ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.overviewMode or "gauges"))) or ""
+    local cacheKey = tostring(activeTab) .. (mainFrame and "_m" or "") .. (self:IsCompact() and "_c" or "") .. overviewSuffix
     if columnCache[cacheKey] then
         return columnCache[cacheKey]
     end
@@ -2027,6 +2033,28 @@ function ForeverAlts:GetColumns(activeTab)
     end
     columnCache[cacheKey] = filtered
     return filtered
+end
+
+function ForeverAlts:ToggleOverviewMode()
+    if not (ForeverAltsDB and ForeverAltsDB.settings) then return end
+    if ForeverAltsDB.settings.overviewMode == "table" then
+        ForeverAltsDB.settings.overviewMode = "gauges"
+    else
+        ForeverAltsDB.settings.overviewMode = "table"
+    end
+    self:InvalidateColumnCache()
+    PlayRetroSound()
+    self:Render()
+end
+
+function ForeverAlts:SetOverviewMode(mode)
+    if not (ForeverAltsDB and ForeverAltsDB.settings) then return end
+    if mode ~= "table" and mode ~= "gauges" then
+        mode = "gauges"
+    end
+    ForeverAltsDB.settings.overviewMode = mode
+    self:InvalidateColumnCache()
+    self:Render()
 end
 
 function ForeverAlts:GetLineWidth()
@@ -3443,11 +3471,51 @@ function ForeverAlts:CreateModernMainFrame()
     end)
     frame.btnSort = btnSort
 
+    -- Overview View Toggle: [ Gauges | Table ] (Option C / Option B)
+    local btnViewMode = CreateFrame("Button", "ForeverAltsViewModeButton", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    btnViewMode:SetHeight(22)
+    btnViewMode:SetWidth(100)
+    btnViewMode:SetPoint("RIGHT", btnSort, "LEFT", -8, 0)
+    btnViewMode:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    if btnViewMode.SetBackdropColor then btnViewMode:SetBackdropColor(panelR, panelG, panelB, 0.8) end
+    if btnViewMode.SetBackdropBorderColor then btnViewMode:SetBackdropBorderColor(lineR, lineG, lineB, 0.8) end
+
+    local btnViewModeText = btnViewMode:CreateFontString(nil, "OVERLAY")
+    self:SetWidgetFont(btnViewModeText, 11, "")
+    btnViewModeText:SetPoint("CENTER", btnViewMode, "CENTER", 0, 0)
+    btnViewModeText:SetText("View: Gauges")
+    btnViewModeText:SetTextColor(mutedR, mutedG, mutedB)
+    btnViewMode.label = btnViewModeText
+    btnViewMode:SetScript("OnClick", function()
+        ForeverAlts:ToggleOverviewMode()
+    end)
+    btnViewMode:SetScript("OnEnter", function(bSelf)
+        if bSelf.SetBackdropColor then bSelf:SetBackdropColor(raisedR, raisedG, raisedB, 0.9) end
+        bSelf.label:SetTextColor(textR, textG, textB)
+        if GameTooltip then
+            GameTooltip:SetOwner(bSelf, "ANCHOR_TOP")
+            GameTooltip:AddLine("Overview Display Mode", 1, 0.82, 0)
+            GameTooltip:AddLine("Click to toggle between visual circular gauges and numeric analysis table.", 0.8, 0.8, 0.8, true)
+            GameTooltip:Show()
+        end
+    end)
+    btnViewMode:SetScript("OnLeave", function(bSelf)
+        if GameTooltip then GameTooltip:Hide() end
+        if bSelf.SetBackdropColor then bSelf:SetBackdropColor(panelR, panelG, panelB, 0.8) end
+        bSelf.label:SetTextColor(mutedR, mutedG, mutedB)
+    end)
+    frame.btnViewMode = btnViewMode
+
     -- Prominent Well Rested & LP Badge for Rested XP view
     local wellRestedBadge = CreateFrame("Button", "ForeverAltsWellRestedBadge", filterChipsBar, BackdropTemplateMixin and "BackdropTemplate" or nil)
     wellRestedBadge:SetHeight(22)
     wellRestedBadge:SetWidth(220)
-    wellRestedBadge:SetPoint("RIGHT", btnSort, "LEFT", -10, 0)
+    wellRestedBadge:SetPoint("RIGHT", btnViewMode, "LEFT", -8, 0)
     wellRestedBadge:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -4467,7 +4535,11 @@ function ForeverAlts:RenderCharRow(row, char, derived)
         local race = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or "Unknown"
         local faction = char.faction or (self.InferFaction and self:InferFaction(char)) or "Neutral"
         local class = char.class or char.className or classFile
-        row.subLine:SetText(string.format("%s %s · %s", race, class, faction))
+        if char.location and char.location ~= "" then
+            row.subLine:SetText(string.format("%s · %s %s · %s", char.location, race, class, faction))
+        else
+            row.subLine:SetText(string.format("%s %s · %s", race, class, faction))
+        end
         row.subLine:SetTextColor(mutedR, mutedG, mutedB)
         row.subLine:Show()
     end
@@ -4675,7 +4747,11 @@ function ForeverAlts:Render(force)
             local cName = (selChar and (selChar.fullName or selChar.name)) or "Character"
             mainFrame.subViewFilters:SetText(string.format("%s: WELL RESTED R%d (+%d%%) · ALT: %.1f LP · ACCOUNT: %.1f LP", string.upper(cName), r, r * 4, charLP, lpVal))
         elseif activeTab == 1 then
-            mainFrame.subViewFilters:SetText("CONSOLIDATED DASHBOARD · DUAL CIRCULAR GAUGES (XP & RESTED)")
+            if ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.overviewMode == "table" then
+                mainFrame.subViewFilters:SetText("NUMERIC RESTED & PROGRESSION ANALYSIS TABLE")
+            else
+                mainFrame.subViewFilters:SetText("CONSOLIDATED DASHBOARD · DUAL CIRCULAR GAUGES (XP & RESTED)")
+            end
         else
             mainFrame.subViewFilters:SetText("FOREVERALTS · CHARACTER MANAGEMENT")
         end
@@ -4725,6 +4801,20 @@ function ForeverAlts:Render(force)
             mainFrame.wellRestedBadge:Show()
         else
             mainFrame.wellRestedBadge:Hide()
+        end
+    end
+
+    if mainFrame.btnViewMode then
+        if activeTab == 1 then
+            mainFrame.btnViewMode:Show()
+            local curMode = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.overviewMode) or "gauges"
+            if curMode == "table" then
+                mainFrame.btnViewMode.label:SetText("View: Table")
+            else
+                mainFrame.btnViewMode.label:SetText("View: Gauges")
+            end
+        else
+            mainFrame.btnViewMode:Hide()
         end
     end
 
@@ -4998,7 +5088,8 @@ function ForeverAlts:Render(force)
     local sortBy = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy
     local sortAsc = ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc
     local curFontSz = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or 18
-    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":mod:" .. curFontSz .. ":v8"
+    local overviewModeKey = (activeTab == 1 and (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.overviewMode == "table" and ":tbl" or ":gauge")) or ""
+    local headerLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":mod:" .. curFontSz .. ":v8" .. overviewModeKey
     local relayoutHeaders = not (mainFrame.headerFrame and mainFrame.headerFrame.lastLayoutKey) or (mainFrame.headerFrame.lastLayoutKey ~= headerLayoutKey)
     if relayoutHeaders and mainFrame.headerFrame then
         mainFrame.headerFrame.lastLayoutKey = headerLayoutKey
@@ -5232,9 +5323,10 @@ function ForeverAlts:Render(force)
                         if row.SetBackdropBorderColor then row:SetBackdropBorderColor(lineR, lineG, lineB, 0.35) end
                     end
 
-                    if activeTab == 1 then
+                    local isTableOverview = (activeTab == 1 and ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.overviewMode == "table")
+                    if activeTab == 1 and not isTableOverview then
                         -- --------------------------------------------------------
-                        -- Tab 1 (Overview): Consolidated Dashboard with Dual Circular Gauges
+                        -- Tab 1 (Overview - Gauges): Consolidated Dashboard with Dual Circular Gauges
                         -- --------------------------------------------------------
                         wipe(rowDerivedScratch)
                         rowDerivedScratch.t = t
@@ -5266,7 +5358,7 @@ function ForeverAlts:Render(force)
                         self:RenderCharRow(row, char, rowDerivedScratch)
                     else
                         -- --------------------------------------------------------
-                        -- Tabs 2 to 7: Multi-Column Cells
+                        -- Tabs 2 to 7 (or Tab 1 Table mode): Multi-Column Cells
                         -- --------------------------------------------------------
                         row:SetAlpha(1.0)
                         if row.classRing then row.classRing:Hide() end
@@ -5280,11 +5372,12 @@ function ForeverAlts:Render(force)
                         if row.restBarBg then row.restBarBg:Hide() end
                         if row.statusPill then row.statusPill:Hide() end
                         if row.goldText then row.goldText:Hide() end
-                        if row.colRestBarBg and activeTab ~= 3 then row.colRestBarBg:Hide() end
-                        if row.colRestLabel and activeTab ~= 3 then row.colRestLabel:Hide() end
+                        local showRestBar = (activeTab == 3 or isTableOverview)
+                        if row.colRestBarBg and not showRestBar then row.colRestBarBg:Hide() end
+                        if row.colRestLabel and not showRestBar then row.colRestLabel:Hide() end
 
                         local curFontSz = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.fontSize) or 18
-                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":mod:" .. curFontSz .. ":v9"
+                        local rowLayoutKey = (activeTab or 1) .. ":" .. (isComp and "1" or "0") .. ":mod:" .. curFontSz .. ":v9" .. overviewModeKey
                         local relayoutRow = not row.lastLayoutKey or (row.lastLayoutKey ~= rowLayoutKey)
                         if relayoutRow then
                             row.lastLayoutKey = rowLayoutKey
