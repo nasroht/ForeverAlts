@@ -3877,6 +3877,8 @@ function ForeverAlts:RunSelfTest()
 
         local mFrame = self:CreateModernMainFrame()
         self:Render()
+        Assert(mFrame:GetFrameStrata() == "DIALOG",
+            "ConsolidatedOverview: mFrame frame strata is DIALOG (above action bars and game UI)")
         Assert(mFrame.nextBanner ~= nil and mFrame.nextBanner:IsShown() == true,
             "ConsolidatedOverview: Play next banner is shown on Overview")
         Assert(mFrame.headerFrame:IsShown() == true,
