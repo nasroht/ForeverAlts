@@ -2201,8 +2201,18 @@ function ForeverAlts:CreateModernMainFrame()
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetClampedToScreen(true)
-    frame:SetFrameStrata("HIGH")
-    tinsert(UISpecialFrames, "ForeverAltsMainFrame")
+    local foundSpecial = false
+    if UISpecialFrames then
+        for _, name in ipairs(UISpecialFrames) do
+            if name == "ForeverAltsMainFrame" then
+                foundSpecial = true
+                break
+            end
+        end
+        if not foundSpecial then
+            tinsert(UISpecialFrames, "ForeverAltsMainFrame")
+        end
+    end
 
     -- Restore saved window scale & position
     local s = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.scale) or 1.0
@@ -2215,9 +2225,53 @@ function ForeverAlts:CreateModernMainFrame()
         ForeverAlts:SaveWindowPosition(self)
     end)
 
-    -- Keyboard Navigation (Phase 6: Up/Down arrow selection and Enter)
+    -- Keyboard Navigation (Phase 6: Up/Down arrow selection, Enter and Escape)
     frame:SetScript("OnKeyDown", function(self, key)
         if InCombatLockdown and InCombatLockdown() then return end
+        if key == "ESCAPE" then
+            local popups = {
+                "ForeverAltsConfirmPopup",
+                "ForeverAltsMailRouteDialog",
+                "ForeverAltsCustomRolePopup",
+                "ForeverAltsDossierPopup",
+                "ForeverAltsHelpPopup",
+                "ForeverAltsExportPopup",
+                "ForeverAltsContextMenu",
+                "ForeverAltsChatDropdown",
+            }
+            for _, pName in ipairs(popups) do
+                local popup = _G[pName]
+                if popup and popup:IsShown() then
+                    popup:Hide()
+                    return
+                end
+            end
+            if self.searchBox and self.searchBox:HasFocus() then
+                local text = self.searchBox:GetText()
+                if text and text ~= "" then
+                    self.searchBox:SetText("")
+                    self.searchBox:ClearFocus()
+                    if ForeverAlts.SetFilter then ForeverAlts:SetFilter("") end
+                    return
+                end
+                self.searchBox:ClearFocus()
+            end
+            if self.promptBox and self.promptBox:HasFocus() then
+                local text = self.promptBox:GetText()
+                if text and text ~= "" then
+                    self.promptBox:SetText("")
+                    self.promptBox:ClearFocus()
+                    return
+                end
+                self.promptBox:ClearFocus()
+            end
+            if self.SetPropagateKeyboardInput then
+                self:SetPropagateKeyboardInput(false)
+            end
+            ForeverAlts:Toggle(false)
+            return
+        end
+
         if (self.searchBox and self.searchBox:HasFocus())
             or (self.promptBox and self.promptBox:HasFocus()) then
             return
@@ -2321,10 +2375,16 @@ function ForeverAlts:CreateModernMainFrame()
         end
     end)
     searchBox:SetScript("OnEscapePressed", function(self)
-        self:SetText("")
-        self:ClearFocus()
-        if ForeverAlts.SetFilter then
-            ForeverAlts:SetFilter("")
+        local curText = self:GetText()
+        if curText and curText ~= "" then
+            self:SetText("")
+            self:ClearFocus()
+            if ForeverAlts.SetFilter then
+                ForeverAlts:SetFilter("")
+            end
+        else
+            self:ClearFocus()
+            ForeverAlts:Toggle(false)
         end
     end)
     searchBox:SetScript("OnEnterPressed", function(self)
@@ -2692,8 +2752,14 @@ function ForeverAlts:CreateModernMainFrame()
         ForeverAlts:ExecutePromptCommand(text)
     end)
     promptBox:SetScript("OnEscapePressed", function(self)
-        self:SetText("")
-        self:ClearFocus()
+        local curText = self:GetText()
+        if curText and curText ~= "" then
+            self:SetText("")
+            self:ClearFocus()
+        else
+            self:ClearFocus()
+            ForeverAlts:Toggle(false)
+        end
     end)
     promptBox:SetScript("OnTabPressed", function(self)
         ForeverAlts:AutoCompletePrompt(self)
@@ -3725,6 +3791,48 @@ function ForeverAlts:CreateModernMainFrame()
         end
     end)
 
+    -- Hidden Button for Escape keyboard override (closes active dialog / panel on ESC)
+    local btnFocusEscape = _G["ForeverAltsCloseEscapeBtn"] or CreateFrame("Button", "ForeverAltsCloseEscapeBtn", frame)
+    btnFocusEscape:SetScript("OnClick", function()
+        local popups = {
+            "ForeverAltsConfirmPopup",
+            "ForeverAltsMailRouteDialog",
+            "ForeverAltsCustomRolePopup",
+            "ForeverAltsDossierPopup",
+            "ForeverAltsHelpPopup",
+            "ForeverAltsExportPopup",
+            "ForeverAltsContextMenu",
+            "ForeverAltsChatDropdown",
+        }
+        for _, pName in ipairs(popups) do
+            local popup = _G[pName]
+            if popup and popup:IsShown() then
+                popup:Hide()
+                return
+            end
+        end
+        if frame.searchBox and frame.searchBox:HasFocus() then
+            local text = frame.searchBox:GetText()
+            if text and text ~= "" then
+                frame.searchBox:SetText("")
+                frame.searchBox:ClearFocus()
+                if ForeverAlts.SetFilter then ForeverAlts:SetFilter("") end
+                return
+            end
+            frame.searchBox:ClearFocus()
+        end
+        if frame.promptBox and frame.promptBox:HasFocus() then
+            local text = frame.promptBox:GetText()
+            if text and text ~= "" then
+                frame.promptBox:SetText("")
+                frame.promptBox:ClearFocus()
+                return
+            end
+            frame.promptBox:ClearFocus()
+        end
+        ForeverAlts:Toggle(false)
+    end)
+
     -- Initialize 12 pooled row frames for Modern UI (Phase 2: Row List)
     local MODERN_ROWS_COUNT = 12
     for i = 1, MODERN_ROWS_COUNT do
@@ -4070,8 +4178,8 @@ function ForeverAlts:CreateModernMainFrame()
     frame:SetScript("OnShow", function(self)
         pcall(function()
             if SetOverrideBindingClick then
+                SetOverrideBindingClick(self, false, "ESCAPE", "ForeverAltsCloseEscapeBtn")
                 SetOverrideBindingClick(self, false, "ENTER", "ForeverAltsFocusEnterBtn")
-                SetOverrideBindingClick(self, false, "/", "ForeverAltsFocusSlashBtn")
             end
         end)
         ForeverAlts:ApplyLayoutSize()
@@ -4083,6 +4191,9 @@ function ForeverAlts:CreateModernMainFrame()
                 ClearOverrideBindings(self)
             end
         end)
+        if frame.searchBox then
+            frame.searchBox:ClearFocus()
+        end
         if frame.promptBox then
             frame.promptBox:ClearFocus()
         end

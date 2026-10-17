@@ -1336,6 +1336,26 @@ function ForeverAlts:RunSelfTest()
         onKeyDownScript(mFrame, "ENTER")
         Assert(dp.name:GetText():find("AllyBeta") ~= nil, "Phase 6: OnKeyDown ENTER updates detailPanel in standard mode")
 
+        -- 7f. Key ESCAPE closes mainFrame
+        mFrame:Show()
+        Assert(mFrame:IsShown() == true, "Phase 6: mainFrame is shown prior to ESC test")
+        onKeyDownScript(mFrame, "ESCAPE")
+        Assert(mFrame:IsShown() == false, "Phase 6: OnKeyDown ESCAPE closes mainFrame")
+
+        -- 7g. ForeverAltsCloseEscapeBtn closes active popup or mainFrame
+        mFrame:Show()
+        local escapeBtn = _G["ForeverAltsCloseEscapeBtn"]
+        Assert(escapeBtn ~= nil, "Phase 6: ForeverAltsCloseEscapeBtn exists")
+        escapeBtn:GetScript("OnClick")()
+        Assert(mFrame:IsShown() == false, "Phase 6: ForeverAltsCloseEscapeBtn Click closes mainFrame")
+
+        -- 7h. Empty searchBox / promptBox ESC closes mainFrame
+        mFrame:Show()
+        mFrame.searchBox:SetText("")
+        mFrame.searchBox:SetFocus()
+        mFrame.searchBox:GetScript("OnEscapePressed")(mFrame.searchBox)
+        Assert(mFrame:IsShown() == false, "Phase 6: searchBox OnEscapePressed when empty closes mainFrame")
+
         -- 8. Test ShowDossierPopup Dual-Mode (Detail Panel in Standard vs Floating Popup in Compact)
         -- Standard mode: ShowDossierPopup updates selection & detail panel without opening popup
         local curDossier = self.GetDossierPopup and self:GetDossierPopup()
