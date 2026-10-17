@@ -2748,9 +2748,9 @@ function ForeverAlts:CreateModernMainFrame()
     if detailAvatar.SetBackdropColor then detailAvatar:SetBackdropColor(raisedR, raisedG, raisedB, 0.8) end
     if detailAvatar.SetBackdropBorderColor then detailAvatar:SetBackdropBorderColor(brandR, brandG, brandB, 0.8) end
     local detailAvatarText = detailAvatar:CreateFontString(nil, "OVERLAY")
-    self:SetWidgetFont(detailAvatarText, 20, "OUTLINE")
+    self:SetWidgetFont(detailAvatarText, 18, "OUTLINE", "mono")
     detailAvatarText:SetPoint("CENTER", 0, 0)
-    detailAvatarText:SetText("T")
+    detailAvatarText:SetText("1")
     detailAvatarText:SetTextColor(brandR, brandG, brandB)
     detailAvatar.text = detailAvatarText
     detailPanel.avatar = detailAvatar
@@ -2765,7 +2765,7 @@ function ForeverAlts:CreateModernMainFrame()
     local detailSub = detailPanel:CreateFontString(nil, "OVERLAY")
     self:SetWidgetFont(detailSub, 14, "")
     detailSub:SetPoint("TOPLEFT", detailName, "BOTTOMLEFT", 0, -3)
-    detailSub:SetText("47 Orc Warrior · Horde")
+    detailSub:SetText("Orc Warrior")
     detailSub:SetTextColor(mutedR, mutedG, mutedB)
     detailPanel.sub = detailSub
 
@@ -4141,7 +4141,6 @@ function ForeverAlts:UpdateDetailPanel(charArg)
 
     -- 1. Avatar & Identity
     local rawName = char.name or char.fullName or "Unknown"
-    local initial = rawName:sub(1, 1):upper()
     local classFile = char.classFile or "WARRIOR"
     local cr, cg, cb = self:GetClassColor(classFile)
 
@@ -4150,7 +4149,8 @@ function ForeverAlts:UpdateDetailPanel(charArg)
             dp.avatar:SetBackdropBorderColor(cr, cg, cb, 0.9)
         end
         if dp.avatar.text then
-            dp.avatar.text:SetText(initial)
+            self:SetWidgetFont(dp.avatar.text, 18, "OUTLINE", "mono")
+            dp.avatar.text:SetText(tostring(char.level or 1))
             dp.avatar.text:SetTextColor(cr, cg, cb)
         end
     end
@@ -4161,12 +4161,15 @@ function ForeverAlts:UpdateDetailPanel(charArg)
     end
 
     if dp.sub then
-        local raceStr = char.race or ""
-        local classStr = char.class or ""
-        local facStr = char.faction or ""
-        local tierStr = (char.tier == "CORE" and "Core") or (char.tier == "RESERVE" and "Alt") or (char.tier == "BANK" and "Bank Mule") or "Alt"
-        local moneyStr = self:FormatCoins(char.money or 0)
-        dp.sub:SetText(string.format("%d %s %s · %s (%s) · %s", char.level or 1, raceStr, classStr, facStr, tierStr, moneyStr))
+        local raceStr = (char.race and char.race ~= "" and char.race ~= "Unknown") and char.race or (char.raceFile == "Scourge" and "Undead") or char.raceFile or ""
+        local classStr = char.class or char.className or classFile or ""
+        local raceClassStr
+        if raceStr ~= "" and classStr ~= "" then
+            raceClassStr = string.format("%s %s", raceStr, classStr)
+        else
+            raceClassStr = (raceStr ~= "") and raceStr or classStr
+        end
+        dp.sub:SetText(raceClassStr)
         dp.sub:SetTextColor(mutedR, mutedG, mutedB)
     end
 

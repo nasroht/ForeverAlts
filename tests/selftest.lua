@@ -1203,9 +1203,8 @@ function ForeverAlts:RunSelfTest()
         self:UpdateDetailPanel()
 
         Assert(dp.name:GetText():find("HordeAlpha") ~= nil, "Phase 6: dp.name shows HordeAlpha")
-        Assert(dp.avatar.text:GetText() == "H", "Phase 6: dp.avatar text displays initial 'H'")
-        Assert(dp.sub:GetText():find("47 Orc Shaman") ~= nil, "Phase 6: dp.sub displays level, race, class")
-        Assert(dp.sub:GetText():find("Horde") ~= nil and dp.sub:GetText():find("%(Core%)") ~= nil, "Phase 6: dp.sub displays faction and cohort tier")
+        Assert(dp.avatar.text:GetText() == "47", "Phase 6: dp.avatar text displays level '47'")
+        Assert(dp.sub:GetText() == "Orc Shaman", "Phase 6: dp.sub displays only race and class 'Orc Shaman'")
 
         -- Rested Card: Capped with waste
         Assert(dp.restedCard.status:GetText():find("Capped") ~= nil and dp.restedCard.status:GetText():find("wasted") ~= nil, "Phase 6: Rested card shows 'Capped ..., ~... XP wasted'")
@@ -4045,6 +4044,20 @@ function ForeverAlts:RunSelfTest()
 
         -- 7. Sidebar Navigation Count
         Assert(#mFrame.sidebarNavButtons == 5, "OptionC: Exactly 5 consolidated navigation buttons exist")
+
+        -- 8. Right Dossier Panel: Avatar Level Square & Race/Class Only Subline
+        local nasGuile = {
+            name = "Nas Guile",
+            level = 18,
+            race = "High Order Skyborne",
+            class = "Rogue",
+            classFile = "ROGUE",
+            faction = "Alliance",
+            money = 14871,
+        }
+        self:UpdateDetailPanel(nasGuile)
+        Assert(mFrame.detailPanel.avatar.text:GetText() == "18", "OptionC: Dossier avatar square displays character level '18'")
+        Assert(mFrame.detailPanel.sub:GetText() == "High Order Skyborne Rogue", "OptionC: Dossier subline displays only race and class 'High Order Skyborne Rogue'")
     end
 
     -- 38. Tab 8 Embedded Settings Navigation Panel Engine Tests
