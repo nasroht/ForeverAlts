@@ -1664,9 +1664,8 @@ function ForeverAlts:CycleWellRestedPerk(charOrName)
     self:SetWellRestedRank(nextRank, char)
 end
 
--- ----------------------------------------------------------------------------
--- Level Experience Progress (Current XP, Max XP, %, and ASCII Progress Bar)
--- ----------------------------------------------------------------------------
+local CLASSIC_FALLBACK_XP = { [1]=400, [2]=900, [3]=1400, [4]=2100, [5]=2800, [6]=3600, [7]=4500, [8]=5400, [9]=6500, [10]=7600 }
+
 function ForeverAlts:GetLevelProgressData(char)
     if not char then return nil end
 
@@ -1694,9 +1693,8 @@ function ForeverAlts:GetLevelProgressData(char)
 
     -- Self-heal cross-contaminated maxXP for offline alts
     if not isCurrent and level > 1 and maxXP <= 400 then
-        local classicXP = { [1]=400, [2]=900, [3]=1400, [4]=2100, [5]=2800, [6]=3600, [7]=4500, [8]=5400, [9]=6500, [10]=7600 }
-        if classicXP[level] then
-            maxXP = classicXP[level]
+        if CLASSIC_FALLBACK_XP[level] then
+            maxXP = CLASSIC_FALLBACK_XP[level]
             char.maxXP = maxXP
         end
     end
@@ -2512,6 +2510,8 @@ function ForeverAlts:PrintRosterRoles()
     PrintGroup("UNASSIGNED ALTS", groups.UNASSIGNED, 60)
 end
 
+local sortScratch = {}
+
 function ForeverAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     local list = {}
     if not ForeverAltsDB or not ForeverAltsDB.characters then
@@ -2587,7 +2587,7 @@ function ForeverAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         sortAsc = ForeverAltsDB.settings.sortAsc
     end
 
-    local sortValues = {}
+    local sortValues = wipe(sortScratch)
     if sortBy == "rested" or sortBy == "pool" then
         for _, char in ipairs(list) do
             local r = self:GetRestedData(char)
@@ -2754,6 +2754,7 @@ function ForeverAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
             if sortAsc then return lvlA < lvlB else return lvlA > lvlB end
         end
     end)
+    wipe(sortScratch)
 
     return list
 end

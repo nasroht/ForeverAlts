@@ -7,6 +7,7 @@
 time = time or os.time
 date = date or os.date
 unpack = unpack or (table and table.unpack)
+wipe = wipe or function(t) if t then for k in pairs(t) do t[k] = nil end end return t end
 
 -- 2. Mock WoW Frame & Widget Hierarchy
 local function CreateDummyFrame(frameType, name, parent)

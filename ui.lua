@@ -939,6 +939,8 @@ end
 -- ----------------------------------------------------------------------------
 -- Sidebar Badges Engine (Phase 5)
 -- ----------------------------------------------------------------------------
+local sidebarBadgeScratch = {}
+
 function ForeverAlts:GetSidebarBadgeCounts(nowOverride)
     if self._cachedSidebarBadges then
         return self._cachedSidebarBadges
@@ -947,14 +949,13 @@ function ForeverAlts:GetSidebarBadgeCounts(nowOverride)
     local digest = self.GetLoginDigestItems and self:GetLoginDigestItems(now)
     local chars = self.GetCharactersList and self:GetCharactersList() or {}
     local mailSummary = self._cachedMailReadySummary or (self.GetMailReadySummary and self:GetMailReadySummary())
-    local counts = {
-        overview = #chars,
-        rested = (digest and digest.losingAlts) or 0,
-        cooldowns = (digest and ((digest.readyCooldowns or 0) + (digest.unlockedRaids or 0))) or 0,
-        mail = (mailSummary and mailSummary.totalPackages) or 0,
-    }
-    self._cachedSidebarBadges = counts
-    return counts
+    wipe(sidebarBadgeScratch)
+    sidebarBadgeScratch.overview = #chars
+    sidebarBadgeScratch.rested = (digest and digest.losingAlts) or 0
+    sidebarBadgeScratch.cooldowns = (digest and ((digest.readyCooldowns or 0) + (digest.unlockedRaids or 0))) or 0
+    sidebarBadgeScratch.mail = (mailSummary and mailSummary.totalPackages) or 0
+    self._cachedSidebarBadges = sidebarBadgeScratch
+    return sidebarBadgeScratch
 end
 
 -- ----------------------------------------------------------------------------
@@ -1990,11 +1991,22 @@ local COLS = {
     [8] = {}, -- 8: SETTINGS & PREFERENCES (Embedded Panel)
 }
 
+local columnCache = {}
+
+function ForeverAlts:InvalidateColumnCache()
+    wipe(columnCache)
+end
+
 function ForeverAlts:GetColumns(activeTab)
     activeTab = tonumber(activeTab) or 1
     local tabCols = COLS[activeTab] or COLS[1]
     if not self:IsCompact() and not mainFrame then
         return tabCols
+    end
+
+    local cacheKey = tostring(activeTab) .. (mainFrame and "_m" or "") .. (self:IsCompact() and "_c" or "")
+    if columnCache[cacheKey] then
+        return columnCache[cacheKey]
     end
 
     local filtered = {}
@@ -2013,6 +2025,7 @@ function ForeverAlts:GetColumns(activeTab)
             end
         end
     end
+    columnCache[cacheKey] = filtered
     return filtered
 end
 
@@ -4345,6 +4358,8 @@ end
 -- ----------------------------------------------------------------------------
 -- Shared Character Row Component (Dual circular gauges, details, g/s/c coins)
 -- ----------------------------------------------------------------------------
+local rowDerivedScratch = {}
+
 function ForeverAlts:RenderCharRow(row, char, derived)
     if not row or not char then return end
 
@@ -5221,18 +5236,34 @@ function ForeverAlts:Render(force)
                         -- --------------------------------------------------------
                         -- Tab 1 (Overview): Consolidated Dashboard with Dual Circular Gauges
                         -- --------------------------------------------------------
-                        self:RenderCharRow(row, char, {
-                            t = t,
-                            raisedR = raisedR, raisedG = raisedG, raisedB = raisedB,
-                            lineR = lineR, lineG = lineG, lineB = lineB,
-                            panelR = panelR, panelG = panelG, panelB = panelB,
-                            brandR = brandR, brandG = brandG, brandB = brandB,
-                            warnR = warnR, warnG = warnG, warnB = warnB,
-                            fillR = fillR, fillG = fillG, fillB = fillB,
-                            textR = textR, textG = textG, textB = textB,
-                            mutedR = mutedR, mutedG = mutedG, mutedB = mutedB,
-                            isSelected = isSelected,
-                        })
+                        wipe(rowDerivedScratch)
+                        rowDerivedScratch.t = t
+                        rowDerivedScratch.raisedR = raisedR
+                        rowDerivedScratch.raisedG = raisedG
+                        rowDerivedScratch.raisedB = raisedB
+                        rowDerivedScratch.lineR = lineR
+                        rowDerivedScratch.lineG = lineG
+                        rowDerivedScratch.lineB = lineB
+                        rowDerivedScratch.panelR = panelR
+                        rowDerivedScratch.panelG = panelG
+                        rowDerivedScratch.panelB = panelB
+                        rowDerivedScratch.brandR = brandR
+                        rowDerivedScratch.brandG = brandG
+                        rowDerivedScratch.brandB = brandB
+                        rowDerivedScratch.warnR = warnR
+                        rowDerivedScratch.warnG = warnG
+                        rowDerivedScratch.warnB = warnB
+                        rowDerivedScratch.fillR = fillR
+                        rowDerivedScratch.fillG = fillG
+                        rowDerivedScratch.fillB = fillB
+                        rowDerivedScratch.textR = textR
+                        rowDerivedScratch.textG = textG
+                        rowDerivedScratch.textB = textB
+                        rowDerivedScratch.mutedR = mutedR
+                        rowDerivedScratch.mutedG = mutedG
+                        rowDerivedScratch.mutedB = mutedB
+                        rowDerivedScratch.isSelected = isSelected
+                        self:RenderCharRow(row, char, rowDerivedScratch)
                     else
                         -- --------------------------------------------------------
                         -- Tabs 2 to 7: Multi-Column Cells
