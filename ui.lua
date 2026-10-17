@@ -9027,7 +9027,7 @@ end
 function ForeverAlts:ToggleAltCountTooltips(enable, isManual)
     if enable == nil then
         if ForeverAltsDB and ForeverAltsDB.settings then
-            enable = not (ForeverAltsDB.settings.showAltCountTooltips ~= false)
+            enable = (ForeverAltsDB.settings.showAltCountTooltips == false)
         else
             enable = true
         end
@@ -9046,7 +9046,7 @@ end
 function ForeverAlts:ToggleMailRouteTooltips(enable)
     if enable == nil then
         if ForeverAltsDB and ForeverAltsDB.settings then
-            enable = not (ForeverAltsDB.settings.showMailRouteTooltips ~= false)
+            enable = (ForeverAltsDB.settings.showMailRouteTooltips == false)
         else
             enable = true
         end
