@@ -4089,6 +4089,105 @@ function ForeverAlts:RunSelfTest()
     end
 
     do
+        -- 37e2. Rested XP % and Time To Cap Sort Validation
+        local now = time()
+        local testSortDB = {
+            settings = { sortBy = "rested", sortAsc = false },
+            characters = {
+                ["SmallAlt150"] = {
+                    name = "SmallAlt150",
+                    faction = "Alliance",
+                    level = 10,
+                    maxXP = 4000,
+                    restedXP = 6000, -- 150% capped, exactly 6,000 raw XP
+                    lastUpdate = now,
+                },
+                ["BigAlt10"] = {
+                    name = "BigAlt10",
+                    faction = "Alliance",
+                    level = 55,
+                    maxXP = 150000,
+                    restedXP = 15000, -- 10% rested, but 15,000 raw XP (> 6,000!)
+                    lastUpdate = now,
+                },
+                ["MidAlt80"] = {
+                    name = "MidAlt80",
+                    faction = "Alliance",
+                    level = 30,
+                    maxXP = 20000,
+                    restedXP = 16000, -- 80% rested
+                    lastUpdate = now,
+                },
+                ["WastingAlt"] = {
+                    name = "WastingAlt",
+                    faction = "Alliance",
+                    level = 20,
+                    maxXP = 10000,
+                    restedXP = 15000, -- 150% cap reached in past, wasting XP
+                    lastUpdate = now - 86400, -- logged out 1 day ago while full
+                },
+                ["MaxLvlAlly"] = {
+                    name = "MaxLvlAlly",
+                    faction = "Alliance",
+                    level = 60,
+                    maxXP = 0,
+                    restedXP = 0,
+                    lastUpdate = now,
+                },
+            }
+        }
+        local oldSortDB = ForeverAltsDB
+        ForeverAltsDB = testSortDB
+        self:InvalidateRestedCache()
+
+        -- 1. Rested % sort descending (default): highest % first, NOT raw XP numbers!
+        local restedSortedDesc = self:GetCharactersList("rested", false)
+        Assert(#restedSortedDesc == 5, "RestedSort: returns all 5 alts")
+        Assert(restedSortedDesc[1].name == "WastingAlt", "RestedSort: WastingAlt (150% + waste) is first")
+        Assert(restedSortedDesc[2].name == "SmallAlt150", "RestedSort: SmallAlt150 (150% rested) is second (ahead of BigAlt10 with 10%)")
+        Assert(restedSortedDesc[3].name == "MidAlt80", "RestedSort: MidAlt80 (80% rested) is third")
+        Assert(restedSortedDesc[4].name == "BigAlt10", "RestedSort: BigAlt10 (10% rested) is fourth despite higher raw XP (15k vs 6k)")
+        Assert(restedSortedDesc[5].name == "MaxLvlAlly", "RestedSort: MaxLvlAlly (level 60) cleanly grouped at the end")
+
+        -- 2. Rested % sort ascending: lowest % first, max level still at the end
+        local restedSortedAsc = self:GetCharactersList("rested", true)
+        Assert(restedSortedAsc[1].name == "BigAlt10", "RestedSortAsc: BigAlt10 (10%) is first")
+        Assert(restedSortedAsc[2].name == "MidAlt80", "RestedSortAsc: MidAlt80 (80%) is second")
+        Assert(restedSortedAsc[3].name == "SmallAlt150", "RestedSortAsc: SmallAlt150 (150%) is third")
+        Assert(restedSortedAsc[4].name == "WastingAlt", "RestedSortAsc: WastingAlt (150% + waste) is fourth")
+        Assert(restedSortedAsc[5].name == "MaxLvlAlly", "RestedSortAsc: MaxLvlAlly remains cleanly grouped at the end")
+
+        -- 3. Raw Pool XP sort: BigAlt10 (15,000 XP) > SmallAlt150 (6,000 XP)
+        local poolSortedDesc = self:GetCharactersList("pool", false)
+        local bigIdx, smallIdx
+        for idx, c in ipairs(poolSortedDesc) do
+            if c.name == "BigAlt10" then bigIdx = idx end
+            if c.name == "SmallAlt150" then smallIdx = idx end
+        end
+        Assert(bigIdx < smallIdx, "PoolSort: BigAlt10 (15k raw XP) sorts ahead of SmallAlt150 (6k raw XP) when sorted by pool")
+
+        -- 4. Time To Cap sorting (default sortAsc = true): most urgent first!
+        local ttcSortedAsc = self:GetCharactersList("timetocap", true)
+        Assert(#ttcSortedAsc == 5, "TimeSort: returns all 5 alts")
+        Assert(ttcSortedAsc[1].name == "WastingAlt", "TimeSort: WastingAlt (wasting XP) is 1st (most urgent)")
+        Assert(ttcSortedAsc[2].name == "SmallAlt150", "TimeSort: SmallAlt150 (at cap, 0s to cap) is 2nd")
+        Assert(ttcSortedAsc[3].name == "MidAlt80", "TimeSort: MidAlt80 (80% rested, ~1.6d to cap) is 3rd")
+        Assert(ttcSortedAsc[4].name == "BigAlt10", "TimeSort: BigAlt10 (10% rested, ~7d to cap) is 4th")
+        Assert(ttcSortedAsc[5].name == "MaxLvlAlly", "TimeSort: MaxLvlAlly (level 60) cleanly grouped at the end")
+
+        -- 5. Time To Cap sorting descending (reversed): least urgent first, max level alts stay at the end
+        local ttcSortedDesc = self:GetCharactersList("timetocap", false)
+        Assert(ttcSortedDesc[1].name == "BigAlt10", "TimeSortDesc: BigAlt10 (furthest from cap) is 1st")
+        Assert(ttcSortedDesc[2].name == "MidAlt80", "TimeSortDesc: MidAlt80 is 2nd")
+        Assert(ttcSortedDesc[3].name == "SmallAlt150", "TimeSortDesc: SmallAlt150 is 3rd")
+        Assert(ttcSortedDesc[4].name == "WastingAlt", "TimeSortDesc: WastingAlt is 4th")
+        Assert(ttcSortedDesc[5].name == "MaxLvlAlly", "TimeSortDesc: MaxLvlAlly cleanly grouped at the end")
+
+        ForeverAltsDB = oldSortDB
+        self:InvalidateRestedCache()
+    end
+
+    do
         -- 37f. Faction Grouping Integrity: Alliance first, Horde second, never mixed
         local testFactionDB = {
             settings = { sortBy = "level", sortAsc = false },

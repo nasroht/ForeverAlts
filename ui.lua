@@ -961,10 +961,11 @@ end
 -- ----------------------------------------------------------------------------
 -- Filter Chips & Sort Engine (Phase 5)
 -- ----------------------------------------------------------------------------
-local SORT_CYCLE = { "rested", "level", "name", "waste", "gold" }
+local SORT_CYCLE = { "rested", "level", "name", "timetocap", "gold" }
 
 function ForeverAlts:CycleSort()
     local cur = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "rested"
+    if cur == "waste" or cur == "time" or cur == "ttc" then cur = "timetocap" end
     local nextKey = "rested"
     for i, k in ipairs(SORT_CYCLE) do
         if k == cur then
@@ -1062,8 +1063,21 @@ function ForeverAlts:UpdateFilterChips()
 
     -- Update Sort Button Text
     if mainFrame.btnSort and mainFrame.btnSort.label then
-        local curSort = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "Rested"
-        local sortTitle = curSort:sub(1,1):upper() .. curSort:sub(2)
+        local curSort = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortBy) or "rested"
+        local sortNames = {
+            rested = "Rested %",
+            pool = "Rested XP",
+            timetocap = "Time to Cap",
+            waste = "Time to Cap",
+            level = "Level",
+            name = "Name",
+            gold = "Wealth",
+            rotation = "Priority",
+            cohort = "Role",
+            xp = "Lvl XP",
+            cooldown = "Cooldown",
+        }
+        local sortTitle = sortNames[curSort:lower()] or (curSort:sub(1,1):upper() .. curSort:sub(2))
         mainFrame.btnSort.label:SetText(string.format("Sort: %s ▾", sortTitle))
     end
 end
@@ -1926,33 +1940,33 @@ ForeverAlts.FmtMailPending = FmtMailPending
 
 local COLS = {
     [1] = { -- 1: OVERVIEW (Consolidated Dashboard with Dual Circular Gauges)
-        { key = "name",       title = "CHARACTER",         w = 30, pw = 280, cpw = 260, mpw = 280, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 78,  cpw = 70,  mpw = 78,  align = "CENTER", sort = "xp",       fmt = FmtCurXP, mono = true },
-        { key = "circleRest", title = "RESTED XP",         w = 9,  pw = 76,  cpw = 70,  mpw = 76,  align = "CENTER", sort = "rested",   fmt = FmtRested, mono = true },
-        { key = "details",    title = "TIME TO CAP",       w = 25, pw = 230, cpw = 200, mpw = 230, align = "LEFT",   sort = "waste",    fmt = FmtTimeToCap },
+        { key = "name",       title = "CHARACTER",         w = 30, pw = 280, cpw = 260, mpw = 280, align = "LEFT",   sort = "name",      fmt = FmtName },
+        { key = "circleXP",   title = "LVL XP",            w = 8,  pw = 78,  cpw = 70,  mpw = 78,  align = "CENTER", sort = "xp",        fmt = FmtCurXP, mono = true },
+        { key = "circleRest", title = "RESTED XP",         w = 9,  pw = 76,  cpw = 70,  mpw = 76,  align = "CENTER", sort = "rested",    fmt = FmtRested, mono = true },
+        { key = "details",    title = "TIME TO CAP",       w = 25, pw = 230, cpw = 200, mpw = 230, align = "LEFT",   sort = "timetocap", fmt = FmtTimeToCap },
         { key = "gold",       title = "WEALTH",            w = 15, pw = 160, cpw = 140, mpw = 160, padRight = 16, cpadRight = 12, mpadRight = 16, align = "RIGHT",  sort = "gold",     fmt = FmtGoldCoins, mono = true },
     },
     [2] = { -- 2: FOREVER ROUTE
-        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 38,  align = "CENTER", sort = "rotation", fmt = FmtRouteOrder, mono = true },
-        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "cohort",   fmt = FmtTier },
-        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "level",    fmt = FmtLevelTarget, mono = true },
-        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  mpw = 95,  align = "RIGHT",  sort = "rested",   fmt = FmtRested, mono = true },
-        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  mpw = 75,  align = "RIGHT",  sort = "rotation", fmt = FmtRotationScore, mono = true },
-        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "waste",    fmt = FmtETA, mono = true },
-        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 370, align = "LEFT", sort = "rotation", fmt = FmtRouteReason },
+        { key = "order",     title = "ORDER",             w = 5,  pw = 48,  cpw = 40,  mpw = 38,  align = "CENTER", sort = "rotation",  fmt = FmtRouteOrder, mono = true },
+        { key = "name",      title = "CHARACTER",         w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",      fmt = FmtName },
+        { key = "tier",      title = "ROLE",              w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "cohort",    fmt = FmtTier },
+        { key = "lvlTgt",    title = "LEVEL",             w = 8,  pw = 65,  cpw = 55,  mpw = 54,  align = "CENTER", sort = "level",     fmt = FmtLevelTarget, mono = true },
+        { key = "rested",    title = "RESTED XP",         w = 11, pw = 100, cpw = 85,  mpw = 95,  align = "RIGHT",  sort = "rested",    fmt = FmtRested, mono = true },
+        { key = "score",     title = "PRIORITY",          w = 9,  pw = 80,  cpw = 70,  mpw = 75,  align = "RIGHT",  sort = "rotation",  fmt = FmtRotationScore, mono = true },
+        { key = "eta",       title = "ETA",               w = 8,  pw = 80,  cpw = 0,   mpw = 0,   padRight = 16, cpadRight = 0, align = "RIGHT",  sort = "timetocap", fmt = FmtETA, mono = true },
+        { key = "reason",    title = "RECOMMENDATION REASON", w = 30, pw = 525, cpw = 410, mpw = 370, align = "LEFT", sort = "rotation",  fmt = FmtRouteReason },
     },
     [3] = { -- 3: RESTED XP MONITOR (Simplified Numeric Analysis Table)
         { key = "fac",       title = "FAC",         w = 3,  pw = 36,  cpw = 32,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
-        { key = "name",      title = "CHARACTER",   w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",     fmt = FmtName },
-        { key = "lvl",       title = "LVL",         w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "RIGHT",  sort = "level",    fmt = FmtLevel, padRight = 6, mpadRight = 6, mono = true },
-        { key = "curXP",     title = "CURRENT XP",  w = 12, pw = 120, cpw = 0,   mpw = 100, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xp",       fmt = FmtCurXP, mono = true },
-        { key = "pool",      title = "RESTED POOL", w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "rested",   fmt = FmtRestedPool, mono = true },
-        { key = "bonus",     title = "XP BONUS",    w = 8,  pw = 75,  cpw = 60,  mpw = 70,  padRight = 6,  mpadRight = 6, align = "RIGHT",  sort = "bonus",    fmt = FmtRestedBonus, mono = true },
-        { key = "restBar",   title = "PROGRESS",    w = 14, pw = 130, cpw = 110, mpw = 115, mpadRight = 8, align = "LEFT",   sort = "progress", fmt = FmtRestedBar },
-        { key = "cap",       title = "RESTED CAP",  w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "cap",      fmt = FmtRestedCap, mono = true },
-        { key = "loc",       title = "REST LOC",    w = 6,  pw = 65,  cpw = 50,  mpw = 55,  align = "CENTER", sort = "resting",  fmt = FmtRestLoc },
-        { key = "timeToCap", title = "TIME TO CAP", w = 12, pw = 130, cpw = 110, mpw = 115, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "waste",    fmt = FmtTimeToCap, mono = true },
+        { key = "name",      title = "CHARACTER",   w = 15, pw = 140, cpw = 125, mpw = 130, align = "LEFT",   sort = "name",      fmt = FmtName },
+        { key = "lvl",       title = "LVL",         w = 3,  pw = 40,  cpw = 35,  mpw = 35,  align = "RIGHT",  sort = "level",     fmt = FmtLevel, padRight = 6, mpadRight = 6, mono = true },
+        { key = "curXP",     title = "CURRENT XP",  w = 12, pw = 120, cpw = 0,   mpw = 100, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "xp",        fmt = FmtCurXP, mono = true },
+        { key = "pool",      title = "RESTED POOL", w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "pool",      fmt = FmtRestedPool, mono = true },
+        { key = "bonus",     title = "XP BONUS",    w = 8,  pw = 75,  cpw = 60,  mpw = 70,  padRight = 6,  mpadRight = 6, align = "RIGHT",  sort = "bonus",     fmt = FmtRestedBonus, mono = true },
+        { key = "restBar",   title = "PROGRESS",    w = 14, pw = 130, cpw = 110, mpw = 115, mpadRight = 8, align = "LEFT",   sort = "progress",  fmt = FmtRestedBar },
+        { key = "cap",       title = "RESTED CAP",  w = 10, pw = 105, cpw = 90,  mpw = 85,  padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "cap",       fmt = FmtRestedCap, mono = true },
+        { key = "loc",       title = "REST LOC",    w = 6,  pw = 65,  cpw = 50,  mpw = 55,  align = "CENTER", sort = "resting",   fmt = FmtRestLoc },
+        { key = "timeToCap", title = "TIME TO CAP", w = 12, pw = 130, cpw = 110, mpw = 115, padRight = 8,  mpadRight = 8, align = "RIGHT",  sort = "timetocap", fmt = FmtTimeToCap, mono = true },
     },
     [4] = { -- 4: PROFESSIONS & MILESTONES
         { key = "fac",       title = "FAC",               w = 3,  pw = 40,  cpw = 36,  mpw = 30,  align = "CENTER", fmt = FmtFaction },
@@ -5277,7 +5291,10 @@ function ForeverAlts:Render(force)
                 end
 
                 local title = col.title
-                if col.sort and col.sort == sortBy then
+                local isCurrentSort = col.sort and (col.sort == sortBy
+                    or (col.sort == "timetocap" and (sortBy == "waste" or sortBy == "time" or sortBy == "ttc"))
+                    or (col.sort == "waste" and (sortBy == "timetocap" or sortBy == "time" or sortBy == "ttc")))
+                if isCurrentSort then
                     local arrow = sortAsc and " ^" or " v"
                     if col.align == "RIGHT" then
                         title = (sortAsc and "^ " or "v ") .. title
@@ -5870,11 +5887,15 @@ end
 function ForeverAlts:ToggleSortKey(key)
     if not key then return end
     if ForeverAltsDB and ForeverAltsDB.settings then
-        if ForeverAltsDB.settings.sortBy == key then
+        local cur = ForeverAltsDB.settings.sortBy
+        local isSame = (cur == key)
+            or (key == "timetocap" and (cur == "waste" or cur == "time" or cur == "ttc"))
+            or (key == "waste" and (cur == "timetocap" or cur == "time" or cur == "ttc"))
+        if isSame then
             ForeverAltsDB.settings.sortAsc = not ForeverAltsDB.settings.sortAsc
         else
             ForeverAltsDB.settings.sortBy = key
-            ForeverAltsDB.settings.sortAsc = (key == "name" or key == "level" or key == "prof" or key == "role")
+            ForeverAltsDB.settings.sortAsc = (key == "name" or key == "level" or key == "prof" or key == "role" or key == "timetocap" or key == "waste" or key == "time" or key == "ttc" or key == "cd" or key == "cooldown")
         end
     end
     PlayRetroSound()
@@ -6007,14 +6028,19 @@ function ForeverAlts:ExecutePromptCommand(input)
                 money = "gold",
                 rest = "rested",
                 rested = "rested",
+                pct = "rested",
+                pool = "pool",
+                timetocap = "timetocap",
+                time = "timetocap",
+                ttc = "timetocap",
+                waste = "timetocap",
+                wst = "timetocap",
                 cohort = "cohort",
                 tier = "cohort",
                 role = "cohort",
                 xp = "xp",
                 exp = "xp",
                 progress = "xp",
-                waste = "waste",
-                wst = "waste",
                 fac = "name",
                 cd = "cooldown",
                 cooldown = "cooldown",
@@ -6039,7 +6065,7 @@ function ForeverAlts:ExecutePromptCommand(input)
             local dir = (ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc) and "ASC" or "DESC"
             self:SetPromptFeedback(string.format("Sorted by %s (%s)", key:upper(), dir))
         else
-            self:SetPromptFeedback("Usage: sort <name|level|gold|rested|waste|xp|location|hearth|seen>", true)
+            self:SetPromptFeedback("Usage: sort <name|level|gold|rested|timetocap|xp|location|hearth|seen>", true)
         end
 
     elseif cmd == "filter" or cmd == "find" then
@@ -6523,7 +6549,7 @@ function ForeverAlts:AutoCompletePrompt(editBox)
     if cmd then
         cmd = cmd:lower()
         if cmd == "sort" then
-            local sortKeys = { "name", "level", "cohort", "role", "gold", "rested", "waste", "xp", "rotation", "next", "location", "hearth", "seen", "note", "prof", "cd", "cooldown" }
+            local sortKeys = { "name", "level", "cohort", "role", "gold", "rested", "pool", "timetocap", "waste", "xp", "rotation", "next", "location", "hearth", "seen", "note", "prof", "cd", "cooldown" }
             for _, k in ipairs(sortKeys) do
                 if k:sub(1, #arg) == arg:lower() and k ~= arg:lower() then
                     editBox:SetText("sort " .. k)

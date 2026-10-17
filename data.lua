@@ -2603,9 +2603,27 @@ function ForeverAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
     if sortAsc == nil and ForeverAltsDB and ForeverAltsDB.settings and ForeverAltsDB.settings.sortAsc ~= nil then
         sortAsc = ForeverAltsDB.settings.sortAsc
     end
+    if sortAsc == nil and (sortBy == "timetocap" or sortBy == "waste" or sortBy == "time" or sortBy == "ttc") then
+        sortAsc = true
+    end
 
+    local maxLevel = self:GetMaxLevel()
     local sortValues = wipe(sortScratch)
-    if sortBy == "rested" or sortBy == "pool" then
+    if sortBy == "rested" or sortBy == "rest" then
+        for _, char in ipairs(list) do
+            local r = self:GetRestedData(char)
+            if not r or r.isMaxLevel or (char.level and char.level >= maxLevel) then
+                sortValues[char] = 0
+            else
+                local curR = r.currentRested or 0
+                local charMaxXP = (char.maxXP and char.maxXP > 0 and char.maxXP) or 1
+                local pct = (curR / charMaxXP) * 100
+                local wastedSec, wastedXP = self:GetRestedWaste(char, nil, r)
+                local wasteFrac = (wastedSec and wastedSec > 0 and wastedXP and wastedXP > 0) and (wastedXP / charMaxXP) or 0
+                sortValues[char] = pct + wasteFrac
+            end
+        end
+    elseif sortBy == "pool" then
         for _, char in ipairs(list) do
             local r = self:GetRestedData(char)
             sortValues[char] = (r and r.currentRested) or 0
@@ -2623,11 +2641,18 @@ function ForeverAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
         for _, char in ipairs(list) do
             sortValues[char] = (char.maxXP and char.maxXP > 0) and ((char.xp or 0) / char.maxXP) or 0
         end
-    elseif sortBy == "waste" then
+    elseif sortBy == "timetocap" or sortBy == "waste" or sortBy == "time" or sortBy == "ttc" then
         for _, char in ipairs(list) do
-            local wastedSec, wastedXP = self:GetRestedWaste(char)
-            local frac = (char.maxXP and char.maxXP > 0) and (wastedXP / char.maxXP) or 0
-            sortValues[char] = (wastedSec or 0) * 1000 + frac
+            local r = self:GetRestedData(char)
+            if not r or r.isMaxLevel or (char.level and char.level >= maxLevel) then
+                sortValues[char] = 999999999
+            elseif r.isFull then
+                local wastedSec, wastedXP = self:GetRestedWaste(char, nil, r)
+                local frac = (char.maxXP and char.maxXP > 0 and wastedXP and wastedXP > 0) and (wastedXP / char.maxXP) or 0
+                sortValues[char] = -(wastedSec or 0) - frac
+            else
+                sortValues[char] = r.timeToFull or 0
+            end
         end
     elseif sortBy == "rotation" or sortBy == "next" then
         for _, char in ipairs(list) do
@@ -2755,13 +2780,58 @@ function ForeverAlts:GetCharactersList(sortBy, sortAsc, filterQuery)
                 if sortAsc then return rA < rB else return rA > rB end
             end
             return (a.name or "") < (b.name or "")
-        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "rested" or sortBy == "pool" or sortBy == "bonus" or sortBy == "cap" or sortBy == "waste" or sortBy == "rotation" or sortBy == "next" or sortBy == "xph" or sortBy == "rate" then
+        elseif sortBy == "timetocap" or sortBy == "waste" or sortBy == "time" or sortBy == "ttc" then
+            local isMaxA = (a.level or 0) >= maxLevel
+            local isMaxB = (b.level or 0) >= maxLevel
+            if isMaxA ~= isMaxB then
+                return not isMaxA
+            end
+            if isMaxA and isMaxB then
+                local lvlA = a.level or 0
+                local lvlB = b.level or 0
+                if lvlA ~= lvlB then return lvlA > lvlB end
+                return (a.name or "") < (b.name or "")
+            end
             local valA = sortValues[a] or 0
             local valB = sortValues[b] or 0
-            if valA == valB then
-                return (a.level or 0) > (b.level or 0)
+            if valA ~= valB then
+                if sortAsc then return valA < valB else return valA > valB end
             end
-            if sortAsc then return valA < valB else return valA > valB end
+            local lvlA = a.level or 0
+            local lvlB = b.level or 0
+            if lvlA ~= lvlB then return lvlA > lvlB end
+            return (a.name or "") < (b.name or "")
+        elseif sortBy == "rested" or sortBy == "rest" then
+            local isMaxA = (a.level or 0) >= maxLevel
+            local isMaxB = (b.level or 0) >= maxLevel
+            if isMaxA ~= isMaxB then
+                return not isMaxA
+            end
+            if isMaxA and isMaxB then
+                local lvlA = a.level or 0
+                local lvlB = b.level or 0
+                if lvlA ~= lvlB then return lvlA > lvlB end
+                return (a.name or "") < (b.name or "")
+            end
+            local valA = sortValues[a] or 0
+            local valB = sortValues[b] or 0
+            if valA ~= valB then
+                if sortAsc then return valA < valB else return valA > valB end
+            end
+            local lvlA = a.level or 0
+            local lvlB = b.level or 0
+            if lvlA ~= lvlB then return lvlA > lvlB end
+            return (a.name or "") < (b.name or "")
+        elseif sortBy == "xp" or sortBy == "progress" or sortBy == "pool" or sortBy == "bonus" or sortBy == "cap" or sortBy == "rotation" or sortBy == "next" or sortBy == "xph" or sortBy == "rate" then
+            local valA = sortValues[a] or 0
+            local valB = sortValues[b] or 0
+            if valA ~= valB then
+                if sortAsc then return valA < valB else return valA > valB end
+            end
+            local lvlA = a.level or 0
+            local lvlB = b.level or 0
+            if lvlA ~= lvlB then return lvlA > lvlB end
+            return (a.name or "") < (b.name or "")
         else -- default "level"
             local lvlA = a.level or 0
             local lvlB = b.level or 0

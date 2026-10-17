@@ -590,14 +590,19 @@ local function SlashHandler(msg)
                 money = "gold",
                 rest = "rested",
                 rested = "rested",
+                pct = "rested",
+                pool = "pool",
+                timetocap = "timetocap",
+                time = "timetocap",
+                ttc = "timetocap",
+                waste = "timetocap",
+                wst = "timetocap",
                 cohort = "cohort",
                 tier = "cohort",
                 role = "cohort",
                 xp = "xp",
                 exp = "xp",
                 progress = "xp",
-                waste = "waste",
-                wst = "waste",
                 rotation = "rotation",
                 rot = "rotation",
                 next = "rotation",
@@ -612,7 +617,7 @@ local function SlashHandler(msg)
                 ForeverAlts:ToggleSortKey(key)
             end
         else
-            ForeverAlts:Print("Usage: |cff00ff66/fa sort <name|level|rotation|cohort|gold|rested|waste|xp|bags>|r")
+            ForeverAlts:Print("Usage: |cff00ff66/fa sort <name|level|rotation|cohort|gold|rested|timetocap|xp|bags>|r")
         end
 
     elseif cmd == "watch" then
