@@ -427,10 +427,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
 
     elseif event == "PLAYER_REGEN_DISABLED" then
-        -- Entering combat: immediately clear override bindings on ASCII legacy frame if open
-        if ClearOverrideBindings and ForeverAlts.mainFrame then
-            pcall(ClearOverrideBindings, ForeverAlts.mainFrame)
-        end
+        -- Entering combat: UISpecialFrames and OnKeyDown handle ESC/navigation cleanly without protected bindings
 
     elseif event == "PLAYER_REGEN_ENABLED" then
         -- Exiting combat: refresh anchors once safe

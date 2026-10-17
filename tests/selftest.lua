@@ -1356,6 +1356,18 @@ function ForeverAlts:RunSelfTest()
         mFrame.searchBox:GetScript("OnEscapePressed")(mFrame.searchBox)
         Assert(mFrame:IsShown() == false, "Phase 6: searchBox OnEscapePressed when empty closes mainFrame")
 
+        -- 7i. Combat Safety: Show/Hide and OnShow/OnHide in combat do NOT invoke protected functions
+        local prevCombat = InCombatLockdown
+        InCombatLockdown = function() return true end
+        local showOk = pcall(function()
+            mFrame:Show()
+            if mFrame:GetScript("OnShow") then mFrame:GetScript("OnShow")(mFrame) end
+            mFrame:Hide()
+            if mFrame:GetScript("OnHide") then mFrame:GetScript("OnHide")(mFrame) end
+        end)
+        InCombatLockdown = prevCombat
+        Assert(showOk == true, "Phase 6: Show/Hide during combat does not invoke protected functions or trigger ADDON_ACTION_BLOCKED")
+
         -- 8. Test ShowDossierPopup Dual-Mode (Detail Panel in Standard vs Floating Popup in Compact)
         -- Standard mode: ShowDossierPopup updates selection & detail panel without opening popup
         local curDossier = self.GetDossierPopup and self:GetDossierPopup()

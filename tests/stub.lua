@@ -302,8 +302,16 @@ tinsert = tinsert or table.insert
 MouseIsOver = MouseIsOver or function() return true end
 PlaySound = PlaySound or function() end
 hooksecurefunc = hooksecurefunc or function() end
-SetOverrideBindingClick = SetOverrideBindingClick or function() end
-ClearOverrideBindings = ClearOverrideBindings or function() end
+SetOverrideBindingClick = SetOverrideBindingClick or function(...)
+    if InCombatLockdown and InCombatLockdown() then
+        error("ADDON_ACTION_BLOCKED: SetOverrideBindingClick called during combat lockdown")
+    end
+end
+ClearOverrideBindings = ClearOverrideBindings or function(...)
+    if InCombatLockdown and InCombatLockdown() then
+        error("ADDON_ACTION_BLOCKED: ClearOverrideBindings called during combat lockdown")
+    end
+end
 GetCursorPosition = GetCursorPosition or function() return 100, 100 end
 ItemRefTooltip = ItemRefTooltip or CreateDummyFrame("Frame", "ItemRefTooltip")
 TooltipDataProcessor = TooltipDataProcessor or {

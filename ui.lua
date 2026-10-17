@@ -4191,21 +4191,10 @@ function ForeverAlts:CreateModernMainFrame()
     frame.rowFrames = rowFrames
 
     frame:SetScript("OnShow", function(self)
-        pcall(function()
-            if SetOverrideBindingClick then
-                SetOverrideBindingClick(self, false, "ESCAPE", "ForeverAltsCloseEscapeBtn")
-                SetOverrideBindingClick(self, false, "ENTER", "ForeverAltsFocusEnterBtn")
-            end
-        end)
         ForeverAlts:ApplyLayoutSize()
         ForeverAlts:Render()
     end)
     frame:SetScript("OnHide", function(self)
-        pcall(function()
-            if ClearOverrideBindings then
-                ClearOverrideBindings(self)
-            end
-        end)
         if frame.searchBox then
             frame.searchBox:ClearFocus()
         end
