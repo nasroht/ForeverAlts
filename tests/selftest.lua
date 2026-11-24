@@ -4574,7 +4574,7 @@ function ForeverAlts:RunSelfTest()
     do
         local prevScrollsDB = ForeverAltsDB
         ForeverAltsDB = {
-            chars = {},
+            characters = {},
             settings = { autoMailConsumables = false },
             ignoredMailItems = {},
         }
@@ -4586,15 +4586,15 @@ function ForeverAlts:RunSelfTest()
         Assert(self:IsMageScroll(nil, "Scroll of Imbue Greater Frost") == true, "MageScrolls: Name fallback recognized")
         Assert(self:IsMageScroll(2589, "Linen Cloth") == false, "MageScrolls: Non-scroll item rejected")
 
-        ForeverAltsDB.chars["MageOne-TestRealm"] = {
+        ForeverAltsDB.characters["MageOne-TestRealm"] = {
             name = "MageOne", fullName = "MageOne-TestRealm", realm = "TestRealm",
             classFile = "MAGE", faction = "Alliance", level = 60,
         }
-        ForeverAltsDB.chars["MageTwo-TestRealm"] = {
+        ForeverAltsDB.characters["MageTwo-TestRealm"] = {
             name = "MageTwo", fullName = "MageTwo-TestRealm", realm = "TestRealm",
             classFile = "MAGE", faction = "Alliance", level = 60,
         }
-        ForeverAltsDB.chars["MainWarrior-TestRealm"] = {
+        ForeverAltsDB.characters["MainWarrior-TestRealm"] = {
             name = "MainWarrior", fullName = "MainWarrior-TestRealm", realm = "TestRealm",
             classFile = "WARRIOR", faction = "Alliance", level = 60,
         }
@@ -4610,12 +4610,12 @@ function ForeverAlts:RunSelfTest()
 
         -- Designate MageOne
         self:ToggleCharacterMageScrolls("MageOne-TestRealm")
-        Assert(ForeverAltsDB.chars["MageOne-TestRealm"].routeMageScrolls == true, "MageScrolls: MageOne designated")
+        Assert(ForeverAltsDB.characters["MageOne-TestRealm"].routeMageScrolls == true, "MageScrolls: MageOne designated")
 
         -- Designate MageTwo -> mutually exclusive, clears MageOne
         self:ToggleCharacterMageScrolls("MageTwo-TestRealm")
-        Assert(ForeverAltsDB.chars["MageTwo-TestRealm"].routeMageScrolls == true, "MageScrolls: MageTwo designated")
-        Assert(not ForeverAltsDB.chars["MageOne-TestRealm"].routeMageScrolls, "MageScrolls: MageOne cleared on MageTwo designation")
+        Assert(ForeverAltsDB.characters["MageTwo-TestRealm"].routeMageScrolls == true, "MageScrolls: MageTwo designated")
+        Assert(not ForeverAltsDB.characters["MageOne-TestRealm"].routeMageScrolls, "MageScrolls: MageOne cleared on MageTwo designation")
 
         -- Routes Mage scroll to MageTwo even with autoMailConsumables = false
         local prevConsumables = ForeverAltsDB.settings.autoMailConsumables

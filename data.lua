@@ -3976,8 +3976,8 @@ function ForeverAlts:IsMageScroll(itemID, itemName)
 end
 
 function ForeverAlts:FindMageScrollReceiver()
-    if not (ForeverAltsDB and ForeverAltsDB.chars) then return nil end
-    for _, c in pairs(ForeverAltsDB.chars) do
+    if not (ForeverAltsDB and ForeverAltsDB.characters) then return nil end
+    for _, c in pairs(ForeverAltsDB.characters) do
         if c.routeMageScrolls == true then
             if self:IsMailCandidate(c) then
                 return c
@@ -3996,8 +3996,8 @@ function ForeverAlts:ToggleCharacterMageScrolls(charOrName)
     end
 
     local enable = (char.routeMageScrolls ~= true)
-    if enable and ForeverAltsDB and ForeverAltsDB.chars then
-        for _, other in pairs(ForeverAltsDB.chars) do
+    if enable and ForeverAltsDB and ForeverAltsDB.characters then
+        for _, other in pairs(ForeverAltsDB.characters) do
             if other ~= char then
                 other.routeMageScrolls = nil
             end
