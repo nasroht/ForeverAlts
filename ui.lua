@@ -6,12 +6,13 @@
 -- ============================================================================
 
 local addonName, addonTable = ...
-local CLIAlts = addonTable or _G["CLIAlts"] or {}
+local ForeverAlts = addonTable or _G["ForeverAlts"] or {}
 
 -- ----------------------------------------------------------------------------
 -- Constants & Terminal Configuration
 -- ----------------------------------------------------------------------------
-local FONT_MONO = "Interface\\AddOns\\" .. (addonName or "ForeverAlts") .. "\\media\\VT323-Regular.ttf"
+local MEDIA_PATH = "Interface\\AddOns\\" .. (addonName or "ForeverAlts") .. "\\media\\"
+local FONT_MONO = MEDIA_PATH .. "VT323-Regular.ttf"
 local FONT_NORMAL = _G["STANDARD_TEXT_FONT"] or "Fonts\\FRIZQT__.TTF"
 local DEFAULT_FONT_SIZE = 18
 
@@ -575,7 +576,7 @@ function ForeverAlts:CreateCircleMeter(parent, size, labelText)
     -- Background Ring Texture
     local bg = f:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(f)
-    bg:SetTexture("Interface\\AddOns\\ForeverAlts\\media\\ring_bg.tga")
+    bg:SetTexture(MEDIA_PATH .. "ring_bg.tga")
     bg:SetVertexColor(0.18, 0.22, 0.28, 0.75)
     f.bg = bg
 
@@ -583,7 +584,7 @@ function ForeverAlts:CreateCircleMeter(parent, size, labelText)
     local cd = CreateFrame("Cooldown", nil, f, "CooldownFrameTemplate")
     cd:SetAllPoints(f)
     if cd.SetSwipeTexture then
-        cd:SetSwipeTexture("Interface\\AddOns\\ForeverAlts\\media\\ring_swipe.tga")
+        cd:SetSwipeTexture(MEDIA_PATH .. "ring_swipe.tga")
     end
     if cd.SetDrawEdge then cd:SetDrawEdge(false) end
     if cd.SetDrawBling then cd:SetDrawBling(false) end
@@ -684,9 +685,9 @@ end
 -- ----------------------------------------------------------------------------
 function ForeverAlts:FmtStatus(char, t)
     -- Allow call with either dot or colon syntax
-    if self ~= CLIAlts and char == nil and type(self) == "table" and (self.name or self.level) then
+    if self ~= ForeverAlts and char == nil and type(self) == "table" and (self.name or self.level) then
         char = self
-        self = CLIAlts
+        self = ForeverAlts
     end
     if not char then return "---", "muted_outline" end
     local maxLevel = self.GetMaxLevel and self:GetMaxLevel() or 60
@@ -1400,7 +1401,7 @@ end
 -- Tab 3 Rested Monitor Formatters
 local function ResolveCharTheme(charOrSelf, charOrTheme, maybeTheme)
     local char, t
-    if charOrSelf == CLIAlts or (type(charOrSelf) == "table" and (charOrSelf.GetColumns or charOrSelf.GetTheme or charOrSelf.RunSelfTest)) then
+    if charOrSelf == ForeverAlts or (type(charOrSelf) == "table" and (charOrSelf.GetColumns or charOrSelf.GetTheme or charOrSelf.RunSelfTest)) then
         char = charOrTheme
         t = maybeTheme
     else
@@ -1906,6 +1907,9 @@ local function FmtMailRoute(char, t)
     if char.routeFirstAid then
         table.insert(tags, "|cff55e39a+FA|r")
     end
+    if char.routeMageScrolls then
+        table.insert(tags, "|cff3fc7eb+Scrolls|r")
+    end
     if #tags > 0 then
         return base .. " " .. table.concat(tags, " ")
     end
@@ -2183,13 +2187,6 @@ function ForeverAlts:ShowRestedTooltip(ownerOrChar, maybeChar)
     end
 
     GameTooltip:Show()
-end
-
--- ----------------------------------------------------------------------------
--- Legacy Main Frame Construction (ASCII Table UI)
--- ----------------------------------------------------------------------------
-function ForeverAlts:CreateLegacyMainFrame()
-    return self:CreateModernMainFrame()
 end
 
 -- ============================================================================
@@ -6494,6 +6491,11 @@ function ForeverAlts:ExecutePromptCommand(input)
         local newState = self:ToggleCharacterFirstAid(targetChar)
         self:SetPromptFeedback(string.format("First Aid routing: %s", newState and "ENABLED" or "DISABLED"))
 
+    elseif cmd == "scrolls" or cmd == "magescrolls" or cmd == "scroll" then
+        local targetChar = (args ~= "") and args or self:GetSelectedOrCurChar()
+        local newState = self:ToggleCharacterMageScrolls(targetChar)
+        self:SetPromptFeedback(string.format("Mage Scroll routing: %s", newState and "ENABLED" or "DISABLED"))
+
     elseif cmd == "tour" or cmd == "onboarding" then
         self:StartTour()
         self:SetPromptFeedback("Onboarding tour started.")
@@ -6522,7 +6524,7 @@ function ForeverAlts:AutoCompletePrompt(editBox)
 
     local commands = {
         "1", "2", "3", "4", "5", "6", "7",
-        "tab", "mail", "fillmail", "mailbtn", "mailignore", "mailunignore", "mailignores", "mailconsumables",
+        "tab", "mail", "fillmail", "mailbtn", "mailignore", "mailunignore", "mailignores", "mailconsumables", "scrolls",
         "sort", "sortbags", "sortbtn", "filter", "find", "clear",
         "goto", "page", "next", "export", "compact",
         "watch", "unwatch", "watchlist",
@@ -7341,7 +7343,7 @@ function ForeverAlts:ShowMailRouteDialog(charData)
     if not mailRouteDialog then
         local dlg = CreateFrame("Frame", "ForeverAltsMailRouteDialog", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         dlg:Hide()
-        dlg:SetSize(480, 420)
+        dlg:SetSize(480, 448)
         dlg:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         dlg:SetFrameStrata("FULLSCREEN_DIALOG")
         dlg:EnableMouse(true)
@@ -7508,6 +7510,16 @@ function ForeverAlts:ShowMailRouteDialog(charData)
         btnFirstAid:SetPoint("TOPLEFT", dlg, "TOPLEFT", 244, -344)
         dlg.btnFirstAid = btnFirstAid
 
+        local btnMageScrolls = CreateRetroButton(dlg, "[ MAGE SCROLLS: DISABLED ]", 448, 20, function()
+            if dlg.targetChar then
+                ForeverAlts:ToggleCharacterMageScrolls(dlg.targetChar)
+                ForeverAlts:ShowMailRouteDialog(dlg.targetChar)
+                ForeverAlts:RequestRender()
+            end
+        end, 10)
+        btnMageScrolls:SetPoint("TOPLEFT", dlg, "TOPLEFT", 16, -370)
+        dlg.btnMageScrolls = btnMageScrolls
+
         -- Ignored Items button
         local btnIgnored = CreateRetroButton(dlg, "[ IGNORED ITEMS ]", 140, 20, function()
             ForeverAlts:ListIgnoredMailItems()
@@ -7626,6 +7638,10 @@ function ForeverAlts:ShowMailRouteDialog(charData)
     if dlg.btnFirstAid and dlg.btnFirstAid.label then
         local faOn = (charData.routeFirstAid == true)
         dlg.btnFirstAid.label:SetText(faOn and "|cff55e39a[ FIRST AID: ACTIVE (Cloth) ]|r" or "|cffa9a08c[ FIRST AID: DISABLED ]|r")
+    end
+    if dlg.btnMageScrolls and dlg.btnMageScrolls.label then
+        local msOn = (charData.routeMageScrolls == true)
+        dlg.btnMageScrolls.label:SetText(msOn and "|cff3fc7eb[ MAGE SCROLLS: DESIGNATED RECEIVER ]|r" or "|cffa9a08c[ MAGE SCROLLS: DISABLED (Click to Designate) ]|r")
     end
 
     dlg:Show()
@@ -8983,7 +8999,11 @@ function ForeverAlts:InitBagSortButton()
 
         local lastShown = false
         local lastTarget = nil
+        local elapsedAcc = 0
         watcher:SetScript("OnUpdate", function(_, dt)
+            elapsedAcc = elapsedAcc + (dt or 0)
+            if elapsedAcc < 0.15 then return end
+            elapsedAcc = 0
             if InCombatLockdown and InCombatLockdown() then return end
             local cf = rawget(_G, "ContainerFrameCombinedBags") or ContainerFrameCombinedBags
             local sf = rawget(_G, "ContainerFrame1") or ContainerFrame1

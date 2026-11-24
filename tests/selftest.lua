@@ -4568,6 +4568,64 @@ function ForeverAlts:RunSelfTest()
         Assert(ttOk == true, "RestedMonitor: ShowRestedTooltip executes without error")
     end
 
+    -- ------------------------------------------------------------------------
+    -- 41. Mage Comprehension Scrolls Routing Engine
+    -- ------------------------------------------------------------------------
+    do
+        Assert(self:IsMageScroll(215257) == true, "MageScrolls: Tier 1 Scroll of Comprehension (215257) recognized")
+        Assert(self:IsMageScroll(277483) == true, "MageScrolls: Tier 2 Scroll of Frog Familiar (277483) recognized")
+        Assert(self:IsMageScroll(277492) == true, "MageScrolls: Tier 3 Scroll of Khadgar's Unlocking (277492) recognized")
+        Assert(self:IsMageScroll(277504) == true, "MageScrolls: Tier 4 Scroll of Wit (277504) recognized")
+        Assert(self:IsMageScroll(nil, "Scroll of Imbue Greater Frost") == true, "MageScrolls: Name fallback recognized")
+        Assert(self:IsMageScroll(2589, "Linen Cloth") == false, "MageScrolls: Non-scroll item rejected")
+
+        ForeverAltsDB.chars["MageOne-TestRealm"] = {
+            name = "MageOne", fullName = "MageOne-TestRealm", realm = "TestRealm",
+            classFile = "MAGE", faction = "Alliance", level = 60,
+        }
+        ForeverAltsDB.chars["MageTwo-TestRealm"] = {
+            name = "MageTwo", fullName = "MageTwo-TestRealm", realm = "TestRealm",
+            classFile = "MAGE", faction = "Alliance", level = 60,
+        }
+        ForeverAltsDB.chars["MainWarrior-TestRealm"] = {
+            name = "MainWarrior", fullName = "MainWarrior-TestRealm", realm = "TestRealm",
+            classFile = "WARRIOR", faction = "Alliance", level = 60,
+        }
+        self.curPlayerPrimary = "MainWarrior"
+        self.curPlayerFullName = "MainWarrior-TestRealm"
+        self.curPlayerKey = "MainWarrior-TestRealm"
+        self.curPlayerRealm = "TestRealm"
+        self.curPlayerName = "MainWarrior"
+
+        -- No receiver designated yet -> kept in bags
+        local noDest = self:GetMaterialDestination(215257, nil, 0, 4, 1, "|cffffffff|Hitem:215257::::::::1:::::::|h[Scroll of Comprehension]|h|r")
+        Assert(noDest == nil, "MageScrolls: Returns nil when no Mage is designated")
+
+        -- Designate MageOne
+        self:ToggleCharacterMageScrolls("MageOne-TestRealm")
+        Assert(ForeverAltsDB.chars["MageOne-TestRealm"].routeMageScrolls == true, "MageScrolls: MageOne designated")
+
+        -- Designate MageTwo -> mutually exclusive, clears MageOne
+        self:ToggleCharacterMageScrolls("MageTwo-TestRealm")
+        Assert(ForeverAltsDB.chars["MageTwo-TestRealm"].routeMageScrolls == true, "MageScrolls: MageTwo designated")
+        Assert(not ForeverAltsDB.chars["MageOne-TestRealm"].routeMageScrolls, "MageScrolls: MageOne cleared on MageTwo designation")
+
+        -- Routes Mage scroll to MageTwo even with autoMailConsumables = false
+        local prevConsumables = ForeverAltsDB.settings.autoMailConsumables
+        ForeverAltsDB.settings.autoMailConsumables = false
+        local dest = self:GetMaterialDestination(277504, nil, 0, 4, 1, "|cffffffff|Hitem:277504::::::::1:::::::|h[Scroll of Wit]|h|r")
+        Assert(dest ~= nil and dest.destName == "MageTwo" and dest.reason == "Mage Scrolls", "MageScrolls: Routes Scroll of Wit to designated MageTwo")
+        ForeverAltsDB.settings.autoMailConsumables = prevConsumables
+
+        -- Playing as MageTwo -> never mails to self
+        self.curPlayerPrimary = "MageTwo"
+        self.curPlayerFullName = "MageTwo-TestRealm"
+        self.curPlayerKey = "MageTwo-TestRealm"
+        self.curPlayerName = "MageTwo"
+        local selfDest = self:GetMaterialDestination(277504, nil, 0, 4, 1, "|cffffffff|Hitem:277504::::::::1:::::::|h[Scroll of Wit]|h|r")
+        Assert(selfDest == nil, "MageScrolls: Does not route to self when playing designated Mage")
+    end
+
     -- Restore master state
     if masterState.db then
         ForeverAltsDB = masterState.db; ForeverAltsDB = ForeverAltsDB

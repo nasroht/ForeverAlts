@@ -10,7 +10,8 @@ unpack = unpack or (table and table.unpack)
 wipe = wipe or function(t) if t then for k in pairs(t) do t[k] = nil end end return t end
 
 -- 2. Mock WoW Frame & Widget Hierarchy
-local function CreateDummyFrame(frameType, name, parent)
+BackdropTemplateMixin = BackdropTemplateMixin or {}
+local function CreateDummyFrame(frameType, name, parent, template)
     local frame = {
         name = name,
         type = frameType,
@@ -77,14 +78,16 @@ local function CreateDummyFrame(frameType, name, parent)
     function frame:GetFrameStrata() return self.strata or "HIGH" end
     function frame:SetFrameLevel(l) self.level = l end
     function frame:GetFrameLevel() return self.level or 10 end
-    function frame:SetBackdrop(...) end
-    function frame:SetBackdropColor(r, g, b, a)
-        if r == nil then error("bad argument #1 to 'SetVertexColor' (Usage: self:SetVertexColor(color [, a]))", 2) end
-        self.backdropColor = { r, g, b, a }
-    end
-    function frame:SetBackdropBorderColor(r, g, b, a)
-        if r == nil then error("bad argument #1 to 'SetVertexColor' (Usage: self:SetVertexColor(color [, a]))", 2) end
-        self.backdropBorderColor = { r, g, b, a }
+    if (type(template) == "string" and template:find("BackdropTemplate")) or frameType == "GameTooltip" then
+        function frame:SetBackdrop(...) end
+        function frame:SetBackdropColor(r, g, b, a)
+            if r == nil then error("bad argument #1 to 'SetVertexColor' (Usage: self:SetVertexColor(color [, a]))", 2) end
+            self.backdropColor = { r, g, b, a }
+        end
+        function frame:SetBackdropBorderColor(r, g, b, a)
+            if r == nil then error("bad argument #1 to 'SetVertexColor' (Usage: self:SetVertexColor(color [, a]))", 2) end
+            self.backdropBorderColor = { r, g, b, a }
+        end
     end
     function frame:ClearAllPoints(...) end
     function frame:SetAllPoints(...) end

@@ -1447,6 +1447,7 @@ function ForeverAlts:CollectCurrentCharacter(isLogout, force)
         supply_role = (existing and existing.supply_role) or (cachedCurrentChar and cachedCurrentChar.supply_role),
         routeCooking = (existing and existing.routeCooking) or (cachedCurrentChar and cachedCurrentChar.routeCooking),
         routeFirstAid = (existing and existing.routeFirstAid) or (cachedCurrentChar and cachedCurrentChar.routeFirstAid),
+        routeMageScrolls = (existing and existing.routeMageScrolls) or (cachedCurrentChar and cachedCurrentChar.routeMageScrolls),
         target_level = (existing and existing.target_level) or (cachedCurrentChar and cachedCurrentChar.target_level),
         wellRestedRank = (existing and existing.wellRestedRank) or (cachedCurrentChar and cachedCurrentChar.wellRestedRank),
         legacyPoints = (existing and existing.legacyPoints) or (cachedCurrentChar and cachedCurrentChar.legacyPoints),
@@ -3892,6 +3893,128 @@ function ForeverAlts:ToggleCharacterFirstAid(charOrName)
     return char.routeFirstAid
 end
 
+-- WoW Forever Mage Comprehension Scrolls (Tier 1 - Tier 4)
+local MAGE_SCROLL_IDS = {
+    -- Tier 1
+    [215257] = true, -- Scroll of Comprehension
+    [275067] = true, -- Scroll of Imbue Chillknife
+    [274947] = true, -- Scroll of Imbue Lesser Flame
+    [213564] = true, -- Scroll of Minor Evocation
+    [275069] = true, -- Scroll of Rat Familiar
+    -- Tier 2
+    [217495] = true, -- Scroll of Cryoblast
+    [277484] = true, -- Scroll of Confuse Beast
+    [277483] = true, -- Scroll of Frog Familiar
+    [277487] = true, -- Scroll of Imbue Baleflame
+    [277485] = true, -- Scroll of Imbue Frost
+    [277488] = true, -- Scroll of Imbue Iceknife
+    [277489] = true, -- Scroll of Imbue Spark
+    [277486] = true, -- Scroll of Imbue Striking
+    [277490] = true, -- Scroll of the Saber
+    -- Tier 3
+    [277493] = true, -- Scroll of Cat Familiar
+    [277496] = true, -- Scroll of Imbue Balefrost
+    [277494] = true, -- Scroll of Imbue Accuracy
+    [277497] = true, -- Scroll of Imbue Flame
+    [277498] = true, -- Scroll of Imbue Manablade
+    [277495] = true, -- Scroll of Imbue Quickening
+    [277492] = true, -- Scroll of Khadgar's Unlocking
+    [277491] = true, -- Scroll of Rebuke Elemental
+    [217496] = true, -- Scroll of the Blade
+    -- Tier 4
+    [277504] = true, -- Scroll of Wit
+    [277499] = true, -- Scroll of Greater Cryoblast
+    [277500] = true, -- Scroll of Imbue Greater Flame
+    [277501] = true, -- Scroll of Imbue Greater Frost
+    [277502] = true, -- Scroll of Imbue Precision
+}
+
+local MAGE_SCROLL_NAMES = {
+    ["scroll of comprehension"] = true,
+    ["scroll of imbue chillknife"] = true,
+    ["scroll of imbue lesser flame"] = true,
+    ["scroll of minor evocation"] = true,
+    ["scroll of rat familiar"] = true,
+    ["scroll of cryoblast"] = true,
+    ["scroll of confuse beast"] = true,
+    ["scroll of frog familiar"] = true,
+    ["scroll of imbue baleflame"] = true,
+    ["scroll of imbue frost"] = true,
+    ["scroll of imbue iceknife"] = true,
+    ["scroll of imbue spark"] = true,
+    ["scroll of imbue striking"] = true,
+    ["scroll of the saber"] = true,
+    ["scroll of cat familiar"] = true,
+    ["scroll of imbue balefrost"] = true,
+    ["scroll of imbue accuracy"] = true,
+    ["scroll of imbue flame"] = true,
+    ["scroll of imbue manablade"] = true,
+    ["scroll of imbue quickening"] = true,
+    ["scroll of khadgar's unlocking"] = true,
+    ["scroll of khadgar’s unlocking"] = true,
+    ["scroll of rebuke elemental"] = true,
+    ["scroll of the blade"] = true,
+    ["scroll of wit"] = true,
+    ["scroll of greater cryoblast"] = true,
+    ["scroll of imbue greater flame"] = true,
+    ["scroll of imbue greater frost"] = true,
+    ["scroll of imbue precision"] = true,
+}
+
+function ForeverAlts:IsMageScroll(itemID, itemName)
+    local numID = tonumber(itemID)
+    if numID and MAGE_SCROLL_IDS[numID] then
+        return true
+    end
+    if type(itemName) == "string" and itemName ~= "" then
+        local lower = itemName:lower():match("^%s*(.-)%s*$")
+        if lower and MAGE_SCROLL_NAMES[lower] then
+            return true
+        end
+    end
+    return false
+end
+
+function ForeverAlts:FindMageScrollReceiver()
+    if not (ForeverAltsDB and ForeverAltsDB.chars) then return nil end
+    for _, c in pairs(ForeverAltsDB.chars) do
+        if c.routeMageScrolls == true then
+            if self:IsMailCandidate(c) then
+                return c
+            end
+            return nil
+        end
+    end
+    return nil
+end
+
+function ForeverAlts:ToggleCharacterMageScrolls(charOrName)
+    local char = self:ResolveCharacter(charOrName)
+    if not char then
+        self:Print("Character not found. Usage: |cff00ff66/fa scrolls <name>|r")
+        return false
+    end
+
+    local enable = (char.routeMageScrolls ~= true)
+    if enable and ForeverAltsDB and ForeverAltsDB.chars then
+        for _, other in pairs(ForeverAltsDB.chars) do
+            if other ~= char then
+                other.routeMageScrolls = nil
+            end
+        end
+    end
+    char.routeMageScrolls = enable
+
+    local name = char.fullName or char.name
+    local stateStr = enable
+        and "|cff3fc7ebENABLED (Designated sole receiver for Mage Comprehension Scrolls)|r"
+        or "|cffff4444DISABLED (Mage Comprehension Scrolls kept in bags)|r"
+    self:Print(string.format("|cff57d6e8[Mail Router]|r Mage Scroll routing for |cffffffff%s|r is now %s.", name, stateStr))
+    if self.UpdateMailAutoFillButton then self:UpdateMailAutoFillButton() end
+    if self.RequestRender then self:RequestRender() end
+    return char.routeMageScrolls
+end
+
 function ForeverAlts:FindBestCrafterForTrade(targetProfession, preferredRole)
     local chars = self:GetCharactersList("level", false)
     local bestChar = nil
@@ -4882,6 +5005,23 @@ function ForeverAlts:GetMaterialDestination(itemIdentifier, itemEquipLoc, itemCl
         if self.IsItemMailIgnored and self:IsItemMailIgnored(itemID, itemName) then
             return nil
         end
+    end
+
+    -- Mage Comprehension Scrolls (route exclusively to the designated Mage, regardless of autoMailConsumables)
+    if self.IsMageScroll and self:IsMageScroll(itemID, itemName) then
+        local receiver = self.FindMageScrollReceiver and self:FindMageScrollReceiver()
+        if receiver and self:IsMailCandidate(receiver) then
+            return {
+                destChar = receiver,
+                destName = receiver.name or "Unknown",
+                classFile = receiver.classFile,
+                tier = receiver.tier or "UNASSIGNED",
+                reason = "Mage Scrolls",
+                category = "Mage Scroll",
+                isCurrentPlayer = false,
+            }
+        end
+        return nil
     end
 
     -- Never auto-mail consumables (food, drink, potions, bandages) unless explicitly enabled

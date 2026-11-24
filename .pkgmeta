@@ -13,4 +13,4 @@ ignore:
   - .gitignore
   - .gitattributes
   - tests
-  - media
+  - media/logo.jpg

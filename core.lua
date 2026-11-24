@@ -20,6 +20,7 @@ local SafeAfter = ForeverAlts.SafeAfter or function(delay, callback)
 end
 
 local hasRequestedRaidInfo = false
+local hasInitializedSession = false
 
 -- ----------------------------------------------------------------------------
 -- Performance Profiling Metrics (/clialts perf)
@@ -258,6 +259,22 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
 
     elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+        -- Request raid/instance lockouts ONCE per session 2s after entering the world
+        if event == "PLAYER_ENTERING_WORLD" and not hasRequestedRaidInfo then
+            hasRequestedRaidInfo = true
+            SafeAfter(2.0, function()
+                if RequestRaidInfo then pcall(RequestRaidInfo) end
+            end)
+        end
+
+        if hasInitializedSession and event == "PLAYER_ENTERING_WORLD" then
+            ForeverAlts.isPlayerResting = (IsResting and IsResting() and true or false)
+            ForeverAlts:CollectCurrentCharacter()
+            ForeverAlts:RequestRender()
+            return
+        end
+        hasInitializedSession = true
+
         ForeverAlts.exhaustionReceived = false
         SafeAfter(2.0, function()
             ForeverAlts.exhaustionReceived = true
@@ -298,14 +315,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
 
             -- Unified boxed login digest (at most 5 lines)
             ForeverAlts:PrintLoginDigest()
-        end
-
-        -- Request raid/instance lockouts ONCE per session 2s after entering the world
-        if event == "PLAYER_ENTERING_WORLD" and not hasRequestedRaidInfo then
-            hasRequestedRaidInfo = true
-            SafeAfter(2.0, function()
-                if RequestRaidInfo then pcall(RequestRaidInfo) end
-            end)
         end
 
         -- Check onboarding tour for first login
@@ -1072,6 +1081,9 @@ local function SlashHandler(msg)
 
     elseif cmd == "firstaid" or cmd == "fa" then
         ForeverAlts:ToggleCharacterFirstAid(arg)
+
+    elseif cmd == "scrolls" or cmd == "magescrolls" or cmd == "scroll" then
+        ForeverAlts:ToggleCharacterMageScrolls(arg)
 
     elseif cmd == "lp" or cmd == "legacypoints" or cmd == "legacypoint" then
         ForeverAlts:PrintLegacyPointStatus(arg)
