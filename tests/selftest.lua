@@ -4572,6 +4572,13 @@ function ForeverAlts:RunSelfTest()
     -- 41. Mage Comprehension Scrolls Routing Engine
     -- ------------------------------------------------------------------------
     do
+        local prevScrollsDB = ForeverAltsDB
+        ForeverAltsDB = {
+            chars = {},
+            settings = { autoMailConsumables = false },
+            ignoredMailItems = {},
+        }
+
         Assert(self:IsMageScroll(215257) == true, "MageScrolls: Tier 1 Scroll of Comprehension (215257) recognized")
         Assert(self:IsMageScroll(277483) == true, "MageScrolls: Tier 2 Scroll of Frog Familiar (277483) recognized")
         Assert(self:IsMageScroll(277492) == true, "MageScrolls: Tier 3 Scroll of Khadgar's Unlocking (277492) recognized")
@@ -4624,6 +4631,8 @@ function ForeverAlts:RunSelfTest()
         self.curPlayerName = "MageTwo"
         local selfDest = self:GetMaterialDestination(277504, nil, 0, 4, 1, "|cffffffff|Hitem:277504::::::::1:::::::|h[Scroll of Wit]|h|r")
         Assert(selfDest == nil, "MageScrolls: Does not route to self when playing designated Mage")
+
+        ForeverAltsDB = prevScrollsDB
     end
 
     -- Restore master state
