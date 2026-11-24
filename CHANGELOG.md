@@ -5,6 +5,15 @@ All notable changes to **ForeverAlts** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-24
+
+### Added
+- **Mage Comprehension Scrolls Routing (Tiers 1–4)**: Added support for designating a single alt to automatically receive all 28 WoW Forever Mage Comprehension Scrolls via Mail Routing (`[ MAGE SCROLLS ]` toggle in the Mail Routing dialog, `/fa scrolls <name>`, or `scrolls <name>` in the command bar). Enabling it on one character automatically clears any previous designation, routes scrolls even when *Auto-Mail Consumables* is disabled, and never mails scrolls to yourself when logged into the designated Mage.
+
+### Fixed
+- **CurseForge Packaging Assets**: Updated `.pkgmeta` so runtime font and ring gauge textures (`media/VT323-Regular.ttf`, `media/ring_bg.tga`, `media/ring_swipe.tga`) are included in packaged releases.
+- **Performance & Session Initialization**: Throttled the bag sort button `OnUpdate` watcher (`0.15s` accumulator), avoided re-running full login/session initialization on subsequent `PLAYER_ENTERING_WORLD` zone transitions, and removed hardcoded addon folder names from ring texture paths.
+
 ## [1.3.3] - 2026-10-18
 
 ### Fixed
